@@ -18,19 +18,19 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 227,
+    "configuration:new": 237,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
-    "database-commands:new": 98,
+    "database-commands:new": 102,
     "jobs:deferred": 1,
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 352,
+    "operational-scripts:new": 369,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 142,
+    "routes:new": 144,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -1083,6 +1083,10 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
+        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
+        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/apps/platform-host/src/diagnostics/telemetry/error-collector.ts",
         "server/packages/services/publication/src/__tests__/local-definition-preview.test.ts"
@@ -1105,6 +1109,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "configuration:athyper_instance",
+      "category": "configuration",
+      "key": "athyper_instance",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/register-services.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:athyper_kernel_config_path",
@@ -1161,6 +1177,21 @@
       "currentLocations": [
         "server/apps/platform-host/src/development/graph-preview.ts",
         "server/packages/services/publication/src/local-definition-preview.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:athyper_local_source",
+      "category": "configuration",
+      "key": "athyper_local_source",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
+        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
+        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -1334,6 +1365,18 @@
       "currentLocations": [
         "server/packages/test-utils/src/no-skipped-postgres-reporter.ts",
         "server/packages/test-utils/src/postgres-global-setup.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:athyper_prisma_pull_url",
+      "category": "configuration",
+      "key": "athyper_prisma_pull_url",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/prisma/prisma-pull.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -1530,6 +1573,18 @@
       "disposition": "migrated",
       "owner": "platform-host",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "configuration:athyper_tenant_extension_test_database_url",
+      "category": "configuration",
+      "key": "athyper_tenant_extension_test_database_url",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/tenant-learning-extension.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:atlas_agent_admin_enabled",
@@ -3639,6 +3694,7 @@
         "server/.env.example",
         "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-case-contract-publication.ts",
         "server/apps/platform-host/scripts/db-verification/tests/integration/publication-authority-repository.mjs",
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/checks/contracts/meta-entity-audit.ts",
@@ -3824,6 +3880,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/services/publication/src/__tests__/integration/development-definition-save.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:deployment_recovery_compiler_postgres",
+      "category": "configuration",
+      "key": "deployment_recovery_compiler_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/deployment-recovery-compiler.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:deployment_recovery_postgres",
+      "category": "configuration",
+      "key": "deployment_recovery_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/deployment-recovery.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -4611,6 +4691,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:human_publication_postgres",
+      "category": "configuration",
+      "key": "human_publication_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:iam_canonical_session_cutover_mode",
       "category": "configuration",
       "key": "iam_canonical_session_cutover_mode",
@@ -5367,6 +5459,7 @@
       ],
       "currentLocations": [
         "server/.env.example",
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts",
@@ -6245,6 +6338,18 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
+      "identity": "configuration:plane_boundary_test_container",
+      "category": "configuration",
+      "key": "plane_boundary_test_container",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/src/security/plane-boundary.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:platform_catalog_writable",
       "category": "configuration",
       "key": "platform_catalog_writable",
@@ -6308,6 +6413,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/config/environment.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:policy_replacement_postgres",
+      "category": "configuration",
+      "key": "policy_replacement_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/policy-replacement.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6380,6 +6497,18 @@
       "currentLocations": [
         "server/apps/platform-host/src/composition/runtimes/http.ts",
         "server/apps/platform-host/src/diagnostics/telemetry/process-metrics-endpoint.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:product_review_postgres",
+      "category": "configuration",
+      "key": "product_review_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6831,6 +6960,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "configuration:qualification_database_url",
+      "category": "configuration",
+      "key": "qualification_database_url",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:qualify_clamd_host",
@@ -7533,11 +7674,12 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
-      "identity": "configuration:secdef_bypass_owner",
+      "identity": "configuration:secdef_ddl_owner",
       "category": "configuration",
-      "key": "secdef_bypass_owner",
+      "key": "secdef_ddl_owner",
       "legacyLocations": [],
       "currentLocations": [
+        "server/db/scripts/checks/security/plane-boundary.ts",
         "server/db/scripts/checks/security/security-definer.ts"
       ],
       "disposition": "new",
@@ -7571,18 +7713,6 @@
       "disposition": "migrated",
       "owner": "platform-host",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
-    },
-    {
-      "identity": "configuration:secdef_projection_owner",
-      "category": "configuration",
-      "key": "secdef_projection_owner",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/checks/security/security-definer.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:seed_strict",
@@ -8032,6 +8162,8 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/.env.example",
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
+        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/scripts/checks/security/field-security.ts",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts",
@@ -8049,6 +8181,7 @@
       "key": "studio_worker_database_url",
       "legacyLocations": [],
       "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -8841,6 +8974,18 @@
       "identity": "database-commands:db:generate:reference:unspsc",
       "category": "database-commands",
       "key": "db:generate:reference:unspsc",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "database-commands:db:generate:security-definer-contract",
+      "category": "database-commands",
+      "key": "db:generate:security-definer-contract",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/package.json"
@@ -10488,6 +10633,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "database-commands:db:verify:common-ddl-equivalence",
+      "category": "database-commands",
+      "key": "db:verify:common-ddl-equivalence",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "database-commands:db:verify:ddl-model",
       "category": "database-commands",
       "key": "db:verify:ddl-model",
@@ -10724,6 +10881,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "database-commands:db:verify:plane-boundary",
+      "category": "database-commands",
+      "key": "db:verify:plane-boundary",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "database-commands:db:verify:plane-eligibility",
       "category": "database-commands",
       "key": "db:verify:plane-eligibility",
@@ -10809,6 +10978,18 @@
       "identity": "database-commands:db:verify:security-definer",
       "category": "database-commands",
       "key": "db:verify:security-definer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "database-commands:db:verify:security-definer-contract",
+      "category": "database-commands",
+      "key": "db:verify:security-definer-contract",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/package.json"
@@ -13768,6 +13949,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:common-ddl-equivalence",
+      "category": "operational-scripts",
+      "key": "common-ddl-equivalence",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/ddl/common-ddl-equivalence.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:common-identity-catalog.test",
       "category": "operational-scripts",
       "key": "common-identity-catalog.test",
@@ -14303,6 +14496,54 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:dev-coordinated-worker-read",
+      "category": "operational-scripts",
+      "key": "dev-coordinated-worker-read",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-coordinated-worker-read.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:dev-deployment-recovery",
+      "category": "operational-scripts",
+      "key": "dev-deployment-recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-deployment-recovery.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:dev-human-publication",
+      "category": "operational-scripts",
+      "key": "dev-human-publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-human-publication.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:dev-mesh-worker-identity",
+      "category": "operational-scripts",
+      "key": "dev-mesh-worker-identity",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-mesh-worker-identity.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:dev-owner-access",
       "category": "operational-scripts",
       "key": "dev-owner-access",
@@ -14315,12 +14556,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:dev-principal-link-target",
+      "identity": "operational-scripts:dev-policy-replacement",
       "category": "operational-scripts",
-      "key": "dev-principal-link-target",
+      "key": "dev-policy-replacement",
       "legacyLocations": [],
       "currentLocations": [
-        "server/db/scripts/operations/entity-onboarding/apply-dev-principal-link-target.mjs"
+        "server/db/scripts/operations/publication/apply-dev-policy-replacement.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -14334,18 +14575,6 @@
       "currentLocations": [
         "server/apps/platform-host/scripts/qualification/check-dev-principal-relationships.ts",
         "server/db/scripts/operations/entity-onboarding/check-dev-principal-relationships.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:dev-projected-profile-source",
-      "category": "operational-scripts",
-      "key": "dev-projected-profile-source",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/operations/entity-onboarding/apply-dev-projected-profile-source.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15248,12 +15477,36 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "operational-scripts:inspect-dev-workforce-authority",
+      "identity": "operational-scripts:inspect-coordinated-apply-failure",
       "category": "operational-scripts",
-      "key": "inspect-dev-workforce-authority",
+      "key": "inspect-coordinated-apply-failure",
       "legacyLocations": [],
       "currentLocations": [
-        "server/db/scripts/verification/inspect-dev-workforce-authority.ts"
+        "server/apps/platform-host/src/scripts/inspect-coordinated-apply-failure.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:inspect-dev-serving-support",
+      "category": "operational-scripts",
+      "key": "inspect-dev-serving-support",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/qualification/inspect-dev-serving-support.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:inspect-entity-support",
+      "category": "operational-scripts",
+      "key": "inspect-entity-support",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/scripts/inspect-entity-support.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -16731,6 +16984,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:plane-boundary",
+      "category": "operational-scripts",
+      "key": "plane-boundary",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/security/plane-boundary.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:plane-cli",
       "category": "operational-scripts",
       "key": "plane-cli",
@@ -16810,6 +17075,30 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:prepare-coordinated-candidate",
+      "category": "operational-scripts",
+      "key": "prepare-coordinated-candidate",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/prepare-coordinated-candidate.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-deployment-recovery",
+      "category": "operational-scripts",
+      "key": "prepare-deployment-recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/prepare-deployment-recovery.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:prepare-dev-control-api",
       "category": "operational-scripts",
       "key": "prepare-dev-control-api",
@@ -16865,6 +17154,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/provisioning/prepare-entity-activity.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-human-publication-policy",
+      "category": "operational-scripts",
+      "key": "prepare-human-publication-policy",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/prepare-human-publication-policy.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -16961,6 +17262,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:product-publication-owner",
+      "category": "operational-scripts",
+      "key": "product-publication-owner",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/security/generate-product-publication-owner.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:project-meta-entity-admin-identities",
@@ -17591,6 +17904,54 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:qualify-approved-candidate",
+      "category": "operational-scripts",
+      "key": "qualify-approved-candidate",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-approved-candidate.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:qualify-coordinated-product-scope",
+      "category": "operational-scripts",
+      "key": "qualify-coordinated-product-scope",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:qualify-deployment-recovery",
+      "category": "operational-scripts",
+      "key": "qualify-deployment-recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:qualify-dev-deployment-permission-retry",
+      "category": "operational-scripts",
+      "key": "qualify-dev-deployment-permission-retry",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/qualify-dev-deployment-permission-retry.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:qualify-document-infrastructure",
       "category": "operational-scripts",
       "key": "qualify-document-infrastructure",
@@ -17609,19 +17970,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/scripts/qualify-document-malware.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:qualify-installed-profile-source-dev",
-      "category": "operational-scripts",
-      "key": "qualify-installed-profile-source-dev",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/qualification/qualify-installed-profile-source-dev.ts",
-        "server/db/scripts/verification/qualify-installed-profile-source-dev.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -17656,36 +18004,12 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "operational-scripts:qualify-profile-source-concurrency-dev",
+      "identity": "operational-scripts:qualify-reviewed-permission-retry",
       "category": "operational-scripts",
-      "key": "qualify-profile-source-concurrency-dev",
+      "key": "qualify-reviewed-permission-retry",
       "legacyLocations": [],
       "currentLocations": [
-        "server/db/scripts/verification/qualify-profile-source-concurrency-dev.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:qualify-profile-source-dev",
-      "category": "operational-scripts",
-      "key": "qualify-profile-source-dev",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/verification/qualify-profile-source-dev.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:qualify-projected-profile-source-dev",
-      "category": "operational-scripts",
-      "key": "qualify-projected-profile-source-dev",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/verification/qualify-projected-profile-source-dev.mjs"
+        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -17704,6 +18028,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:reconcile-dev-publisher",
+      "category": "operational-scripts",
+      "key": "reconcile-dev-publisher",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/reconcile-dev-publisher.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:reconcile-development-publication-access",
@@ -17860,12 +18196,36 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:rehearse-dev-recovery-compiler",
+      "category": "operational-scripts",
+      "key": "rehearse-dev-recovery-compiler",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/rehearse-dev-recovery-compiler.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:rehearse-publication-canary",
       "category": "operational-scripts",
       "key": "rehearse-publication-canary",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/publication/rehearse-publication-canary.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:rehearse-recovery-compiler",
+      "category": "operational-scripts",
+      "key": "rehearse-recovery-compiler",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18130,6 +18490,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:retry-coordinated-apply",
+      "category": "operational-scripts",
+      "key": "retry-coordinated-apply",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/scripts/retry-coordinated-apply.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:reversal-implementations",
       "category": "operational-scripts",
       "key": "reversal-implementations",
@@ -18341,6 +18713,18 @@
       "disposition": "migrated",
       "owner": "platform-operations",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "operational-scripts:security-definer-contract",
+      "category": "operational-scripts",
+      "key": "security-definer-contract",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/security/generate-security-definer-contract.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:seed-contract-lint.test",
@@ -20296,6 +20680,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-d---produce-the-phase-0-inventory-and-parity-matrix",
       "risk": "A legacy HTTP behavior may be absent or have changed authorization semantics.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "routes:get ${base}/graph",
+      "category": "routes",
+      "key": "get ${base}/graph",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "routes:get ${base}/templates",
@@ -27592,6 +27988,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-d---produce-the-phase-0-inventory-and-parity-matrix",
       "risk": "A legacy HTTP behavior may be absent or have changed authorization semantics.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "routes:post ${base}/${action}",
+      "category": "routes",
+      "key": "post ${base}/${action}",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "routes:post ${base}/preview",

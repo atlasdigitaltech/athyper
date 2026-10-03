@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 757
+- Cataloged database tables: 760
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -32,7 +32,7 @@ or multiply classified runtime objects.
 | business_scope_context_non_authorizing | 2 |
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
-| ddl_catalog_reference | 127 |
+| ddl_catalog_reference | 128 |
 | derived_projection | 24 |
 | derived_runtime_projection | 13 |
 | document_metadata | 159 |
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 40 |
+| metadata_authority | 42 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -217,6 +217,7 @@ or multiply classified runtime objects.
 | `control.process_task_rule_proposal` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.process_task_rule_release` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.procurement_match_tolerance_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.publication_policy_replacement` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.quota_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.rate_table` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.rate_table_row` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -688,6 +689,7 @@ or multiply classified runtime objects.
 | `metadata.entity_flow_step` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_key` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_key_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_learning_ancestry` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_lifecycle_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_lifecycle_operation_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_materialization_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -699,6 +701,7 @@ or multiply classified runtime objects.
 | `metadata.entity_operation_rule` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation_scope_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_product_review_receipt` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_relation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_relation_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_relation_target` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |

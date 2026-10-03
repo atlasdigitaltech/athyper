@@ -4,11 +4,11 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 757,
+    "discoveredTables": 760,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 741,
+    "schemaDefaultedTables": 744,
     "byDataClass": {
       "ai_governance_and_runtime": 31,
       "audit_log": 17,
@@ -19,7 +19,7 @@
       "business_scope_context_non_authorizing": 2,
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
-      "ddl_catalog_reference": 127,
+      "ddl_catalog_reference": 128,
       "derived_projection": 24,
       "derived_runtime_projection": 13,
       "document_metadata": 159,
@@ -33,7 +33,7 @@
       "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 40,
+      "metadata_authority": 42,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
@@ -64,7 +64,7 @@
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 31,
       "migrate_published_artifacts_and_release_history": 13,
-      "migrate_published_authority_and_rebuild_projections": 40,
+      "migrate_published_authority_and_rebuild_projections": 42,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
@@ -75,7 +75,7 @@
       "rebuild_from_published_authority": 13,
       "recreate_empty_in_mesh_then_rebuild_from_executed_manifest": 1,
       "recreate_empty_then_rebuild_from_executed_manifest": 1,
-      "recreate_from_approved_seed": 127,
+      "recreate_from_approved_seed": 128,
       "retain_encrypted_backups_then_rebind_to_plane_specific_backup_policy": 1,
       "retain_or_archive_under_log_and_legal_hold_policy": 1,
       "retain_or_expire_under_observability_policy_without_business_replay": 1,
@@ -921,7 +921,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 662
+          "line": 674
         }
       ],
       "decisionSource": "schema_default",
@@ -939,7 +939,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 380
+          "line": 387
         }
       ],
       "decisionSource": "schema_default",
@@ -957,7 +957,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 454
+          "line": 462
         }
       ],
       "decisionSource": "schema_default",
@@ -975,7 +975,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 337
+          "line": 343
         }
       ],
       "decisionSource": "schema_default",
@@ -993,7 +993,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 708
+          "line": 720
         }
       ],
       "decisionSource": "schema_default",
@@ -1011,7 +1011,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 754
+          "line": 766
         }
       ],
       "decisionSource": "schema_default",
@@ -1029,7 +1029,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 269
+          "line": 273
         }
       ],
       "decisionSource": "schema_default",
@@ -1047,7 +1047,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 301
+          "line": 306
         }
       ],
       "decisionSource": "schema_default",
@@ -1065,7 +1065,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/13_management.sql",
-          "line": 33
+          "line": 20
         }
       ],
       "decisionSource": "schema_default",
@@ -1083,7 +1083,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 472
+          "line": 481
         }
       ],
       "decisionSource": "schema_default",
@@ -1155,7 +1155,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 212
+          "line": 215
         }
       ],
       "decisionSource": "schema_default",
@@ -1173,7 +1173,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 682
+          "line": 694
         }
       ],
       "decisionSource": "schema_default",
@@ -1191,7 +1191,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 693
+          "line": 705
         }
       ],
       "decisionSource": "schema_default",
@@ -1209,7 +1209,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 537
+          "line": 547
         }
       ],
       "decisionSource": "schema_default",
@@ -1227,7 +1227,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 146
+          "line": 147
         }
       ],
       "decisionSource": "schema_default",
@@ -1245,7 +1245,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 192
+          "line": 194
         }
       ],
       "decisionSource": "schema_default",
@@ -1281,7 +1281,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/authz/03_tables.sql",
-          "line": 603
+          "line": 614
         }
       ],
       "decisionSource": "schema_default",
@@ -1389,7 +1389,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 602
+          "line": 603
         }
       ],
       "decisionSource": "schema_default",
@@ -1605,7 +1605,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/14_admin_integrations.sql",
-          "line": 84
+          "line": 72
         }
       ],
       "decisionSource": "schema_default",
@@ -1659,7 +1659,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 994
+          "line": 999
         }
       ],
       "decisionSource": "schema_default",
@@ -1677,7 +1677,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1032
+          "line": 1037
         }
       ],
       "decisionSource": "schema_default",
@@ -1785,7 +1785,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 542
+          "line": 543
         }
       ],
       "decisionSource": "schema_default",
@@ -1803,7 +1803,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 513
+          "line": 514
         }
       ],
       "decisionSource": "schema_default",
@@ -1821,7 +1821,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 357
+          "line": 358
         }
       ],
       "decisionSource": "schema_default",
@@ -1839,7 +1839,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 395
+          "line": 396
         }
       ],
       "decisionSource": "schema_default",
@@ -1857,7 +1857,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 488
+          "line": 489
         }
       ],
       "decisionSource": "schema_default",
@@ -1875,7 +1875,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 429
+          "line": 430
         }
       ],
       "decisionSource": "schema_default",
@@ -1893,7 +1893,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 569
+          "line": 570
         }
       ],
       "decisionSource": "schema_default",
@@ -1911,7 +1911,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 317
+          "line": 318
         }
       ],
       "decisionSource": "schema_default",
@@ -2019,7 +2019,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 780
+          "line": 783
         }
       ],
       "decisionSource": "schema_default",
@@ -2037,7 +2037,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 824
+          "line": 827
         }
       ],
       "decisionSource": "schema_default",
@@ -2145,7 +2145,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 210
+          "line": 211
         }
       ],
       "decisionSource": "schema_default",
@@ -2181,7 +2181,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 949
+          "line": 952
         }
       ],
       "decisionSource": "schema_default",
@@ -2199,7 +2199,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/14_admin_integrations.sql",
-          "line": 22
+          "line": 12
         }
       ],
       "decisionSource": "schema_default",
@@ -2217,7 +2217,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/14_admin_integrations.sql",
-          "line": 20
+          "line": 10
         }
       ],
       "decisionSource": "schema_default",
@@ -2235,7 +2235,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/14_admin_integrations.sql",
-          "line": 21
+          "line": 11
         }
       ],
       "decisionSource": "schema_default",
@@ -2253,7 +2253,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 970
+          "line": 975
         }
       ],
       "decisionSource": "schema_default",
@@ -2271,7 +2271,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/14_admin_integrations.sql",
-          "line": 24
+          "line": 14
         }
       ],
       "decisionSource": "schema_default",
@@ -2469,7 +2469,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1049
+          "line": 1054
         }
       ],
       "decisionSource": "schema_default",
@@ -2487,7 +2487,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1109
+          "line": 1114
         }
       ],
       "decisionSource": "schema_default",
@@ -2505,7 +2505,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1080
+          "line": 1085
         }
       ],
       "decisionSource": "schema_default",
@@ -2523,7 +2523,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1152
+          "line": 1157
         }
       ],
       "decisionSource": "schema_default",
@@ -2611,7 +2611,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 853
+          "line": 856
         }
       ],
       "decisionSource": "schema_default",
@@ -2701,7 +2701,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1332
+          "line": 1337
         }
       ],
       "decisionSource": "schema_default",
@@ -2719,7 +2719,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1220
+          "line": 1225
         }
       ],
       "decisionSource": "schema_default",
@@ -2737,7 +2737,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1339
+          "line": 1344
         }
       ],
       "decisionSource": "schema_default",
@@ -2755,7 +2755,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1252
+          "line": 1257
         }
       ],
       "decisionSource": "schema_default",
@@ -2773,7 +2773,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1288
+          "line": 1293
         }
       ],
       "decisionSource": "schema_default",
@@ -2791,7 +2791,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1323
+          "line": 1328
         }
       ],
       "decisionSource": "schema_default",
@@ -2827,7 +2827,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1560
+          "line": 1567
         }
       ],
       "decisionSource": "schema_default",
@@ -2845,7 +2845,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1535
+          "line": 1542
         }
       ],
       "decisionSource": "schema_default",
@@ -2900,6 +2900,24 @@
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
           "line": 1257
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.publication_policy_replacement",
+      "schema": "control",
+      "table": "publication_policy_replacement",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/control/14_publication_policy_replacement.sql",
+          "line": 3
         }
       ],
       "decisionSource": "schema_default",
@@ -3007,7 +3025,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1406
+          "line": 1413
         }
       ],
       "decisionSource": "schema_default",
@@ -3025,7 +3043,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1358
+          "line": 1363
         }
       ],
       "decisionSource": "schema_default",
@@ -3105,7 +3123,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 703
+          "line": 706
         }
       ],
       "decisionSource": "schema_default",
@@ -3123,7 +3141,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1574
+          "line": 1581
         }
       ],
       "decisionSource": "schema_default",
@@ -3249,7 +3267,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1503
+          "line": 1510
         }
       ],
       "decisionSource": "schema_default",
@@ -3267,7 +3285,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 909
+          "line": 912
         }
       ],
       "decisionSource": "schema_default",
@@ -3285,7 +3303,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 734
+          "line": 737
         }
       ],
       "decisionSource": "schema_default",
@@ -3303,7 +3321,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1433
+          "line": 1440
         }
       ],
       "decisionSource": "schema_default",
@@ -3321,7 +3339,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 668
+          "line": 671
         }
       ],
       "decisionSource": "schema_default",
@@ -3339,7 +3357,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 265
+          "line": 266
         }
       ],
       "decisionSource": "schema_default",
@@ -3465,7 +3483,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 29
+          "line": 32
         }
       ],
       "decisionSource": "schema_default",
@@ -3483,7 +3501,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 457
+          "line": 470
         }
       ],
       "decisionSource": "schema_default",
@@ -3501,7 +3519,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 103
+          "line": 113
         }
       ],
       "decisionSource": "schema_default",
@@ -3519,7 +3537,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 409
+          "line": 422
         }
       ],
       "decisionSource": "schema_default",
@@ -3537,7 +3555,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 439
+          "line": 452
         }
       ],
       "decisionSource": "schema_default",
@@ -3555,7 +3573,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 156
+          "line": 166
         }
       ],
       "decisionSource": "schema_default",
@@ -3591,7 +3609,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 134
+          "line": 144
         }
       ],
       "decisionSource": "schema_default",
@@ -3843,7 +3861,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 185
+          "line": 197
         }
       ],
       "decisionSource": "schema_default",
@@ -3861,7 +3879,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 247
+          "line": 259
         }
       ],
       "decisionSource": "schema_default",
@@ -3879,7 +3897,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 289
+          "line": 302
         }
       ],
       "decisionSource": "schema_default",
@@ -3897,7 +3915,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 314
+          "line": 327
         }
       ],
       "decisionSource": "schema_default",
@@ -3915,7 +3933,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 327
+          "line": 340
         }
       ],
       "decisionSource": "schema_default",
@@ -3933,7 +3951,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 506
+          "line": 519
         }
       ],
       "decisionSource": "schema_default",
@@ -4023,7 +4041,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 344
+          "line": 357
         }
       ],
       "decisionSource": "schema_default",
@@ -4041,7 +4059,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_foundation_tables.sql",
-          "line": 383
+          "line": 396
         }
       ],
       "decisionSource": "schema_default",
@@ -10247,7 +10265,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1471
+          "line": 1478
         }
       ],
       "decisionSource": "schema_default",
@@ -10463,7 +10481,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1980
+          "line": 1981
         }
       ],
       "decisionSource": "schema_default",
@@ -10481,7 +10499,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1832
+          "line": 1833
         }
       ],
       "decisionSource": "schema_default",
@@ -10535,7 +10553,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 2010
+          "line": 2011
         }
       ],
       "decisionSource": "schema_default",
@@ -10931,7 +10949,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1937
+          "line": 1938
         }
       ],
       "decisionSource": "schema_default",
@@ -11039,7 +11057,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1694
+          "line": 1695
         }
       ],
       "decisionSource": "schema_default",
@@ -11093,7 +11111,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1506
+          "line": 1507
         }
       ],
       "decisionSource": "schema_default",
@@ -11129,7 +11147,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1480
+          "line": 1481
         }
       ],
       "decisionSource": "schema_default",
@@ -11147,7 +11165,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1593
+          "line": 1594
         }
       ],
       "decisionSource": "schema_default",
@@ -11428,6 +11446,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "metadata.entity_learning_ancestry",
+      "schema": "metadata",
+      "table": "entity_learning_ancestry",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/21_entity_learning_ancestry.sql",
+          "line": 38
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "metadata.entity_lifecycle_binding",
       "schema": "metadata",
       "table": "entity_lifecycle_binding",
@@ -11616,6 +11652,24 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
           "line": 1063
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_product_review_receipt",
+      "schema": "metadata",
+      "table": "entity_product_review_receipt",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/22_product_human_review.sql",
+          "line": 3
         }
       ],
       "decisionSource": "schema_default",
@@ -12173,7 +12227,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 523
+          "line": 513
         }
       ],
       "decisionSource": "schema_default",
@@ -12191,7 +12245,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 504
+          "line": 494
         }
       ],
       "decisionSource": "schema_default",
@@ -12209,7 +12263,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 540
+          "line": 530
         }
       ],
       "decisionSource": "schema_default",
@@ -12227,7 +12281,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 482
+          "line": 472
         }
       ],
       "decisionSource": "schema_default",
@@ -12335,7 +12389,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 443
+          "line": 438
         }
       ],
       "decisionSource": "schema_default",
@@ -12353,7 +12407,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 432
+          "line": 427
         }
       ],
       "decisionSource": "schema_default",
@@ -12389,7 +12443,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 466
+          "line": 456
         }
       ],
       "decisionSource": "schema_default",

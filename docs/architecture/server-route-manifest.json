@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1223,
+    "identities": 1224,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 355,
+    "currentOnly": 356,
     "legacyOccurrences": 898,
-    "currentOccurrences": 421
+    "currentOccurrences": 422
   },
   "routes": [
     {
@@ -1071,7 +1071,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 270,
+          "line": 272,
           "declaredPath": "/api/record-bookmarks/:entityCode",
           "kind": "contract"
         }
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3811,
+          "line": 3814,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3201,
+          "line": 3204,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -8072,7 +8072,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 199,
+          "line": 201,
           "declaredPath": "/api/record-bookmarks",
           "kind": "contract"
         }
@@ -8087,7 +8087,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 229,
+          "line": 231,
           "declaredPath": "/api/record-bookmarks/:entityCode/membership",
           "kind": "contract"
         }
@@ -17640,8 +17640,23 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/shared/publication/workload-routes.ts",
-          "line": 27,
+          "line": 29,
           "declaredPath": "/api/studio/publication-policies/:id/execute",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/publication-policies/:param/replace",
+      "method": "POST",
+      "path": "/api/studio/publication-policies/:param/replace",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts",
+          "line": 12,
+          "declaredPath": "/api/studio/publication-policies/:id/replace",
           "kind": "contract"
         }
       ],
@@ -18817,7 +18832,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 257,
+          "line": 259,
           "declaredPath": "/api/record-bookmarks/:entityCode",
           "kind": "contract"
         }

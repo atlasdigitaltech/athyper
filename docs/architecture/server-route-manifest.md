@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 355 |
+| Current-only identities | 356 |
 | Legacy occurrences | 898 |
-| Current occurrences | 421 |
+| Current occurrences | 422 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -1148,6 +1148,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/studio/publication-policies` | 0 | 1 |
 | current-only | POST | `/api/studio/publication-policies/:param/activate` | 0 | 1 |
 | current-only | POST | `/api/studio/publication-policies/:param/execute` | 0 | 1 |
+| current-only | POST | `/api/studio/publication-policies/:param/replace` | 0 | 1 |
 | current-only | POST | `/api/v1/records/:param/exports` | 0 | 1 |
 | current-only | POST | `/api/v1/records/:param/imports` | 0 | 1 |
 | current-only | POST | `/api/v1/records/exports/:param/cancel` | 0 | 1 |
