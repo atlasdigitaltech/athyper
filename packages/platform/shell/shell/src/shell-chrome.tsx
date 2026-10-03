@@ -49,7 +49,6 @@ export function GlobalSidebar(props: {
   readonly controls: React.ReactNode;
   readonly navigation: React.ReactNode;
   readonly peek?: React.ReactNode;
-  readonly quickAccess: React.ReactNode;
   readonly profile: React.ReactNode;
 }) {
   const panel = useRef<HTMLElement>(null);
@@ -80,7 +79,6 @@ export function GlobalSidebar(props: {
       {props.controls}
       {props.navigation}
       {props.peek}
-      {props.quickAccess}
       {props.profile}
     </aside>
   );

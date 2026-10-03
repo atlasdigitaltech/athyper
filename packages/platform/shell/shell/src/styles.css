@@ -118,17 +118,9 @@
 
 /* Favourites and recent work */
 .athyper-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
-.athyper-shell__quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:.38rem;flex:0 0 auto;margin:0 .75rem;padding:.65rem 0;border-top:var(--a-border-width) solid var(--a-story-border)}
-.athyper-shell__quick-actions button{min-width:0;min-height:var(--shell-rail-row);display:flex;align-items:center;justify-content:center;gap:.48rem;padding:.48rem .55rem;border:var(--a-border-width) solid var(--a-story-border);border-radius:var(--a-radius-md);background:var(--a-story-surface);color:var(--a-story-muted);font:650 .68rem var(--a-font-sans);cursor:pointer;transition:background var(--a-motion-fast),border-color var(--a-motion-fast),color var(--a-motion-fast),transform var(--a-motion-fast)}
-.athyper-shell__quick-actions button:hover{transform:translateY(-1px);border-color:var(--a-story-selection-border);background:var(--a-story-surface-hover);color:var(--a-story-foreground)}
-.athyper-shell__quick-actions button[aria-expanded=true]{border-color:var(--a-story-selection-border);background:var(--a-story-surface-active);color:var(--a-story-foreground);box-shadow:var(--a-shadow-raised)}
-.athyper-shell__quick-actions svg{width:1rem;height:1rem;flex:0 0 auto;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}
-.athyper-shell__quick-actions button:first-child[aria-expanded=true] svg{fill:currentColor}
-.athyper-shell[data-collapsed=true] .athyper-shell__quick-actions{grid-template-columns:1fr;margin-inline:.62rem;padding-block:.55rem}
-.athyper-shell[data-collapsed=true] .athyper-shell__quick-actions button{min-height:var(--shell-field);padding:.4rem}
-.athyper-shell[data-collapsed=true] .athyper-shell__quick-actions button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 
-.athyper-quick-access{--quick-panel-width:clamp(22rem,24vw,26rem);position:fixed;z-index:calc(var(--a-z-drawer) - 1);inset:var(--shell-topbar) auto 0 var(--shell-rail);width:var(--quick-panel-width);display:flex;flex-direction:column;overflow:hidden;border-right:var(--a-border-width) solid var(--a-border);background:var(--a-panel-background);color:var(--a-foreground);box-shadow:var(--a-shadow-overlay);animation:athyper-quick-access-in .2s var(--a-easing) both}
+/* Geometry, resize, modality and focus come from the shared .a-tool-panel frame (right edge). */
+.athyper-quick-access{background:var(--a-panel-background);color:var(--a-foreground)}
 .athyper-quick-access button,.athyper-quick-access input{font-family:var(--a-font-sans)}
 .athyper-quick-access svg{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.75}
 .athyper-quick-access svg[data-filled=true]{fill:currentColor}
@@ -138,7 +130,7 @@
 .athyper-quick-access__summary button:hover{color:var(--a-primary);text-decoration:underline}
 .athyper-quick-access__clear-confirm{display:flex;align-items:center;gap:.18rem}
 .athyper-quick-access__clear-confirm button:last-child{padding:.24rem .42rem;border-radius:var(--a-radius-sm);background:color-mix(in srgb,var(--a-danger) 10%,transparent);color:var(--a-danger)}
-.athyper-quick-access__content{flex:1;overflow:auto;padding:.55rem .75rem 1rem;scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
+.athyper-quick-access__content{flex:1;min-block-size:0;overflow:auto;padding:.55rem .75rem 1rem;scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
 .athyper-quick-access__group+ .athyper-quick-access__group{margin-top:.65rem}
 .athyper-quick-access__group>header{height:2rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:0 .35rem;color:var(--a-muted-foreground)}
 .athyper-quick-access__group>header strong{overflow:hidden;font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);letter-spacing:var(--a-tracking-wider);text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
@@ -167,14 +159,11 @@
 .athyper-quick-access__undo{position:absolute;z-index:2;right:.75rem;bottom:.85rem;left:.75rem;min-height:2.75rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.58rem .7rem;border:var(--a-border-width) solid color-mix(in srgb,var(--a-success) 25%,var(--a-border));border-radius:var(--a-radius-md);background:var(--a-foreground);color:var(--a-background);box-shadow:var(--a-shadow-overlay);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);animation:athyper-quick-access-undo-in .18s var(--a-easing) both}
 .athyper-quick-access__undo button{padding:.3rem .48rem;border:0;border-radius:var(--a-radius-sm);background:color-mix(in srgb,var(--a-background) 14%,transparent);color:inherit;font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);cursor:pointer}
 .athyper-quick-access__undo button:hover{background:color-mix(in srgb,var(--a-background) 22%,transparent)}
-@media (width >= 80rem){.athyper-shell[data-quick-access-open=true] .athyper-shell__body{margin-left:calc(var(--shell-rail) + clamp(22rem,24vw,26rem))}}
-@media (48rem <= width < 80rem){.athyper-quick-access{box-shadow:var(--a-shadow-overlay)}}
-@media (width < 48rem){.athyper-shell__quick-actions,.athyper-shell[data-collapsed=true] .athyper-shell__quick-actions{grid-template-columns:1fr 1fr;margin-inline:.75rem}.athyper-shell[data-collapsed=true] .athyper-shell__quick-actions button span{position:static;width:auto;height:auto;overflow:visible;clip:auto}.athyper-quick-access{z-index:calc(var(--a-z-drawer) + 1);inset:0;width:auto;box-shadow:none}.athyper-quick-access__header{min-height:4.3rem;padding-top:calc(.7rem + env(safe-area-inset-top))}.athyper-quick-access__content{padding-bottom:calc(1rem + env(safe-area-inset-bottom))}}
-@media (width < 40rem){.athyper-quick-access__item{grid-template-columns:1.9rem minmax(0,1fr) auto}.athyper-quick-access__item>svg{display:none}.athyper-quick-access__item-actions{opacity:1}.athyper-quick-access__header small{display:none}}
-@keyframes athyper-quick-access-in{from{opacity:0;transform:translateX(-.7rem)}to{opacity:1;transform:none}}
+@media (width < 48rem){.athyper-quick-access__content{padding-bottom:calc(1rem + env(safe-area-inset-bottom))}}
+@media (width < 40rem){.athyper-quick-access__item{grid-template-columns:1.9rem minmax(0,1fr) auto}.athyper-quick-access__item>svg{display:none}.athyper-quick-access__item-actions{opacity:1}.athyper-quick-access .a-panel-header small{display:none}}
 @keyframes athyper-quick-access-undo-in{from{opacity:0;transform:translateY(.45rem)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.athyper-shell__quick-actions button,.athyper-quick-access,.athyper-quick-access__close,.athyper-quick-access__item,.athyper-quick-access__item>svg,.athyper-quick-access__undo{animation:none!important;transition:none!important}.athyper-shell__quick-actions button:hover,.athyper-quick-access__item:hover{transform:none}}
-@media(forced-colors:active){.athyper-shell__quick-actions button,.athyper-quick-access,.athyper-quick-access__tabs button[aria-selected=true],.athyper-quick-access__item{border:1px solid CanvasText}.athyper-quick-access__tabs button[aria-selected=true]{background:Highlight;color:HighlightText}}
+@media(prefers-reduced-motion:reduce){.athyper-quick-access__item,.athyper-quick-access__item>svg,.athyper-quick-access__undo{animation:none!important;transition:none!important}.athyper-quick-access__item:hover{transform:none}}
+@media(forced-colors:active){.athyper-quick-access__item{border:1px solid CanvasText}}
 
 /* Shared page foundation: one identity model with level-appropriate density. */
 .athyper-page-frame{--athyper-page-max:88rem;width:min(100%,var(--athyper-page-max));display:grid;gap:var(--a-space-5);margin-inline:auto;min-width:0}
@@ -251,7 +240,6 @@
 [dir=rtl] .athyper-context-identity__disclosure{margin-left:0;margin-right:auto}
 [dir=rtl] .athyper-shell__navigation-peek,[dir=rtl] .athyper-shell__profile-panel{left:auto;right:calc(var(--shell-rail) + .65rem)}
 [dir=rtl] .athyper-shell__context-menu li button,[dir=rtl] .athyper-shell__identity-details dd{text-align:right}
-[dir=rtl] .athyper-quick-access{left:auto;right:var(--shell-rail);border-right:0;border-left:var(--a-border-width) solid var(--a-border)}
 [dir=rtl] .athyper-shell__breadcrumbs li+li:before{margin-right:0;margin-left:var(--a-space-2)}
 /* Phones: the trail becomes one back link to the parent ("‹ Countries"); the page
    title already names the current page. A single crumb (a workspace, Notifications)
@@ -264,7 +252,6 @@
 [dir=rtl] .athyper-shell__breadcrumbs li:nth-last-child(2)>a:before{content:"\203A"}
 }
 .athyper-shell__language{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding:.8rem 1rem;border-top:var(--a-border-width) solid var(--a-border);border-bottom:var(--a-border-width) solid var(--a-border)}.athyper-shell__language>span{min-width:0;display:grid;gap:.15rem}.athyper-shell__language strong{font-size:var(--a-font-size-xs)}.athyper-shell__language small{color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs)}.athyper-shell__language .a-choice-select__trigger{min-height:var(--shell-control);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium)}
-@media (width >= 80rem){[dir=rtl] .athyper-shell[data-quick-access-open=true] .athyper-shell__body{margin-left:0;margin-right:calc(var(--shell-rail) + clamp(22rem,24vw,26rem))}}
 @media (width < 48rem){[dir=rtl] .athyper-shell__rail{transform:translateX(105%)}[dir=rtl] .athyper-shell[data-drawer-open=true] .athyper-shell__rail{transform:none}[dir=rtl] .athyper-shell__close--rail{right:auto;left:var(--a-space-2)}[dir=rtl] .athyper-shell__body{margin-right:0}[dir=rtl] .athyper-shell__mobile-brand{margin-right:0;margin-left:var(--a-space-1)}[dir=rtl] .athyper-shell__actions{margin-right:0}[dir=rtl] .athyper-shell__profile-panel{inset:auto 1rem 1rem}[dir=rtl] .athyper-quick-access{inset:0}}
 
 @media(prefers-reduced-motion:reduce){.athyper-activity-center,.athyper-activity-center__scrim,.athyper-activity-center__close,.athyper-activity-center__item,.athyper-activity-center__item>a>svg,.athyper-activity-center__item>div>svg{animation:none!important;transition:none!important}.athyper-activity-center__loading i{animation:none}}
@@ -399,11 +386,9 @@
   .athyper-shell[data-desktop-brand=true] .athyper-shell__rail-brand,.athyper-shell[data-desktop-brand=true] .athyper-shell__rail-toggle{display:none}
   .athyper-shell[data-desktop-brand=true][data-collapsed=true] .athyper-shell__navigation{padding:.5rem .375rem}
   .athyper-shell[data-desktop-brand=true][data-collapsed=true] .athyper-shell__navigation a{padding:.58rem 0}
-  .athyper-shell[data-desktop-brand=true][data-collapsed=true] .athyper-shell__quick-actions{margin-inline:.375rem}
   .athyper-shell[data-desktop-brand=true][data-collapsed=true] .athyper-shell__profile{margin-inline:.375rem}
   .athyper-shell[data-desktop-brand=true][data-collapsed=true] .athyper-shell__profile>summary{padding:.2rem}
 }
-.athyper-shell__quick-actions button{font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium)}
 .athyper-shell__avatar{font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-strong)}
 .athyper-shell__profile-summary strong{font-size:var(--shell-nav-font-current);font-weight:var(--a-font-weight-strong)}
 .athyper-shell__profile>summary{padding-block:var(--shell-account-padding,.52rem)}
@@ -833,7 +818,7 @@
 .athyper-shell__overflow-panel>button:focus-visible{outline:2px solid var(--a-focus);outline-offset:-2px}
 @media (width < 48rem){
   .athyper-shell__actions>button[data-slot=search],.athyper-shell__actions>button[data-slot=inbox],.athyper-shell__actions>button[data-slot=more]{display:inline-flex}
-  .athyper-shell__actions>button[data-slot=notifications],.athyper-shell__actions>button[data-slot=agent],.athyper-shell__actions>button[data-slot=utilities]{display:none}
+  .athyper-shell__actions>button[data-slot=quick-access],.athyper-shell__actions>button[data-slot=notifications],.athyper-shell__actions>button[data-slot=agent],.athyper-shell__actions>button[data-slot=utilities]{display:none}
 }
 .athyper-shell__surface-error{position:fixed;z-index:var(--a-z-drawer);inset-block-start:var(--shell-topbar,3.5rem);inset-inline-end:var(--a-space-2);max-width:calc(100vw - 1rem);padding:var(--a-space-4);border:var(--a-border-width) solid var(--a-border);background:var(--a-surface);box-shadow:var(--a-shadow-overlay)}
 

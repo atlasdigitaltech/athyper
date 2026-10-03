@@ -1,12 +1,14 @@
 "use client";
 
-import { FilterChipGroup, SearchField, PanelHeader, PanelTabs, PanelEmptyState, Button, Tooltip, useModalIsolation } from "@athyper/platform-ui";
+import { FilterChipGroup, SearchField, PanelHeader, PanelTabs, PanelEmptyState, Button, type PanelHeaderCapabilities } from "@athyper/platform-ui";
 import { parseInstant } from "@athyper/platform-temporal";
 import * as React from "react";
 import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { canAccessRoute, type DerivedShellNavigation } from "./core";
 import type { RecordBreadcrumbBinding } from "./route-state";
+import { useShellI18n } from "./shell-i18n";
+import { WorkspaceToolPanel } from "./workspace-tool-panel";
 
 export type ShellQuickAccessTab = "favourites" | "recent";
 export type ShellQuickAccessKind = "record" | "page";
@@ -35,7 +37,6 @@ interface QuickAccessStore {
 }
 
 interface ShellQuickAccessProps {
-  readonly modal?: boolean;
   readonly plane?: string;
   readonly activeTab: ShellQuickAccessTab;
   readonly tenantId: string;
@@ -50,7 +51,24 @@ interface ShellQuickAccessProps {
 const EMPTY_STORE: QuickAccessStore = Object.freeze({ favourites: Object.freeze([]), recent: Object.freeze([]) });
 const MAX_RECENT_ITEMS = 50;
 
-export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, tenantId, accountScope, path, navigation, dataSource, onTabChange, onClose }: ShellQuickAccessProps) {
+/** Favourites and Recent in the shared right-edge tool panel, like Notifications, Inbox and Atlas.
+ * It is a launcher, so it never pins beside the page: choosing an item navigates and closes it. */
+export function ShellQuickAccess(props: ShellQuickAccessProps) {
+  const t = useShellI18n().message;
+  return <WorkspaceToolPanel
+    id="quick-access"
+    open
+    onOpenChange={(open) => { if (!open) props.onClose(); }}
+    canPin={false}
+    labels={{ region: t("shell.quick.label"), close: t("shell.quick.close"), pin: t("panel.pin"), unpin: t("panel.unpin"), resize: t("shell.quick.resize") }}
+    className="athyper-quick-access"
+    panelProps={{ id: "athyper-quick-access", "aria-labelledby": "athyper-quick-access-title" }}
+  >
+    {(frame) => <QuickAccessContent {...props} visible={frame.visible} capabilities={frame.capabilities} />}
+  </WorkspaceToolPanel>;
+}
+
+function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScope, path, navigation, dataSource, onTabChange, visible, capabilities }: ShellQuickAccessProps & { readonly visible: boolean; readonly capabilities: PanelHeaderCapabilities }) {
   const storageKey = useMemo(() => quickAccessStorageKey(plane, tenantId, accountScope), [plane, tenantId, accountScope]);
   const [localStore, setLocalStore] = useState<QuickAccessStore>(EMPTY_STORE);
   const [query, setQuery] = useState("");
@@ -58,8 +76,6 @@ export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, t
   const [confirmClear, setConfirmClear] = useState(false);
   const [undoRecent, setUndoRecent] = useState<readonly ShellQuickAccessItem[]>();
   const search = useRef<HTMLInputElement>(null);
-  const panel = useRef<HTMLElement>(null);
-  useModalIsolation(panel, modal, { initialFocus: () => search.current, restoreFocus: false });
   const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const durableRecords = useDurableRecordFavourites(navigation, dataSource?.favourites !== undefined);
 
@@ -68,17 +84,10 @@ export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, t
     setLocalStore(stored);
   }, [storageKey, path, navigation, dataSource]);
 
+  // The frame owns Escape, modality and focus return; the search is where work starts.
   useEffect(() => {
-    requestAnimationFrame(() => search.current?.focus());
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+    if (visible) requestAnimationFrame(() => search.current?.focus());
+  }, [visible]);
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
@@ -155,8 +164,8 @@ export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, t
   const visibleNoun = activeTab === "favourites" ? "favourite" : recentKind;
   const showClearRecent = activeTab === "recent" && recent.length > 0 && canClearRecent && (!normalizedQuery || visibleCount > 0);
   const summary = `${visibleCount} of ${activeTab === "favourites" ? favourites.length : recentCounts[recentKind]} ${visibleNoun}s`;
-  return <aside ref={panel} id="athyper-quick-access" className="athyper-quick-access" role="dialog" aria-modal={modal} aria-labelledby="athyper-quick-access-title">
-    <PanelHeader icon={activeTab === "favourites" ? <StarIcon/> : <HistoryIcon/>} title="Quick access" titleId="athyper-quick-access-title" subtitle="Your saved and recently opened work" actions={<Tooltip portal side="bottom" label="Close Quick access"><button type="button" aria-label="Close quick access" onClick={onClose}><CloseIcon size={18}/></button></Tooltip>}/>
+  return <>
+    <PanelHeader icon={<StarIcon/>} title="Quick access" titleId="athyper-quick-access-title" subtitle="Your saved and recently opened work" capabilities={capabilities}/>
     <PanelTabs label="Quick access views" value={activeTab} onValueChange={key=>onTabChange(key as ShellQuickAccessTab)} items={[{key:"favourites",label:"Favourites",count:favourites.length,id:"quick-access-tab-favourites",panelId:"quick-access-favourites"},{key:"recent",label:"Recent",count:recent.length,id:"quick-access-tab-recent",panelId:"quick-access-recent"}]}/>
 
     <SearchField className="athyper-quick-access__search" ref={search} label="Filter quick access items" value={query} onValueChange={setQuery} clearLabel="Clear filter" placeholder={activeTab === "favourites" ? "Search favourites" : "Search recent work"} maxLength={80} autoComplete="off"/>
@@ -178,7 +187,7 @@ export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, t
       {activeTab === "recent" ? recentGroups.map((group) => <QuickAccessGroup key={group.label} label={group.label} items={group.items} favouriteHrefs={favouriteHrefs} onToggleFavourite={canToggleFavourite ? toggleFavourite : undefined} onDismiss={canDismissRecent ? dismissRecent : undefined} showTime />) : null}
     </div>
     {undoRecent?.length ? <div className="athyper-quick-access__undo" role="status"><span>Recent history cleared</span><button type="button" onClick={restoreRecent}>Undo</button></div> : null}
-  </aside>;
+  </>;
 }
 
 interface DurableBookmarkRow { readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }

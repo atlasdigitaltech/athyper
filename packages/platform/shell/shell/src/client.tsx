@@ -19,11 +19,8 @@ import {
 import { readShellPreference, writeShellPreference } from "./shell-preferences";
 import { useShellSurfaces } from "./use-shell-surfaces";
 import { HeaderActions } from "./shell-header-actions";
-import {
-  NavigationPanel,
-  QuickAccessRailActions,
-  type ShellNavigationPeek,
-} from "./shell-navigation";
+import { NavigationPanel, type ShellNavigationPeek } from "./shell-navigation";
+import { readBrowserStorage, writeBrowserStorage } from "@athyper/platform-ui";
 import { useShellI18n } from "./shell-i18n";
 import type { HeaderActionKind } from "./shell-surfaces";
 
@@ -63,6 +60,10 @@ import {
 } from "./quick-access";
 import { AtlasSurfaceContext } from "./atlas-surface";
 import { ShellOverlayHost } from "./shell-overlay-host";
+
+const QUICK_ACCESS_TAB_PREFERENCE = "athyper.shell.quick-access.tab";
+/** Panels opened from the app bar whose open state is the shell surface itself. */
+const SHELL_SURFACE_PANELS: ReadonlySet<string> = new Set(["activity-center", "quick-access"]);
 
 export interface ShellContextOption {
   readonly tenantId: string;
@@ -220,7 +221,6 @@ export function ShellChrome({
       if (atlasOpener.current?.isConnected) atlasOpener.current.focus();
     });
   }, [setAtlasOpen]);
-  const quickAccessOpener = useRef<HTMLButtonElement>(null);
   const previousScope = useRef({ path, tenantId });
   useEffect(() => {
     const previous = previousScope.current;
@@ -287,27 +287,27 @@ export function ShellChrome({
     setDrawerOpen(false);
     requestAnimationFrame(() => menuButton.current?.focus());
   };
-  const closeQuickAccess = useCallback(() => {
-    setQuickAccessTab(undefined);
-    requestAnimationFrame(() =>
-      (window.matchMedia(viewportQuery({ below: "medium" })).matches
-        ? menuButton.current
-        : quickAccessOpener.current
-      )?.focus(),
-    );
+  // The shared tool panel returns focus to the app bar button that opened it.
+  const closeQuickAccess = useCallback(() => setQuickAccessTab(undefined), []);
+  const changeQuickAccessTab = useCallback((tab: ShellQuickAccessTab) => {
+    writeBrowserStorage(QUICK_ACCESS_TAB_PREFERENCE, tab);
+    setQuickAccessTab(tab);
   }, []);
   const changeHeaderAction = useCallback((next?: HeaderActionKind) => {
     setHeaderAction(next);
   }, []);
-  const openQuickAccess = (
-    tab: ShellQuickAccessTab,
-    opener: HTMLButtonElement,
-  ) => {
-    quickAccessOpener.current = opener;
+  const toggleQuickAccess = () => {
     setNavigationPeek(undefined);
     setDrawerOpen(false);
     setHeaderAction(undefined);
-    setQuickAccessTab((current) => (current === tab ? undefined : tab));
+    // Reopens on the section last used; Recent is useful before anything is starred.
+    setQuickAccessTab((current) =>
+      current
+        ? undefined
+        : readBrowserStorage(QUICK_ACCESS_TAB_PREFERENCE) === "favourites"
+          ? "favourites"
+          : "recent",
+    );
   };
   const openNavigation = () => {
     setQuickAccessTab(undefined);
@@ -354,7 +354,8 @@ export function ShellChrome({
         setSidePanel(panel);
         return;
       }
-      if (panel.id !== "activity-center") dismissTransient();
+      // Shell-owned panels are the transient surface; claiming must not close them.
+      if (!SHELL_SURFACE_PANELS.has(panel.id)) dismissTransient();
       setAtlasOpen(false);
       setSidePanel(panel);
     },
@@ -479,6 +480,8 @@ export function ShellChrome({
                   navigation={navigation}
                   activity={activity}
                   active={headerAction}
+                  quickAccessOpen={Boolean(quickAccessTab)}
+                  onQuickAccessToggle={toggleQuickAccess}
                   atlasOpen={atlasVisible}
                   onAtlasToggle={(opener) => {
                     atlasOpener.current = opener;
@@ -577,13 +580,6 @@ export function ShellChrome({
                   </div>
                 ) : null
               }
-              quickAccess={
-                <QuickAccessRailActions
-                  activeTab={quickAccessTab}
-                  onOpen={openQuickAccess}
-                  onPeek={setNavigationPeek}
-                />
-              }
               profile={
                 <SidebarProfile
                   accountLabel={accountLabel}
@@ -607,14 +603,13 @@ export function ShellChrome({
                 quickAccessTab
                   ? {
                       activeTab: quickAccessTab,
-                      modal: compact,
                       tenantId,
                       accountScope: quickAccessScope,
                       plane: applicationName,
                       path,
                       navigation,
                       dataSource: quickAccess,
-                      onTabChange: setQuickAccessTab,
+                      onTabChange: changeQuickAccessTab,
                       onClose: closeQuickAccess,
                     }
                   : undefined

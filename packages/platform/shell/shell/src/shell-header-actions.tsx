@@ -8,6 +8,7 @@ import {
   InboxIcon,
   SearchIcon,
   SettingsIcon,
+  StarIcon,
   AtlasBrandIcon,
   CircleCheckIcon,
   resolveIcon,
@@ -28,6 +29,8 @@ export function HeaderActions({
   navigation,
   activity,
   active,
+  quickAccessOpen,
+  onQuickAccessToggle,
   atlasOpen,
   onAtlasToggle,
   onActiveChange,
@@ -40,6 +43,9 @@ export function HeaderActions({
   readonly navigation: DerivedShellNavigation;
   readonly activity?: ShellActivityDataSource;
   readonly active?: HeaderActionKind;
+  /** Favourites and Recent open in the shared right-edge panel, beside Search. */
+  readonly quickAccessOpen: boolean;
+  readonly onQuickAccessToggle: () => void;
   readonly atlasOpen: boolean;
   readonly onAtlasToggle: (opener: HTMLButtonElement) => void;
   readonly onActiveChange: (next?: HeaderActionKind) => void;
@@ -139,6 +145,13 @@ export function HeaderActions({
         onClick={(opener) => toggle("search", opener)}
       />
       <HeaderActionButton
+        kind="quick-access"
+        label={t("shell.quick.label")}
+        active={quickAccessOpen}
+        controls="athyper-quick-access"
+        onClick={onQuickAccessToggle}
+      />
+      <HeaderActionButton
         kind="notifications"
         label={t("shell.actions.notifications")}
         active={active === "notifications"}
@@ -197,6 +210,17 @@ export function HeaderActions({
             label={t("shell.actions.search")}
             active={false}
             onClick={(opener) => toggle("search", opener)}
+          />
+          <HeaderActionButton
+            kind="quick-access"
+            label={t("shell.quick.label")}
+            active={quickAccessOpen}
+            controls="athyper-quick-access"
+            onClick={() => {
+              // The overflow closes; focus returns to More when the panel closes.
+              overflowButton.current?.focus();
+              onQuickAccessToggle();
+            }}
           />
           <HeaderActionButton
             kind="inbox"
@@ -343,7 +367,7 @@ function HeaderActionButton({
   controls,
   onClick,
 }: {
-  readonly kind: HeaderActionKind;
+  readonly kind: HeaderActionKind | "quick-access";
   readonly label: string;
   readonly active: boolean;
   readonly count?: number;
@@ -383,8 +407,9 @@ function HeaderActionButton({
     </button>
   );
 }
-function HeaderGlyph({ kind }: { readonly kind: HeaderActionKind }) {
+function HeaderGlyph({ kind }: { readonly kind: HeaderActionKind | "quick-access" }) {
   if (kind === "search") return <SearchIcon />;
+  if (kind === "quick-access") return <StarIcon />;
   if (kind === "notifications") return <BellIcon />;
   if (kind === "inbox") return <InboxIcon />;
   if (kind === "utilities") return <SettingsIcon />;

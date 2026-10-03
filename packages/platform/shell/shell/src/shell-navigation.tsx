@@ -2,12 +2,9 @@
 import * as React from "react";
 import {
   HomeIcon,
-  StarIcon,
-  HistoryIcon,
   resolveMetadataIcon,
 } from "@athyper/platform-icons";
 import type { DerivedShellNavigation } from "./core";
-import type { ShellQuickAccessTab } from "./quick-access";
 import { useShellI18n } from "./shell-i18n";
 
 export interface ShellNavigationPeek {
@@ -91,62 +88,4 @@ export function NavigationPanel({
       </ul>
     </nav>
   );
-}
-export function QuickAccessRailActions({
-  activeTab,
-  onOpen,
-  onPeek,
-}: {
-  readonly activeTab?: ShellQuickAccessTab;
-  readonly onOpen: (
-    tab: ShellQuickAccessTab,
-    opener: HTMLButtonElement,
-  ) => void;
-  readonly onPeek: (peek?: ShellNavigationPeek) => void;
-}) {
-  const t = useShellI18n().message;
-  const showPeek = (label: string, element: HTMLButtonElement) => {
-    const bounds = element.getBoundingClientRect();
-    onPeek({
-      label,
-      workspace: t("shell.quick.label"),
-      top: bounds.top + bounds.height / 2,
-    });
-  };
-  const action = (
-    kind: ShellQuickAccessTab,
-    label: string,
-    ariaLabel: string,
-  ) => (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      aria-expanded={activeTab === kind}
-      aria-controls="athyper-quick-access"
-      onPointerEnter={(event) => showPeek(label, event.currentTarget)}
-      onPointerLeave={() => onPeek()}
-      onFocus={(event) => showPeek(label, event.currentTarget)}
-      onBlur={() => onPeek()}
-      onClick={(event) => onOpen(kind, event.currentTarget)}
-    >
-      <QuickAccessGlyph kind={kind} />
-      <span>{label}</span>
-    </button>
-  );
-  return (
-    <nav
-      className="athyper-shell__quick-actions"
-      aria-label={t("shell.quick.label")}
-    >
-      {action(
-        "favourites",
-        t("shell.quick.favourites"),
-        t("shell.quick.openFavourites"),
-      )}
-      {action("recent", t("shell.quick.recent"), t("shell.quick.openRecent"))}
-    </nav>
-  );
-}
-function QuickAccessGlyph({ kind }: { readonly kind: ShellQuickAccessTab }) {
-  return kind === "favourites" ? <StarIcon /> : <HistoryIcon />;
 }
