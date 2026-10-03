@@ -726,7 +726,6 @@ export function createEntityListService(options: {
         collectionScope,
         dataOperations,
       );
-      const identity = storageIdentityProjection(descriptor, readable);
       const displayValues = await references.labelsMany(query.context, descriptor, result.data);
       const rows = result.data.map((source, index) => {
         const rawId = source[descriptor.storage.idField];
@@ -741,7 +740,6 @@ export function createEntityListService(options: {
           const value = jsonValue(source[field.key]);
           if (value !== undefined) values[field.key] = value;
         }
-        if (!identity.published) values[identity.key] = String(rawId);
         const version = recordVersion(descriptor.storage.versionField
           ? source[descriptor.storage.versionField] : undefined);
         return Object.freeze({
@@ -936,22 +934,33 @@ export function compileEntityListDescriptor(
   navigation: readonly EffectiveEntitySectionV1[] = [],
 ): EntityListDescriptorV1 {
   readableFields = queryableListFields(descriptor, readableFields);
-  // The executor searches the published search profile as a whole. Do not
-  // advertise a partial profile that would still query a forbidden member.
-  const searchAdmitted = descriptor.fields.filter(field => field.searchable).every(field => readableFields.some(visible => visible.key === field.key && visible.searchable));
   if (!readableFields.length)
     throw new RecordServiceError(
       403,
       "ENTITY_LIST_FIELDS_FORBIDDEN",
       "No fields are readable for this entity list",
     );
-  const storageIdentity = storageIdentityProjection(descriptor, readableFields);
+  // Storage identity is used for routes and selection, never presentation.
+  // UUID references remain internal; readable labels belong in published fields.
+  readableFields = readableFields.filter(
+    field => field.type !== "uuid" && field.storagePath !== descriptor.storage.idField,
+  );
+  if (!readableFields.length)
+    throw new RecordServiceError(
+      503,
+      "ENTITY_LIST_PRESENTATION_REQUIRED",
+      "Publish a readable business field for this entity list",
+    );
+  // The executor searches the published search profile as a whole. Do not
+  // advertise a partial profile that would still query a forbidden member.
+  const searchAdmitted = descriptor.fields.filter(field => field.searchable).every(field => readableFields.some(visible => visible.key === field.key && visible.searchable));
   const configuredIdentity = descriptor.listPresentation?.identityField;
   const identityKey =
     configuredIdentity &&
     readableFields.some((field) => field.key === configuredIdentity)
       ? configuredIdentity
-      : storageIdentity.key;
+      : readableFields.find(field => field.key === descriptor.recordPresentation?.titleField)?.key
+        ?? readableFields[0]!.key;
   const configuredColumnList =
     descriptor.listPresentation?.defaultState?.columns ??
     descriptor.listPresentation?.defaultColumns ??
@@ -1010,20 +1019,6 @@ export function compileEntityListDescriptor(
       aggregations: Object.freeze(field.list?.aggregations ?? []),
     });
   });
-  if (!storageIdentity.published && identityKey === storageIdentity.key)
-    fields.unshift(
-      Object.freeze({
-        key: storageIdentity.key,
-        label: "Record ID",
-        valueKind: "string",
-        defaultVisible: true,
-        defaultOrder: 0,
-        filterOperators: Object.freeze([]),
-        sortable: false,
-        groupable: false,
-        aggregations: Object.freeze([]),
-      }),
-    );
   const ordered = Object.freeze(
     [...fields]
       .sort(
@@ -1441,18 +1436,6 @@ function filterOptions(
       : [];
   });
   return Object.freeze(options);
-}
-
-function storageIdentityProjection(
-  descriptor: EntityRuntimeDescriptor,
-  fields: readonly EntityFieldDescriptor[],
-): { readonly key: string; readonly published: boolean } {
-  const field = fields.find(
-    (candidate) => candidate.storagePath === descriptor.storage.idField,
-  );
-  return field
-    ? { key: field.key, published: true }
-    : { key: "record_id", published: false };
 }
 
 function normalizeModes(

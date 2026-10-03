@@ -25,13 +25,13 @@ describe("safe entity list service", () => {
   it("compiles only authorized public coordinates and normalizes storage identities server-side", async () => {
     const lists = createTestListService({ authorizer: allowReadOnly() });
     const compiled = parseEntityListDescriptor(await lists.descriptor(context, descriptor.entityCode));
-    expect(compiled.entity.identityField).toBe("record_id");
-    expect(compiled.fields.map((field) => field.key)).toEqual(["record_id", "code", "name"]);
+    expect(compiled.entity.identityField).toBe("code");
+    expect(compiled.fields.map((field) => field.key)).toEqual(["code", "name"]);
     expect(JSON.stringify(compiled)).not.toContain("partner_uuid");
     expect(JSON.stringify(compiled)).not.toContain("master");
     expect(JSON.stringify(compiled)).not.toContain("tax_identifier");
     const page = parseEntityListResult(await lists.list({ context, entityCode: descriptor.entityCode, limit: 25 }));
-    expect(page.rows[0]).toMatchObject({ id: "partner-1", version: 4, values: { record_id: "partner-1", code: "ACME", name: "Acme" } });
+    expect(page.rows[0]).toMatchObject({ id: "partner-1", version: 4, values: { code: "ACME", name: "Acme" } });
     expect(page.rows[0]?.values).not.toHaveProperty("tax_id");
   });
 
@@ -124,7 +124,7 @@ describe("safe entity list service", () => {
       ],
     });
     const page = parseEntityListResult(await lists.list({ context, entityCode: presented.entityCode, fields: ["code"], group: "status", sort: [{ field: "name", direction: "asc" }] }));
-    expect(page.rows.map((row) => row.values)).toEqual([{ record_id: "partner-1", code: "ACME", status: "active" }, { record_id: "partner-2", code: "BETA", status: "active" }, { record_id: "partner-3", code: "DRAFT", status: "draft" }]);
+    expect(page.rows.map((row) => row.values)).toEqual([{ code: "ACME", status: "active" }, { code: "BETA", status: "active" }, { code: "DRAFT", status: "draft" }]);
     expect(page.rows[0]?.values).not.toHaveProperty("name");
     expect(page.groups).toEqual([{ value: "active", label: "active", count: 2 }, { value: "draft", label: "draft", count: 1 }]);
   });

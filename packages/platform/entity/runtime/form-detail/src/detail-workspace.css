@@ -138,14 +138,6 @@
 .a-metadata-detail__rail .a-entity-record__picker {
   display: none;
 }
-.a-metadata-detail__selector .a-entity-record__links {
-  display: none;
-}
-.a-metadata-detail__selector .a-entity-record__picker {
-  display: flex;
-  align-items: center;
-  gap: var(--a-space-2);
-}
 .a-metadata-detail [data-detail-section] {
   scroll-margin-block-start: var(--detail-section-offset);
 }

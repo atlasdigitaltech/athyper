@@ -17,6 +17,22 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Implement read-only entities and record-scoped embedded lists through that
   same framework. Enforce locked record scope and authorization on the server.
 
+## Entity list identity and record navigation
+
+- Never display UUIDs in Entity List Views, including default or saved-view
+  columns, embedded lists, cards, search hints, or fallback record labels.
+  Keep technical identities internal for routing, selection and API operations.
+- Use readable business codes, names and reference labels from published Meta
+  Entity properties. Never synthesize a visible Record ID column when presentation
+  metadata is missing. Missing display configuration requires a shared framework
+  or governed metadata correction, not a UUID fallback.
+- Country and Principal Profile define the reference record experience: reuse
+  the existing Navigation Tabs and Section Tabs/menu components. Honor published
+  navigation groups and section order for every entity.
+- The full-width "Record sections" dropdown fallback on Entity detail pages is
+  deprecated and must not be restored. Section-only metadata must use the same
+  shared navigation components; do not add another entity-specific presentation.
+
 ## No hardcoded entities
 
 - Do not hardcode entity names, entity allowlists, or entity-specific branches

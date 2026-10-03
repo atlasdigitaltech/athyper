@@ -51,10 +51,12 @@ export function MetadataDetailWorkspace({
   const descriptor = useMemo(() => localizeEntityLabels(sourceDescriptor, intl), [sourceDescriptor, intl]);
   const presentation = useMemo(() => {
     const published = descriptor.presentation!;
-    if (published.navigation || !published.sections.some(section => section.key === "overview")) return published;
+    if (published.navigation) return published;
+    // Section-only metadata uses the same navigation and section menu as a
+    // configured record. The full-width selector fallback is retired.
     return {...published,
       sections: published.sections.map(section => section.key === "overview" && section.label === descriptor.entity.pluralLabel ? {...section,label:descriptor.entity.label} : section),
-      navigation: {mode: "scroll" as const, tabs: [{key:"overview",label:intl.message("detail.overview"),sectionKeys:published.sections.map(section=>section.key)}]},
+      navigation: {mode: published.sections.some(section => section.key === "overview") ? "scroll" as const : "switch" as const, tabs: [{key:"overview",label:intl.message("detail.overview"),sectionKeys:published.sections.map(section=>section.key)}]},
     };
   }, [descriptor, intl]);
   useRecordFooterInformation({recordId: record.id, metadataRelease: descriptor.revision.release,
@@ -323,13 +325,9 @@ export function MetadataDetailWorkspace({
             data-tab-sections={Boolean(activeTab) || undefined}
             hidden={collaboration.full}
           >
-            {visible.length > 1 && (sectionView || !activeTab) ? (
+            {visible.length > 1 && sectionView ? (
               <EntitySectionNavigation
-                className={
-                  sectionView
-                    ? "a-metadata-detail__rail"
-                    : "a-metadata-detail__selector"
-                }
+                className="a-metadata-detail__rail"
                 sections={visible}
                 activeSection={selected?.key ?? ""}
                 onNavigate={(key) => select(key, true)}

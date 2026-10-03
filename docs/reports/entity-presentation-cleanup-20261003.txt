@@ -1,0 +1,22 @@
+Entity presentation cleanup — 2026-10-03
+
+Owner instruction recorded in AGENTS.md: never display UUIDs in Entity List Views. Internal route, API and selection identities remain available. Country and Principal Profile are the record navigation references. The full-width Record sections dropdown fallback is deprecated and must not be restored.
+
+Screenshot origin:
+- entity-detail-runtime.tsx selects MetadataDetailWorkspace for the shared Entity read route.
+- detail-workspace.tsx previously supplied Navigation Tabs only for configured navigation or an overview section. Other section-only descriptors fell through to EntitySectionNavigation with a-metadata-detail__selector.
+- section-navigation.tsx renders the ChoiceSelect. detail-workspace.css forced this selector across the detail body. This was shared fallback code, not a separate Person page.
+- Country publishes an Overview navigation group and uses the existing tab row and RecordSectionMenu. The fallback now uses these same components for all authorized section-only metadata, preserving section order, URL section selection, and existing selected-section versus continuous behavior. Configured navigation remains authoritative.
+- The obsolete detail selector branch and CSS were removed. EntitySectionNavigation remains for supported section rails, forms and workspaces; deleting that shared component would break other existing flows.
+
+UUID origin and correction:
+- server/packages/services/records/src/entity-list-service.ts synthesized a visible Record ID field when published fields lacked storage identity; it also forced the identity column visible.
+- Removed the synthetic field, duplicate row value and storageIdentityProjection helper. List display descriptors exclude UUID fields and the storage identity. Identity uses the readable configured field, published record title, or first readable nontechnical metadata field. No entity-name dispatch was added.
+- Fields removed from the descriptor cannot be selected as display columns through its ordinary view controls. UUID reference keys are internal; readable labels must be published as display fields. An entity with no eligible display field reports a presentation configuration error rather than showing a UUID.
+
+Verification:
+- Records package build passed.
+- Form-detail package TypeScript check passed.
+- Existing assertions endorsing injected Record ID and the detail dropdown were updated, but tests were not run.
+- No browser automation, live API acceptance, metadata publication, DDL, permission or MFA changes were performed for this task. DEV mounts this checkout, but visual acceptance is not claimed.
+- Unrelated working-tree DDL edits were preserved.

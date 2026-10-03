@@ -4,7 +4,6 @@ import { build } from "esbuild";
 import { test, expect } from "@playwright/test";
 
 import { withSessionDefaults } from "./fixtures/session-stub";
-import { chooseOption } from "./fixtures/choice";
 const bundle = build({
   stdin: {
     loader: "tsx",
@@ -337,7 +336,9 @@ test("legacy selected sections do not silently become continuous", async ({
     page.getByRole("heading", { name: "Identity", exact: true }),
   ).toBeVisible();
   await expect(page.locator("[data-detail-section]")).toHaveCount(1);
-  await chooseOption(page.getByRole("combobox", { name: "Record sections" }), "contacts");
+  await expect(page.getByRole("combobox", { name: "Record sections" })).toHaveCount(0);
+  await page.locator('summary[aria-label="Overview sections"]').click();
+  await page.getByRole("menuitem", { name: "Contacts", exact: true }).click();
   await expect(page.locator('[data-detail-section="contacts"]')).toBeFocused();
   await expect(page).toHaveURL(/section=contacts/);
   await page.goBack();
