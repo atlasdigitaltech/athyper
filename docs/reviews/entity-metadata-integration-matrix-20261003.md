@@ -1,5 +1,7 @@
 # Per-entity source integration matrix and current plan
 
+**Current follow-up:** [Nested projection, runtime and tenant-override review](bp-nested-projection-runtime-review-20261003.md). The owner approved unavailable coverage references. Shared nested projection/display and compiler admission fixes are implemented; exact tenant deltas are recorded. Root legacy operation/storage reconciliation, complete runtime publication and independent approval remain blocked.
+
 **Latest implementation checkpoint:** [BP projection readers and predecessor reconciliation](bp-projection-reader-and-predecessor-review-20261003.md). Banking, industry and qualification SQL read models and draft shared read/list bindings are implemented and fixture-qualified; complete runtime publication and nested coverage presentation remain gated. Five of seven predecessor source blockers are recovered but have additional source changes to review; two remain unresolved. Context references will be unavailable as approved. No permission retirement or independent release approval has occurred. Earlier counts and statuses below describe their recorded checkpoints.
 
 **Current BP scope correction:** banking and tax use tenant plus mandatory BP parent scope, with no company relation at this stage per the owner. Organization assignment declares the shared organization-field binding. See [implementation and publication status](bp-child-scope-implementation-20261003.md); none of these draft changes establishes DEV activation.

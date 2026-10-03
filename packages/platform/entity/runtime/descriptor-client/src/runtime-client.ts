@@ -85,6 +85,7 @@ export interface EntityRuntimeSummaryResource {
 }
 
 export interface EntityRuntimeDisplayField {
+  readonly unavailableReference?: { readonly labelKey: string; readonly defaultText: string };
   readonly attachmentDownload?: true;
   readonly temporalType?: "date" | "datetime";
   readonly revealOperation?: string;
@@ -334,6 +335,8 @@ function parsePresentation(value: unknown): EntityRuntimeSectionPresentation {
   const field = (value: unknown, name: string): EntityRuntimeDisplayField => {
     const item = object(value, name);
     if (item.attachmentDownload !== undefined && item.attachmentDownload !== true) invalid(`${name}.attachmentDownload`);
+    const unavailableReference = item.unavailableReference === undefined ? undefined : localized(item.unavailableReference);
+    if (item.unavailableReference !== undefined && (!unavailableReference || item.options !== undefined || item.itemFields !== undefined || item.attachmentDownload !== undefined || item.revealOperation !== undefined)) invalid(`${name}.unavailableReference`);
     const options = item.options === undefined ? undefined : array(item.options, `${name}.options`).map(value => {
       const option = object(value, `${name}.option`);
       const label = localized(option.label);
@@ -345,7 +348,7 @@ function parsePresentation(value: unknown): EntityRuntimeSectionPresentation {
       if (!label) invalid(`${name}.revealPurpose.label`);
       return {value:key(option.value, `${name}.revealPurpose.value`), label};
     });
-    return Object.freeze({ ...(item.attachmentDownload === true ? {attachmentDownload:true as const} : {}), ...(item.temporalType === "date" || item.temporalType === "datetime" ? {temporalType:item.temporalType} : {}), ...(item.revealTargetField === undefined ? {} : {revealTargetField:key(item.revealTargetField, `${name}.revealTargetField`)}), ...(item.maskedPrefix === undefined ? {} : {maskedPrefix:text(item.maskedPrefix, `${name}.maskedPrefix`)}), ...(revealPurposes ? {revealPurposes} : {}), ...(item.revealOperation === undefined ? {} : {revealOperation:key(item.revealOperation, `${name}.revealOperation`)}), key: key(item.key, `${name}.key`), ...(localized(item.label) ? { label: localized(item.label) } : {}), ...(options ? { options } : {}), ...(item.itemFields ? {itemFields:array(item.itemFields,`${name}.itemFields`).map(v=>field(v,`${name}.itemField`))} : {}) });
+    return Object.freeze({ ...(unavailableReference ? {unavailableReference} : {}), ...(item.attachmentDownload === true ? {attachmentDownload:true as const} : {}), ...(item.temporalType === "date" || item.temporalType === "datetime" ? {temporalType:item.temporalType} : {}), ...(item.revealTargetField === undefined ? {} : {revealTargetField:key(item.revealTargetField, `${name}.revealTargetField`)}), ...(item.maskedPrefix === undefined ? {} : {maskedPrefix:text(item.maskedPrefix, `${name}.maskedPrefix`)}), ...(revealPurposes ? {revealPurposes} : {}), ...(item.revealOperation === undefined ? {} : {revealOperation:key(item.revealOperation, `${name}.revealOperation`)}), key: key(item.key, `${name}.key`), ...(localized(item.label) ? { label: localized(item.label) } : {}), ...(options ? { options } : {}), ...(item.itemFields ? {itemFields:array(item.itemFields,`${name}.itemFields`).map(v=>field(v,`${name}.itemField`))} : {}) });
   };
   const collections = array(root.childCollections, "entity runtime section child collections").map((value, index) => {
     const item = object(value, `entity runtime child collection ${index}`);

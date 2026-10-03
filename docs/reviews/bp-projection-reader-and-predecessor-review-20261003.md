@@ -1,5 +1,7 @@
 # BP projection readers and predecessor reconciliation
 
+**Current follow-up:** [Nested projection, runtime and tenant-override review](bp-nested-projection-runtime-review-20261003.md). The owner approved unavailable coverage references. Shared nested projection/display and compiler admission fixes are implemented; exact tenant deltas are recorded. Root legacy operation/storage reconciliation, complete runtime publication and independent approval remain blocked.
+
 Date: 3 October 2026. **Unsigned implementation checkpoint; not ready for activation or permission retirement.** Existing DEV is the only target. No persistent database changes, release publication, authorship/review attestations, permission deletion or role/group changes were performed in this checkpoint.
 
 ## Read-model implementation

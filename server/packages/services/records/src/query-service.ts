@@ -1,3 +1,4 @@
+import { validateStructuredProjectionValue } from "@athyper/server-contract-metadata";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
 import {
@@ -372,7 +373,7 @@ function restrictResponseProjection(
   const visible = new Set<string>(responseFields.map((field) => field.key));
   if (enforced)
     for (const row of result.data)
-      assertProfiledScalarProjection(row, [...visible]);
+      assertProfiledScalarProjection(row, [...visible], descriptor);
   // Repository-only storage coordinates are retained for the record envelope and
   // optimistic concurrency, but query-internal sort columns never escape.
   for (const key of [
@@ -476,7 +477,7 @@ export function createRecordQueryService<Transaction = unknown>(
           return record;
         },
       );
-      if (data && enforced) assertProfiledScalarProjection(data, projection);
+      if (data && enforced) assertProfiledScalarProjection(data, projection, descriptor);
       return {
         descriptor,
         readableFields,
@@ -680,15 +681,29 @@ export async function authorize(
   return decision;
 }
 
-/** Nested JSON requires an owning provider profile, not a root scalar field grant. */
+/** Nested JSON requires an explicit published member contract in addition to
+ * root field admission. Undeclared provider objects remain forbidden. */
 function assertProfiledScalarProjection(
   row: Readonly<Record<string, unknown>>,
   fields: readonly string[],
+  descriptor: EntityRuntimeDescriptor,
 ): void {
+  const structured = new Set<string>();
+  for (const key of fields) {
+    const field = descriptor.fields.find(field => field.key === key);
+    if (!field?.structuredProjection || row[key] === null) continue;
+    try {
+      validateStructuredProjectionValue(row[key], field.structuredProjection);
+    } catch {
+      throw new RecordServiceError(403, "ENTITY_STRUCTURED_PROJECTION_INVALID",
+        "Record does not match its published structured projection");
+    }
+    structured.add(key);
+  }
   if (
     fields.some(
       (field) =>
-        row[field] !== null &&
+        !structured.has(field) && row[field] !== null &&
         typeof row[field] === "object" &&
         !(row[field] instanceof Date),
     )

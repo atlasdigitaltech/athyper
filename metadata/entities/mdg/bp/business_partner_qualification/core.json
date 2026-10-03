@@ -226,6 +226,22 @@
       "binding": {
         "sourceObject": "control.v_partner_qualification_read",
         "column": "context_reference"
+      },
+      "structuredProjection": {
+        "kind": "object_array",
+        "maxItems": 1,
+        "fields": [
+          {
+            "key": "name",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "state",
+            "type": "string",
+            "nullable": true
+          }
+        ]
       }
     },
     {
@@ -506,8 +522,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.operating_organization"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -523,8 +540,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.company_code"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -540,8 +558,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.commodity_category"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -613,8 +632,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.business_partner_commodity_classification"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -630,8 +650,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.tax_jurisdiction"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -647,8 +668,9 @@
             "readPolicy": "authorized_projection",
             "writePolicy": "system_managed",
             "display": {
-              "lookup": {
-                "code": "master.org_unit"
+              "unavailableReference": {
+                "labelKey": "entity.reference.unavailable_or_not_permitted",
+                "defaultText": "Reference unavailable or not permitted"
               }
             }
           },
@@ -669,6 +691,82 @@
       "binding": {
         "sourceObject": "control.v_partner_qualification_read",
         "column": "coverage"
+      },
+      "structuredProjection": {
+        "kind": "object_array",
+        "maxItems": 1000,
+        "fields": [
+          {
+            "key": "scope_group",
+            "type": "integer",
+            "nullable": true
+          },
+          {
+            "key": "scope_mode",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "scope_kind",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "selection_mode",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "commercial_capacity_code",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "operating_organization_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "company_code_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "commodity_category_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "country_code",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "country_purpose",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "commodity_classification_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "tax_jurisdiction_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "organization_unit_id",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "key": "hierarchy_version",
+            "type": "integer",
+            "nullable": true
+          }
+        ]
       }
     },
     {
@@ -733,6 +831,22 @@
       "binding": {
         "sourceObject": "control.v_partner_qualification_read",
         "column": "condition_summaries"
+      },
+      "structuredProjection": {
+        "kind": "object_array",
+        "maxItems": 100,
+        "fields": [
+          {
+            "key": "summary",
+            "type": "string",
+            "nullable": true
+          },
+          {
+            "key": "state",
+            "type": "string",
+            "nullable": true
+          }
+        ]
       }
     },
     {

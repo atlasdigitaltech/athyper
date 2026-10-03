@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { parseCompiledEntityArtifact } from "@athyper/server-contract-publication";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import { validateCompiledRuntimeContracts } from "./compiled-runtime-contract.js";
 import { validateRequiredParentContracts } from "./required-parent-contract.js";
@@ -144,7 +145,7 @@ it("the seven BP authoring removals carry explicit scope and cannot publish with
       expect(field.uiFacets.visibility).toBe("hidden");
     }
     expect(() =>
-      validateCompiledRuntimeContracts([{ ...core, content: core }]),
+      validateCompiledRuntimeContracts([parseCompiledEntityArtifact({ ...core, artifactHash: `sha256:${"a".repeat(64)}` })]),
     ).toThrow("PARENT_RUNTIME_REQUIRED");
   }
 });

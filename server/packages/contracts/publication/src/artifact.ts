@@ -1,3 +1,4 @@
+import { validateReferencePresentation } from "./reference-presentation.js";
 import { PublicationContractError } from "./errors.js";
 import { parseCapabilityProfile } from "./capability-profile.js";
 import { parseCapabilityBinding, parseCapabilityDeclaration, validateEntityCapabilities } from "./entity-capabilities.js";
@@ -141,7 +142,7 @@ const compiledHashPattern = /^sha256:[a-f0-9]{64}$/;
 const compiledArtifactKeys: Readonly<Record<CompiledEntityArtifactType, ReadonlySet<string>>> = {
   capability_profile: new Set(["schema", "schemaVersion", "contractStatus", "artifactType", "artifactKey", "entityCode", "plane", "dependencies", "artifactHash", "profile"]),
   runtime_contract: new Set(["schema", "schemaVersion", "contractStatus", "artifactType", "artifactKey", "entityCode", "plane", "dependencies", "artifactHash", "descriptor"]),
-  core: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","businessContext","capabilities","coreKind","defaultsProfile","defaultsProfileRef","deferredRelations","editRuntimeTier","fieldAccess","fieldDefaults","fields","operationDefaults","ownerBinding","profileKey","projectionPolicy","protections","query","querySafetyLimits","readinessFacts","referencePicker","relationDefaults","relations","serverDependencies","storage","validationAuthority"]),
+  core: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","businessContext","capabilities","coreKind","defaultsProfile","defaultsProfileRef","deferredRelations","editRuntimeTier","directoryScope","entityRelationships","fieldAccess","fieldDefaults","fields","operationDefaults","ownerBinding","profileKey","projectionPolicy","protections","query","querySafetyLimits","readinessFacts","referencePicker","relationDefaults","relations","serverDependencies","storage","validationAuthority"]),
   operation: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","commentBinding","attachmentBinding","activityBinding","browserProjection","concurrency","consumedBy","disclosureBinding","evaluationContract","handlerBindingStatus","lifecycleBinding","lifecycleOperationBindings","materialization","numberingBinding","operationDefaultsProfile","operationDefaultsProfileRef","operations","policyBindings","policyManifestProjection","printBinding","reasonCodeCatalog","snapshotBinding","transactionOrder","validationDeclarations"]),
   presentation_surface: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","actions","columns","contextControl","dataAuthority","excludedCapabilities","fieldDiff","header","layout","navigation","pageSizes","policyManifest","queryPresentation","restrictedValues","sections","sort","summaryView","surfaceKey"]),
   presentation_section: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","accessAuthority","additionalCoreRefs","authorization","availableOperations","childCollections","completenessEvaluation","completenessPacks","contentModel","emptyState","coreRef","dataBinding","fieldBindingNamespace","fieldBindings","form","linkFields","load","ownerBinding","pagination","relationKey","rendererKey","requiredContext","resourceStates","targetCoreRef","targetFieldBindings","validationAuthority","sectionKey"]),
@@ -207,6 +208,7 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
     !Array.isArray(value.dependencies) || !value.dependencies.includes(`${String(value.entityCode)}/core`) ||
     !value.dependencies.includes(`${String(value.entityCode)}/operation`)
   )) throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_INVALID", "Invalid compiled server-runtime contract");
+  if (type === "core") validateReferencePresentation(value.fields);
   if(type === "core" && value.capabilities !== undefined) {
     if(!isRecord(value.capabilities)) throw new PublicationContractError("ENTITY_CAPABILITY_INVALID", `${String(value.artifactKey)}.capabilities must be an object`);
     const known = new Set(["comments","attachments","activity","audit","customFields","lifecycle","numbering","print","snapshot"]);

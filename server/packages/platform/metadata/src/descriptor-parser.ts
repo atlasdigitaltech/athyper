@@ -1,4 +1,4 @@
-import { validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
+import { parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
   parseRecordMutationPolicy,
@@ -1102,9 +1102,15 @@ function parseField(raw: unknown): EntityFieldDescriptor {
     item["keyReference"] === undefined
   )
     throw new Error("Entity references require a UUID field");
+  if (item["structuredProjection"] !== undefined && (
+    type !== "json" || item["filterable"] === true || item["sortable"] === true ||
+    item["searchable"] === true || (item["list"] && typeof item["list"] === "object" &&
+      Reflect.get(item["list"], "groupable") === true)
+  )) throw new TypeError("Structured projection requires non-queryable JSON field");
   const writableOn = array(item["writableOn"], "field.writableOn").map(
     (entry) => string(entry, "field.writableOn"),
   );
+  if (item["structuredProjection"] !== undefined && writableOn.length) throw new TypeError("Structured projection is read-only");
   if (writableOn.some((entry) => entry !== "create" && entry !== "patch"))
     throw new Error("Invalid field write mode");
   const listValue =
@@ -1274,6 +1280,7 @@ function parseField(raw: unknown): EntityFieldDescriptor {
         }),
     key: identifier(item["key"], "field.key"),
     storagePath: identifier(item["storagePath"], "field.storagePath"),
+    ...(item["structuredProjection"] === undefined ? {} : {structuredProjection:parseStructuredProjection(item["structuredProjection"])}),
     type,
     required: item["required"] === true,
     writableOn: writableOn as ("create" | "patch")[],

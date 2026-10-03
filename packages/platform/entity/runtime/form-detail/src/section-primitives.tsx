@@ -210,6 +210,7 @@ export function display(value: unknown): string {
 function MetadataValue({field,value}:{field:EntityRuntimeSectionResource["presentation"]["fields"][number];value:unknown}):ReactNode {
   const intl = useEntityI18n();
   if(value==null) return "—";
+  if(field.unavailableReference) return intl.text(field.unavailableReference);
   if(typeof value === "boolean") return intl.message(value ? "entity.value.yes" : "entity.value.no");
   if(field.attachmentDownload) return <AttachmentReference key={String(value)} value={value} />;
   if(field.temporalType && typeof value === "string") {

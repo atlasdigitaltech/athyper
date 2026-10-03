@@ -1,4 +1,4 @@
-import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
+import { parseStructuredProjection, parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import type {
   EntityRuntimeDescriptor,
@@ -120,7 +120,8 @@ export function validateCompiledRuntimeContracts(
         !Array.isArray(storage.sourceObjects) ||
         !storage.sourceObjects.includes(binding?.sourceObject) ||
         binding?.column !== field.storagePath ||
-        compiled.dataType !== field.type
+        compiled.dataType !== field.type ||
+        JSON.stringify(compiled.structuredProjection === undefined ? null : parseStructuredProjection(compiled.structuredProjection)) !== JSON.stringify(field.structuredProjection ?? null)
       )
         throw new Error(`COMPILED_ENTITY_RUNTIME_FIELD_MISMATCH:${field.key}`);
     }

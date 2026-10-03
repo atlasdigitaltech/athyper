@@ -9,6 +9,29 @@ const overview = artifact("presentation_section", "business_partner/presentation
 const context = { tenantId: "tenant", principalId: "principal", planeKey: "neon", permissions: { allowed: ["bp.read"] } } as any;
 
 describe("entity runtime resource service", () => {
+  it("resolves nested code labels by their actual values rather than the first catalog page", async () => {
+    const typed = artifact("core", core.artifactKey, {fields:[{key:"coverage",dataType:"json",display:{itemFields:[{key:"country_code",dataType:"enum",display:{lookup:{code:"shared.country"}}}]}}]});
+    const section = artifact("presentation_section", overview.artifactKey, {...overview.content,coreRef:core.artifactKey+".json",fieldBindings:[{fieldKey:"coverage"}]});
+    const reader = {surfaceModel:async()=>({release:{release:{releaseId:"release",releaseHash:`sha256:${"a".repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const choices = vi.fn(async (_context, _catalog, values) => values?.includes("MY") ? [{value:"MY",label:{labelKey:"country.my",defaultText:"Malaysia"}}] : []);
+    const service = createEntityRuntimeResourceService({reader:reader as any,displayChoices:choices,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{values:{coverage:[{country_code:"MY"},{country_code:"MY"}]}}})})}});
+    const result = await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
+    expect(choices).toHaveBeenCalledExactlyOnceWith(context,"shared.country",["MY"]);
+    expect(result?.presentation.fields[0]?.itemFields?.[0]?.options?.[0]?.label.defaultText).toBe("Malaysia");
+  });
+
+  it.each(["coverage", "shipment_destinations"])("projects nested unavailable references without resolving labels for %s", async key => {
+    const unavailableReference = {labelKey:"reference.unavailable", defaultText:"Reference unavailable or not permitted"};
+    const typed = artifact("core", core.artifactKey, {fields:[{key,dataType:"json",display:{itemFields:[{key:"target_id",dataType:"uuid",display:{unavailableReference}}]}}]});
+    const section = artifact("presentation_section", overview.artifactKey, {...overview.content,coreRef:core.artifactKey+".json",fieldBindings:[{fieldKey:key}]});
+    const reader = {surfaceModel:async()=>({release:{release:{releaseId:"release",releaseHash:`sha256:${"a".repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const choices = vi.fn();
+    const service = createEntityRuntimeResourceService({reader:reader as any,displayChoices:choices,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{values:{[key]:[{target_id:"00000000-0000-4000-8000-000000000001"}]}}})})}});
+    const result = await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
+    expect(result?.presentation.fields[0]?.itemFields).toEqual([{key:"target_id",unavailableReference}]);
+    expect(choices).not.toHaveBeenCalled();
+  });
+
   it("routes normalized Summary to the pinned provider service without requiring a legacy surface", async () => {
     const release = { artifactIndex: new Map([["business_partner/runtime", {}]]), release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } };
     const reader = { resolve: vi.fn(async () => release), surfaceModel: vi.fn() };
@@ -81,7 +104,7 @@ describe("entity runtime resource service", () => {
     const service=createEntityRuntimeResourceService({reader:reader as any,displayChoices:catalog,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{collections:{rows:[{status:"active",scheme:"isic"}]}}})})}});
     const result=await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
     expect(reader.artifactByKey).toHaveBeenCalledWith(expect.anything(),"child/core","core");
-    expect(catalog).toHaveBeenCalledWith(context,"shared.classification_scheme");
+    expect(catalog).toHaveBeenCalledWith(context,"shared.classification_scheme",["isic"]);
     expect(result?.presentation.childCollections[0]?.fields.map(f=>f.options?.[0]?.label.defaultText)).toEqual(["Child active","Catalog scheme name"]);
   });
   it("projects explicit collection captions and collapsed reference presentation without leaking internal metadata", async () => {

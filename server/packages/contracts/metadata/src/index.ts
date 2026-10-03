@@ -34,3 +34,5 @@ export * from "./record-predicates.js";
 
 export * from "./key-reference.js";
 export * from "./entity-readiness.js";
+
+export * from "./structured-projection.js";

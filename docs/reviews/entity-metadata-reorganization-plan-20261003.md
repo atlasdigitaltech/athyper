@@ -1,5 +1,7 @@
 # Entity metadata reorganization review plan
 
+**Current follow-up:** [Nested projection, runtime and tenant-override review](bp-nested-projection-runtime-review-20261003.md). The owner approved unavailable coverage references. Shared nested projection/display and compiler admission fixes are implemented; exact tenant deltas are recorded. Root legacy operation/storage reconciliation, complete runtime publication and independent approval remain blocked.
+
 **Latest implementation checkpoint:** [BP projection readers and predecessor reconciliation](bp-projection-reader-and-predecessor-review-20261003.md). Banking, industry and qualification SQL read models and draft shared read/list bindings are implemented and fixture-qualified; complete runtime publication and nested coverage presentation remain gated. Five of seven predecessor source blockers are recovered but have additional source changes to review; two remain unresolved. Context references will be unavailable as approved. No permission retirement or independent release approval has occurred. Earlier counts and statuses below describe their recorded checkpoints.
 
 **Owner scope clarification:** banking and tax have no company relation at this stage; their child views require tenant plus BP parent access. Organization assignment retains explicit organization scope. The [shared scope implementation checkpoint](bp-child-scope-implementation-20261003.md) records the code, checks and remaining projection/publication gates. This supersedes earlier company-scope proposals for banking and tax.

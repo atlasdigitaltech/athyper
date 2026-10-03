@@ -82,6 +82,7 @@ export function entityFieldFilterOperators(
 }
 
 export interface EntityFieldDescriptor {
+  readonly structuredProjection?: import("./structured-projection.js").StructuredProjection;
   /** Published, single UUID reference; resolved through the target Entity owner, never an inferred join. */
   readonly referenceTargetEntity?: string;
   readonly keyReference?: import("./key-reference.js").EntityKeyReference;

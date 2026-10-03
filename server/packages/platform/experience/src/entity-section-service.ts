@@ -212,9 +212,12 @@ export function createEntityRuntimeResourceService(options: {
           const catalog = field.display.lookup.code;
           const ids: string[]=[];
           const collect=(value:unknown):void=>{if(Array.isArray(value))value.forEach(collect);else if(record(value)){if(typeof field.key==='string'&&typeof value[field.key]==='string')ids.push(value[field.key] as string);Object.values(value).forEach(child=>{if(child&&typeof child==='object')collect(child);});}};
-          if(field.dataType==='uuid')collect(result.data);
-          const cacheKey=field.dataType==='uuid'?catalog+JSON.stringify(ids):catalog;
-          if(!catalogCache.has(cacheKey)) catalogCache.set(cacheKey,publishedDisplayChoices(options.displayChoices,input.context,catalog,[source,section],...(field.dataType==='uuid'?[ids] as const:[])));
+          collect(result.data);
+          const values = [...new Set(ids)].sort();
+          const cacheKey = catalog + JSON.stringify(values);
+          if (!catalogCache.has(cacheKey)) catalogCache.set(cacheKey, values.length
+            ? publishedDisplayChoices(options.displayChoices, input.context, catalog, [source, section], values)
+            : Promise.resolve([]));
           const choices = await catalogCache.get(cacheKey)!;
           return { ...field, dataType: "enum", display: { ...field.display, ...nested, lookup: { ...field.display.lookup, options: choices } } };
         };
@@ -263,7 +266,7 @@ function sectionHandler(registry: EntityRuntimeSectionHandlerRegistry, section: 
 
 
 /** Browser-safe renderer projection; handler/storage/policy internals never leave the server. */
-type DisplayField = { key: string; temporalType?: "date" | "datetime"; label?: { labelKey: string; defaultText: string }; options?: readonly { value: string; label: { labelKey: string; defaultText: string } }[]; itemFields?: readonly DisplayField[] };
+type DisplayField = { unavailableReference?: { labelKey: string; defaultText: string }; key: string; temporalType?: "date" | "datetime"; label?: { labelKey: string; defaultText: string }; options?: readonly { value: string; label: { labelKey: string; defaultText: string } }[]; itemFields?: readonly DisplayField[] };
 type SectionPresentation = { rendererKey: string; emptyState?: { title: string; detail: string }; fields: readonly DisplayField[]; childCollections: readonly { key: string; rendererKey: string; fields: readonly DisplayField[]; rowFields?: readonly (readonly DisplayField[])[]; label?: { labelKey: string; defaultText: string }; display?: "disclosure"; description?: string }[] };
 function browserSectionPresentation(core: CompiledEntityArtifactV2, section: CompiledEntityArtifactV2, data: unknown, cores = new Map<string, CompiledEntityArtifactV2>()): SectionPresentation {
   const values = record(data) && record(data.values) ? data.values : {};
@@ -302,7 +305,7 @@ function browserSectionPresentation(core: CompiledEntityArtifactV2, section: Com
     }) : undefined;
     const revealTargetField = reveal && typeof reveal.targetField === "string" ? reveal.targetField : "id";
     const maskedPrefix = record(protection) && record(protection.normalProjection) && typeof protection.normalProjection.displayPrefix === "string" ? protection.normalProjection.displayPrefix : undefined;
-    return key && dataKey && !hidden.has(key) ? [Object.freeze({ key: dataKey, ...(record(definition) && record(definition.display) && definition.display.attachmentDownload === true && definition.dataType === "uuid" ? {attachmentDownload:true as const} : {}), ...(record(definition) && (definition.dataType === "date" || definition.dataType === "datetime") ? {temporalType:definition.dataType as "date" | "datetime"} : {}), ...(maskedPrefix ? {maskedPrefix} : {}), ...(revealOperation ? {revealOperation, revealPurposes, revealTargetField} : {}), ...(label ? { label } : {}), ...(choices.has(key) ? { options: choices.get(key)! } : {}), ...(itemFields?{itemFields}:{}) })] : [];
+    return key && dataKey && !hidden.has(key) ? [Object.freeze({ key: dataKey, ...(record(definition) && record(definition.display) && localized(definition.display.unavailableReference) ? { unavailableReference: localized(definition.display.unavailableReference)! } : {}), ...(record(definition) && record(definition.display) && definition.display.attachmentDownload === true && definition.dataType === "uuid" ? {attachmentDownload:true as const} : {}), ...(record(definition) && (definition.dataType === "date" || definition.dataType === "datetime") ? {temporalType:definition.dataType as "date" | "datetime"} : {}), ...(maskedPrefix ? {maskedPrefix} : {}), ...(revealOperation ? {revealOperation, revealPurposes, revealTargetField} : {}), ...(label ? { label } : {}), ...(choices.has(key) ? { options: choices.get(key)! } : {}), ...(itemFields?{itemFields}:{}) })] : [];
   });
   const childCollections = array(section.content.childCollections).flatMap((value) => {
     if (!record(value) || typeof value.key !== "string" || typeof value.rendererKey !== "string") return [];

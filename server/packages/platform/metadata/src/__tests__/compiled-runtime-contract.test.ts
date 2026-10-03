@@ -275,3 +275,17 @@ describe("compiled-only runtime contract", () => {
     ).toThrow("Invalid compiled server-runtime contract");
   });
 });
+
+it("requires identical structured projection declarations in Core and the signed runtime", () => {
+  const structuredProjection = {kind:"object_array",maxItems:2,fields:[{key:"state",type:"string",nullable:false}]};
+  const key = descriptor.fields[0]!.key;
+  const native = {...descriptor, fields:descriptor.fields.map(field=>field.key===key?{...field,type:"json",structuredProjection}:field)};
+  const runtimeWithJson = {...runtime, content:{...runtime.content,descriptor:native}};
+  const fields = (core.content.fields as any[]).map(field=>field.key===key?{...field,dataType:"json",structuredProjection}:field);
+  const coreWithJson = {...core,content:{...core.content,fields}};
+  expect(()=>validateCompiledRuntimeContracts([runtimeWithJson,coreWithJson,operation])).not.toThrow();
+  expect(()=>validateCompiledRuntimeContracts([runtimeWithJson,{...coreWithJson,content:{...coreWithJson.content,fields:fields.map(field=>field.key===key?{...field,structuredProjection:{...structuredProjection,maxItems:3}}:field)}},operation])).toThrow("FIELD_MISMATCH");
+  for (const property of ["filterable","sortable","searchable"]) {
+    expect(()=>parseCompiledRuntimeContract({...runtimeWithJson,content:{...runtimeWithJson.content,descriptor:{...native,fields:native.fields.map(field=>field.key===key?{...field,[property]:true}:field)}}},publication)).toThrow("non-queryable JSON");
+  }
+});
