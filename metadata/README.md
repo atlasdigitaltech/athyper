@@ -55,16 +55,55 @@ never saved as a hand-maintained source definition.
 
 | Source home | Entities |
 | --- | ---: |
-| `entities/common/reference/` | 6 |
+| `entities/common/reference/` | 15 |
 | `entities/platform/iam/` | 4 |
 | `entities/ppl/workforce/` | 4 |
 | `entities/mdg/location/` | 3 |
-| `entities/mdg/bp/` | 22 |
-| `entities/mdg/reference/` | 10 |
+| `entities/mdg/bp/` | 19 |
+| `entities/mdg/contact/` | 3 |
+| `entities/mdg/reference/` | 1 |
 
 The [domain relocation inventory](../docs/reviews/entity-metadata-domain-relocation-20261003.json)
-records all 49 source/destination homes and the SHA-256 of each of the 202 moved
-files. It is audit evidence, never a runtime source index.
+records the original domain relocation of all 49 source/destination homes and the SHA-256 of each of the 202 moved
+files. It is historical audit evidence, never a runtime source index. The
+[shared-domain relocation evidence](../docs/reviews/entity-metadata-shared-domain-relocation-20261003.json)
+records the subsequent nine lookup moves from `mdg/reference/` to
+`common/reference/` and three Contact moves from `mdg/bp/` to `mdg/contact/`,
+with preserved byte hashes. Certification stays in `mdg/reference/`.
+
+Contact is shared MDG business functionality, with owner-scoped records distinct
+from global reference data, HR persons and login identities. The documented
+exposure is owner-scoped business views with standard Entity detail navigation
+and separately authorized Data Stewardship directories for key users. The move implements source organization only;
+validated owner bindings, View/Edit operation bindings and readable presentation
+metadata remain separate corrections. Keep existing tables and entity codes.
+Neon-only declarations remain source evidence; three-plane applicability follows
+the coverage decision below and requires governed implementation/publication.
+See the [current integration plan](../docs/reviews/entity-metadata-integration-matrix-20261003.md).
+Intake and case requests are deferred; `business_partner_request` remains a
+preserved source in the 49-entity workspace but is outside the 48-entity current
+View/Edit plan.
+
+## Required and recommended plane coverage
+
+The [current coverage table and publication gates](../docs/reviews/entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026)
+require Neon, Mesh and Studio publication for all 15 entities under
+`common/reference/`: bank_branch, bank_identifier, bank_institution,
+classification_scheme, commodity_code, commodity_crosswalk, country, currency,
+industry_code, industry_crosswalk, language, locale, state_region, timezone and uom.
+The same applicability is recommended for person, address, address_link,
+person_address_use, contact_channel, contact_person and contact_person_role.
+Keep their domain homes and tenant/owner scope; three-plane availability does not
+mean global records, automatic replication or unrestricted user access.
+
+Six reference native definitions already declare all three targets. The other
+nine references and the seven business entities currently declare Neon only.
+Declarations do not prove publication. Exact per-target authorization, dependency,
+storage/provider, navigation and operation bindings must be reconciled first;
+the table compiler's current permission-prefix substitution is a shared contract
+gap, not a valid source of new permission codes. Track independent release review,
+activation receipts and verification per entity/plane before claiming completion.
+This planning update changes no source definitions or active releases.
 
 ## Development rules
 

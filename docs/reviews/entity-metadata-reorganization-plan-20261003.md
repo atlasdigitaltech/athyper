@@ -165,7 +165,7 @@ The latest [grouping and access recommendation](#revised-grouping-and-access-rec
 
    Expose search, filtering, sorting, pagination, and controls only when metadata and APIs support them. Preserve locked server-side parent scope for embedded lists, explicit projections for read models, and all necessary BP/workforce operations and workflows. Generalize missing capabilities through shared contracts rather than entity-specific runtime branches.
 
-   Recommend Contact as a shared MDG domain under `mdg/contact/`, reusable by BP and other eligible owners. Business users use owner-scoped record navigation; authorized key users also use explicitly configured standard Entity directories under Data Stewardship. Use owner-scoped Channels and Contacts lists, standard Contact detail navigation, and embedded Responsibilities under a contact person. Declare readable contact name, channel value/type and responsibility labels; never UUIDs. Sharing functionality does not share records between owners or turn Contact into global reference data. The proposed independent directories require exact published access bindings and authorized tenant/record scope; their menu placement does not authorize cross-owner access. Keep tables, entity codes and Neon declarations unchanged until additional targets are deliberately approved and published. Resolve Contact Channel’s fixed owner target and Contact Person’s BP request-bound operations through validated published capability bindings. See the [Contact recommendation and source gaps](entity-metadata-integration-matrix-20261003.md#shared-contact-domain-recommendation).
+   Recommend Contact as a shared MDG domain under `mdg/contact/`, reusable by BP and other eligible owners. Business users use owner-scoped record navigation; authorized key users also use explicitly configured standard Entity directories under Data Stewardship. Use owner-scoped Channels and Contacts lists, standard Contact detail navigation, and embedded Responsibilities under a contact person. Declare readable contact name, channel value/type and responsibility labels; never UUIDs. Sharing functionality does not share records between owners or turn Contact into global reference data. The proposed independent directories require exact published access bindings and authorized tenant/record scope; their menu placement does not authorize cross-owner access. Preserve tables and entity codes. Neon-only declarations are the current baseline, not the desired final target: apply the three-plane recommendation below through reviewed contracts and governed publication. Resolve Contact Channel’s fixed owner target and Contact Person’s BP request-bound operations through validated published capability bindings. See the [Contact recommendation and source gaps](entity-metadata-integration-matrix-20261003.md#shared-contact-domain-recommendation).
 
    Product defaults remain platform-owned Studio releases with independent Platform Owner review. Tenant extensions remain tenant-isolated with independent Tenant Owner review. File moves and commits do not establish publication approval.
 
@@ -238,7 +238,7 @@ Organize navigation around the task and audience while keeping entity sources wi
 | Administration | Principals | Directory for authorized administrators, with all Principal child records and the optional Employee relationship. General business access to a principal reference does not imply directory access. |
 | Data Stewardship | Addresses, Contacts, Persons | Independent directories for authorized key users/administrators. Other business users access permitted data through BP or Workforce records. Contacts groups the existing Contact entities; it does not introduce an additional `contact` entity or custom explorer. |
 
-These are suggested labels and groupings, not new module codes. Reference read access and reference maintenance are separate decisions: broad lookup availability need not grant edit access or put crosswalk maintenance in every user's primary menu. Existing declared planes and module identities remain unchanged until separately reconciled through publication.
+These are suggested labels and groupings, not new module codes. Reference read access and reference maintenance are separate decisions: broad lookup availability need not grant edit access or put crosswalk maintenance in every user's primary menu. Existing declarations remain source evidence. The [three-plane target decision](#three-plane-applicability-and-publication--3-october-2026) below requires Neon, Mesh and Studio for all 15 listed references and recommends that coverage for the seven shared Person/Address/Contact entities. Module identities remain unchanged; target expansion requires governed implementation and publication.
 
 ### Relationship decisions
 
@@ -278,7 +278,7 @@ Keep the implemented source homes in item 6 for now. All 15 shared reference ent
 4. Configure the entity definitions, placement and published navigation: BP children, Workforce peer entries, self/admin Principal surfaces, and key-user directories. Declare section order explicitly and validate readable identities and no UUID presentation across default/saved/embedded views. Publish no unsupported controls.
 5. Under the existing approved validation scope, check compilation and metadata consistency. Runtime acceptance remains pending and must eventually cover: parent A cannot retrieve child B; a deep link cannot bypass directory/record scope; self-service cannot retrieve another principal; parent read does not imply reveal or management; directory access follows exact published bindings; linked shared-record edits cannot escape their declared authority. These are future acceptance criteria, not executed tests or authorization to expand the current no-test scope.
 
-This review implements documentation only. Metadata corrections, contract changes, permission migration, publication and user-flow verification remain pending. No MFA changes are proposed or authorized.
+This review implements documentation only. The required reference target is now all three planes, with shared business entity expansion recommended below. Metadata corrections, contract changes, permission migration, publication and user-flow verification remain pending. No MFA changes are proposed or authorized.
 
 
 ### Manual-review decisions and deliverables
@@ -318,3 +318,59 @@ Manual review should resolve these outstanding decisions before their dependent 
 | Runtime/user-flow acceptance | Pending; no tests or runtime probes are authorized by this refresh. | Under separately agreed testing scope, verify each eligible surface and the negative scope cases in the implementation order above. Confirm standard search/filter/sort/pagination/views work where declared, navigation follows metadata and no UUID presentation is possible. |
 
 Final implementation review must distinguish source changes, published releases and observed runtime behavior. A successful named-entity request or build alone does not establish shared-framework correctness.
+
+
+## Three-plane applicability and publication — 3 October 2026
+
+**Owner-required target: publish all 15 named reference entities to Neon, Mesh and Studio through the shared Entity Framework.** This requirement supersedes any earlier suggestion to retain Neon-only target coverage for these references. This document update records the required outcome; it does not attest that publication has occurred. Source declarations, source folders, catalog placement, deployed storage and active publication are separate evidence.
+
+**Recommendation: Person, Address and Contact functionality should also be available in all three planes**, including the seven entities enumerated below. Keep their existing domain homes and tenant/owner scope. Reusable business functionality does not turn personal/contact records into globally shared lookup data. The same definition can support parent-scoped business views and authorized key-user directories through explicit published surfaces. Plane availability does not grant every user access or enable every operation.
+
+### Exact coverage and observed source gaps
+
+Static inspection of current source JSON on 3 October 2026 found the declarations below. “Split Neon” refers to the artifact's scalar `plane`, not a supported multi-target release declaration. Native `planes` is an authoring target declaration, not proof of activation. **Publication and runtime readiness are unverified for every row and every target.**
+
+| Entity | Observed native / split declarations | Desired targets | Decision |
+| --- | --- | --- | --- |
+| `bank_branch` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `bank_identifier` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `bank_institution` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `classification_scheme` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `commodity_code` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `commodity_crosswalk` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `country` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `currency` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `industry_code` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `industry_crosswalk` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `language` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `locale` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `state_region` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `timezone` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
+| `uom` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `person` | Neon / No split artifact | Neon, Mesh, Studio | Recommended shared business coverage |
+| `address` | Neon / Neon | Neon, Mesh, Studio | Recommended shared business coverage |
+| `address_link` | No native definition / Neon | Neon, Mesh, Studio | Recommended; validate eligible owner bindings per plane |
+| `person_address_use` | Neon / No split artifact | Neon, Mesh, Studio | Recommended; preserve Person/Address relationship scope |
+| `contact_channel` | No native definition / Neon | Neon, Mesh, Studio | Recommended; resolve owner-binding gap |
+| `contact_person` | No native definition / Neon | Neon, Mesh, Studio | Recommended; resolve governed operation dependencies |
+| `contact_person_role` | No native definition / Neon | Neon, Mesh, Studio | Recommended; preserve Contact Person parent scope |
+
+The 15 references comprise six native definitions already declaring all three targets and nine split-only definitions declaring Neon. All seven shared business entities currently declare Neon only. These are verified source observations, not live release observations. The frozen inventory JSON and historical release/hash evidence remain unchanged.
+
+Employee, External Worker, the existing Workforce projection, BP and BP children are not automatically added to all planes by this recommendation. They retain their separately reviewed business scope. A shared Address/Contact capability may serve supported owners in each plane without requiring every possible owner entity to exist there. Resolve actual owner and lookup dependencies per target; if a required dependency is unavailable, report a blocked surface rather than inventing it or weakening scope. Principal and its three child native definitions already declare all three planes, with self/admin boundaries still requiring reconciliation. Certification remains a separate unresolved definition-versus-assignment decision.
+
+### Shared-framework findings that must precede target expansion
+
+1. **Country provides the integration path, not a blanket read-only conversion.** Reuse the trace in [the reconciliation review](entity-metadata-reconciliation-20261003.md#reference-integration-and-affected-shared-components). Preserve each reference's relationships, business keys and supported capabilities. Select a supported canonical authoring input and successor release membership for the nine split-only references; do not change scalar artifact `plane` to an array or hand-copy draft artifacts into three competing sources.
+2. **The table-product compiler currently rewrites permission prefixes.** In `server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product.ts`, `targetTableEntityGraph` substitutes a source-plane prefix with the requested target plane in operation and surface permissions. That is not evidence of exact governed permission bindings and conflicts with the required no-inference authorization model. Plan a shared authoring/compiler contract correction that resolves explicit per-target bindings from governed metadata before extending Person/Address table targets. Do not create Mesh/Studio codes by string substitution. Country's separate compiler-supplied reference permission remains an existing reconciliation gap too.
+3. **Targeting also changes storage coordinates.** The same table compiler assigns the target plane to runtime storage profiles. Therefore adding `planes` can direct reads to storage that has not been established. Verify the owning storage object, schema/version, provider contract and record authority in each plane. Choose an explicitly supported local or service-backed binding through the framework; do not assume automatic replication, cross-plane reads or identical datasets. Shared business records must not be copied across planes merely to populate a menu.
+4. **Operation readiness is independent of read availability.** Preserve Address's competing read-binding investigation and existing governed request behavior. Contact Person's BP request dependency and Contact Channel's fixed owner target need resolution. Do not make Neon-specific request handlers appear usable in Mesh/Studio by renaming them, enabling generic writes or onboarding deferred request entities implicitly. Declare only supported View/Edit capabilities for each target.
+5. **Publication must include the full dependency closure.** Resolve required relationships, lookup labels, profiles, exact permissions/policies, capability registrations, explicit navigation/placement, readable identity and non-UUID presentation per target. Product definitions stay platform-owned; tenant extensions and business records retain tenant boundaries. An undefined entity permission in valid metadata still requires no grant, while invalid/unpublished metadata must fail closed. No MFA changes are proposed or authorized.
+
+### Publication completion gate
+
+Maintain one successor evidence row per **entity × target plane**: 45 rows for required references, plus 21 for the recommended shared business scope if adopted. Each row records the source release identity/hash, target artifact hash, source-to-target bindings, dependency resolution, storage/provider readiness, exact authorization and scope, human authorship/independent review, publication/activation receipt, active-release identity and verification result. A missing receipt or unsupported target stays pending/blocked; a partial three-plane rollout is not “published everywhere.”
+
+Follow the existing shared coordinated-publication path. Platform Admin authors/proposes the product release; Platform Owner independently reviews/approves it for all declared targets. Do not create duplicate tenant-owned source releases or rewrite historical evidence. Retain the existing publication failure/recovery controls and identify any incomplete target explicitly.
+
+After the separately agreed validation and runtime-testing scope permits it, verify standard Entity lists, detail and supported lookups in each plane with readable labels, declared navigation and functional supported controls. Verify tenant isolation, parent/self scope, direct API/deep-link restrictions, field reveal and write boundaries in every eligible surface. Until then, this plan establishes required/recommended coverage only: **no new metadata implementation, publication, data replication, grants or runtime verification occurred in this documentation refresh.**
