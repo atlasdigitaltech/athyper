@@ -1,3 +1,4 @@
+import { deriveCanonicalRelations } from "./canonical-relations.js";
 import { parsePublishedLearningFixtureSet } from "./published-learning-fixture-schema.js";
 import { parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
 import { parseRecordOwnerAccess } from "@athyper/server-contract-metadata";
@@ -92,6 +93,13 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   }
   if (issues.length)
     return { deterministic: true, contractHash, issues: sorted(issues) };
+  try {
+    graph = deriveCanonicalRelations(graph);
+  } catch (error) {
+    return { deterministic: true, contractHash, issues: [{
+      code: "ENTITY_RELATION_INVALID", path: "relations", message: (error as Error).message,
+    }] };
+  }
   const entityCode = graph.entity.entityCode;
   const capabilityKeys = new Set<string>();
   for (const [index, member] of (graph.capabilities ?? []).entries()) {
@@ -524,6 +532,7 @@ export function compileGraph(
 ): CompiledMetaEntityArtifact {
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
+  graph = deriveCanonicalRelations(graph);
   const commonReference = (graph.operationPermissions ?? []).some(p => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION);
   if (commonReference) assertCommonReferenceGraph(graph);
   const ai = compileEntityAi(graph);

@@ -348,7 +348,22 @@ export function compileNativeRuntimeProjection(input: {
           throw Error("NATIVE_PROJECTION_AMBIGUOUS_REFERENCE");
         const reference = references[0];
         const keyReference = field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey);
-        if (keyReference && (!reference || reference.targetEntityCode !== keyReference.targetEntity || keyReference.fields.some(mapping => !fields.some(source => source.fieldKey === mapping.source)))) throw Error("NATIVE_PROJECTION_REFERENCE_MAPPING_INVALID");
+        const selected = field.typeConfig?.relationReference;
+        let canonicalReference = false;
+        if (selected !== undefined) {
+          const relations = rows("relations").filter(r => r.relationKey === selected.relationKey && r.status !== "deprecated");
+          const targets = relations.length === 1 ? rows("relationTargets").filter(t => t.entityRelationId === relations[0]!.id) : [];
+          const mappings = targets.length === 1 ? rows("relationFields").filter(m => m.entityRelationTargetId === targets[0]!.id).sort((a,b) => a.position-b.position) : [];
+          canonicalReference = Boolean(keyReference && !reference && targets.length === 1
+            && targets[0]!.targetEntityCode === keyReference.targetEntity
+            && selected.labelField === keyReference.labelField
+            && mappings.length > 0 && mappings.length === keyReference.fields.length
+            && mappings.every((m,i) => m.position === i+1
+              && fields.find(f => f.id === m.sourceFieldId)?.fieldKey === keyReference.fields[i]?.source
+              && m.targetFieldKey === keyReference.fields[i]?.target));
+          if (!canonicalReference) throw Error("NATIVE_PROJECTION_REFERENCE_MAPPING_INVALID");
+        }
+        if (keyReference && ((!reference && !canonicalReference) || (reference && reference.targetEntityCode !== keyReference.targetEntity) || keyReference.fields.some(mapping => !fields.some(source => source.fieldKey === mapping.source)))) throw Error("NATIVE_PROJECTION_REFERENCE_MAPPING_INVALID");
         if (
           reference &&
           (!reference.targetEntityCode ||
@@ -357,8 +372,8 @@ export function compileNativeRuntimeProjection(input: {
           throw Error("NATIVE_PROJECTION_REFERENCE_ADAPTER_REQUIRED");
         return {
           ...(keyReference ? { keyReference } : {}),
-          ...(reference
-            ? { referenceTargetEntity: reference.targetEntityCode }
+          ...(reference || canonicalReference
+            ? { referenceTargetEntity: reference?.targetEntityCode ?? keyReference!.targetEntity }
             : {}),
           ...choices,
           ...(Object.keys(constraints).length

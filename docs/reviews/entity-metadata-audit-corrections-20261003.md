@@ -1,3 +1,5 @@
+> **Historical review — superseded as design guidance.** The sole active Entity Studio authoring design is [Entity Studio blueprint](../blueprints/entity-studio/blueprint.md). Do not implement earlier recommendations from this review. Retained statements describe historical work/evidence.
+
 # Metadata folder audit corrections
 
 Date: 3 October 2026. Scope: the supplied folder audit, all 49 entity source

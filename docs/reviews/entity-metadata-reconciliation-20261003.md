@@ -1,3 +1,5 @@
+> **Historical review — superseded as design guidance.** The sole active Entity Studio authoring design is [Entity Studio blueprint](../blueprints/entity-studio/blueprint.md). Do not implement earlier recommendations from this review. Retained statements describe historical work/evidence.
+
 # Entity metadata reconciliation: reference trace and correction plan
 
 Date: 3 October 2026. Status: source trace and reconciliation proposal recorded; property edits, format consolidation, contract changes and builds are not complete. This is review evidence, not a release or publication approval.

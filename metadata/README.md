@@ -1,5 +1,10 @@
 # MetaEntity source workspace
 
+The sole active Entity metadata/Studio authoring design is
+[Entity Studio blueprint](../docs/blueprints/entity-studio/blueprint.md).
+Update that document in place. Earlier dated reviews describe historical work
+and must not be used as competing implementation plans.
+
 This repository contains platform-owned MetaEntity **authoring inputs**. A file
 move does not validate, approve, sign, publish or activate a definition. Studio
 remains the authority for governed release state and independent review.
@@ -203,9 +208,10 @@ release evidence; never rewrite historical hashes to remove that binding.
 ## Permission cleanup review input
 
 The [owner-directed cleanup input](../docs/reviews/entity-metadata-permission-cleanup-20261003.json)
-and [controlling design](../docs/reviews/entity-metadata-reconciliation-20261003.md#owner-directed-permission-cleanup--controlling-correction)
-replace earlier retain-by-default recommendations. These files are review data,
-not metadata discovery inputs or permission grants. Explicit removals require
+is historical correction data, not an alternative design, metadata discovery
+input or permission grant. The sole controlling design is
+[Entity Studio blueprint](../docs/blueprints/entity-studio/blueprint.md).
+Explicit removals require
 migration of active consumers and removal of old catalog/provisioning references;
 a source move or permission rename alone does not complete cleanup. Preserve
 historical release/migration evidence and existing MFA controls. Implement all

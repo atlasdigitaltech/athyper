@@ -45,6 +45,7 @@ export function compileEntityAi(graph: MetaEntityGraph) {
       searchable: field.id !== undefined && searchableIds.has(field.id),
       reference:
         field.dataType === "reference" ||
+        field.typeConfig?.relationReference !== undefined ||
         Boolean(
           graph.fieldReferenceBindings?.some(
             (ref) =>

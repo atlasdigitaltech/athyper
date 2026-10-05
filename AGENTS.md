@@ -17,6 +17,31 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Implement read-only entities and record-scoped embedded lists through that
   same framework. Enforce locked record scope and authorization on the server.
 
+## DDL-led Entity Studio authoring storage
+
+- The sole active design is
+  [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md).
+  Read it before implementing Entity metadata/composer changes and update it in
+  place. Other dated Entity/BP reviews are historical evidence, not implementation
+  authority. Do not create competing plans or companion design reports.
+- Build the shared Studio composer from typed metadata DDL contracts plus explicit
+  governed authoring presentation properties. DDL types alone do not define
+  readable identity, navigation, supported controls or authorization intent.
+- Save structural authoring into canonical typed columns and related metadata
+  rows. Do not store whole presentation, authorization or AI declarations in
+  `entity_surface.layout_config`, or move those blobs into another property bag.
+- Compile the normalized authoring graph into the existing reviewed JSON runtime
+  artifacts. Compiled JSON is derived output, not a second writable authoring
+  source. Preserve immutable historical artifacts and applied migration hashes.
+- Extend the existing shared authoring repository, contracts, compiler and UI
+  together. Each composer property must have a database location, typed API,
+  save/load mapping, validation and compiler mapping. No bespoke composer or
+  parallel provider stack is authorized.
+- Convert legacy JSON through an explicit, validated migration adapter. Report
+  unsupported paths; never silently drop them or dual-write competing sources.
+- This redesign remains Entity onboarding/shared framework work. It does not
+  authorize workflow/case execution, new business handlers or MFA changes.
+
 ## Entity list identity and record navigation
 
 - Define navigation groups, section behavior, visible columns and readable

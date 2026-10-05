@@ -1,3 +1,5 @@
+import { bindCanonicalRelationTargets } from "./canonical-relation-targets.js";
+import { assertCanonicalRelationAuthoring } from "./canonical-relations.js";
 import { normalizeGraphStorageOrder } from "./graph-storage-order.js";
 import { clearExecutionBindings } from "./execution-binding-replacement.js";
 import { randomUUID } from "node:crypto";
@@ -334,6 +336,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_class_profile t WHERE entity_class=${string(header, "entity_class")} LIMIT 1`.execute(
               this.database,
             )
+          : table === "entity_relation_target"
+            ? await sql<JsonRow>`SELECT to_jsonb(t) || jsonb_build_object('target_entity_code',e.entity_code) AS value FROM metadata.entity_relation_target t JOIN metadata.entity e ON e.id=t.target_entity_id
+              WHERE t.change_set_id=${id}::uuid ORDER BY t.id`.execute(this.database)
           : table === "entity_materialization_field_mapping"
             ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
               JOIN metadata.entity_materialization_binding b ON b.id=t.entity_materialization_binding_id
@@ -412,11 +417,6 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async replaceGraph(
     input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
   ) {
-    const validation = validateGraph(input.graph);
-    if (validation.issues.length)
-      throw new AuthoringConflictError(
-        `Invalid graph: ${validation.issues[0]?.path}`,
-      );
     await atomic(this.database, (tx) => replaceGraphInTransaction(tx, input));
     return required(await this.get(input.changeSetId));
   }
@@ -425,11 +425,6 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
     transaction: Kysely<Database>,
   ) {
-    const validation = validateGraph(input.graph);
-    if (validation.issues.length)
-      throw new AuthoringConflictError(
-        `Invalid graph: ${validation.issues[0]?.path}`,
-      );
     await replaceGraphInTransaction(transaction, input);
     return this.map(
       required(
@@ -745,7 +740,15 @@ async function replaceGraphInTransaction(
   db: Kysely<Database>,
   input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
 ) {
-  input = { ...input, graph: normalizeGraphStorageOrder(input.graph) };
+  input = { ...input, graph: normalizeGraphStorageOrder(await bindCanonicalRelationTargets(db, input.changeSetId, input.graph)) };
+  try { assertCanonicalRelationAuthoring(input.graph); } catch (error) {
+    throw new AuthoringPolicyError("ENTITY_RELATION_AUTHORING_INVALID", (error as Error).message);
+  }
+  const validation = validateGraph(input.graph);
+  if (validation.issues.length) {
+    const issue = validation.issues[0]!;
+    throw new AuthoringPolicyError("ENTITY_GRAPH_INVALID", `${issue.path}: ${issue.message}`);
+  }
   if (input.graph.classProfiles?.length) {
     const classRow = required(
       (
@@ -944,7 +947,7 @@ async function insertRows(
     const id = Reflect.get(row, "id");
     const allowed = new Set<string>(BRANCH_COLUMNS[table]);
     const authored = Object.entries(row).filter(
-      ([key, value]) => value !== undefined && allowed.has(key),
+      ([key, value]) => value !== undefined && allowed.has(key) && !(table === "entity_relation_target" && key === "targetEntityCode"),
     );
     const value: JsonObject = {
       ...Object.fromEntries(
@@ -1129,6 +1132,7 @@ const BRANCH_COLUMNS = {
     "entityRelationId",
     "relationTargetKey",
     "targetEntityId",
+    "targetEntityCode",
     "targetKeyKey",
     "discriminatorValue",
     "isDefault",

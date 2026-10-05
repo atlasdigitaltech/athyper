@@ -1,6 +1,6 @@
 # Entity Studio — field-level relational authoring blueprint
 
-**Reconciled design for owner review • 6 October 2026 (DDL-verified revision).** This document specifies the target relational authoring model, JSON contracts and shared Studio composer. Sections 1–10 contain the reconciled design; section 11 records the resolved audit decisions, compatibility boundary and qualification criteria. Section 11.11 lists the decisions from the 6 October review against `server/db/ddl/planes/studio/metadata`. Section 11.12 is the column-level legacy and JSONB retirement ledger. This is a design specification, not a claim of implemented DDL, deployed runtime behavior or release approval. It is self-contained. Examples are configuration/data specimens, not executable grants, seeds or a statement that a release has been published. Dictionary sample cells demonstrate their column variants independently; only worked examples describe a whole consistent row/graph.
+**Reconciled design for owner review • 6 October 2026 (DDL-verified revision).** This document specifies the target relational authoring model, JSON contracts and shared Studio composer. Sections 1–10 contain the reconciled design; section 11 records the resolved audit decisions, compatibility boundary and qualification criteria. Section 11.11 lists the decisions from the 6 October reviews against `server/db/ddl/planes/studio/metadata` (D01–D18, then D19–D27 for the existing-DDL status and composer build order). Section 7.9 is the composer build order against the current DDL. Section 11.12 is the column-level legacy and JSONB retirement ledger. Section 11.19 records the subsequent dual-audit corrections and qualified/deferred dispositions. Section 6.5 specifies handler/event/webhook contracts, with source evidence and acceptance gates in section 11.20. Section 11.21 reconciles the foundation/access-expansion audits, including explicit qualified and deferred decisions. Section 11.22 records storage-boundary and authoring-safety corrections and qualified follow-ons. This is a design specification, not a claim of implemented DDL, deployed runtime behavior or release approval. It is self-contained. Examples are configuration/data specimens, not executable grants, seeds or a statement that a release has been published. Dictionary sample cells demonstrate their column variants independently; only worked examples describe a whole consistent row/graph.
 
 ## 1. Model and design rules
 
@@ -14,6 +14,8 @@ flowchart LR
 ```
 
 The authoring model is relational. Each scalar has a typed column; each independently ordered/referenced membership has a row. The shared compiler emits JSON from that model. Studio edits the same typed model whether it was created interactively or imported as JSON.
+
+Kind-axis glossary: surface_kind selects list/detail/form/embedded/lookup; content_kind selects what a section contains; section_kind selects its layout; binding_kind selects a field placement's role; view_kind selects default versus named published list state. These axes are independent typed choices, not interchangeable strings.
 
 Model optimization decisions:
 
@@ -29,7 +31,52 @@ Model optimization decisions:
 
 Names and SQL types below define the intended contract. Metadata sample IDs such as `@country`, `@country.detail` and `@country.name` are readable **document aliases for internal UUID FKs**, not stored string IDs and not visible record IDs in Entity lists.
 
+**Evidence terminology and invariant index.** Qualified means the applicable acceptance contract has a recorded passing evidence bundle identifying implementation revision, contract/dependency hashes, fixtures, environment, results and accountable approver. A designed requirement, pending test, signed artifact or successful deployment alone is not qualification. Required evidence is bounded by the named gate; failed/unknown checks cannot be relabeled passed. Tests may cite the following stable invariant IDs; the linked sections remain their canonical definitions, not another copy of the rules.
+
+| ID | Canonical contract |
+| --- | --- |
+| INV-001 | Typed authoring authority and derived runtime artifacts — sections 1, 6 and 7.3.1 |
+| INV-002 | Valid absent permission versus invalid evidence; independent governance — sections 2.4–2.4.3 |
+| INV-003 | Source-kind membership and baseline isolation — section 2.4.1 |
+| INV-004 | Exposure and presentation inference — section 2.4.2 and field-access dictionary |
+| INV-005 | Reviewed source/target heads, rollback and release trust — section 2.3.3 and release dictionary |
+| INV-006 | Partial-save integrity versus P completeness — sections 2.3 and 2.5 |
+| INV-007 | Identity provenance, concurrency and retention — field-identity dictionary and section 5 |
+| INV-008 | Explicit readable identity/navigation, no UUID presentation — sections 1 and 7 |
+| INV-009 | Preserved protected controls; no unapproved MFA changes — section 6.1.5 |
+| INV-010 | Sealed target requirements, receipt-derived delivery and current activation — release/target dictionary and section 2.4.1 |
+| INV-011 | Legacy JSONB preservation equality versus immutable artifact bytes — section 6.1.2 |
+| INV-012 | Ordered-family provenance and complete sibling scope — section 7.9.1 |
+| INV-013 | Generated kind applicability and scoped cross-plane catalogue resolution — section 7.3.1 |
+| INV-014 | Constraint cutover and semantic navigation conversion — sections 11.12 and 11.7; retain these canonical anchors until traced consolidation |
+
+**Phase 1 implementation boundary:** deliver the dependency-complete typed contract, shared command/codec path, governed host bootstrap and Country/State Region read-only inspection/preview slice. Live reads additionally require F6 and F8; no synthetic preview attests live-data authorization. Existing controls needed by this subset remain mandatory. AI authoring, capability expansion, custom-value writes/overlays, release sets and Integration-owned authoring are later scope; parked workflow/case/print/integration automation remains NOT AUTHORIZED as stated in 7.9.4. A dictionary entry specifies a target contract, not a commitment to implement it in Phase 1.
+
+**F0 source decision (supersedes the earlier in-Markdown proposal):** the canonical executable authoring contract belongs in `server/packages/contracts/meta-entity-authoring`, as a closed typed contract definition generating schema, descriptors, mappings and the blueprint's repetitive contract tables. This blueprint remains the sole design authority for rationale, scope and governance; package definitions implement that reviewed design. Generate section 3 and applicable comparison/ledger/specimen regions from the contract plus pinned source evidence. Do not generate narrative rationale or pretend repository-derived specimens come from schema alone. Until the package definition and generator qualify, existing tables are reviewed migration inputs, explicitly not executable or generated authority. No contract file/tool is created by this documentation edit. Once generated, package and tables cannot both be independently edited; CI fails drift, and semantic changes update the contract and affected rationale in one review.
+
+### 1.1 Studio authoring and consuming-plane responsibilities
+
+Owner-approved architectural direction: centralize governed authoring in Studio, expose specialized editors through shared framework contracts, and publish through the existing publication infrastructure to declared consuming planes. Entity composer completion remains the immediate priority. This direction does not approve implementation of future capability editors, workflow/case execution, new business handlers or MFA changes.
+
+| Responsibility | Owner |
+| --- | --- |
+| Shared authoring workspace, review experience and release coordination | Studio |
+| Entity fields, keys, relations, surfaces, navigation and operation bindings | Shared Entity Framework |
+| Each resource's typed storage, semantic validation, compiler and execution | Owning capability/domain package through registered contracts |
+| Signed artifacts, delivery commands and deployment evidence | Existing publication infrastructure |
+| Local verification, activation and operational instances | Consuming plane |
+| Personal views/preferences within published constraints | Consuming plane |
+| Environment-specific credentials, connections and worker configuration | Appropriate plane administration |
+
+Studio may itself be a declared consumer; authoring there does not automatically target business behavior to Studio. Shared/default presentation changes follow governed authoring, while executing an operation, printing a record or managing personal preferences remains close to the work in the consuming plane.
+
+A reusable definition has its own identity, ownership, revision and release history, even if initially used by only one Entity. Entity metadata binds to it explicitly instead of copying its contents. Print, Workflow, Notifications and Numbering are future specialized authoring resources, not additional property bags inside Entity surfaces. The workspace remains thin; registered editors use existing framework hosting and canonical services, not bespoke applications or parallel providers.
+
+Generalize contracts before persistence. Preserve entity_change_set, Entity graph foreign keys, typed dictionaries and governance evidence. Do not fabricate an entity_id for another resource, replace Entity storage with a universal JSON store, or globally rename Entity graph semantics to resource semantics. Sections 7.1.1 and 11.18 define the incremental boundary.
+
 ## 2. Ownership, standard columns and constraints
+
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
 
 ### 2.1 Standard draft-owned columns
 
@@ -53,7 +100,7 @@ Stable entity/field identities do not carry change_set_id or revision-member sta
 - Same-graph FKs use `(change_set_id, referenced_id)` coordinates with matching unique keys; entity ownership is checked against the root. Nullable tenant columns do not substitute for same-graph FKs; a NULL-safe ownership guard checks tenant equality.
 - External relation targets, permission catalogues and immutable profile/tool releases are explicitly typed cross-resource references. They must not become unrestricted cross-tenant pointers.
 - Logical keys are unique within their owner. Active sibling positions are unique. Section parentage is acyclic, and parent/child sections belong to the same surface/navigation group.
-- For ordered collections, stored positions are one-based integers. This matches `entity_key_field`, `entity_search_field` and `entity_relation_field` (`CHECK position BETWEEN 1 AND n`). The existing `entity_surface_section`, `entity_surface_field_binding`, `entity_surface_operation` and `entity_surface_component_binding` positions are **zero-based** (`CHECK position >= 0`). A forward migration renumbers those rows by +1 inside each sibling scope, then replaces the CHECK with `position >= 1`. The codec never guesses which convention a row uses. JSON array indexes are zero-based; the codec adds/subtracts one explicitly. Order is preserved, never inferred from UUID or insertion time.
+- For ordered collections, stored positions are one-based integers. This matches `entity_key_field`, `entity_search_field` and `entity_relation_field` (`CHECK position BETWEEN 1 AND n`). The existing `entity_surface_section`, `entity_surface_field_binding`, `entity_surface_operation` and `entity_surface_component_binding` positions are **zero-based** (`CHECK position >= 0`). For the three retained surface membership tables, a forward migration renumbers valid rows by +1 inside each sibling scope, then replaces the CHECK with `position >= 1`. The retired entity_surface_component_binding has an explicit conversion/retirement disposition in section 7.9.1; its presence in the legacy inventory does not authorize a new editor. The codec never guesses which convention a row uses. JSON array indexes are zero-based; the boundary codec adds/subtracts one exactly once according to the declared input schema. Section 7.9.1 defines the boundary matrix; the adapter never shifts a value already normalized by that codec. Order is preserved, never inferred from UUID or insertion time.
 - A detail surface declares readable title/code fields and navigation. A list declares an explicit readable identity and allowed visible fields. UUIDs remain internal and are rejected as visible list identity/columns, including saved views.
 - An operation/surface with a valid undefined permission has no entity permission requirement. A defined permission uses its exact published catalogue reference. Authentication, tenant isolation, record scope, explicit denies and existing controls still apply.
 - Required configuration is explicit. Defaults chosen in Studio are persisted as authored values; no runtime guessing from field order, section names or entity codes.
@@ -68,7 +115,7 @@ Every draft child stores id, tenant_id, entity_id and change_set_id; shared cata
 | Local member reference | Composite FK (change_set_id,member_id) to unique (change_set_id,id), deferrable where graph insertion requires it | Reject foreign graph IDs; resolve JSON logical references through server-owned maps |
 | Same surface/group | Composite or deferred constraint trigger verifies owner chain; supplied group/section/field placements match | Named path diagnostics; no cross-surface slot reuse |
 | Tree membership | Self-FK plus deferred recursive cycle/root/purpose checks | Qualified depth limits; no tab-as-section nodes |
-| Target published reference | FK target_release_id to Entity release; guard target entity/owner and sealed source revision | Key/operation/surface/view keys resolved against that exact release and content hash; target plane qualified |
+| Relation target binding | same_graph requires local entity and NULL release; published_release FK checks exact entity/owner/sealed revision | Local graph or exact release resolution per section 6.1.3; target plane and reader qualified; no latest-release fallback |
 | Tenant overlay | Root tenant non-null, exact base_release_id and owned overlay rows; local/overlay XOR | Product-declared extension point and baseline operation enrollment only; effective graph retains both source hashes |
 | Position | positive integer; deferrable unique NULLS NOT DISTINCT within owner/sibling dimensions | Dense 1..N on saved ordered collections; reorder whole membership set atomically |
 | Surface applicability | CHECK permits NULL for an incomplete embedded draft or sectioned/collection for embedded, and requires NULL otherwise; deferred owner guards reject section/group/view/action/binding rows incompatible with the surface kind/mode | Shared descriptor applicability is validated at save, import and compilation; missing embedded mode is a P finding, never inferred |
@@ -80,7 +127,14 @@ Every draft child stores id, tenant_id, entity_id and change_set_id; shared cata
 
 Partial draft save is deliberate: SQL integrity, unknown properties, ownership, invalid values, incompatible selections and contradictory declarations always reject. Missing P properties can be saved on mutable draft/rejected change sets with a returned validation report. No valid-preview/publication receipt is produced until P completeness passes. Submitted/approved/published graphs are sealed under their existing controls. Conversion of an allegedly complete source has stricter all-path validation and never labels a failed conversion as a completed import.
 
-Service save calls the existing `metadata.fn_advance_entity_change_set(change_set_id, expected_lock_version, actor)`. This compares and advances lock_version exactly once and only for draft/rejected change sets. It also issues the transaction-local `app.entity_change_set_write_token` that every normalized graph mutation trigger requires. The service then verifies author rights, applies all member writes in that one transaction, runs the deferred ownership/tree/order checks and captures the immutable `snapshot.entity_draft_save` row for the new revision. It returns both the persisted revision and the validation findings. New member tables must enforce the same write-token guard as existing ones; a table without it is not a graph member. Concurrent stale save returns conflict with no partial writes. Preview reads a consistent saved revision; its validation/compiler hash binds that revision and exact dependencies. A malformed preview never invokes unqualified readers.
+Service save calls the existing `metadata.fn_advance_entity_change_set(change_set_id, expected_lock_version, actor)`. This compares and advances lock_version exactly once and only for draft/rejected change sets. It also issues the transaction-local `app.entity_change_set_write_token` that every normalized graph mutation trigger requires. The service then verifies author rights, applies all member writes in that one transaction, runs the deferred ownership/tree/order checks and captures the immutable `snapshot.entity_draft_save` row for the new revision. It returns both the persisted revision and the validation findings. New member tables must enforce the same write-token guard as existing ones; a table without it is not a graph member. Concurrent stale save returns conflict with no partial writes.
+
+The same guard, `metadata.trg_guard_entity_graph_row(<coordinate columns>)`, also makes each table's **logical coordinate immutable on UPDATE**, together with id, tenant, entity, change set and creation evidence. Examples are `field_key` on entity_field, `surface_key` on entity_surface, (`entity_surface_id`, `section_key`) on sections, (`entity_surface_id`, `binding_key`) on bindings and (`entity_surface_id`, `placement_key`) on surface operations. A new member table declares its coordinate columns in that trigger. Consequences for the composer:
+
+- A logical key cannot be edited in place once its row is saved. Renaming is an explicit **Rename key** command. The service executes it in the same revision-checked save as remove-and-recreate, remaps every same-graph reference and shows those references before confirmation. The command is limited to draft-local members without immutable or external references. Stable entity/field identities and custom-value identities are not eligible for remove-and-recreate; they use a governed replacement, preserving the original identity and data. The command retains audit evidence and reports all remaps. For a member present in the base release, rename is a breaking change, so the composer offers the member-lifecycle path instead (deprecate plus replacement key, section 2.5).
+- Moving a placement to another surface is likewise remove-and-recreate, never an UPDATE of `entity_surface_id`. Moving within a surface (section, position) is an ordinary update.
+
+Same-graph ownership of existing tables is enforced today by `(tenant_id, id)` unique keys plus the `trg_validate_entity_graph_binding` / deferred `trg_validate_entity_graph_deferred` trigger family, not by `(change_set_id, id)` composite FKs. New tables use the composite-FK form above. Existing tables keep their triggers until a forward migration replaces them one table at a time; the two mechanisms must never disagree, and the shared validator reports the same findings for both. Preview reads a consistent saved revision; its validation/compiler hash binds that revision and exact dependencies. A malformed preview never invokes unqualified readers.
 
 For content_kind=fields, relation/component/capability columns are NULL; direct bindings or child sections are allowed, not both. related_list has only its relation-target/surface/view/read/setup fields. component has only component_contract_id and slots. capability has only enrollment/layout references. Child sections are permitted only under fields layout containers. Null related-list selections are incomplete drafts, not an instruction to read unscoped data.
 
@@ -88,11 +142,174 @@ Required indexes: all FK referencing columns; (change_set_id,status); scoped log
 
 Draft-member deletion uses the owning graph transaction and explicit child removal; external dependencies and sealed releases use RESTRICT. Stable field identities are never reused for a different field and remain while values/references exist. RLS preserves platform/tenant ownership through the existing trusted session contract; client-supplied tenant_id is never ownership evidence.
 
+Rename key must remap and preserve all child security rows, policy/scope bindings and references atomically; remove-and-recreate is an internal identity operation, not permission reset. The semantic diff records old/new logical coordinates and retained controls as a rename. An ordinary delete plus add has no inferred lineage: show removed controls and every new none permission explicitly, invalidate approval and require independent review. Tests cover operation rename, recreation and failed remap rollback.
+
+**Product-authoring database authority qualification:** ordinary tenant-scoped application policies do not themselves establish permission to write NULL-tenant product rows. Inventory the actual application role/session context, role membership/grants, RLS policies, function ownership and execution privileges for every product save/import/submit/publication path. The inspected declaration of metadata.fn_advance_entity_change_set in metadata/07_functions.sql does not specify SECURITY DEFINER; its write token proves participation in the mutation protocol, not independent database authority. Do not assume either elevated execution or athyperadmin is the only possible path without tracing deployed composition.
+
+Qualify authorized Platform Admin product authoring and independent owner review, while denying tenant impersonation, forged principal/session scope, direct unauthorized DML and self-approved publication. No broad OR tenant_id IS NULL relaxation or seed-as-human-approval is authorized. Any proposed privileged routine requires explicit least-privilege ownership, safe name resolution, execution grants and verified human attribution. The platform/tenant governance maintainer owns this gate; named assignee/date are required before product-host/B0 activation. Existing authorization, audit and MFA controls remain intact.
+
+### 2.3.1 Canonical mutation protocol and snapshot cadence
+
+Interactive Studio authoring uses an atomic typed command batch, not ambiguous whole-graph replacement or unrestricted JSON Patch. The request supplies changeSetId, expectedRevision, a command identity under the existing idempotency contract, and an ordered commands array. Registered command variants are addMember, updateMember, removeMember, reorderMembers, renameDraftMember and the explicitly governed rebind/upgrade operations. Each variant selects a descriptor-enumerated member kind and schema-bound payload; there is no arbitrary table/path/SQL command. updateMember carries explicit set members and clear-property names with disjoint paths; omission means unchanged. removeMember is the sole ordinary deletion intent, with dependency findings. reorderMembers carries the complete sibling identity sequence, not intermediate drag coordinates.
+
+The server checks the whole batch, resolves scoped member identities, advances the draft revision once, applies keyed reconciliation and captures one immutable draft-save snapshot in the same transaction. Failure rolls back the entire batch. Full portable import/restore is a distinct reviewed replaceGraph command: validate a complete typed snapshot, present additions/changes/removals, require expectedRevision and reconcile rather than delete/reinsert all members. A normal editor never submits this mode implicitly.
+
+One lock_version remains the authoritative concurrency boundary. A stale batch returns conflict plus the changed member/path summary when authorized; it is not silently replayed against the new revision. The composer offers a three-way comparison with the author's original revision. Proven disjoint changes may be proposed as a new rebased batch, but an author must accept it and the server revalidates the entire graph. Separate module locks or last-write-wins are not introduced.
+
+The composer supports local undo/redo of uncommitted edits and reorders against the same descriptor state. After a batch commits, undo is an explicit revision comparison/restore command with concurrency and full validation, never deletion of audit history. Edits and drag gestures are buffered locally until an explicit Save/batch commit; drag-over frames and selection changes do not write. A reorder gesture updates the local sibling sequence and is included in the next committed batch. Preview uses only that saved revision. Every successful committed graph batch retains one full snapshot under existing snapshot.entity_draft_save semantics; no sampling or automatic history deletion is authorized. No-op batches produce neither revision nor snapshot. Any future autosave/retention change requires an explicit qualified cadence, retention contract and preservation of referenced review/publication snapshots. Load tests must measure representative large drafts, including approximately 1,365 bindings, before editor release; snapshot cost is a measured gate, not grounds for weakening audit history. Before production rollout, record an explicit operational decision covering snapshot volume/capacity, retention period or review checkpoint, archival/retrieval requirements, protected release/review references and permitted disposal controls. That decision is currently pending. Preserve existing history in the meantime; neither automatic deletion nor indefinite retention is silently selected by this blueprint.
+
+Batch-local references: addMember may declare a unique client-local token, referenced by later commands using a typed `{ "$tempRef": "token" }` member-reference variant. Tokens are request-local, never UUIDs or ownership evidence. The server prevalidates kinds/owners, allocates database identities and resolves the dependency graph in the same transaction; forward references are permitted only where the typed FK/graph contract supports them. Duplicate, unknown, cyclic-invalid or cross-batch tokens reject the whole batch. Responses return the token-to-persisted-identity mapping; idempotent replay returns that same mapping. Tokens never enter stored graphs, portable exports or compiled artifacts. Existing identities still require scoped resolution.
+
+Governed resource budgets are independent platform operational controls, not invented entity permissions. A proposed typed limits contract binds source owner/tenant/principal and plane to active-draft/reserved-identity counts, command/snapshot byte and graph-size bounds, save/preview/dry-run rates, concurrency and preview-handle TTL/count limits. Reuse registered admission/rate-limit infrastructure; F0 specifies exact typed settings, scope accounting, overrides and diagnostics before enabling production. Missing required budget configuration blocks the affected rollout; no guessed unlimited default. Check admission atomically before effects and report a retryable quota/rate result without partial saves or history deletion. Fairness must prevent one tenant exhausting shared queues/storage. Retention and quota are distinct: reaching a budget cannot authorize snapshot disposal.
+
+Unused reserved identities may be removed only through the existing governed disposal rule after every draft/snapshot/review/fork reference is legitimately removed and no release/value depends on them. Where only an editable draft references a reservation, explicit abandon/remove may release it after retention-approved disposal proves no retained reference; ordinary abandonment cannot erase immutable snapshots. Until that proof, quotas constrain reservation abuse and an authorized recovery/adoption of the existing compatible proposal can resolve ownership; incompatible reuse remains blocked. Never silently lease-expire a referenced identity or recycle its UUID.
+
+Immediate-uniqueness reconciliation is an explicit batch phase. Under the draft revision lock, first resolve commands to the intended final graph and reject competing final defaults. For each descriptor-declared immediate partial-unique scope, clear departing/default-changing memberships before inserting or enabling replacements; then apply dependent updates and verify final completeness before the single snapshot. Order scopes and row locks deterministically. Do not apply request order blindly, disable indexes or expose the temporary no-default state as a committed revision. This applies to default surface/search/view/placement and every other registered immediate partial-unique membership, not hardcoded table exceptions. Tests include update+insert, remove+replace, two final defaults, cross-scope swaps and failure rollback; all preserve identity and one revision/snapshot per accepted batch.
+
+### 2.3.2 Derived values, chains and targeted indexes
+
+The proposed shared derived-field consistency guard runs in the graph transaction after nested-field creation, fork, rename/remap and storage rebind. parent_field_id equals the revision row in the same graph whose field_identity_id matches the stable parent_identity_id; a missing required parent or cycle rejects. storage_type equals the exact column type in the hash-pinned storage catalogue for storage_path. Clients cannot set either value. The server resolves catalogue facts through the qualified reader, recomputes affected values atomically and revalidates all dependent fields; publication independently verifies the same dependency hash. Database guards enforce same-graph parent consistency and write-token ownership; the database is not claimed to query a remote catalogue. Missing catalogue evidence blocks the mutation, not a best-effort stale cache update.
+
+All replacement edges (field revision, stable field identity and other declared member replacements) must stay in their declared scope, reject self-links and form terminating acyclic chains. Deferred graph guards check the complete chain; replacing A with B does not permit B→A via another draft. Stable successors retain historical evidence, while immutable draft-local chains are checked within their pinned graphs. Inverse relations are not replacement chains: Phase 1 permits an explicit reciprocal pair A↔B with reversed compatible key mappings and matching scope, but no self-inverse edge or longer cycle. A self-referencing business entity may still declare distinct parent/children relation members; that is not a self-inverse member ID.
+
+Required indexes supplement section 2.3: entity_predicate(change_set_id,purpose,parent_predicate_id,position), scoped partial indexes for each root-owner FK, entity_field_access(change_set_id,entity_field_id,target_plane), operation_field(operation_change_set_id,entity_operation_id), field_access(read_operation_change_set_id,read_operation_id), and replacement_identity_id. Generate index definitions from actual column names and query plans; index existence does not substitute for ownership, recursion limits or authorization checks.
+
+### 2.3.3 Release concurrency, review independence and lifecycle
+
+Draft lock_version protects one draft, not a release line. Submission and publication compare source_predecessor_release_id with the current sealed source head for the exact resource/source-owner release line. Publication locks that line and performs the comparison and successor insertion atomically; first publication checks that no predecessor exists. supersedes_release_id must equal that checked predecessor. For product/tenant_entity successors, base_release_id must identify that same source base where it represents the starting graph; for tenant_extension it identifies the separate product dependency. Legacy drafts require explicit verified predecessor backfill or a blocking finding, never assignment of whichever head is current at migration time. A tenant extension additionally pins its baseline dependency: its own source predecessor and product base_release_id are distinct coordinates and both must be validated. Activation separately checks the intended local active head; source publication head is never substituted for it.
+
+A stale source base returns a named conflict. Explicit rebase uses a three-way semantic diff, typed reference/overlay remapping and full validation, then produces a new saved revision requiring fresh independent review. Never silently merge, overwrite the head or transplant approval. branch_code and parent_change_set_id record lineage; Phase 1 has no general sibling-branch merge/promotion UI. Existing governed fork/successor creation remains available through qualified services; it does not imply an arbitrary merge engine.
+
+Reviewer independence includes every authenticated human who committed content to any revision of the change set, including imports, replaceGraph, accepted rebase and post-rejection edits, plus any attributable proposing author. Resolve this participant set from immutable save/proposal evidence, not only created_by/submitted_by; missing attribution blocks review. A contributor cannot gain eligibility by reverting their edits or changing draft status. A fork must retain provenance for carried proposals; copying content cannot launder authorship. Service activity is not human review. Any content/dependency/base change invalidates prior approval.
+
+Semantic diff is the primary readable review artifact, but approval binds the exact base hash, resulting graph hash, dependency manifest hash, diff hash and diff-engine version together. A diff hash alone never replaces full-graph validation or source signatures. Classify access widening (including removal of a permission), exposure/masking, export/query, scope, protected capability settings and execution changes separately from presentation. Compute compatibility conservatively from versioned rules: removed fields/operations, narrowed types, incompatible references and newly required inputs without qualified defaults are breaking; presentation-only changes qualify as compatible only with supported consumers. Security changes carry separate classifications even when shape-compatible. Unknown changes block classification; an author's chosen compatibility label cannot override the evidence.
+
+F0 descriptors assign every property a closed securityClass set (presentation, permission, exposure, scope, policy, storage_authority, execution, protected_control) and a versioned change-classifier rule. Missing classification blocks generation; presentation-only requires every changed property and dependency to qualify as such. Classifiers compare effective before/after graphs, including child-row removal, not just scalar edits. Explicitly classify policy removal/enforcement/priority, removal of operation-rule denies, record-lock predicates, authorization_target/effect, requires_parent_read and relation mutation_mode. Uncertain direction is security-impact-unknown and blocks approval pending resolution, never presentation-only. These annotations describe contracts and require no second writable authoring property bag.
+
+Entity retirement is a governed release action with an affected-source/value inventory, independent review and target acknowledgements. Deprecation prevents new bindings under the declared policy while existing supported pins remain resolvable. Retirement does not delete sealed artifacts or custom values. The existing publication/dependency service owns retained dependency reachability and blocks disposal while active consumers, retained instances, reviews or retention/legal holds require the artifact. Dependents receive explicit rebind/rebase findings and migrate through reviewed successors. Revocation or an incompatible security/storage finding blocks affected operations immediately; unavailable pinned dependencies fail closed. No automated disposal or retention period is invented; the owner-approved retention decision remains required.
+
+The composer-host definition uses the same controls, with a separately reachable governed baseline-import/publication command and signed rollback procedure as recovery. Qualification must rehearse a broken host definition with independent authorization/review preserved. No emergency bespoke editor, direct graph SQL or bypass approval is allowed.
+
+Rollback is a newly reviewed successor, not restoration of old approval. Compute the semantic/security diff against the current sealed source head and, for activation, against each destination's current active head and effective current controls. Include every destination/head/hash in the review evidence; comparing only the historical graph's original base is insufficient. Widening receives normal independent security review. Changed source/active heads invalidate the relevant evidence and require refreshed diff/review before activation; local compare-and-swap prevents races. Historical provenance remains intact and a rollback cannot bypass revocation or current control intersection.
+
+Successor preflight classifies reverse dependencies as gates as well as review findings. Before ordinary publication, verify every actively pinned consumer can map its referenced identities/operations to the candidate compatible security contract; an unmappable active dependency blocks publication pending a reviewed rebind/compatibility plan. Incomplete dependency inventory is unknown, not no consumers. Recheck current consuming-plane dependencies under activation preconditions because consumers may change after publication. Publication alone does not activate the successor. Urgent restriction/revocation is a distinct existing security path: it may deliberately block affected consumers, but must record impact and recovery evidence rather than mislabel the change compatible. Never retain unsafe access merely to keep a pin working.
+
+### 2.3.4 Default uniqueness, namespaces and bounded validation
+
+Generate scoped partial unique indexes for active/default rows: surface(change_set_id,surface_kind) where is_default; search_profile(change_set_id) where is_default; surface_view(entity_surface_id) where view_kind=default; relation_target(entity_relation_id) where is_default; navigation_placement(entity_target_id) where is_default IS TRUE; surface_view_field(view_id) where grouped. Include each table's applicable lifecycle exclusion. Exactly-one completeness remains a P check. Partial unique indexes are immediate: a default swap clears the old value before setting the new one within the revision-locked transaction; do not claim a partial unique index is deferrable.
+
+Predicate roots have at most one root per (change_set_id,purpose,owner): generate one partial unique index per owner FK, filtered to parent_predicate_id IS NULL and that owner IS NOT NULL. all/any groups express multiple conditions below that root; multiple roots never imply undocumented conjunction. Retain purpose/owner XOR and same-graph constraints.
+
+Logical coordinates use descriptor-declared bounded ASCII grammars compatible with existing key domains (snake_case where applicable; existing dotted/hyphenated qualified keys retain their declared grammar). Labels remain Unicode. Do not globally impose snake_case or silently normalize existing sealed keys. Resolve entities/resources by source owner plus stable identity, never a bare tenant/product code preference. Product codes/namespaces and workspace/module/plane route coordinates are reserved against tenant shadowing; reserve/check collisions under a serialized registry/publication check as well as save validation. A later product registration must also detect existing conflicts rather than override them. Tenant labels are scoped by owning resource and locale; compiled bundles preserve that namespace. Explicit approved overlay/translation points are the only way to customize baseline labels/routes. Legacy collisions block publication with a migration finding.
+
+The versioned descriptor declares positive, tested limits for fields, sections, bindings, relations, predicate nodes/depth, commands per batch and payload bytes. Values require measured qualification, including the approximately 1,365-binding fixture, before editor release; this document invents no unmeasured numeric budget. Enforce bounds before expensive traversal and at save/import/compile. Reuse one bounded graph validation pass where possible and measure latency/snapshot size. PostgreSQL deferred constraint triggers are row-level; statement transition-table triggers cannot simply be declared deferred. The dirty-generation protocol in section 2.3.5 collects affected roots and deduplicates full validation under the graph write lock while preserving direct-DML guards and final transaction integrity. Do not remove deferred enforcement based on a performance assumption.
+
+Deferrable position uniqueness and immediate partial-default uniqueness are distinct declared mechanisms. A transient duplicate inside an uncommitted transaction is not inherently an invalid final graph. Position constraints defer their check to support qualified reorders; the chosen partial-default indexes are immediate, so the reconciler clears the old default before setting its replacement. Preserve these exact semantics rather than claiming transient duplicates alone explain which mechanism is correct.
+
+### 2.3.5 Transaction-scoped validation and collaborative reads
+
+Choose a shared dirty-generation validator, not recursive whole-graph validation per member callback. The existing graph write lock/token remains mandatory. Every authorized member mutation performs narrow row-local ownership/immutable-coordinate checks and records its graph/affected roots in a private transaction-scoped dirty registry with a monotonically increasing mutation generation. The registry is service/database-owned (transaction identity plus graph coordinate); clients cannot mark a graph clean or supply a trusted validation receipt. No user-created temporary table or freely writable session variable establishes validity.
+
+A deferred constraint trigger on that registry calls one shared graph validator under the same graph lock. It loads the current complete affected-root set and skips expensive work only when validated_generation equals mutation_generation. Otherwise it validates the graph and records the generation validated. Multiple queued callbacks may occur, but callbacks for an already validated generation do no recursive work. Updating the validation marker must not itself mark the graph dirty or create an infinite trigger loop. Explicit service validation uses the same routine before the saved snapshot/receipt; later mutations advance the generation and force revalidation at commit. SET CONSTRAINTS IMMEDIATE, multiple batches in one transaction, deferred FK failures, rollback and savepoint rollback must all preserve this invariant.
+
+Direct authorized DML uses the same member guards and dirty marking; unauthorized DML fails before mutation. Missing write token, disabled/missing registry trigger or registry ownership checks prevent qualification. Internal registry state follows transaction rollback; committed bookkeeping has a separate proven-safe cleanup path as specified by the prototype below. It is not an authoring property bag or another graph source. F0 must specify the exact private SQL objects/privileges and callback conditions before replacing existing guards; existing per-row enforcement remains until the replacement passes direct-DML and batching conformance tests. Qualify approximately 1,365-binding reorder cost, number of full validation passes and callback overhead separately.
+
+Priority 2 has a stop/go comparison against the simplest equivalent design: one final affected-graph validation under the existing write lock, with proven database final-state enforcement for every supported mutation/constraint mode. Compare correctness, full-validation count, callback overhead and latency at the 1,365-binding fixture and approved limits. A service-only final call is not equivalent for direct DML or subsequent writes. Adopt the dirty-generation candidate only if its correctness and measured benefit justify the extra machinery; otherwise document a simpler proven mechanism before changing existing guards.
+
+The priority-2 prototype candidate is a private ordinary database relation keyed by non-reused database transaction identity plus graph identity, with normalized affected-root rows, mutation generation and validated generation. It is not a user temporary table, session setting or advisory lock acting as validity evidence. Only narrow privileged routines may mutate it; graph-writer roles cannot forge generations or cleanliness. Member guards advance mutation generation; a deferred registry trigger is scheduled only for insertion or mutation-generation change, never validated-generation-only updates. Explicit validation and callbacks share one routine. Each callback reads current registry state under the graph lock; rolled-back rows/generations follow transaction/savepoint rollback. Retained committed rows cannot qualify a later transaction and are cleaned by a bounded internal maintenance path only after transaction completion is proven; cleanup failure cannot change validation correctness. This refines the earlier transactional cleanup wording, not snapshot retention.
+
+This is a prototype selection, not verified SQL. Its deliverable includes exact transaction-identity semantics on the supported database version, private DDL, function ownership/search-path/privilege rules, trigger event predicates, post-commit cleanup and crash tests. Qualify SET CONSTRAINTS IMMEDIATE before and after member mutations, including visibility of the final changed row; an early callback must not certify a pre-mutation state. Compare against retained existing guards and reject this candidate if final-state validation or bounded work cannot be proven. Do not replace working controls because the candidate has been named.
+
+Phase 1 keeps one optimistic lock_version per draft, not one author per Entity. Multiple drafts/authors can work concurrently, but stale saves within a draft require explicit reconciliation. Module reads and comparisons bind one saved revision/hash, never mix revisions; users may inspect a newer revision without overwriting their unsaved buffer. Optional presence indicators are advisory and reveal only authorized identities. Measure two-author disjoint Fields/Labels edits, overlapping edits, rebase effort and conflict latency. Automatic stale-batch acceptance or member-subgraph locks remain deferred until a qualified read-set/phantom-dependency contract exists; non-overlapping writes alone do not prove semantic independence.
+
 ### 2.4 Catalogue, label and profile ownership
 
 ui_component_contract and its slots are immutable registered resource projections; they do not inherit Entity draft coordinates. Capability profiles and override rules belong to their governed profile resource revision and retain their exact publication reference/hash. entity_field_identity belongs to a stable entity and tenant, without change_set_id. entity_class_profile retains its existing natural primary key. Release rows retain their actual governance columns, not the draft-member common-column template.
 
 entity_label and entity_label_translation in this dictionary belong to Entity drafts. External profile/component labels remain with their registered resource; do not insert a fake entity_id or cross-draft label row to own them. Entity-specific labels on enrollments/sections reference the Entity label catalogue. Localized output joins the two qualified resources without duplicating their authoring authority.
+
+**Governed authoring authority:** composer-host permissions are metadata-defined, and no extra permission code is invented or embedded in application logic. Preserve the independent product/tenant author and owner-review roles, contributor separation and publication authority required by section 2.4.1. Their exact role/policy bindings come from the existing governed platform publication contract, outside the host draft being edited; a host release cannot remove or redefine its own governance boundary. Save, submit, review, publish, API/CLI bootstrap and recovery enforce the applicable registered governance capability as well as the host's entity controls. Missing governance evidence blocks that capability, not unrelated entity access. F0 and host qualification must demonstrate the published binding source, delegated scope and enforcement for each action; removing host permission rows must not expand authority to ordinary Studio users. This preserves existing independent controls rather than adding a hardcoded author/review/publish permission set.
+
+**Authoring permission intent:** retain valid permission absence as no entity grant required. The existing none/defined compiled contract is derived explicitly for each effective operation/surface/action × target plane. The composer always displays that resolved state and includes newly absent requirements in the immutable semantic review artifact. A new operation or plane has an unreviewed change state until the existing independent review approves its exact graph; that is review status, not an invented missing permission. Do not add mandatory authoring none rows or block otherwise valid preview solely because a permission property is absent. A future explicit intent-row redesign would require an owner-approved change to this rule and its typed migration; it is not adopted here.
+
+### 2.4.1 Source ownership, publication authority and deployment destination
+
+Keep three independent coordinates: source owner (platform baseline or tenant-owned definition), publication authority (authorized human author, independent reviewer and publisher), and deployment destination (applicable tenant scope, plane, environment and instance). A publication authority tenant must not become the owner of a platform baseline merely because publication.release has a tenant coordinate. Preserve platform-admin/platform-owner and tenant-admin/tenant-owner review separation and exact source hashes; service/deployment receipts are not human review evidence. Tenant extensions remain bounded overlays and cannot mutate their baseline or weaken platform controls.
+
+Published and active are existing distinct states. Reuse publication.release, artifact, artifact_compilation, deployment, deployment_event and deployment_acknowledgement; do not introduce another release or activation ledger. The generic ledger is evidenced by server/db/ddl/planes/studio/publication/02_domains.sql and 03_tables.sql. Generic storage does not prove that each resource kind has a qualified compiler, dispatcher, verifier, renderer or activation adapter.
+
+Studio coordinates approved publication and projects target receipts. Consuming-plane adapters verify compatibility and establish local active state; Studio never invents that state. fn_confirm_metadata_activation in metadata/12_baseline_import.sql checks existing activation evidence before emitting its acknowledgement event; it is not a universal resource activation implementation. Runtime continues from locally verified active artifacts during Studio outages while retaining local authorization, revocation and independent controls.
+
+**Source-kind membership boundary:** apply the following closed family matrix at save/import and compilation. F0 expands families to exact table names and mutation modes, with zero unclassified member tables; a new family is forbidden until explicitly classified. Database guards validate source kind, same-graph ownership and permitted baseline/overlay references using the installed pinned contract; the service validator additionally proves extension-point semantics. Inherited product rows are resolved read-only from the sealed baseline, never copied into the tenant graph as writable members.
+
+| Member family | product | tenant_entity | tenant_extension |
+| --- | --- | --- | --- |
+| Draft identity, targets and governance evidence | Governed own scope | Governed own tenant scope | Own extension scope and permitted baseline targets only; no baseline identity/profile mutation |
+| Owned labels/translations and contract-test fixtures | Add/edit own | Add/edit own | Add/edit only for permitted owned members; no product label replacement |
+| Field definitions/choices and stable identity references | Add/edit own | Add/edit own | Add ext_ extension fields only through approved extension points; no product field rows or storage-column claims; stable identity lifecycle server-owned |
+| Runtime profiles, operations, permission/scope/policy rules, authorization profiles | Add/edit through normal controls | Add/edit through normal controls | Forbidden new/replacement rows; baseline operations/policies remain inherited |
+| Field access and operation-field enrollment | Add/edit own | Add/edit own | Only own extension fields against exact approved baseline operations and allowed extension enrollment; cannot widen baseline scope/exposure |
+| Surfaces, navigation groups, sections, views, surface operations | Add/edit own | Add/edit own | Forbidden new/replacement members; no new surface or open operation |
+| Surface overlays and overlay-owned field bindings | No tenant overlays | No product-baseline overlays | Overlay-only at declared baseline anchors; registered controls and own-field placements only |
+| Keys, relations, search profiles, predicates, component-field bindings, badges, AI, capabilities and navigation placement | Allowed only where the kind's complete contract exists | Same, tenant scope | Forbidden unless a later explicit typed extension contract adds that family; no generic copy-through |
+| External catalogues and release/identity lifecycle records | Referenced read-only or governed service-owned | Same | Same; no client mutation |
+
+Extension saves reject field-access or operation-field rows whose field is baseline-owned, and reject authored baseline operation-permission rows, with exact safe property-path diagnostics. An owned extension field may still enroll against an explicitly permitted, pinned baseline operation; the baseline-operation reference is not itself a forbidden redeclaration. No prohibited row is accepted as a silent runtime no-op.
+
+This intentionally bounded initial extension surface does not promise every future extension use case. An unsupported member is a named error, not silently dropped or treated as permission absence. F0 tests each family with allowed/forbidden source-kind fixtures and direct authorized DML; baseline hashes and inherited restrictions remain mandatory.
+
+E1 applies to every extension field-access and operation-field mutation, including imports and direct authorized DML. The guard verifies the exact sealed permitted baseline, own-field ownership, approved enrollment point and applicable product/tenant policy constraints; tests cover foreign/older/unsealed bases, product-field redeclaration, forged operation references and widened query/disclosure. A new tenant-owned field represented plain is not inherently a widening of an unrelated product field: validate that field's classification, lineage and governing policies. Computed/fetched values cannot launder masked/omitted product data through an extension field. E1 acceptance requires both save-time guard evidence and effective runtime composition; until then extension enrollment controls and mutation capabilities remain unavailable.
+
+Extension enrollment must preserve the baseline operation's accepted input contract for existing callers. An owned extension field enrolled in a baseline operation is optional, or its omission has a pinned, deterministic and authorized server default qualified for that exact create/import/update context. required=true without such omission compatibility rejects save/qualification; a UI default is insufficient. PATCH omission means unchanged and cannot overwrite an existing value with a default. Cross-field rules must not introduce new mandatory inputs for unchanged baseline clients. Test old API/import/bulk payloads with and without tenant extensions; incompatible behavior needs a separately versioned explicitly selected contract, not implicit baseline tightening.
+
+### 2.4.2 Effective security across pins, previews and data channels
+
+Pinned artifacts remain immutable contract/presentation evidence, including their reviewed authorization declarations. A pin never exempts a request from the consuming plane's current independently governed authorization, explicit denies, exposure, record scope, revocation and protected capability controls. Do not silently replace the pinned graph with a newer graph. Resolve a compatible current active security contract and apply both restrictions: access must pass both, query uses intersect, scopes intersect, and representation may only become more restrictive (omitted over masked over plain). If the current control cannot be mapped to stable identities or required evidence is unavailable, block the affected operation and require rebind; never fall back to weaker pinned access. Protected settings combine by registered semantics, not arbitrary boolean logic: a required scan cannot become optional because an older profile permitted it. Qualify the shared resolver/version/cache invalidation contract before serving pinned live dependencies.
+
+Tenant extensions expose baseline-superseded/rebase-needed status. A compatible baseline update may remain supported only under an explicitly governed compatibility policy; no implicit grace period permits revoked or weaker security. Incompatible or revoked baseline use suspends affected operations immediately until reviewed rebase/revalidation and activation. Unaffected operations may continue only if their independent dependency closure qualifies. Publication preflight and target activation verify these rules; no automatic baseline mutation is allowed.
+
+Live saved-draft preview uses the intersection of currently active published data-read authority/exposure and the draft's requested presentation. Author rights are not record-read rights. A draft cannot unmask a live field, expose a draft-only field, widen scope or gain query access. Draft-only/unpublished values use marked fixtures or an unavailable-data finding. More restrictive draft presentation may narrow live output. The server reader applies this rule before values reach the renderer, preview response, AI context or cache; field filtering in the browser is insufficient.
+
+Export/print/AI/reference/search channels cannot bypass field access. Export resolves the plane's authorization_profile.record_read_operation_id and each field's compatible entity_field_access read-operation binding, current record scope and representation; omitted fields are excluded and masked fields remain masked. entity_operation_field currently owns writable/request enrollment and must not be repurposed as a second read-field list. Any explicit export field selection must be a qualified subset of the resolved read closure; requested forbidden fields reject configuration. Enforce masking before serialization and background job results, with authorization rechecked at execution/download as applicable. Imported masked display values are not original values and cannot be silently written back; import mappings follow authorized input enrollment and reject unsupported masked placeholders.
+
+Search profiles are reusable authoring definitions, but compile/qualify per target plane against effective field_access.query_uses and exposure. Incompatible search/filter/sort/group enrollment blocks that plane's qualification rather than silently dropping fields. Masking does not grant query access; masked-field queries require an explicitly qualified policy/provider contract preventing unauthorized raw-value inference, otherwise they reject. Personal views and runtime queries undergo the same checks.
+
+Permission-row deletion is explicitly access widening and receives a review finding. The semantic diff also enumerates every newly effective operation/surface/capability-action × target-plane requirement, including newly added planes and members. A newly introduced none requirement is a distinct security finding even if no row was deleted; write/delete/export and external effects are identified separately. This finding requires informed independent review, not an invented default permission or automatic denial of valid permission absence. Preserve the runtime rule: a valid undefined applicable permission requires no entity grant. The first normalized compiler/reader transition must encode that resolved state explicitly as a closed none/defined requirement variant (with exact plane/catalogue identity when defined). Missing/unknown required state in that contract is invalid, not none. Historical artifact schemas retain their existing validated absence semantics through version-specific decoders; never rewrite signed artifacts or require a new field without a schema/compiler/reader transition. No default permission or MFA change is introduced.
+
+For source_kind=product, record-UUID literals are forbidden in default_uuid, predicate value_uuid/value_uuid_set and policy-parameter UUID values. Internal metadata identities/FKs are distinct and remain permitted. Use registered trusted context, governed business keys and supported typed resolvers; an unresolved literal is a conversion finding, never guessed or stripped. Tenant literals also require scope/type validation and environment portability evidence. This rule does not permit UUID presentation.
+
+Product activation establishes the current product baseline on that target. Tenant overlays do not veto a product release or silently keep the whole tenant on an obsolete baseline. Before activation, run an affected-overlay compatibility dry-run against the candidate baseline and record its observation/generation; activation rechecks that evidence. An overlay is executable only with its exact qualified baseline pin. A reviewed rebase/successor may qualify it against the new baseline; otherwise suspend that overlay and dependent operations while the new baseline serves unaffected behavior. Do not apply the old overlay directly to the new graph, delete its values, weaken required fields/relations or fabricate rebase approval. If safe baseline-only operation is impossible, report the affected operation unavailable. Dependency safety can block a particular activation under its explicit policy, but a tenant field-name collision cannot become a global product namespace veto. This is the target default; implementation must qualify suspension, recovery and read-only retained-data access before enabling mixed baseline/overlay deployment.
+
+**Presentation inference rule:** all field dependencies of visibility/editability, badge tones, header/summary expressions and formatting participate in the effective read closure. Plain authorized fields may drive ordinary presentation. Masked fields cannot drive raw-value branches, tones, aggregates, lengths or formats merely because their display is masked. Add `condition` to the closed query_uses contract only for an explicitly registered policy/provider that permits the exact derived disclosure and proves its inference limits; the flag alone never grants unrestricted predicate access. Otherwise reject that configuration. Omitted fields never participate. Server evaluation of sensitive conditions returns only authorized bounded derived outputs and does not send raw operands; server execution alone does not make a boolean result safe. Client formatting/conditions may use plain authorized values or the already-masked representation only where the registered contract proves it cannot recover or infer disallowed information. Unknown dependency sets reject compilation. Include salary thresholds, masked enums, badge tones, headers and aggregate summaries in tests; this extends the webhook no-oracle principle to every presentation channel.
+
+### 2.4.3 Effective-security resolver and authoring scope
+
+The named shared prerequisite `entity.effective-security/1` must qualify before any pinned live read, saved-draft live preview, export or integration disclosure. Inputs are the pinned source/dependency identities and hashes, current locally active security generation, requested operation/fields/query uses, target plane/tenant and verified caller context. Resolve stable Entity/field/operation identities against installed immutable manifests; names alone cannot join different generations. Output is a discriminated resolved closure (exact generations/hashes, allowed operations, scoped reader/query contract, per-field representation and applicable protected settings) or a blocking diagnostic; it is not a reusable permission grant.
+
+State machine: resolve installed evidence → verify scope/identity mapping → evaluate pinned and current controls → intersect compatible restrictions → issue a request-scoped resolved closure. Missing/revoked evidence yields blocked_dependency; unmappable identities or incompatible representation/settings yields rebind_required; failed authorization yields denied. None of those states becomes an absent permission. Registered protected-setting combiners carry key/version/hash and declared monotonic rules; incompatible masks/providers block rather than choose whichever mask is weaker. Successful composition cannot add query uses, widen scope, remove mandatory scanning or expose omitted fields.
+
+Cache keys include caller authorization generation, tenant, plane, pinned hashes, current security generation and operation/field selection. Acquire the local head/security locks from section 5.1 before resolution; verify generations under that lock and retain the qualified closure for the bounded transaction. Activation publishes the new generation under the exclusive lock. Asynchronous invalidation improves freshness but never substitutes for generation checks; old cache entries cannot match the new coordinate. Long-lived handles/jobs re-resolve at execution. This is a prerequisite deliverable within existing foundation gates, not a reused F-number or a second policy engine.
+
+The composer-host Entity declares record scope in published metadata for both read and mutation: tenant drafts require matching tenant ownership; product drafts require authenticated platform author/reviewer authority; applicable module scope resolves through entity.module_id and the existing governed scope/policy contracts. An author/reviewer permission alone does not confer access to every change set. Enforce scope on list, graph read/save/import/rebase/review, dependency selection and preview; filter lists server-side and recheck addressed records. Missing module resolver/assignment evidence blocks restricted authoring, never creates entity-name allowlists or additional inferred permission codes. Bootstrap must publish these bindings together with the host.
+
+Collision diagnostics disclose only coordinates the actor is authorized to inspect. For a foreign tenant reservation, report a restricted namespace conflict with an opaque support correlation, not tenant identity, hidden key names, counts or suggested alternatives that reveal them. Authorized governance investigation uses separately scoped evidence. Save and publication checks must have equivalent redaction.
+
+Effective-security composition is a product of typed restrictions, not one scalar security score. For each request, verified dependency/identity/trust resolution precedes evaluation; denial, revocation or unmappable evidence terminates access before any result serialization. Use the following resolver conformance algebra:
+
+| Control family | Restriction order and composition |
+| --- | --- |
+| Permission requirements | Conjoin independently resolved pinned/current requirements. none contributes true only to the Entity permission component; defined requires its exact authorized catalogue binding. Removing a current permission does not cancel a pinned defined requirement |
+| Allowed record/tenant scope | Intersect authorized sets/predicates under the registered provider grammar; unsupported intersection blocks rather than approximates |
+| Explicit deny scope | Union denied sets, then subtract from the allowed intersection. Denied sets themselves are not intersected |
+| Field representation | omitted is no disclosure. plain may narrow to a qualified mask. Equal mask contracts compose idempotently; different masks require an explicitly registered compatible meet, otherwise block. Never order unrelated masks by name or perceived strength |
+| Query/condition uses | Intersect permitted uses and require each surviving use's provider/disclosure-safe contract; exposure alone grants no query use |
+| Required safeguards | Conjoin obligations (for example a scan required by either side remains required); permitted implementations/settings intersect. Permission removal cannot remove a required scan. Unsatisfiable obligations block |
+| Limits | For the same unit/scope and semantics, use the stricter bound; incompatible units or meanings require a registered adapter or block |
+| Protected existing controls | Preserve their established registered semantics and verified values. This table does not define or change MFA behavior |
+
+For supported combinations the meet is idempotent, commutative and associative after canonical normalization, and never permits more than either input. Registered combiners must supply these law tests and rejection vectors. Evaluate families in the canonical dependency order (trust/identity, operation authority, scope/denies, field disclosure/query use, obligations/limits); changing evaluation order cannot widen the result. An unsupported pair returns rebind_required/blocked_dependency as appropriate, with authorized diagnostics. Adding a combiner is a versioned governed contract change with conformance evidence, not ad-hoc boolean logic. F0 records these interface/test dependencies; the resolver stays inside the existing authorization framework.
+
+Product entity-code reservation is a database-enforced namespace invariant for new writes, not merely a preflight service lookup. The existing (tenant_id, entity_code) unique key enforces only local uniqueness. F0 must specify a shared database guard and serialized namespace claim/check for product-versus-tenant collisions in both directions, preserving scoped tenant uniqueness and restricted diagnostics. Exact storage objects/locks and migration of legacy collisions require proof before code-registration writes qualify; do not claim the existing unique index enforces cross-scope reservation. The registry is governed identity evidence, not hardcoded entity dispatch.
 
 ### 2.5 Lifecycle, nullability and concrete constraint templates
 
@@ -119,10 +336,10 @@ CHECK (content_kind = 'related_list' OR
 -- Mutable predicate trees may be incomplete but cannot have two owners.
 CHECK ((parent_predicate_id IS NULL AND
         num_nonnulls(view_id, authorization_profile_id, field_binding_id,
-                     surface_operation_id, surface_section_id) = 1)
+                     surface_operation_id, surface_section_id, navigation_group_id) = 1)
     OR (parent_predicate_id IS NOT NULL AND
         num_nonnulls(view_id, authorization_profile_id, field_binding_id,
-                     surface_operation_id, surface_section_id) = 0))
+                     surface_operation_id, surface_section_id, navigation_group_id) = 0))
 
 -- Scoped member reference; parent table declares UNIQUE(change_set_id,id).
 FOREIGN KEY (change_set_id, entity_field_id)
@@ -134,13 +351,51 @@ Ordinary CHECK constraints do not inspect other rows. Same-surface membership, c
 
 Nullable columns with paired keys/versions/hashes use all-or-none checks. Character limits and numeric/date bounds reject min > max; irrelevant field-family columns must be NULL. Reference tokens reject raw UUID display. A UUID foreign key can participate in a readable reference only when the published component resolves authorized target tokens; it cannot fall back to the underlying UUID. This applies to default/personal views, embedded lists, cards, hints and exports of presentation labels.
 
+#### Field-family CHECK templates and cross-row checks
+
+Generate these row-local templates from the same descriptor as the API validator; these are design fragments, not an applied migration. Extend them with every family/default payload column before claiming full generated coverage.
+
+```sql
+CHECK (data_type IN ('string','text') OR
+       num_nonnulls(min_length,max_length,pattern) = 0),
+CHECK (data_type IN ('integer','bigint','decimal','money') OR
+       num_nonnulls(minimum,maximum) = 0),
+CHECK (data_type IN ('decimal','money') OR
+       num_nonnulls(precision,scale) = 0),
+CHECK (data_type = 'date' OR
+       num_nonnulls(minimum_date,maximum_date,default_date) = 0),
+CHECK (data_type = 'datetime' OR
+       num_nonnulls(minimum_datetime,maximum_datetime,default_datetime) = 0),
+CHECK ((data_type = 'money' AND
+        num_nonnulls(currency_field_id,currency_code) <= 1)
+    OR (data_type <> 'money' AND
+        num_nonnulls(currency_field_id,currency_code) = 0)),
+CHECK ((json_schema_key IS NULL) = (json_schema_hash IS NULL)),
+CHECK ((data_type = 'json' OR cardinality = 'many') OR
+       (json_schema_key IS NULL AND json_schema_hash IS NULL)),
+CHECK (minimum IS NULL OR maximum IS NULL OR minimum <= maximum),
+CHECK (data_type NOT IN ('integer','bigint') OR
+       ((minimum IS NULL OR minimum = trunc(minimum)) AND
+        (maximum IS NULL OR maximum = trunc(maximum))))
+```
+
+These currency/schema CHECKs enforce consistency of supplied values, not P completeness: a mutable money draft may omit both currency selectors; a json/many draft may omit both schema coordinates. Paired schema coordinates, wrong-family values and two currency authorities still reject immediately. Preview/publication requires exactly one currency authority for money and a complete supported schema pin for json/many. Tests cover selecting a type first, saving incomplete, completing it and rejecting contradictory values.
+
+Enum choice rows are cross-row data: a deferred scoped guard enforces exactly one authority (domain_code XOR nonempty owned choices) at completeness, and immediately rejects contradictory supplied authorities; an ordinary CHECK cannot count choices. Apply the same graph guard to currency-field type/ownership and catalogue compatibility. Generated fixtures cover irrelevant columns, default tagged payloads, ordered bounds and schema pins through SQL and service validation within each layer's scope. Incomplete drafts retain only the explicitly permitted P gaps.
+
 ## 3. Field dictionary
 
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
+
 `R` means NOT NULL in storage; `N` means nullable. `P` marks a publication/preview requirement that can remain incomplete in a mutable UI draft. Conditional variant checks apply immediately to supplied values; publication validates completeness. An R designation qualified by a surface/content kind means N at SQL level with P requiredness for that kind. An FK selector displays a declared readable code/name and stores an internal UUID. A catalogue selector is backed by the relevant governed catalogue. Sets are typed arrays only when they have no independent identity/order/relationship semantics; their canonical JSON order is explicitly sorted by value. Ordered collections always use position rows. Every table has its declared PK/FKs plus the applicable standard ownership/audit columns; the setting-column and override-column subsections extend their named table and do not introduce tables.
+
+Each dictionary carries a **DDL status** line comparing its listed columns with `server/db/ddl/planes/studio/metadata/*.sql` as of 6 October 2026. "Existing" means the column is declared there today with the stated type; "proposed" means a forward migration must add it before any editor, codec or compiler path may write it. The type column uses the actual PostgreSQL domain name wherever the DDL declares one, because the descriptor (section 7.3) selects `choice` controls from registered domains, not from free `text`. Section 7.9 turns these lines into the composer build order.
 
 ### `metadata.entity`
 
 *Composer home: Overview › Identity.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Stable entity identity, separate from versioned definitions.
 
@@ -157,6 +412,8 @@ PK `id`; scope uniqueness `(tenant_id, entity_code)` with NULLs treated as equal
 
 *Composer home: Overview › Identity (draft) and Provenance.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; proposed columns (11): `source_kind`, `schema_version`, `authoring_schema_hash`, `entity_label_id`, `default_locale`, `required_locales`, `publication_resource_key`, `source_uri`, `source_hash`, `publication_owner`, `source_predecessor_release_id`. The other listed columns exist.
+
 Owns the complete definition being composed; presentation/localization values live once at this root.
 
 One semantic graph per draft. Target declarations are owned by entity_target rows; compiled envelopes derive their sets. Review/authorship fields are service-owned metadata, not surface layout settings.
@@ -164,9 +421,11 @@ One semantic graph per draft. Target declarations are owned by entity_target row
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `change_set_code` | `text` | R; unique entity revision code | country-definition-v1 | Draft code |
-| `base_release_id` | `uuid` | N; exact published baseline | @baseline-release | Baseline selector |
+| `base_release_id` | `uuid` | N; exact published baseline; product base for tenant extensions | @baseline-release | Baseline selector |
+| `source_predecessor_release_id` | `uuid` | N; exact source-line predecessor; NULL only for first publication; same entity/source owner FK validated by guard | NULL | Server-captured at creation; changed only by reviewed rebase |
 | `source_kind` | `text` | R; product/tenant_entity/tenant_extension | product | Read-only ownership |
-| `schema_version` | `integer` | R; positive authoring-contract version | 1 | Read-only |
+| `schema_version` | `integer` | R; positive version of the registered AuthoringSchemaDescriptor contract in section 7.3.1 | 1 | Read-only |
+| `authoring_schema_hash` | `text` | R; SHA-256 of immutable descriptor registered for schema_version; server-populated and verified | 64 hexadecimal characters | Read-only |
 | `entity_label_id` | `uuid` | R; label FK | @label.country | Entity label selector |
 | `default_locale` | `text` | R; governed UI locale code | en | Locale selector |
 | `required_locales` | `text[]` | R; distinct, includes default locale | {en,ms,ar} | Locale multi-select |
@@ -174,7 +433,7 @@ One semantic graph per draft. Target declarations are owned by entity_target row
 | `source_uri` | `text` | N; author-supplied provenance | repository entity source | Provenance input |
 | `source_hash` | `text` | N; sha256, supplied/verified import identity | 64 hexadecimal characters | Read-only after import |
 | `lock_version` | `bigint` | R; 0..2^53−1 (forward CHECK); advanced exactly once per graph save by fn_advance_entity_change_set | 7 | Read-only; API revision (JSON integer) |
-| `branch_code` | `text` | R; scoped branch code | main | Branch selector |
+| `branch_code` | `text` | R; scoped branch code | main | Read-only lineage (no general merge UI) |
 | `parent_change_set_id` | `uuid` | N; same entity/owner | NULL | Read-only lineage |
 | `title` | `text` | R; draft title; governance text, not runtime label | Country authoring | Draft title |
 | `change_summary` | `text` | N; bounded | Layout and reference configuration | Summary |
@@ -200,6 +459,8 @@ The root status uses the existing draft/in_review/approved/rejected/abandoned/pu
 ### `metadata.entity_release`
 
 *Composer home: Review and release › Releases (read-only).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Immutable release using the established publication and Entity governance columns.
 
@@ -233,9 +494,21 @@ PK id; tenant_id follows entity ownership. Existing checks, immutable triggers, 
 | `published_at` | `timestamptz` | R | 2026-10-05T10:00:00Z | Server-owned |
 | `published_by` | `uuid` | R; authenticated governed publisher | @publisher | Server-owned |
 
+The nullable signature tuple preserves historical storage compatibility; it is not optional for new publication. New product, tenant-entity and tenant-extension releases require a registered algorithm, signing key identifier and valid signature over the existing canonical release/artifact envelope and its dependency/hash bindings. The publication service signs only after verifying independent approval; private keys stay in the governed signing service/key store, never metadata, browser or exported drafts. Consumers verify trusted issuer/source-owner scope, algorithm, exact bytes/hash, key status and signature before installation/activation and when trust generation changes. Hash integrity alone is not authenticity.
+
+The trust policy declares allowed algorithms, rotation overlap, key validity, compromise/revocation behavior and whether old signatures remain trusted after ordinary rotation; no automatic re-signing or rewriting historical artifacts. Compromised-key evidence blocks affected activation/use until a reviewed recovery disposition. Historical unsigned artifacts need an explicit scoped compatibility policy and verified provenance; they cannot be called signed or silently qualify a new publication. Define trust-policy version/cache invalidation and offline verification behavior before publication qualification; unavailable required trust evidence fails closed. Existing signature algorithms/envelope hashes are not changed by this documentation requirement.
+
+Publication derives release.target_planes exclusively from the exact sealed change set's entity_target rows, using the registered deterministic projection. Clients cannot author release target planes or substitute target requirements; any supplied derived evidence must match or reject. The release.change_set_id and sealed rows remain retained immutable evidence. required/recommended/optional stays in those sealed entity_target rows, not a new writable release column or parallel ledger.
+
+Register a typed delivery-status projection over that release/change-set linkage and existing deployment/acknowledgement records. Each destination is an explicitly governed tuple of plane, tenant/deployment scope, environment and instance with release/artifact hashes and receipt provenance. Required delivery is complete only when every destination in the pinned required deployment scope has a verified successful activation receipt matching the exact artifact and compatibility evidence. A plane name alone does not define the destination population: product baseline installation scope is distinct from tenant-extension scope. Missing or unspecified scope is incomplete evidence, never all-tenants success. Recommended/optional failures remain visible and do not satisfy required destinations.
+
+Published, required-delivery-complete and currently-active are separate projected facts. Historical successful delivery does not prove current activation after rollback/revocation; current status needs fresh target evidence. Retries, duplicates, partial delivery, stale receipts, wrong tenant/instance and scope changes have explicit fixtures. A changed deployment population requires a new governed deployment-scope revision and recomputation, not mutation of sealed target requirements. This projection reuses the existing ledger and cannot let Studio manufacture consuming-plane activation.
+
 ### `metadata.entity_target`
 
 *Composer home: Overview › Ownership and targets.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (3 listed columns).
 
 One declared publication plane and its explicit requirement; no duplicate target arrays on the draft.
 
@@ -243,13 +516,17 @@ Unique draft/plane and draft/position. Plane support is independently qualified;
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
-| `target_plane` | `text` | R; neon/mesh/studio registered plane | studio | Plane selector |
+| `target_plane` | `metadata.entity_plane_d` | R; neon/mesh/studio registered plane | studio | Plane selector |
 | `requirement` | `text` | R; required/recommended/optional | required | Requirement selector |
 | `position` | `integer` | R; preserved declaration order | 1 | Order control |
+
+Target requirement describes delivery obligation, not permission to skip target-specific validation. Required targets must have verified activation evidence before the release's required delivery is complete; recommended/optional targets retain explicit pending/failed/not-activated status and cannot be reported as successful. Source publication, target qualification and deployment completion are distinct states. Under the current all-surfaces rule, an incompatible declared surface remains a validation finding even for an optional target; this blueprint does not authorize excluding it silently or emitting a qualified artifact for that target. Partial-target source publication requires an explicitly qualified publication contract; until then, use the existing conservative completeness gate. Per-plane surface enrollment is prioritized when the first real onboarding requires divergent experiences, with exact membership/default/compatibility migration defined before replacing this limitation. An interim omit-surface flag would be that same contract change.
 
 ### `metadata.entity_navigation_placement`
 
 *Composer home: Overview › Placement.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
 
 Ordered published location in the shared workspace/module navigation.
 
@@ -271,9 +548,11 @@ Composite FK (workspace_id,module_id) references control.workspace_module. Both 
 
 *Composer home: Data model › Fields (server-owned, Technical details).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (11 listed columns).
+
 Small stable identity catalogue for fields whose versioned definition rows change across drafts.
 
-PK id with shared.uuidv7(); unique entity/tenant/parent/key using NULL-safe uniqueness. This table contains identity only, no duplicate field constraints or presentation. Revision fields and stored custom values FK this identity, so draft forks cannot orphan values. Retiring a field retains its identity while any record values refer to it.
+PK id with shared.uuidv7(); unique entity/tenant/parent/key using NULL-safe uniqueness. This table contains identity only, no duplicate field constraints or presentation. Revision fields FK this identity; cross-plane custom values use the published validated identity reference from section 5, not a remote FK. Draft forks preserve that stable identity. Retiring a field retains its identity while any record values refer to it.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -281,10 +560,26 @@ PK id with shared.uuidv7(); unique entity/tenant/parent/key using NULL-safe uniq
 | `tenant_id` | `uuid` | N; product field NULL, extension field explicit owner | @tenant | Server-owned |
 | `field_key` | `text` | R; stable logical field key | preferred_contact_time | Field code |
 | `parent_identity_id` | `uuid` | N; stable nested-field parent, same scope/entity | NULL | Server-owned |
+| `identity_status` | `text` | R; CHECK reserved/active/retired; server-owned governed lifecycle | reserved | Read-only |
+| `retired_at` | `timestamptz` | N; required iff retired; service event time | NULL | Read-only |
+| `retired_by` | `uuid` | N; required iff retired; verified actor | NULL | Read-only |
+| `retirement_release_id` | `uuid` | N; required iff retired; sealed same-entity/owner release authorizing retirement | NULL | Read-only release link |
+| `replacement_identity_id` | `uuid` | N; retired only; same entity/tenant identity, not self; acyclic successor chain | NULL | Governed replacement selection |
+| `introduced_change_set_id` | `uuid` | R; same entity/source owner; immutable reservation provenance | @draft | Server-owned |
+| `first_release_id` | `uuid` | N iff reserved; otherwise first sealed same-owner release containing identity | NULL | Server-owned release link |
+
+
+Allocate a new field identity at the first successful field save as reserved, under a serialized NULL-safe entity/source-owner/parent/key reservation. The introducing draft is recorded; another draft cannot silently reuse that reserved identity. Forks preserve explicit lineage and require reconciliation with the introducing proposal before first publication. Existing published fields reuse only their verified active identity and compatible contract. First publication locks the reservation and release line, validates the field contract and source predecessor, then atomically records first_release_id and promotes reserved to active. Competing incompatible proposals fail with an identity conflict before activation or value writes; reserved identities never receive business values.
+
+Compatibility compares the first and all retained published contracts, including type/cardinality/reference target and storage semantics, not merely whether a current value query happens to be empty. Incompatible meaning requires a new identity and governed replacement/conversion. Publication never changes identity semantics based on a stale count of values. The reservation may be reclaimed only if no sealed release, retained snapshot/review/fork, dependent field or business value refers to it and the governed retention/disposal process authorizes removal. Otherwise preserve the reservation/tombstone and report the conflict; an abandoned draft is not permission to reuse its UUID or delete history. Key reuse with retained incompatible identity remains unsupported. Migration records verified introducing provenance and first sealed release, or blocks; it must not invent provenance or rewrite historical hashes.
+
+Retirement/replacement is a governed lifecycle operation applied after the exact authorizing release is approved and sealed; ordinary draft saves cannot change these server-owned columns. Reserved and active identities have no retirement payload; reserved has no first_release_id and active/retired require one. New enrollment in a retired identity rejects; existing values and immutable releases retain the original identity and are not reinterpreted or cascade-deleted. Retirement alone does not revoke an otherwise valid pinned historical reader; revocation remains a separate control. Replacing a field never copies/converts values implicitly. The replacement must have its own qualified definition, and any value conversion is an explicit governed operation. The draft revision replacement_field_id is the sole authored successor proposal; identity.replacement_identity_id is server-derived from that exact reviewed proposal only when the authorizing retirement release commits. It is never independently editable. Before commitment, show proposed versus committed successor separately; neither compiler nor UI silently overwrites a historical revision from current identity state. Publication verifies proposal identity, chain and predecessor under the identity lock; conflicting concurrent proposals reject. This is proposal versus committed lifecycle evidence, not two writable authorities. Field hub › Lifecycle selects a qualified replacement proposal; Technical details shows committed evidence.
 
 ### `metadata.entity_runtime_profile`
 
 *Composer home: Overview › Storage.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; proposed columns (9): `storage_catalogue_hash`, `id_field_id`, `tenant_field_id`, `record_version_field_id`, `soft_delete_field_id`, `read_handler_version`, `write_handler_version`, `reference_capability_key`, `reference_capability_version`. The other listed columns exist.
 
 Physical record contract and reusable provider selection. Storage settings are not UI settings.
 
@@ -293,18 +588,19 @@ Unique change_set_id; profile_key is default, preserving the existing one-profil
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `profile_key` | `text` | R; explicit key | default | Profile code |
-| `backing_kind` | `text` | R; table/view/materialized_view/external/virtual; existing domain | table | Backing selector |
-| `storage_plane` | `text` | N; required for table/view/materialized_view/external, NULL for virtual (existing storage CHECK) | studio | Plane selector |
-| `storage_schema` | `text` | R; registered storage contract | shared | Registered schema selector |
-| `storage_object` | `text` | R; registered source object | country | Registered object selector |
-| `read_mode` | `text` | R; installed framework capability | generic | Capability selector |
-| `write_mode` | `text` | R; enabled write contract or none | none | Capability selector |
-| `api_exposure` | `text` | R; declared exposure | api | Exposure selector |
-| `create_mode` | `text` | R; form_only/early_draft/direct/source_document; write_mode=none requires form_only | form_only | Create-mode selector |
+| `backing_kind` | `metadata.entity_backing_kind_d` | R; table/view/materialized_view/external/virtual; existing domain | table | Backing selector |
+| `storage_plane` | `metadata.entity_plane_d` | N; required for table/view/materialized_view/external, NULL for virtual (existing storage CHECK) | studio | Plane selector |
+| `storage_schema` | `text` | N; required iff backing_kind is table/view/materialized_view, NULL for external/virtual (existing storage CHECK) | shared | Registered schema selector |
+| `storage_object` | `text` | N; required iff backing_kind is table/view/materialized_view, NULL for external/virtual (existing storage CHECK) | country | Registered object selector |
+| `storage_catalogue_hash` | `text` | N; P for table/view/materialized_view; exact SHA-256 of registered per-plane catalogue; NULL for external/virtual | 64 hexadecimal characters | Registered catalogue selection |
+| `read_mode` | `metadata.entity_read_mode_d` | R; none/generic/facade/projection; generic requires table/view/materialized_view backing; api_exposure other than api requires read_mode=none and write_mode=none (existing CHECKs) | generic | Capability selector |
+| `write_mode` | `metadata.entity_write_mode_d` | R; none/generic/facade/append_only; generic requires table backing (existing CHECK) | none | Capability selector |
+| `api_exposure` | `metadata.entity_api_exposure_d` | R; none/catalog_only/api | api | Exposure selector |
+| `create_mode` | `metadata.entity_create_mode_d` | R; form_only/early_draft/direct/source_document; write_mode=none requires form_only | form_only | Create-mode selector |
 | `draft_ttl_hours` | `integer` | N; required iff create_mode=early_draft, 1..8760 (existing CHECK) | NULL | Number input, shown only for early_draft |
-| `concurrency_mode` | `text` | R; none/optimistic/append_only; append_only iff write_mode=append_only | none | Concurrency selector |
+| `concurrency_mode` | `metadata.entity_concurrency_mode_d` | R; none/optimistic/append_only; append_only iff write_mode=append_only | none | Concurrency selector |
 | `id_field_id` | `uuid` | R; technical record identity field | @country.id | Field selector |
-| `tenant_field_id` | `uuid` | N; explicit tenant coordinate | NULL | Field selector |
+| `tenant_field_id` | `uuid` | N; required for catalogue-declared row-scoped tenancy; explicit verified tenant coordinate | NULL | Field selector |
 | `record_version_field_id` | `uuid` | N; required for optimistic writes | @profile.record_version | Field selector |
 | `soft_delete_field_id` | `uuid` | N; declared deletion semantics | NULL | Field selector |
 | `read_handler_key` | `text` | N; required iff read_mode=facade, otherwise NULL (existing CHECK) | registered facade reader | Registered contract selector |
@@ -316,9 +612,17 @@ Unique change_set_id; profile_key is default, preserving the existing one-profil
 
 The existing `record_version_field_key`, `tenant_field_key` and `soft_delete_field_key` text columns are replaced by the `*_field_id` FKs above. The forward migration resolves each key against the same change set's fields and blocks if it cannot. `id_field_id` is new: the technical record identity is declared, never assumed to be a field named `id`. Provider handlers select record storage/read ports. They do not duplicate entity_operation.handler_key, which selects operation execution. Table/view/materialized_view require registered schema/object; external requires a storage plane but no SQL object; virtual requires neither. No arbitrary SQL identifiers are accepted. Every key/version pair pins its manifest hash through governed release dependencies.
 
+**Storage authority is an independent binding gate.** The proposed governed storage-authority contract assigns each physical object used for Entity storage an owning Entity release line and authorized source-owner/tenant scope. It is authority evidence, separate from DDL catalogue facts and entity permissions. Additional bindings are explicitly approved projections with pinned source dependencies and mapped field/operation/scope restrictions; their effective security intersects the storage owner's applicable controls through entity.effective-security/1. A second Entity with valid no-permission metadata cannot bypass that boundary. Views, materialized views and external providers require equivalent lineage/authority evidence, including all contributing owners; unresolved mappings block activation and use. Shared objects require explicit governed allocation, not fabricated ownership inferred from table names.
+
+Tenant-owned definitions may bind only storage allocated to that tenant or supported tenant-scoped extension storage under the owning provider; product storage is accessible only through an explicitly approved projection capability. A row-scoped object requires a non-null tenant_field_id verified against its catalogue coordinate and enforced server-side. Dedicated tenant storage may instead use a qualified tenant-bound provider contract; a fabricated tenant column is not required. Tenant isolation never comes from a caller-supplied filter. F0 must define the closed authority resource, exact dependency/hash binding, ownership/projection mapping and activation checks before enabling a new binding; this paragraph does not claim a deployed registry or permit authority declarations inside arbitrary JSON.
+
+**Read-only consistency:** write_mode=none forbids create/update/delete operations using the generic storage writer. Configuration and publication reject contradictory enrollment; runtime dispatch rechecks it. Separately declared non-storage actions require a qualified capability and must not disguise record mutation. Existing write_mode and provider constraints apply equally to API, bulk and background entry points.
+
 ### `metadata.entity_field`
 
 *Composer home: Data model › Fields (inspector, section 7.7).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; only `description`, `data_type`, `cardinality`, `value_origin`, `storage_path`, `write_mode`, `data_classification`, `retention_policy_code` exist today. The other 41 listed columns are proposed.
 
 One canonical definition per field; constraints and business type are not copied into surface bindings.
 
@@ -330,23 +634,23 @@ Unique `(change_set_id, field_identity_id)`; logical key/parent uniqueness belon
 | `parent_field_id` | `uuid` | N; derived from entity_field_identity.parent_identity_id within this draft; not independently writable | NULL | Read-only (set when the nested field is created) |
 | `label_id` | `uuid` | R for visible fields; label FK | @label.country_code | Label selector |
 | `description` | `text` | N; bounded documentation | Country alpha-2 code | Text input |
-| `data_type` | `text/domain` | R; registered field type | string | Type selector |
+| `data_type` | `metadata.entity_field_data_type_d` | R; string/text/integer/bigint/decimal/boolean/uuid/date/datetime/json/enum/money. The domain value `reference` is legacy input only and converts per section 11.3 | string | Type selector |
 | `storage_type` | `text` | N; server-populated from the registered storage catalogue for storage_path at save and re-verified at publication; never client-supplied | text | Read-only from registered storage |
-| `cardinality` | `text` | R; one/many for new authoring; optionality is `nullable` only. Legacy zero_or_one decodes to one + nullable=true | one | Single/repeated switch |
-| `value_origin` | `text` | R; stored/computed/projected/runtime | stored | Origin selector |
+| `cardinality` | `metadata.entity_field_cardinality_d` | R; one/many for new authoring; optionality is `nullable` only. Legacy zero_or_one decodes to one + nullable=true | one | Single/repeated switch |
+| `value_origin` | `metadata.entity_field_value_origin_d` | R; stored/computed/projected/runtime | stored | Origin selector |
 | `storage_kind` | `text` | N; column/extension; required iff value_origin is stored/projected, NULL for computed/runtime (value_origin already says so) | column | Storage selector |
 | `storage_path` | `text` | N; validated registered column/path | country_code | Registered column selector |
 | `nullable` | `boolean` | R; qualified storage/value contract permits explicit NULL | false | Read-only from storage or typed extension editor |
 | `required` | `boolean` | R; required authored input, distinct from physical nullability/defaults | true | Switch |
-| `write_mode` | `text` | R; read_only/mutable/write_once; value_origin computed/projected/runtime requires read_only. Legacy `computed` decodes to read_only (value_origin carries it) | read_only | Mode selector |
-| `data_classification` | `text` | R; explicit classification | public | Classification selector |
+| `write_mode` | `metadata.entity_field_write_mode_d` | R; read_only/mutable/write_once; value_origin computed/projected/runtime requires read_only. Legacy `computed` decodes to read_only (value_origin carries it) | read_only | Mode selector |
+| `data_classification` | `text` | R; exact code in pinned governed classification domain; exposure-relevant | public | Classification selector |
 | `retention_policy_code` | `text` | N; catalogue reference | NULL | Retention selector |
 | `semantic_role` | `text` | N; declared role, not inferred | status | Role selector |
 | `min_length` | `integer` | N; 0 <= min <= max | 2 | Number inputs |
 | `max_length` | `integer` | N; 0 <= min <= max | 2 | Number inputs |
 | `minimum` | `numeric` | N; ordered numeric bounds | 0 | Number inputs |
 | `maximum` | `numeric` | N; ordered numeric bounds | 6 | Number inputs |
-| `pattern` | `text` | N; validated supported regex | ^[A-Z]{2}$ | Pattern editor |
+| `pattern` | `text` | N; pinned linear-time regex contract; bounded pattern/input | ^[A-Z]{2}$ | Pattern editor |
 | `precision` | `integer` | N; compatible numeric type | 12 | Number inputs |
 | `scale` | `integer` | N; compatible numeric type | 2 | Number inputs |
 | `domain_code` | `text` | N; registered enum/lookup domain | master.ui_appearance_mode | Domain selector |
@@ -364,7 +668,7 @@ Unique `(change_set_id, field_identity_id)`; logical key/parent uniqueness belon
 | `validation_contract_version` | `integer` | N; registered complex validator | 1 | Contract selector |
 | `json_schema_key` | `text` | N; required for structured JSON business values | registered schema | Schema selector |
 | `json_schema_hash` | `text` | N; required for structured JSON business values | digest | Schema selector |
-| `replacement_field_id` | `uuid` | N; active replacement | NULL | Field selector |
+| `replacement_field_id` | `uuid` | N; draft-local proposal resolving to a qualified stable successor; no direct identity mutation | NULL | Governed replacement proposal selector |
 | `minimum_date` | `date` | N; date family only | NULL | Date bound |
 | `maximum_date` | `date` | N; >= minimum_date | NULL | Date bound |
 | `minimum_datetime` | `timestamptz` | N; datetime only | NULL | Datetime bound |
@@ -379,11 +683,25 @@ Unique `(change_set_id, field_identity_id)`; logical key/parent uniqueness belon
 R data_type is the scalar/structured semantic family; a relation-bearing string stays a string. A target-owned lookup surface supplies reference presentation through relation_target; no copied label field is stored here. Optionality is stored once, in nullable; cardinality only distinguishes single from repeated values, and many uses a qualified structured item contract. Nested-field parentage is owned once, by entity_field_identity.parent_identity_id. The existing field_key, replacement_field_key, type_config, default_spec, computation_spec and validation_spec columns are retired by the 11.12 ledger. Physical storage nullability and authoring required input are independent. Only registered zero-parameter computation/validation contracts are enabled by these key/version columns; parameterized contracts require an explicit finite typed parameter design before selection. No hidden JSON options are accepted.
 
 
-The semantic family constraint matrix is mandatory: string/text permit length/pattern only; integer/bigint permit integral numeric bounds; decimal/money permit numeric bounds/precision/scale; date permits date bounds; datetime permits instant bounds/temporal_kind; boolean and UUID permit none of these range/format constraints. Enum uses domain_code XOR owned choices, with a deferred count guard. Phase-1 enum is string-backed: entity_field_choice.value_text is text and non-string enum payloads block until a qualified typed enum contract exists. Money requires exactly one currency field or governed fixed currency. Structured json/many requires a pinned schema and supported provider; a property bag is not a schema contract. String/text aliases share a semantic resolver while preserving physical storage type and explicit component choice. bigint/decimal JSON encodings preserve precision as decimal strings when necessary.
+The semantic family constraint matrix is mandatory: string/text permit length/pattern only; integer/bigint permit integral numeric bounds; decimal/money permit numeric bounds/precision/scale; date permits date bounds; datetime permits instant bounds/temporal_kind; boolean and UUID permit none of these range/format constraints. Enum uses domain_code XOR owned choices, with a deferred count guard. Phase-1 enum is string-backed: entity_field_choice.value_text is text and non-string enum payloads block until a qualified typed enum contract exists. Money requires exactly one currency field or governed fixed currency. Structured json/many requires a pinned schema and supported provider; a property bag is not a schema contract. For a many-valued string enum, that schema describes the API array/item contract and does not force physical JSONB storage: a qualified text[] column adapter may preserve typed array storage. It must define member/null/duplicate/order semantics and query support. Until that adapter qualifies, the option is unavailable; do not remove the schema CHECK to enable an untyped array. String/text aliases share a semantic resolver while preserving physical storage type and explicit component choice. bigint/decimal JSON encodings preserve precision as decimal strings when necessary.
+
+For newly authored tenant-extension fields reserve the `ext_` logical-key prefix within each parent field scope; product fields cannot use it, and tenant fields cannot claim product field keys. Effective payloads preserve these distinct keys and stable source identities; labels may remain friendly. Existing product keys beginning with ext_ or extension keys outside it require an explicit collision/migration report before adopting this grammar, not silent renaming of sealed identities. Reserve the namespace in descriptor/save/compile/runtime adapters and validate against bounded key lengths. Legacy ambiguous payload keys block affected overlay qualification; a new product field must not require enumerating every tenant merely to discover a namespace collision. Independently scoped tenant-owned entities keep their own qualified field namespace.
+
+The pattern validator uses a registered linear-time engine/dialect (RE2-class) with pinned version, pattern/input limits and conformance vectors. Unsupported constructs reject authoring/import; no fallback to a backtracking engine is permitted on server writes or preview. Browser validation is advisory and must not claim a different dialect. This is a qualification requirement, not a claim that an engine is already installed.
+
+The classification domain is a governed versioned resource referenced through the release dependency contract. Its codes, ordering where comparable and policy associations are explicit; SQL text is storage, not free-text semantics. Unknown codes reject authoring/import; an unmappable domain upgrade blocks qualification. F0 marks data_classification and its resource binding exposure-relevant. Downgrades, removals and incomparable reclassifications receive security review, even if no enforced floor exists yet. Suggestions never silently disappear through a text edit; binding class-policy floors remain the qualified follow-on in section 11.22.
+
+The proposed trusted money-default context contract is `entity.money-default-currency/1`, selected through existing default_context_key/version and an exact dependency hash. It returns one validated currency code for explicit authenticated tenant/record context, without a hardcoded currency or caller-controlled tenant. It initializes the declared currency field only under its qualified create/default semantics; it never introduces a third currency authority beside currency_field_id XOR currency_code. Missing/ambiguous context is a validation finding, not a fallback. Qualify two tenant contexts, an unavailable currency, explicit-input precedence, existing-record update behavior and authorization failure before enabling this choice; the key names a proposed contract, not an installed provider.
+
+For product definitions default_uuid has no permitted business-record literal case. Internal metadata FKs used by the authoring graph are not field-value defaults. A non-record technical UUID literal requires a registered portable semantic contract proving source-kind applicability and that it is not a record identity; absent that evidence it rejects. Tenant record literals remain separately scope/portability-validated. Never allow a free UUID text box as a fallback.
+
+Money defaults follow a declared acyclic dependency order. Validate explicit authorized inputs first; resolve the currency field from its single qualified literal/context/database default only when omitted under the operation's default semantics; then resolve/validate the amount default against that currency's contract and precision. If currency is fixed by currency_code, that is the sole currency source. An amount default cannot install or overwrite a conflicting currency default. Missing/ambiguous currency or cyclic defaults blocks qualification; explicit null is not omission, and PATCH omission remains unchanged. Persist one coherent amount/currency result in the same authorized transaction and test explicit inputs, both defaults, provider failure and conflicts.
 
 ### `metadata.entity_field_choice`
 
 *Composer home: Data model › Fields › field Value rules panel.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (5 listed columns).
 
 Use only for entity-owned inline choices. Registered catalogue domains stay catalogue-owned.
 
@@ -394,7 +712,7 @@ Unique `(entity_field_id, value_text)`. Surface lookups and AI do not duplicate 
 | `entity_field_id` | `uuid` | R; enum field FK | @country.status | Field selector |
 | `value_text` | `text` | R; string enum values only in this contract; unique field value | active | Value input |
 | `label_id` | `uuid` | R | @label.status.active | Label selector |
-| `tone` | `text` | N; neutral/success/warning/danger | success | Tone selector |
+| `tone` | `metadata.entity_tone_d` | N; CHECK neutral/success/warning/danger; finite descriptor choice | success | Tone selector |
 | `position` | `integer` | R | 1 | Order control |
 
 Non-string choice payloads are not silently stringified. They require a qualified typed enum contract before import/editor selection. Domain-backed fields have zero entity-owned choice rows; catalogue labels/tones are referenced, not copied.
@@ -403,6 +721,8 @@ Non-string choice payloads are not silently stringified. They require a qualifie
 
 *Composer home: Data model › Keys.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; every listed column exists in the current DDL.
+
 Defines key semantics; technical and readable business identities are distinct.
 
 Ordered fields live in `entity_key_field`; a compound key is not a comma-separated column string.
@@ -410,13 +730,15 @@ Ordered fields live in `entity_key_field`; a compound key is not a comma-separat
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `key_key` | `text` | R; unique draft key | country_code | Key code |
-| `key_kind` | `text` | R; primary/natural/alternate/idempotency | natural | Kind selector |
-| `uniqueness_scope` | `text` | R; explicitly declared scope | global | Scope selector |
-| `null_semantics` | `text` | R; key null contract | not_allowed | Selector |
+| `key_kind` | `metadata.entity_key_kind_d` | R; primary/natural/alternate/idempotency | natural | Kind selector |
+| `uniqueness_scope` | `metadata.entity_uniqueness_scope_d` | R; global/tenant | global | Scope selector |
+| `null_semantics` | `metadata.entity_null_semantics_d` | R; not_allowed/nulls_distinct/nulls_not_distinct | not_allowed | Selector |
 
 ### `metadata.entity_key_field`
 
 *Composer home: Data model › Keys.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Key membership including composite identities.
 
@@ -426,11 +748,13 @@ Unique key/field and key/position. State Region stored positions: country_code a
 | --- | --- | --- | --- | --- |
 | `entity_key_id` | `uuid` | R | @state.natural_key | Key selector |
 | `entity_field_id` | `uuid` | R | @state.country_code | Field selector |
-| `position` | `integer` | R; contiguous within key | 1 | Order control |
+| `position` | `smallint` | R; existing CHECK bounds 1..64; shared graph validator enforces dense order within key | 1 | Order control |
 
 ### `metadata.entity_search_profile`
 
 *Composer home: Data model › Search.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Single search definition reused by surfaces and entity AI.
 
@@ -439,16 +763,20 @@ AI can select a dedicated search profile if it needs a subset. It must not maint
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `search_key` | `text` | R; unique draft profile | default | Code input |
-| `search_kind` | `text` | R; keyword/full_text/hybrid | keyword | Selector |
-| `query_operator` | `text` | R; and/or | and | Operator selector |
-| `minimum_query_length` | `integer` | R; nonnegative | 2 | Number input |
+| `search_kind` | `metadata.entity_search_kind_d` | R; keyword/full_text/hybrid | keyword | Selector |
+| `query_operator` | `metadata.entity_search_operator_d` | R; and/or | and | Operator selector |
+| `minimum_query_length` | `smallint` | R; 1..64 (existing CHECK), default 2 | 2 | Number input |
 | `language_code` | `text` | N; approved language | en | Language selector |
-| `normalization_mode` | `text` | R; none/casefold/casefold_unaccent | casefold | Selector |
+| `normalization_mode` | `metadata.entity_search_normalization_d` | R; none/casefold/casefold_unaccent | casefold | Selector |
 | `is_default` | `boolean` | R; at most one active default | true | Switch |
+
+Full-text/hybrid qualification requires an exact registered provider analyzer key/version/hash and supported language set in the profile's governed dependency closure. normalization_mode is text normalization, not a tokenizer/stemmer or proof of multilingual analysis. The current single search_profile_id binds one explicit analysis contract: it may qualify a declared multilingual analyzer only with per-language tests, index/query analyzer consistency and supported locale behavior. Otherwise its supported language is visibly limited; required_locales for labels does not promise search in every locale. Unsupported language queries return an explicit unsupported result, not a silent analyzer fallback. Locale→profile routing remains a typed follow-on, not an inferred browser-locale choice. Fixtures include English and Arabic where multilingual support is claimed, diacritics, mixed-language input and analyzer/index version mismatch.
 
 ### `metadata.entity_search_field`
 
 *Composer home: Data model › Search.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Ordered weighted field memberships.
 
@@ -458,13 +786,15 @@ Unique profile/field and profile/position.
 | --- | --- | --- | --- | --- |
 | `entity_search_profile_id` | `uuid` | R | @country.search | Profile selector |
 | `entity_field_id` | `uuid` | R; search-authorized field | @country.name | Field selector |
-| `position` | `integer` | R | 2 | Order control |
-| `match_mode` | `text` | R; supported by type/provider | contains | Match selector |
-| `weight` | `numeric` | N; positive | 1 | Number input |
+| `position` | `smallint` | R; 1..256 (existing CHECK) | 2 | Order control |
+| `match_mode` | `metadata.entity_search_match_mode_d` | R; exact/prefix/contains/full_text, supported by type/provider | contains | Match selector |
+| `weight` | `numeric(6,3)` | R; 0 < weight <= 100, default 1.000 (existing CHECK) | 1 | Number input |
 
 ### `metadata.entity_relation`
 
 *Composer home: Data model › Relations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; proposed columns (1): `inverse_relation_id`. The other listed columns exist.
 
 Named relationship structure; display cardinality is an explicit presentation choice.
 
@@ -473,21 +803,27 @@ No permissions or independently repeated joins in a surface or AI selection.
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `relation_key` | `text` | R; unique in draft | country | Code input |
-| `relation_kind` | `text` | R; qualified cardinality | many_to_one | Selector |
-| `resolution_kind` | `text` | R; supported foreign_key/logical | foreign_key | Selector |
-| `ownership_mode` | `text/domain` | R; reference/aggregate_child/shared | reference | Ownership selector |
-| `mutation_mode` | `text` | R; declared qualified behavior | read_only | Selector |
-| `on_delete` | `text` | R; registered referential semantics | restrict | Selectors |
-| `on_update` | `text` | R; registered referential semantics | restrict | Selectors |
+| `relation_kind` | `metadata.entity_relation_kind_d` | R; qualified cardinality | many_to_one | Selector |
+| `resolution_kind` | `metadata.entity_relation_resolution_d` | R; foreign_key/logical; the domain value polymorphic blocks qualification until an installed resolver exists | foreign_key | Selector |
+| `ownership_mode` | `metadata.entity_relation_ownership_d` | R; reference/aggregate_child/shared | reference | Ownership selector |
+| `mutation_mode` | `metadata.entity_relation_mutation_d` | R; read_only/source_owned/target_owned/coordinated; declared qualified behavior | read_only | Selector |
+| `on_delete` | `metadata.entity_relation_delete_action_d` | R; restrict/cascade/set_null/no_action | restrict | Selectors |
+| `on_update` | `metadata.entity_relation_update_action_d` | R; restrict/cascade/no_action | restrict | Selectors |
 | `inverse_relation_id` | `uuid` | N; explicit inverse | NULL | Relation selector |
+
+Phase 1 on_delete/on_update describe **verified physical-FK behavior only** for foreign_key relations; they do not command provider cascades or create/alter SQL constraints. Catalogue verification includes exact direction, columns and action. Logical relations accept restrict/no_action only; cascade/set_null must not imply an unenforced physical rule. Release-resource references never cascade, and cross-plane cascading is unsupported.
+
+A physical cascade is itself a mutation path: affected records may be referencing children rather than the relation's named target. Any parent operation capable of triggering cascade/set_null/key propagation remains unavailable until its registered provider enumerates and authorizes the full affected closure in the same transaction, locks/revalidates it against concurrent changes, and audits each affected record. Delete checks delete authorization; set_null/key propagation checks update and field enrollment. Verify retention, tenant scope and transitive effects; raw database cascade must not bypass these checks. Unsupported/unbounded closure blocks the operation. Existing physical FK facts can be inventoried without qualifying mutations; a future provider-executed cascade requires an explicit contract extension.
 
 ### `metadata.entity_relation_target`
 
 *Composer home: Data model › Relations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; proposed columns (3): `target_binding_kind`, `target_release_id`, `reference_surface_key`. The other listed columns exist.
+
 Canonical target identity, key and exact published source, including its target-owned lookup presentation.
 
-Unique relation/variant. The target release FK must belong to target_entity_id; immutable release_hash and target source revision are derived from that FK and emitted as dependencies, not independently editable text. Target field/key/surface logical keys resolve against that sealed revision. Multiple variants require an installed resolver that selects exactly one; unsupported polymorphism blocks qualification. Structural-only relations need no lookup surface until a display/picker selects them.
+Unique relation/variant. For same_graph, target_entity_id equals the source entity and target_release_id is NULL; keys/fields/surfaces resolve in the current graph. For published_release, the target release FK must belong to target_entity_id; immutable release_hash and target source revision are derived from that FK and emitted as dependencies, not independently editable text. Published target field/key/surface logical keys resolve against that sealed revision; same_graph keys resolve locally as specified in section 6.1.3. Multiple variants require an installed resolver that selects exactly one; unsupported polymorphism blocks qualification. Structural-only relations need no lookup surface until a display/picker selects them.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -495,7 +831,8 @@ Unique relation/variant. The target release FK must belong to target_entity_id; 
 | `relation_target_key` | `text` | R; unique relation variant | default | Code input |
 | `target_entity_id` | `uuid` | R; governed identity | @country | Entity selector |
 | `target_key_key` | `text` | R; declared target key | country_code | Target key selector |
-| `target_release_id` | `uuid` | N; P exact published Entity release | @country.release | Release selector |
+| `target_binding_kind` | `text` | R; same_graph/published_release; explicit selection | published_release | Target binding selector |
+| `target_release_id` | `uuid` | N; P iff published_release; NULL for same_graph | @country.release | Release selector |
 | `reference_surface_key` | `text` | N; P when relation is displayed/picked; target lookup surface | lookup | Target presentation selector |
 | `discriminator_value` | `text` | N; only qualified variant relations | NULL | Variant selector |
 | `is_default` | `boolean` | R; at most one per relation | true | Variant selector |
@@ -503,6 +840,8 @@ Unique relation/variant. The target release FK must belong to target_entity_id; 
 ### `metadata.entity_relation_field`
 
 *Composer home: Data model › Relations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Ordered join mappings, including tenant equality and compound keys.
 
@@ -513,11 +852,13 @@ Unique target/source field, target/target field and target/position. Examples: c
 | `entity_relation_target_id` | `uuid` | R | @state.country.target | Target selector |
 | `source_field_id` | `uuid` | R | @state.country_code | Source field selector |
 | `target_field_key` | `text` | R; declared qualified target field | code | Target field selector |
-| `position` | `integer` | R; contiguous | 1 | Order control |
+| `position` | `smallint` | R; existing CHECK bounds 1..64; shared graph validator enforces dense sibling order | 1 | Order control |
 
 ### `metadata.entity_field_reference_binding`
 
 *Composer home: Data model › Relations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; proposed column: `resolver_version`. Existing reference_kind is text with a three-way CHECK (entity_relation/lookup_domain/resolver), while the target narrows it to lookup_domain/resolver. Legacy target_entity_code and lookup_domain columns require verified conversion and forward retirement; the target dictionary does not imply those columns are absent today.
 
 Non-entity lookup domain or registered resolver selection.
 
@@ -534,9 +875,13 @@ Entity-to-entity references always use the relation tables above.
 
 For reference_kind=lookup_domain, the field.domain_code is the sole catalogue identity; no second lookup_domain copy is stored. For resolver, resolver_key/version is required and domain_code must be NULL. require_active is only an explicitly supported narrowing rule. An entity relation never uses this table.
 
+Reference-binding cutover maps verified legacy entity_relation rows to relation/target/field memberships with complete target/column evidence; lookup_domain identity moves to entity_field.domain_code while supported narrowing behavior is retained; resolver rows retain the registered resolver and gain an exact qualified version. Missing target mappings or unresolved resolver versions block conversion with path diagnostics. Narrow the text CHECK only after applicable legacy rows are converted, and retire obsolete writable columns without repurposing them or discarding immutable source evidence. The column dictionary, conversion ledger and generated migration manifest change together.
+
 ### `metadata.entity_operation`
 
 *Composer home: Access and behaviour › Operations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; listed columns `operation_key`, `operation_kind`, `description`, `audit_event_code`, `execution_mode`, `idempotency_mode`, `handler_key` exist today. The other 14 listed columns are proposed.
 
 Operation identity, executable selection and explicit authorization semantics.
 
@@ -545,19 +890,20 @@ Exact permission, plane/scope and runtime selections are separate relational bin
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `operation_key` | `text` | R; unique in draft | read | Code input |
-| `operation_kind` | `text` | R; declared semantic kind | read | Selector |
+| `operation_kind` | `metadata.entity_operation_kind_d` | R; create/read/update/delete/execute/transition/import/export | read | Selector |
+| `description` | `text` | N; length <= 4000 (existing CHECK); author documentation, not runtime label | Read a record | Bounded text |
 | `label_id` | `uuid` | R | @label.read | Label selector |
 | `audit_event_code` | `text` | R; configured audit identity | published audit event | Catalogue selector |
-| `execution_mode` | `text` | R; qualified execution mode | synchronous | Selector |
-| `idempotency_mode` | `text` | R; none/required/revision contract | none | Selector |
+| `execution_mode` | `metadata.entity_operation_execution_d` | R; synchronous/asynchronous | synchronous | Selector |
+| `idempotency_mode` | `metadata.entity_operation_idempotency_d` | R; none/optional/required | none | Selector |
 | `input_surface_id` | `uuid` | N; same graph surface FKs | @profile.form | Surface selectors |
 | `result_surface_id` | `uuid` | N; same graph surface FKs | @profile.detail | Surface selectors |
 | `authorization_target` | `text` | R; collection/existing/new | existing | Selector |
 | `authorization_effect` | `text` | R; read/write/navigation | read | Selector |
 | `requires_parent_read` | `boolean` | R; explicit published requirement | false | Switch |
-| `requires_preflight` | `boolean` | R; registered evidence requirement | false | Read-only qualified contract setting |
+| `requires_preflight` | `boolean` | N server-derived; P resolved true/false from pinned operation contract; client input forbidden | false | Read-only qualified contract setting |
 | `replacement_operation_id` | `uuid` | N | NULL | Operation selector |
-| `handler_key` | `text` | N; P for executable operation; registered shared handler | entity.record.read.v1 | Contract selector |
+| `handler_key` | `text` | N only for operation_kind=read; every other kind requires it at save (existing entity_operation_handler_required_chk); registered shared handler | entity.record.read.v1 | Contract selector |
 | `handler_version` | `integer` | N; key/version both absent or present | 1 | Version selector |
 | `preflight_key` | `text` | N; P when requires_preflight; installed contract | NULL | Contract selector |
 | `preflight_version` | `integer` | N; paired | NULL | Version selector |
@@ -565,11 +911,19 @@ Exact permission, plane/scope and runtime selections are separate relational bin
 | `export_formats` | `text[]` | N; export operation only; qualified formats | {csv} | Format selector |
 | `export_max_records` | `bigint` | N; export only; positive approved bound | 10000 | Limit input |
 
-One shared operation handler across declared planes; each plane must qualify that contract. Scope resolvers stay in entity_operation_scope_binding. A source requiring incompatible per-plane handlers is unsupported in this contract version and blocks import/publication; do not create a parallel runtime-binding table or infer dispatch. The earlier separate entity_operation_runtime_binding table is folded into this row's handler_key/version plus entity_operation_scope_binding and is not reintroduced. Existing requires_mfa storage/control is preserved service-side; this composer has no editable MFA member. The legacy operation columns are retired by the 11.12 ledger: `permission_code` duplicates entity_operation_permission; `confirmation_surface_key` moves to entity_surface_operation.confirmation_surface_id; `input_surface_key`/`result_surface_key` become the *_surface_id FKs; `label` becomes label_id. `description` is kept as bounded author documentation (`text`, N, ≤4000), not a runtime label.
+One shared operation handler across declared planes; each plane must qualify that contract under section 6.5.2, including exact manifest resolution and execution guarantees. Scope resolvers stay in entity_operation_scope_binding. A source requiring incompatible per-plane handlers is unsupported in this contract version and blocks import/publication; do not create a parallel runtime-binding table or infer dispatch. The earlier separate entity_operation_runtime_binding table is folded into this row's handler_key/version plus entity_operation_scope_binding and is not reintroduced. Existing requires_mfa storage/control is preserved service-side; this composer has no editable MFA member. A read-only protected-state envelope in snapshots/portable packages carries the existing operation value and trusted source-operation/release identity. The service resolves and verifies it; client save commands cannot set it. Import/restore/fork/duplicate/rename/remove-and-recreate must preserve matching controls and reject missing, changed or unmappable evidence instead of accepting a database default. New operation controls require the existing governed source; unresolved protected state blocks the operation's qualification. The protected-state package contract is defined in section 6.1.5. This preservation contract authorizes no new MFA requirement or enforcement change; changes to requiresMfa DTO/repository code still require explicit prior owner approval for that specific MFA work. The legacy operation columns are retired by the 11.12 ledger: `permission_code` duplicates entity_operation_permission; `confirmation_surface_key` moves to entity_surface_operation.confirmation_surface_id; `input_surface_key`/`result_surface_key` become the *_surface_id FKs; `label` becomes label_id. `description` is kept as bounded author documentation (`text`, N, ≤4000), not a runtime label.
+
+Operation authorization mapping is required compiler behavior, not descriptive intent. authorization_target=collection resolves the authorized collection/tenant scope before query or bulk selection; existing resolves the addressed record and its locked scope before effects; new validates trusted tenant/parent coordinates and create authority before allocating a record. authorization_effect=read enforces the applicable read closure; write enforces input enrollment, server policies, transaction/audit/idempotency and concurrency; navigation grants no data permission and requires the destination's normal surface/read authorization when resolved. Validate each target/effect/operation-kind combination against the registered handler contract; unsupported combinations block compilation. Hiding a navigation action is never the enforcement boundary.
+
+requires_preflight is service-derived from that pinned handler/operation contract, absent only while a draft selection is unresolved. Save/load/portable export distinguish this derived fact from required authored inputs: recompute it, compare any supplied import evidence and reject mismatches. The authoring mutation DTO cannot set it. Preview/publication requires an explicit resolved boolean and its required evidence contract when true. requires_parent_read remains a separately authored setting where the dictionary permits it.
+
+Operation input/output schemas are closed references in the immutable registered handler/capability contract already pinned by key/version and manifest hash. The compiler emits resolved input/result schema key/version/hash with operation enrollment and redaction rules into its versioned runtime contract; consumers verify those pins rather than introspect mutable handler code. No second freely authored schema pair is added to entity_operation. A generic handler must also publish its deterministic specialization contract and pin the resulting Entity-specific schema hashes. Missing or incompatible schemas block preflight/API export/invocation qualification. Idempotency canonicalization remains an explicit handler contract with test vectors; a schema alone cannot define retry/effect semantics. Event payload contracts remain independently pinned and must qualify any operation-result mapping.
 
 ### `metadata.entity_operation_permission`
 
 *Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Exact plane-specific permission metadata.
 
@@ -578,29 +932,33 @@ Unique operation/plane. Zero rows for an operation means no entity permission re
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `entity_operation_id` | `uuid` | R | @profile.patch | Operation selector |
-| `target_plane` | `text` | R; declared publication target | studio | Plane selector |
+| `target_plane` | `metadata.entity_plane_d` | R; declared publication target | studio | Plane selector |
 | `permission_code` | `text` | R in a row; governed exact code | selected published permission | Permission catalogue selector |
 | `permission_kind` | `text` | R; existing CHECK entity_operation/capability | entity_operation | Selector |
 
 ### `metadata.entity_access_permission`
 
-*Composer home: Access and behaviour › Permissions and scope.* (Generated from section 7.2; edit the map there, not here.)
+*Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (5 listed columns).
 
 Exact plane-specific permission for a surface or a capability action. It has the same shape as entity_operation_permission, but its owner is not an operation.
 
-Owner XOR: exactly one of entity_surface_id and capability_binding_id, both same-graph. Unique owner/plane. Zero rows for an owner means that owner adds no entity permission requirement, provided the metadata itself is valid. A capability binding row is legal only for binding_kind=action. This replaces the earlier single `entity_surface.permission_code` and `entity_capability_binding.permission_code` text columns. Those columns could not say which plane's catalogue the code belongs to, and every other permission in this model is plane-qualified. Same code-format CHECK as entity_operation_permission; codes are selected from the published catalogue, never constructed.
+Owner XOR: exactly one of entity_surface_id and capability_binding_id, both same-graph. Unique owner/plane. Zero rows for an owner means that owner adds no entity permission requirement, provided the metadata itself is valid. A capability binding row is legal only for binding_kind=action. permission_kind classifies the selected governed permission, not the owner of this binding. The owner is already defined exclusively by entity_surface_id XOR capability_binding_id. A surface may require an existing entity_operation or capability-classified permission without becoming that operation/capability; the published catalogue classification must match exactly. No third surface permission kind, implicit permission creation or replacement of independent operation checks is introduced. This also matches operation-permission bindings, which already permit capability-classified permissions. This replaces the earlier single `entity_surface.permission_code` and `entity_capability_binding.permission_code` text columns. Those columns could not say which plane's catalogue the code belongs to, and every other permission in this model is plane-qualified. Same code-format CHECK as entity_operation_permission; codes are selected from the published catalogue, never constructed.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `entity_surface_id` | `uuid` | N; XOR capability_binding_id | NULL | Fixed by context |
 | `capability_binding_id` | `uuid` | N; XOR entity_surface_id; action bindings only | @country.comments.read | Fixed by context |
-| `target_plane` | `text` | R; declared publication target | neon | Plane selector |
+| `target_plane` | `metadata.entity_plane_d` | R; declared publication target | neon | Plane selector |
 | `permission_code` | `text` | R in a row; governed exact code | selected comment-read permission | Permission catalogue selector |
-| `permission_kind` | `text` | R; entity_operation/capability | capability | Selector |
+| `permission_kind` | `text` | R; CHECK entity_operation/capability; exact selected permission classification, independent of binding owner | capability | Read-only catalogue classification |
 
 ### `metadata.entity_operation_scope_binding`
 
 *Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; proposed columns (1): `resolver_version`. The other listed columns exist.
 
 Canonical scope coordinates and resolver selection.
 
@@ -609,7 +967,7 @@ Unique draft/binding_key and operation/plane/scope_kind (existing constraints). 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `entity_operation_id` | `uuid` | R | @profile.read | Operation selector |
-| `target_plane` | `text` | R | studio | Plane selector |
+| `target_plane` | `metadata.entity_plane_d` | R | studio | Plane selector |
 | `binding_key` | `text` | R | record_scope | Code input |
 | `decision_mode` | `text` | R; collection/entity_resource | entity_resource | Selector |
 | `scope_kind` | `text` | R; supported coordinate contract | tenant | Selector |
@@ -622,6 +980,8 @@ Unique draft/binding_key and operation/plane/scope_kind (existing constraints). 
 ### `metadata.entity_operation_field`
 
 *Composer home: Access and behaviour › Operations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (4 listed columns).
 
 Explicit writable/request field enrollment.
 
@@ -640,13 +1000,15 @@ Composite FK (operation_change_set_id,entity_operation_id) resolves an existing 
 
 *Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (11 listed columns).
+
 Entity-level access/read/directory and owner semantics, together in one profile per plane.
 
 Unique draft/plane. Owner access is not another loosely attached surface object; absence of optional owner settings does not invent another scope.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
-| `target_plane` | `text` | R | studio | Plane selector |
+| `target_plane` | `metadata.entity_plane_d` | R | studio | Plane selector |
 | `ownership_resolver_key` | `text` | R; registered contract | tenant.record.v1 | Contract selector |
 | `ownership_resolver_version` | `integer` | R; registered contract | 1 | Contract selector |
 | `record_read_operation_id` | `uuid` | R | @profile.read | Operation selector |
@@ -655,11 +1017,18 @@ Unique draft/plane. Owner access is not another loosely attached surface object;
 | `owner_field_id` | `uuid` | N; declared owner coordinate | @profile.principal_id | Field selector |
 | `created_by_field_id` | `uuid` | N; paired when required | @profile.created_by | Field selectors |
 | `updated_by_field_id` | `uuid` | N; paired when required | @profile.updated_by | Field selectors |
-| `administer_permission_code` | `text` | N; exact published property | selected administration permission | Permission selector |
+| `administer_permission_code` | `text` | N; paired with administer_permission_kind; exact catalogue permission in this profile's target_plane | selected administration permission | Governed permission selector |
+| `administer_permission_kind` | `text` | N; paired with administer_permission_code; entity_operation/capability classification from selected catalogue entry | entity_operation | Read-only catalogue classification |
+
+Administration permission code/kind are one optional catalogue selection qualified by target_plane; enforce paired nulls, valid classification and exact catalogue existence, and compile the same none/defined requirement contract as other permission properties. Broken references reject. The legacy ownerAccess.administerPermission adapter resolves the exact classification from governed evidence; it cannot infer a permission or silently discard the value.
+
+**Operation-to-field read closure:** an operation O may serialize field F only after O and F's declared read operation both authorize the caller in the same tenant/plane/record scope and effective security generation. Equality allows one shared evaluation; differing operation identities do not imply coverage, even when codes coincide. Directory/list queries must apply the field-read scope before rows/counts/pagination or fail qualification when the provider cannot express the intersection. A denied required displayed field rejects the configured surface/request with an actionable access result; it is not silently dropped or returned raw. Export, embedded lists, AI context and event construction apply the same closure under their qualified principal contract. Publication checks the provider can enforce each enrolled operation/field pair, and conformance includes an open directory plus a stricter record-read permission. No implicit operation implication or separate policy engine is introduced.
 
 ### `metadata.entity_field_access`
 
 *Composer home: Access and behaviour › Field access.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (6 listed columns).
 
 Keep one field/plane access row; separate read/query/write semantics explicitly.
 
@@ -668,17 +1037,21 @@ Unique field/plane. Write membership uses entity_operation_field; access validat
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `entity_field_id` | `uuid` | R | @country.name | Field selector |
-| `target_plane` | `text` | R | studio | Plane selector |
-| `read_operation_id` | `uuid` | R | @country.read | Operation selector |
+| `target_plane` | `metadata.entity_plane_d` | R | studio | Plane selector |
+| `read_operation_id` | `uuid` | N only for omitted; paired with read_operation_change_set_id | @country.read | Operation selector |
 | `representation` | `text` | R; plain/masked/omitted contract | plain | Selector |
-| `query_uses` | `text[]` | R; supported permitted set | {search,filter,sort,group} | Multi-select |
-| `read_operation_change_set_id` | `uuid` | R; local or exact sealed baseline graph | @country.draft | Server-resolved |
+| `query_uses` | `text[]` | R; supported permitted set; condition requires registered disclosure-safe contract | {search,filter,sort,group} | Multi-select |
+| `read_operation_change_set_id` | `uuid` | N only for omitted; otherwise local or exact sealed baseline graph | @country.draft | Server-resolved |
 
-Composite read-operation FK uses read_operation_change_set_id. Cross-draft selection is permitted only for the exact approved baseline of a tenant extension; it inherits that operation and cannot weaken product authorization. Conditional policy bindings remain independent approved controls. Missing exposure metadata for a rendered field is a configuration error; this is distinct from a valid absent entity permission.
+Composite read-operation FK uses read_operation_change_set_id. Cross-draft selection is permitted only for the exact approved baseline of a tenant extension; it inherits that operation and cannot weaken product authorization. Conditional policy bindings remain independent approved controls. Publication requires exactly one access row for every effective field × declared target plane, including inherited fields, technical fields and fields used only by APIs, export, AI or event payloads. Missing or duplicate coverage is a configuration error, distinct from valid absent entity permission. Explicit omitted is valid and permits no serialization or query uses; internal provider coordinates remain available only to trusted execution. For omitted rows only, read_operation_id and read_operation_change_set_id may both be NULL; plain/masked require both and a qualified read operation. This permits write-only targets without inventing read operations. Incomplete drafts report coverage gaps; no runtime channel treats absence as plain exposure.
+
+**Surface/plane completeness rule SURFACE_EXPOSURE_COVERAGE:** until typed per-plane surface enrollment is separately designed, every declared surface is validated on every entity target plane. A placed field with omitted representation, unsupported read closure or unsupported component blocks that target's qualification/publication; runtime never silently hides the placement to compensate. Authors must correct the shared surface/exposure or the declared target set through review. This conservative Phase-1 limitation does not permit ad-hoc unavailable-field rendering or infer surface applicability from permission rows.
 
 ### `metadata.ui_component_contract`
 
 *Composer home: Experience › component palette (read-only catalogue).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (11 listed columns).
 
 Read-only governed catalogue projection of installed shared UI contracts. It is the single palette authority; authoring cannot upload or edit implementation code.
 
@@ -702,6 +1075,8 @@ PK id with shared.uuidv7(); unique key/version/level; tenant_id NULL for platfor
 
 *Composer home: Experience › component palette (read-only catalogue).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (8 listed columns).
+
 Ordered registered field roles of a component contract; implementation metadata, not a second component selection.
 
 PK id; parent-owned catalogue coordinates; unique contract/role and contract/position. Every slot maps to authorized field bindings of the selected section. Required slots are publication constraints; draft bindings can be incomplete but never point at a slot of another component.
@@ -721,6 +1096,8 @@ PK id; parent-owned catalogue coordinates; unique contract/role and contract/pos
 
 *Composer home: Access and behaviour › Policies.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; every listed column exists in the current DDL.
+
 Existing conditional-policy composition; policy definitions and evaluation remain control-owned.
 
 Existing identity/ownership/audit and key/priority constraints remain. The selected policy is pinned through immutable publication dependencies. No policy body or input_mapping bag is authored here. Parameter rows below select the exact declared inputs; policy controls cannot be weakened by presentation, tenant overlays or missing entity permissions.
@@ -738,6 +1115,8 @@ Existing identity/ownership/audit and key/priority constraints remain. The selec
 
 *Composer home: Access and behaviour › Policies.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; every listed column exists in the current DDL.
+
 Field-scoped variant of `entity_policy_binding`. It has every column, rule and control of that table plus the column below; the shared rules are not restated. The two existing tables stay separate for compatibility (section 11.6). Studio edits both through one Policies editor in the Access and behaviour module, with scope = entity or field.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
@@ -747,6 +1126,8 @@ Field-scoped variant of `entity_policy_binding`. It has every column, rule and c
 ### `metadata.entity_policy_parameter_binding`
 
 *Composer home: Access and behaviour › Policies.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (14 listed columns).
 
 Finite argument mapping to a declared policy signature, not a generic settings store.
 
@@ -773,9 +1154,13 @@ PK id; XOR owner with same graph guard; unique owner/parameter. Unknown paramete
 
 *Composer home: Overview › Identity (read-only defaults source).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; every listed column exists in the current DDL.
+
 Immutable class defaults; values are copied explicitly during authoring and then persisted. No runtime inference.
 
-These are retained columns, not replacement concepts. Retains its existing PK entity_class, profile_version and created audit; no draft coordinates or UUID id.
+These are retained columns, not replacement concepts. The existing primary key is entity_class alone; profile_version is a separate positive integer column, not part of that key. There are no draft coordinates or UUID id. Existing triggers reject UPDATE/DELETE. A version stamp may identify an externally versioned seed contract without retaining multiple rows, but cannot act as an in-place revision counter under this immutability rule.
+
+The platform-defaults owner must decide between a single installed default per class with an explicit governed replacement/install lifecycle, and retained multi-version defaults with exact version selection and dependent-reference semantics. Do not change the PK merely because a version column exists. A retained-version choice requires a reviewed forward migration for keys/references, seeding and historical selection; a single-current choice must explain installation without bypassing immutable evidence or human approval. This is an unresolved resource-lifecycle decision, not a confirmed composite-PK bug.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -794,6 +1179,8 @@ These are retained columns, not replacement concepts. Retains its existing PK en
 ### `metadata.entity_operation_rule`
 
 *Composer home: Access and behaviour › Rules and context.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** existing table; every listed column exists in the current DDL.
 
 Existing generic operation controls. Lifecycle-conditioned rules are outside new Phase 1 editing; existing protected controls are preserved.
 
@@ -816,6 +1203,8 @@ These are retained columns, not replacement concepts. Standard draft ownership a
 
 *Composer home: Access and behaviour › Rules and context.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; every listed column exists in the current DDL.
+
 Existing trusted context input contract. Request fields are not trusted tenant evidence.
 
 These are retained columns, not replacement concepts. Standard draft ownership applies; retain the existing operation/field scope FKs and ordering/uniqueness checks.
@@ -833,6 +1222,8 @@ These are retained columns, not replacement concepts. Standard draft ownership a
 
 *Composer home: Review and release › Contract tests.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; proposed columns (2): `input_schema_key`, `input_schema_hash`. The other listed columns exist.
+
 Existing schema-bound fixture metadata. Results belong to immutable qualification artifacts, not these rows.
 
 These are retained columns, not replacement concepts. Standard draft ownership applies; retain the existing operation/field scope FKs and ordering/uniqueness checks.
@@ -843,7 +1234,7 @@ These are retained columns, not replacement concepts. Standard draft ownership a
 | `test_kind` | `metadata.entity_contract_test_kind_d` | R; preserve existing typed contract | compilation | Typed governed editor |
 | `title` | `text` | R; preserve existing typed contract | Compile the declared entity contract | Typed governed editor |
 | `description` | `text` | N; preserve existing typed contract | NULL | Typed governed editor |
-| `target_plane` | `text` | N; preserve existing typed contract | NULL | Typed governed editor |
+| `target_plane` | `metadata.entity_plane_d` | N; preserve existing typed contract | NULL | Typed governed editor |
 | `entity_operation_id` | `uuid` | N; preserve existing typed contract | NULL | Typed governed editor |
 | `entity_flow_id` | `uuid` | N; preserve existing typed contract | NULL | Read-only existing control |
 | `input_context` | `jsonb` | R; pinned fixture schema and bounded payload; only qualified test kinds | {} | Typed governed editor |
@@ -857,6 +1248,8 @@ These are retained columns, not replacement concepts. Standard draft ownership a
 
 *Composer home: Experience › surface tree and surface inspector (sections 7.6–7.7).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; only `surface_key`, `surface_kind`, `layout_kind`, `is_default` exist today. The other 24 listed columns are proposed.
+
 Single home for surface-level scalar settings. Nullable settings are constrained by surface kind and explicit embedded mode. List-only settings also apply to collection embedded and are NULL elsewhere; reference_key_id/reference_format are NULL outside lookup. Section 7.6 defines the same applicability contract for the composer, API validation and compiler.
 
 One active default surface per kind. A form's create/edit modes are **derived** from its submit placements (entity_surface_operation with interaction_target=submit and a create- or update-kind operation). No separate form_modes array is stored: the array would be a second, contradictable copy of the placements. Geometry shared by create/edit uses one form surface; differing operation labels are operation-placement metadata. Different geometry requires a second explicitly selected surface, not duplicated form JSON.
@@ -864,11 +1257,11 @@ One active default surface per kind. A form's create/edit modes are **derived** 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
 | `surface_key` | `text` | R; unique in draft | detail | Code input |
-| `surface_kind` | `text` | R; list/detail/form/embedded/lookup | detail | Kind selector |
+| `surface_kind` | `metadata.entity_surface_kind_d` | R; list/detail/form/embedded/lookup | detail | Kind selector |
 | `embedded_mode` | `text` | N; P for embedded; sectioned/collection; NULL for all other kinds | NULL | Explicit embedded presentation selector |
 | `label_id` | `uuid` | N; P readable surface label | @label.countries | Label selectors |
 | `description_label_id` | `uuid` | N | NULL | Label selectors |
-| `layout_kind` | `text` | R; flow/grid/stack. The existing `tabs` value is retired for new authoring (R08); navigation groups own tabs | stack | Layout selector |
+| `layout_kind` | `metadata.entity_surface_layout_d` | R; flow/grid/stack. The existing `tabs` value is retired for new authoring (R08); navigation groups own tabs | stack | Layout selector |
 | `is_default` | `boolean` | R; at most one active per kind | true | Switch |
 | `icon_key` | `text` | N; registered semantic icon | globe | Icon selector |
 | `identity_field_id` | `uuid` | P for list and collection embedded; readable business field | @country.code | Field selector |
@@ -894,15 +1287,19 @@ One active default surface per kind. A form's create/edit modes are **derived** 
 
 The surface's `embedded_mode` is the sole authored discriminator for embedded presentation. `sectioned` permits section rows and record field placements; `collection` permits list views, readable identity, filters and paging. The selected surface component must qualify that declared mode; component selection and existing child rows never infer or override it. Missing mode is a P finding and disables mode-dependent editors/preview. Other surface kinds require NULL. The service DTO uses embeddedMode and the portable codec round-trips it; the compiler emits the declared variant into the qualified runtime contract. A runtime contract unable to express the variant blocks publication rather than inferring one. Legacy conversion without an explicit, losslessly mapped variant reports MISSING_EMBEDDED_MODE and requires an authored selection; it must not classify the surface from its rows.
 
-Lookup is a token-based reference presentation, not an independently rendered record layout. It permits title_field_id, reference_key_id, reference_format and reference_token bindings; it forbids section/group/view/action rows, summary/header bindings and a surface component selection. Generic required layout_kind/column_count retain the explicit neutral values stack/1 on lookup (read-only, no rendered layout meaning); form/list/embedded/navigation/extension settings are NULL. Input adapters must report incompatible lookup layout content, never discard it. Target lookup tokens still use qualified readable field/reference display contracts and target authorization.
+Lookup is a token-based reference presentation, not an independently rendered record layout. It permits title_field_id, reference_key_id, reference_format and reference_token bindings; it forbids section/group/view/action rows, summary/header bindings and a surface component selection. layout_kind retains the explicit neutral value stack (read-only, no rendered layout meaning); column_count is NULL as the dictionary requires. Form/list/embedded/navigation/extension settings are NULL. A version-specific legacy adapter may recognize the former neutral column_count=1 and explicitly report its conversion to NULL; other supplied layout content remains invalid. Input adapters must report incompatible lookup layout content, never discard it. Target lookup tokens still use qualified readable field/reference display contracts and target authorization.
 
 Surface kind lookup is the sole owner of reference presentation. It declares value-key members, readable title and a bounded literal/token template; reference_token bindings define every usable token. No executable expression or fallback field is allowed. A binding can narrow presentation only by selecting another target-authored lookup surface whose token exposure is a subset. List/detail/form/embedded surfaces select the appropriate component contract. column_count lays out direct sections; each section owns its internal column_count. A detail surface requires explicit navigation groups and show_group_band for preview/publication; one group never implies a band choice.
 
 An optional surface permission is held in entity_access_permission rows, one per plane. It is an independent published access property and can only add its own exact check. It does not copy the read-operation permission. Compiler validation rejects duplicated authoring sources for the same property; the runtime still applies applicable surface, operation, field and scope controls. An absent valid surface permission adds no grant requirement.
 
+The compiled surface contract exposes a derived formModes projection with mode, submitOperationKey and geometryRef pointing to the compiled surface layout. Generate it once from qualified submit placements; do not duplicate geometry or persist another authoring form_modes value. Reject ambiguous unsupported submit selection, missing operations and disagreement on import. Consumers use this pinned compiler output; older consumers require a qualified adapter or block, not independent mode inference. This is a proposed runtime-contract version change and does not mutate historical artifacts.
+
 ### `metadata.entity_surface_navigation_group`
 
 *Composer home: Experience › Navigation groups (detail).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (6 listed columns).
 
 Navigation tab label, behavior and membership owner. No component renderer or alternative surface-level navigation mode is stored.
 
@@ -921,9 +1318,13 @@ Unique surface/key and deferrable surface/position. Group content is derived fro
 
 *Composer home: Experience › Layout tree and section inspector.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; only `entity_surface_id`, `parent_section_id`, `section_key`, `section_kind`, `position`, `column_count`, `collapsible`, `collapsed_by_default` exist today. The other 20 listed columns are proposed.
+
+**Design boundary:** the inline related-list columns below remain authoritative. The owner decision on P02 in section 11.11 retains this inline model for Phase 1; no related-list subtype table is part of this design.
+
 One layout region with one explicit content variant. Navigated detail regions have a group; forms and sectioned embedded regions have no group. List, collection embedded and lookup surfaces cannot own section rows.
 
-Unique surface/key; unique sibling position with NULL parent treated as equal, deferrable for reordering. See section 2.3 for variant CHECKs and deferred graph guards. Related references resolve target release through relation_target_id; no second target entity, join, release hash or UUID pointer is copied onto the section. For related lists the exact target operation, surface, view and fields are qualified and locked by the relation on the server. Layout containers can own child sections; mixing direct field bindings and nested sections under the same fields container is prohibited to avoid competing order/geometry. Components and capabilities are leaf content.
+Unique surface/key; unique sibling position with NULL parent treated as equal, deferrable for reordering. See section 2.3 for variant CHECKs and deferred graph guards. Related references resolve their local-graph or published-release coordinate through relation_target_id; no second target entity, join, release hash or UUID pointer is copied onto the section. For related lists the exact target operation, surface, view and fields are qualified and locked by the relation on the server. Layout containers can own child sections; mixing direct field bindings and nested sections under the same fields container is prohibited to avoid competing order/geometry. Components and capabilities are leaf content.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -932,9 +1333,9 @@ Unique surface/key; unique sibling position with NULL parent treated as equal, d
 | `parent_section_id` | `uuid` | N; same surface/group; acyclic | NULL | Parent region |
 | `section_key` | `text` | R; unique surface logical key | phone | Code input |
 | `label_id` | `uuid` | N; P for labeled region | @label.phone | Label selector |
-| `section_kind` | `text` | R; section/subsection/fieldset/columns | section | Layout selector |
+| `section_kind` | `metadata.entity_surface_section_kind_d` | R; section/subsection/fieldset/columns | section | Layout selector |
 | `content_kind` | `text` | R; fields/related_list/component/capability | fields | Content selector |
-| `position` | `integer` | R; >=1 within siblings | 2 | Drag order |
+| `position` | `smallint` | R; >=1 within siblings | 2 | Drag order |
 | `column_count` | `smallint` | R; 1..12; layout for direct children | 2 | Grid control |
 | `collapsible` | `boolean` | R | false | Switch |
 | `collapsed_by_default` | `boolean` | R; true requires collapsible | false | Switch |
@@ -960,6 +1361,8 @@ Unique surface/key; unique sibling position with NULL parent treated as equal, d
 
 *Composer home: Experience › Header, Layout tree, Columns and views, Cards and summaries or Reference presentation according to placement kind; shared field placement inspector.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; only `entity_surface_id`, `entity_surface_section_id`, `entity_field_id`, `binding_key`, `position`, `column_span` exist today. The other 21 listed columns are proposed.
+
 One authorized field placement with explicit display/input/filter/format selections. Value constraints and access remain field/operation-owned.
 
 Local owner is surface plus optional section; overlay owner is the exact baseline target from entity_surface_overlay, never both. Unique binding key per surface/overlay and position per section/kind (NULL-safe). Component slots reference these rows; composite content does not also render them as ordinary fields. reference_token enrollments belong only to lookup surfaces. summary means card/summary surface content; header_context means header context. Read-only and required indication derive from the field plus selected operation; no read_only/show_required_indicator/list_available/grouping_enabled/visibility-operation/edit-operation copies exist. Permitted visibility/edit conditions are predicates and may only further restrict presentation.
@@ -972,7 +1375,7 @@ Local owner is surface plus optional section; overlay owner is the exact baselin
 | `entity_field_id` | `uuid` | R; same graph field | @country.calling_code | Field selector |
 | `binding_key` | `text` | R; unique within surface or overlay | calling_code | Code input |
 | `binding_kind` | `text` | R; field/badge/summary/header_context/reference_token | field | Placement kind |
-| `position` | `integer` | R; >=1 within placement owner and kind | 1 | Drag order |
+| `position` | `smallint` | R; >=1 within placement owner and kind | 1 | Drag order |
 | `label_override_id` | `uuid` | N; only an explicitly different presentation label | NULL | Label selector |
 | `help_label_id` | `uuid` | N | @label.help | Help text |
 | `placeholder_label_id` | `uuid` | N; input-capable placement | NULL | Placeholder |
@@ -998,6 +1401,8 @@ Local owner is surface plus optional section; overlay owner is the exact baselin
 
 *Composer home: Experience › section Component panel (slot mapping).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (4 listed columns).
+
 Registered slot-to-placement mappings for a composite section.
 
 Unique section/slot/position; duplicate binding within a slot forbidden. Deferred guard verifies slot.component_contract_id equals section.component_contract_id; binding.section equals owner; types/access/cardinality match slot contract. Slot minimums are publication checks; maximums and mismatches reject save. There is no navigation-group slot owner and no independent role text copy.
@@ -1013,9 +1418,11 @@ Unique section/slot/position; duplicate binding within a slot forbidden. Deferre
 
 *Composer home: Extensions › Overlays (tenant extension drafts only).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
+
 Tenant-owned placement instruction targeting a stable extension point in an exact immutable product baseline.
 
-Tenant_id must be non-null and source_kind=tenant_extension. Unique draft/baseline/surface/section/extension-point/anchor/position with NULL-safe keys. Product extension-point declaration must match selected surface/section. Local field bindings reference overlay.id; their positions order the additions. Baseline members retain their relative order. Duplicate keys, ambiguous anchors or conflicting extensions fail publication. List additions become eligible bindings, not automatic changes to the product default view; user/tenant views explicitly select them. Form additions require qualified baseline operation enrollment and never become writable from placement alone.
+Tenant_id must be non-null and source_kind=tenant_extension. Unique draft/baseline/surface/section/extension-point/anchor/position with NULL-safe keys. Product extension-point declaration must match selected surface/section. Local field bindings reference overlay.id; their positions order the additions. Baseline members retain their relative order. Duplicate keys, ambiguous anchors or conflicting extensions fail publication. List additions become eligible bindings, not automatic changes to the product default view. Selection requires a qualified persisted view contract; this blueprint does not define tenant-owned view overlays. Until that typed resource qualifies, tenant overlay authoring cannot claim to create or amend a saved list view. Existing personal-view behavior remains subject to its independently qualified storage and effective field-access validation. Form additions require qualified baseline operation enrollment and never become writable from placement alone.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -1031,6 +1438,8 @@ Tenant_id must be non-null and source_kind=tenant_extension. Unique draft/baseli
 
 *Composer home: Experience › Actions.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; proposed columns (3): `label_override_id`, `entry_contract_key`, `entry_contract_version`. The other listed columns exist.
+
 Places existing operations on surfaces/sections; includes submit and setup labels.
 
 Unique surface/placement key. Form mode uses the explicitly referenced create/patch operation, not surface-key naming conventions.
@@ -1041,9 +1450,9 @@ Unique surface/placement key. Form mode uses the explicitly referenced create/pa
 | `entity_surface_section_id` | `uuid` | N; same surface | NULL | Section selector |
 | `entity_operation_id` | `uuid` | R | @profile.create | Operation selector |
 | `placement_key` | `text` | R; unique placement | submit_create | Code input |
-| `interaction_target` | `text` | R; supported primary/secondary/toolbar/row/selection/overflow/submit | submit | Placement selector |
-| `selection_mode` | `text` | R; none/single/multiple | none | Selector |
-| `position` | `integer` | R | 1 | Order control |
+| `interaction_target` | `metadata.entity_surface_operation_target_d` | R; supported primary/secondary/toolbar/row/selection/overflow/submit | submit | Placement selector |
+| `selection_mode` | `metadata.entity_surface_operation_selection_d` | R; none/single/multiple | none | Selector |
+| `position` | `smallint` | R | 1 | Order control |
 | `label_override_id` | `uuid` | N; only when the placement's text differs from entity_operation.label_id (for example a submit label) | @label.setup_profile | Label selector |
 | `icon_key` | `text` | N; registered choices | NULL | Selectors |
 | `presentation_variant` | `text` | N; registered choices | primary | Selectors |
@@ -1055,6 +1464,8 @@ Unique surface/placement key. Form mode uses the explicitly referenced create/pa
 
 *Composer home: Experience › Columns and views.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (8 listed columns).
+
 Product default and named published list states, independent of personal saved-view data.
 
 Exactly one default is required for a publishable list or collection-embedded surface. Personal saved views retain their separate user ownership.
@@ -1065,16 +1476,20 @@ Exactly one default is required for a publishable list or collection-embedded su
 | `view_key` | `text` | R | default | Code input |
 | `view_kind` | `text` | R; default/published | default | Kind selector |
 | `label_id` | `uuid` | N; required for named view | @label.default | Label selector |
-| `query_text` | `text` | N; bounded default query | NULL | Query input |
+| `query_text` | `text` | N; bounded literal keyword-search input only, validated against the surface search profile; never a filter expression | NULL | Keyword search input |
 | `density` | `text` | R; comfortable/compact/spacious | comfortable | Selector |
 | `mode` | `text` | R; member of supported surface modes | table | Selector |
 | `position` | `integer` | R | 1 | Order control |
 
 The default view is a publication requirement; a newly composed list may save an incomplete draft without one. Named views are product/tenant authored presentation; personal saved views remain user-owned and are revalidated against the qualified effective field set.
 
+query_text is only the initial literal keyword string for the surface search profile. It cannot define SQL, expression syntax or scope. The provider ANDs authorized keyword search with the typed list_filter predicate and independently applies locked scope. Without a qualified search profile, nonempty query_text rejects. Ambiguous legacy query strings block conversion until explicitly classified and mapped. Personal saved views use the same typed filter grammar, operator/type/depth limits, no-UUID presentation and effective field-access validation in their user-owned storage, not Entity draft rows. Invalid stale views report findings rather than silently dropping conditions.
+
 ### `metadata.entity_surface_view_field`
 
 *Composer home: Experience › Columns and views.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
 
 One reusable row per view/field handles columns, sort and grouping without duplicate membership tables.
 
@@ -1093,6 +1508,8 @@ Unique view/field. At least one of visibility/sort/group must be selected. Query
 ### `metadata.entity_predicate`
 
 *Composer home: Experience › Filters/Visibility rules/Form behavior by purpose; record_lock in Access and behaviour › Record lock.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (28 listed columns).
 
 Typed conditions reused for supported list filters, locked record constraints and visibility conditions, with an explicit finite purpose.
 
@@ -1121,6 +1538,7 @@ Group nodes have no field/operator/value payload; condition nodes have no conjun
 | `position` | `integer` | R | 1 | Order control |
 | `surface_operation_id` | `uuid` | N; root visibility owner only | NULL | Scoped owner |
 | `surface_section_id` | `uuid` | N; root visibility owner only | NULL | Scoped owner |
+| `navigation_group_id` | `uuid` | N; same-graph root visibility owner only | NULL | Scoped owner |
 | `value_numeric_set` | `numeric[]` | N; numeric membership operator only | NULL | Typed values |
 | `value_uuid_set` | `uuid[]` | N; internal reference membership only | NULL | Authorized selectors |
 | `value_date_set` | `date[]` | N; date membership operator only | NULL | Typed values |
@@ -1128,11 +1546,19 @@ Group nodes have no field/operator/value payload; condition nodes have no conjun
 | `context_key` | `text` | N; value_kind=context; registered trusted coordinate | NULL | Trusted context selector |
 | `context_version` | `integer` | N; paired with context_key | NULL | Contract version |
 
-Root CHECK uses num_nonnulls(view_id,authorization_profile_id,field_binding_id,surface_operation_id,surface_section_id)=1. Descendants have zero owner FKs and the same purpose as their root. list_filter roots own a view; record_lock roots own an authorization profile; editability owns a field binding; visibility owns a field binding, surface operation or section. Group nodes have conjunction only and no field/operator/value. Conditions have exactly the typed operand required by their operator; is_null/is_not_null use none, membership uses a nonempty compatible set, context uses the trusted registered coordinate. Root/sibling order is NULL-safe and deferred. Cycles, mixed owners/purposes and max depth violations reject save. Visibility can suppress presentation but cannot authorize reads/writes or replace policy enforcement.
+Root CHECK uses num_nonnulls(view_id,authorization_profile_id,field_binding_id,surface_operation_id,surface_section_id,navigation_group_id)=1. Descendants have zero owner FKs and the same purpose as their root. list_filter roots own a view; record_lock roots own an authorization profile; editability owns a field binding; visibility owns a field binding, surface operation, section or navigation group. Group nodes have conjunction only and no field/operator/value. Conditions have exactly the typed operand required by their operator; is_null/is_not_null use none, membership uses a nonempty compatible set, context uses the trusted registered coordinate. Root/sibling order is NULL-safe and deferred. Cycles, mixed owners/purposes and max depth violations reject save. Visibility can suppress presentation but cannot authorize reads/writes or replace policy enforcement.
+
+Visibility editors, including navigation-group rules, display **Presentation only — not data access control**. A hidden field may still be delivered if its separate exposure contract permits it; use server-enforced field access/policy for sensitive values. Visibility evaluates only already-authorized record/context inputs and cannot fetch omitted values. The group root uses the same typed predicate/codec/compiler path, composite ownership FK, root index and validator; no duplicate predicate column belongs on the group. The Extensions group explicitly predicates on the host record source_kind=tenant_extension; direct component/service access independently enforces applicability and authorization. A consumer lacking group visibility support cannot qualify that host definition.
+
+Editability inspectors display **UI editability condition — not write authorization**. Emit an actionable warning when no corresponding qualified server restriction exists; an author may acknowledge presentation-only intent, but a claimed business invariant without server enforcement blocks qualification. Visibility carries its separate presentation-only warning. Neither predicate can grant writes or replace server conditional-requiredness validation.
+
+The preview/readiness projection exposes source kind, permitted member families, supported control paths and unmet gates from the descriptor and deployed readiness manifest. For Phase-1 extensions, list-column/search authoring is unavailable until a complete persisted enrollment path qualifies. Do not offer a list-placement control that saves a binding but cannot display it in any supported view. Legacy/imported inert placements are explicit unsupported/completeness findings with preserved source evidence; they are not silently discarded. Existing qualified personal-view support cannot be assumed to supply tenant-overlay authoring.
 
 ### `metadata.entity_label`
 
 *Composer home: Labels and languages, and inline wherever a label is shown.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
 
 Canonical labels with scope and default text.
 
@@ -1144,12 +1570,22 @@ Stable keys identify labels; consumers reference label UUIDs. Default locale is 
 | `default_text` | `text` | N; required iff source_kind=owned; nonblank, bounded | Name | Text input |
 | `source_kind` | `text` | R; owned/shared | owned | Read-only badge ("shared" chip) |
 | `shared_label_key` | `text` | N; required iff source_kind=shared; key in the pinned platform UI-label resource | NULL | Shared label picker |
+| `shared_resource_key` | `text` | N; required iff shared; registered platform UI-label resource | NULL | Qualified resource picker |
+| `shared_resource_version` | `text` | N; required iff shared; exact immutable registered resource version | NULL | Paired resource selection |
+| `shared_resource_hash` | `text` | N; required iff shared; verified SHA-256 for that key/version | NULL | Read-only verified pin |
 
-Shared labels avoid one repeated cost. Common presentation text such as "Overview", "Audit", "Created at" and "Status" otherwise needs its own label row and translations in every entity draft (seven current sources each declare an "Audit" section). A shared row is still an entity_label row, so every consumer keeps its single label FK. It holds no text: the compiler resolves it from the governed platform UI-label resource, pinned by key/version/hash as a draft dependency like any other external resource. Translations exist only for owned rows. Converting a shared label to owned is an explicit author action ("Customize for this entity") that copies the text once. Shared labels are disabled until that platform label resource is published under the section 2.4 ownership rules; until then every label is owned.
+Shared labels avoid one repeated cost. Common presentation text such as "Overview", "Audit", "Created at" and "Status" otherwise needs its own label row and translations in every entity draft (seven current sources each declare an "Audit" section). A shared row is still an entity_label row, so every consumer keeps its single label FK. It holds no text: the compiler resolves it from the governed platform UI-label resource, pinned by the shared_resource_key/version/hash columns on that label row. Those typed columns are the persisted authority; portable dependencies are a derived, deduplicated inventory and cannot override a row pin. Translations exist only for owned rows. Converting a shared label to owned is an explicit author action ("Customize for this entity") that copies the text once. Shared labels are disabled until that platform label resource is published under the section 2.4 ownership rules; until then every label is owned.
+
+
+All four shared coordinates (resource key/version/hash and shared_label_key) are present iff source_kind=shared and NULL iff owned. Shared rows have no default_text or owned translations; owned rows require default_text and use only owned translations. A deferred/shared validator resolves the label key in the exact qualified resource; inconsistent hashes for the same resource key/version reject. Different resource versions remain distinct dependencies, never an implicit upgrade. The portable codec carries these camelCase coordinates; the compiler derives its dependency inventory and resolved text from the same pin. Labels and languages owns the paired resource/key picker, with hash server-verified; customization copies the selected text/locales into an owned label and clears every shared coordinate atomically after showing affected usages. No generic dependency property bag or new parallel catalogue table is introduced.
+
+This closes the target storage definition, not implementation readiness: shared label selection and customization remain disabled until the resource, typed save/load, resolver and compiler qualification exist. Tests must cover wrong/missing resource, missing key, hash mismatch, cross-tenant access, explicit upgrade and shared-to-owned round trips.
 
 ### `metadata.entity_label_translation`
 
 *Composer home: Labels and languages › Translation matrix.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (3 listed columns).
 
 One non-default translation per label and locale.
 
@@ -1165,6 +1601,8 @@ Unique label/locale. Compiler derives default-locale values from default_text ra
 
 *Composer home: Experience › Header.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (4 listed columns).
+
 Only for a badge whose display mapping differs from reusable enum choice tones.
 
 A badge uses canonical choice tones when there is no explicit override. Do not copy identical maps into this table.
@@ -1174,11 +1612,13 @@ A badge uses canonical choice tones when there is no explicit override. Do not c
 | `field_binding_id` | `uuid` | R; badge binding | @country.status.badge | Badge selector |
 | `choice_id` | `uuid` | N; enum choice FK when applicable | @status.active | Choice selector |
 | `value_text` | `text` | N; scalar non-enum mapping, XOR choice | NULL | Value input |
-| `tone` | `text` | R; supported tone | success | Tone selector |
+| `tone` | `metadata.entity_tone_d` | R; CHECK neutral/success/warning/danger; same finite descriptor choice | success | Tone selector |
 
 ### `metadata.capability_profile`
 
 *Composer home: Capabilities (read-only profile).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (10 listed columns).
 
 Reusable versioned comments/attachments/activity configuration. A profile is a governed resource, not an entity-specific implementation.
 
@@ -1198,6 +1638,8 @@ Profile catalogue rows have explicit resource ownership, review and source versi
 | `content_hash` | `text` | R at selection; immutable published identity | digest | Read-only release pin |
 
 ### `metadata.capability_profile — setting columns`
+
+**DDL status:** proposed table — not in the current DDL (44 listed columns).
 
 Finite capability-specific columns on the profile table; irrelevant-kind settings must be NULL.
 
@@ -1254,6 +1696,8 @@ A CHECK validates positive limits and declared feature invariants. No generic se
 
 *Composer home: Capabilities (read-only rule).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (6 listed columns).
+
 A bounded permission to override one known profile setting; this is not an arbitrary settings store.
 
 Unique profile/property. Exactly the rule variant compatible with the setting type is populated; unknown property keys are rejected.
@@ -1271,6 +1715,8 @@ Unique profile/property. Exactly the rule variant compatible with the setting ty
 
 *Composer home: Capabilities › Enrollments and Effective settings.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** existing table; only `capability_key` exists today (the profile and override payloads are in the legacy `declaration`/`binding`/`profile`/`profile_definition`/`overrides` JSONB columns, section 11.5). The other 5 listed columns are proposed.
+
 Entity enrollment in one immutable reviewed capability profile.
 
 Unique draft/capability. Exact profile code/version/hash is derived through profile_id. Enrollment ownership field/resolver derives from the canonical authorization profile, not a separate owner policy. The finite override setting columns listed below exist as nullable `override_<setting_column>` on this row; NULL means no override. Values are scalar/typed arrays with the same type as the setting above; the profile and rule determine authorization and bounds. Unused capability-kind overrides are NULL.
@@ -1287,6 +1733,10 @@ Unique draft/capability. Exact profile code/version/hash is derived through prof
 Enrollment contains no second placement or layout set. A content_kind=capability section selects the enrollment and one registered layout binding; its navigation group determines the tab. Multiple sections may select the same qualified enrollment without copying its profile/settings. Profile source is a pinned immutable resource dependency, and content authorization remains independent.
 
 ### `metadata.entity_capability — override columns`
+
+**Design boundary:** these inline overrides remain authoritative. The owner decision on P01 in section 11.11 defers the settings-table split; the proposed split is not an implementation contract.
+
+**DDL status:** existing table; all 36 listed columns are proposed (none exist in the current DDL).
 
 These columns are on the enrollment table, not another table. The finite set below is the complete override contract.
 
@@ -1335,6 +1785,8 @@ NULL means inherit pinned profile; no row/array entry is a generic settings prop
 
 *Composer home: Capabilities › Actions and layouts.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (9 listed columns).
+
 Ordered action/layout/qualified collection binding selections for an enrollment.
 
 Finite row variants have CHECK constraints. An action's exact per-plane permission lives in entity_access_permission. Selecting a layout or a profile never grants action permission. Binding references a capability enrollment and registered contract, not a separate API stack.
@@ -1355,9 +1807,11 @@ Finite row variants have CHECK constraints. An action's exact per-plane permissi
 
 *Composer home: AI › Profile.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (6 listed columns).
+
 Entity-facing AI declaration only. It does not store AI execution/autonomy policy.
 
-Unique draft. AI search keys compile from the selected search profile. No copied permission policy, thresholds, credential or provider quota fields.
+Unique draft. AI search keys compile from the selected search profile. AI search is a search_profile reference, never a second authored field list; only summary selections use entity_ai_field rows. Legacy searchFieldKeys must reconcile exactly with ordered search_field membership before conversion; summaryFieldKeys maps separately to entity_ai_field. No copied permission policy, thresholds, credential or provider quota fields.
 
 | Column | PostgreSQL type | Required / rule | Sample value | Authoring intent |
 | --- | --- | --- | --- | --- |
@@ -1372,6 +1826,8 @@ Unique draft. AI search keys compile from the selected search profile. No copied
 
 *Composer home: AI › Fields.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (3 listed columns).
+
 Ordered summary-field selections.
 
 Unique profile/field and profile/position. Selections do not bypass field authorization.
@@ -1385,6 +1841,8 @@ Unique profile/field and profile/position. Selections do not bypass field author
 ### `metadata.entity_ai_binding`
 
 *Composer home: AI › Bindings.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
+
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
 
 Finite union of provider/action/presentation-profile selections with typed constraints.
 
@@ -1404,6 +1862,8 @@ Unique profile/kind/contract. A provider validates context and manifests; an act
 
 *Composer home: AI › References.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (7 listed columns).
+
 AI relationship navigation refers to canonical structures, not independently authored joins.
 
 Exactly one variant. AI relationshipKeys emits the approved reference entry field/collection source reference expected by the AI contract; it does not assume relation_key equals field_key.
@@ -1422,6 +1882,8 @@ Exactly one variant. AI relationshipKeys emits the approved reference entry fiel
 
 *Composer home: AI › Terms.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
+**DDL status:** proposed table — not in the current DDL (9 listed columns).
+
 Reviewed vocabulary terms attached to selected providers; learning-source provenance remains AI-owned.
 
 Unique profile/normalized phrase/provider. An authored term is reviewed with the draft like any other member. A learned term carries the exact approved candidate identity and proposal hash; editing its phrase would invalidate that hash, so a change to a learned term creates a new authored term. Candidate data/review is not copied into this table. Default vocabulary may be absent; no term is synthesized from record data.
@@ -1432,11 +1894,19 @@ Unique profile/normalized phrase/provider. An authored term is reviewed with the
 | `provider_binding_id` | `uuid` | R; selected insight provider | @country.ai.read_record | Provider selector |
 | `phrase` | `text` | R; normalized short supported phrase; read-only when origin_kind=learning_candidate | country details | Phrase editor (authored) / read-only (learned) |
 | `origin_kind` | `text` | R; authored/learning_candidate | learning_candidate | Read-only provenance |
-| `origin_plane` | `text` | N; all-or-none provenance tuple, required iff learning_candidate | studio | Read-only provenance |
+| `origin_plane` | `text` | N; required iff learning_candidate; server-verified provenance | studio | Read-only provenance |
+| `origin_source_kind` | `text` | N; platform/tenant; required iff learning_candidate | platform | Read-only candidate ownership |
+| `origin_tenant_id` | `uuid` | N; required iff learned candidate has tenant ownership; NULL for platform/authored sources | NULL | Read-only candidate tenant |
 | `origin_candidate_id` | `uuid` | N; provenance tuple | @candidate | Read-only provenance |
 | `origin_proposal_hash` | `text` | N; provenance tuple; SHA-256 of reviewed proposal | 64 hexadecimal characters | Read-only provenance |
 
+Learned-term provenance is server-resolved from the immutable AI candidate: origin_source_kind/tenant, origin_plane, candidate identity and proposal hash must agree. Tenant candidates may enter only matching tenant-owned publications. A platform baseline accepts platform-owned candidates; Platform Owner review alone cannot relabel tenant data as platform data. Any future cross-tenant promotion requires a separately qualified AI-owned sanitization/consent/export policy, source-owner authority, independent platform review and immutable promotion evidence; until then it blocks. Metadata never copies candidate content or invents provenance. Conversion of missing/ambiguous source ownership blocks learned-term publication. Authored terms have no candidate tuple; changing a learned term cannot erase its source evidence to bypass these controls.
+
+Capability record actions resolve their parent record through the registered admission contract in the existing Entity authorization framework. Admission must declare collection/existing/new context, parent identity/tenant resolver, required read closure or explicitly supported write-without-read semantics, exact published operation authority, field enrollment and locked record scope. No generic action permission substitutes for parent authorization. When no qualified write-without-read contract exists, record actions require the current parent-read closure before effects. Missing admission semantics blocks the action; navigation still requires destination authorization. These are versioned capability-manifest requirements, not a new hidden Entity permission or an inferred permission name. Test direct invocation on foreign-tenant and unreadable parent records, not just button visibility.
+
 ## 4. AI ownership and effective reuse
+
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
 
 | Information | Authoritative owner | Entity model reference |
 | --- | --- | --- |
@@ -1453,9 +1923,13 @@ Entity permission, field access and record scope apply independently of AI selec
 
 Comments, attachments and activity likewise use the existing owning stores for their actual content. Metadata stores enrollment/settings/bindings only. Activity view selections are supported profile subsets, with real authorized readers and data coverage. Nothing synthesizes audit history or snapshots from missing data.
 
+AI context is assembled for the requesting authenticated human under current operation, record-scope and field-read closure before model input. Service credentials used for retrieval/indexing cannot expand that human's disclosure. A precomputed index must retain verified tenant/source/record/field provenance and policy/security-generation coordinates, enforce current authorization at query time and revalidate returned material before context assembly. Include embeddings, chunks, summaries, caches and model/tool traces in the disclosure/retention contract; metadata filtering alone is insufficient if stale results can still reach the model. Unmappable or stale-policy entries are withheld pending reindex/revalidation. Masking applies before model input unless an independently authorized purpose-specific contract permits otherwise. Background AI jobs require an explicit scoped principal/purpose contract and separately authorized result delivery; they cannot claim an absent requesting human as unrestricted access.
+
 ## 5. Custom field model
 
-A custom field is a normal `entity_field` with a stable field identity, label, type, constraints, storage kind and explicit access. Studio can create it, place it in shared surfaces/forms, include it in qualified searches/views and compile it through the same contract.
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
+
+A custom field is a normal `entity_field` with a stable field identity, label, type, constraints, storage kind and explicit access. Studio may create it and place it through qualified extension points. Search and list-view use additionally require a qualified persisted enrollment contract and query provider. Phase-1 tenant extensions cannot author baseline search profiles or tenant view overlays; do not promise searchable/list-column authoring until those typed overlays qualify. Provider query capability alone does not create an authoring enrollment path.
 
 Storage is explicit:
 
@@ -1472,6 +1946,8 @@ Creating a field in Studio does not issue arbitrary ALTER TABLE statements or ma
 
 ### `master.entity_custom_field_value`
 
+**DDL status:** proposed table — not in the current DDL (14 listed columns).
+
 One shared typed extension store for eligible entities, not a new business-specific table per custom field.
 
 PK `(tenant_id, entity_id, record_id, field_identity_id)`; audit columns are service-owned. Exactly one payload for value_state=value; none for null. No arbitrary attribute key is accepted. Product/global records can have tenant-local extensions only with an explicit published extension ownership contract.
@@ -1481,7 +1957,7 @@ PK `(tenant_id, entity_id, record_id, field_identity_id)`; audit columns are ser
 | `tenant_id` | `uuid` | R; caller/extension scope | @tenant | Server-owned |
 | `entity_id` | `uuid` | R; governed entity identity | @principal_profile | Server-owned |
 | `record_id` | `uuid` | R; eligible stable technical record ID | @record | Server-owned |
-| `field_identity_id` | `uuid` | R; FK entity_field_identity, stable across definition revisions | @profile.preferred_contact_time | Server-owned |
+| `field_identity_id` | `uuid` | R; validated published identity reference, not a cross-plane FK; stable across definition revisions | @profile.preferred_contact_time | Server-owned |
 | `value_kind` | `text` | R; compatible registered scalar/reference/structured type | text | Derived from field |
 | `value_text` | `text` | N; tagged compatible value | Morning | Typed shared field control |
 | `value_numeric` | `numeric` | N; tagged compatible value | NULL | Typed shared field control |
@@ -1493,6 +1969,8 @@ PK `(tenant_id, entity_id, record_id, field_identity_id)`; audit columns are ser
 | `value_state` | `text` | R; value/null | value | Null/value selector when permitted |
 | `record_version` | `bigint` | R; positive optimistic concurrency | 1 | Server-owned |
 
+The extension store resides in the parent record's owning plane/database, allowing its provider to apply record and custom-value changes in the same transaction. field_identity_id and entity_id refer to stable identities published from Studio; no SQL FK across the Studio/Neon/Mesh databases is claimed. The shared metadata resolver on the owning plane loads the exact activated product/extension release and hash from that plane's verified artifact installation, validates identity membership, type, tenant and retirement state, and pins that coordinate for the transaction. Missing/stale/unavailable metadata blocks the operation. Target-plane activation must verify installation of the complete dependency closure before switching the active pointer. Requests use that installed, hash-verified closure; Studio need not be synchronously online for each record request. Installed immutable dependencies remain available while active releases reference them; revocation and incompatible-storage findings still block affected operations. Activation/rollback and dependency-retention checks are shared runtime contracts, not a second writable metadata source. Publication/removal coordinates with the provider so referenced identities remain resolvable while values exist; retirement does not cascade-delete data. An early extension-provider follow-on must qualify the derived local identity projection described in section 5.2; it is not a parallel writable catalogue or a cross-plane SQL FK.
+
 The shared provider verifies the real parent record, tenant/extension ownership, active field definition and access inside the record transaction. A polymorphic entity/record identity cannot have a normal FK to an arbitrary table: this integrity is an explicit shared provider contract, not a claimed SQL FK. Provider composition qualifies deletion/orphan handling and transaction boundaries. Non-UUID identity models need an approved adapter; unsupported storage is an actionable configuration error, not another key guess.
 
 Extension values require matching tenant/entity/stable-field identity and the exact published extension field contract. Scalar extension fields support string, integer/bigint/decimal, boolean, date and datetime in this version. UUID reference or structured extension controls remain disabled until the shared provider qualifies their target/schema behavior. Once values exist, changing a field identity/type cannot reinterpret them in place: incompatible changes require a new stable field identity and explicit governed value conversion.
@@ -1501,7 +1979,57 @@ Search/filter/sort/group use extension fields only when the shared query provide
 
 Example custom field: `preferred_contact_time`, string, nullable, max_length=32, storage_kind=extension, label=Preferred contact time. It is enrolled explicitly in the profile form, the patch operation and field access. Its value can be Morning. A nullable boolean extension preserves three states: unset/inherit, true and false.
 
+Record/custom-value concurrency is one provider contract: lock the parent and compare a single aggregate expected-version token before mutation. An extension-only change advances the parent version (or a qualified combined revision); a mixed patch changes parent and custom values atomically and advances that revision once. Per-value record_version remains subordinate and cannot substitute for aggregate conflict detection. Providers unable to supply this transaction/version contract cannot enable extension writes. Read assembly uses one consistent database snapshot and returns its aggregate revision; an at-version read must return that exact qualified snapshot or a conflict/unsupported result, never independently fetched mixed versions. Concurrent extension-only and mixed-patch fixtures must demonstrate no lost update.
+
+**Extension storage decision record — EXT-STORAGE-01.** Retain the proposed shared typed-value store provisionally; require this decision to be closed with measured workloads before F7 implementation, not before the read-only reference slice. The parent-FK limitation is polymorphic parent identity within a local database, not simply a cross-plane database restriction.
+
+| Alternative | Advantages | Costs and qualification |
+| --- | --- | --- |
+| Shared typed-value store (current proposal) | No physical column/table change for each supported tenant field; common provider lifecycle | Polymorphic parent integrity, typed-value applicability, query/index and F7 enforcement costs |
+| Generated per-entity extension table | Real local parent FK, native typed columns and constraints | Governed DDL evolution, index/backfill/lock costs, tenant field collisions and version/rollback lifecycle; a FK still does not enforce authorization or aggregate concurrency |
+| Per-entity/per-tenant table | Tenant-local physical constraints and field isolation | Object-count/catalogue growth, operational migration/backup cost and tenant provisioning |
+| Shared table with nullable typed columns | Bounded schema for finite scalar families | Still needs discriminators and polymorphic-parent controls unless partitioned by parent type; null/uniqueness/query semantics remain explicit |
+
+Compare field-change frequency, tenant/entity count, query patterns, latency/storage budgets and operational migration capacity. Dynamic DDL avoidance is an explicit reason to choose the shared store, not proof it always wins. If measurements favor another model, amend typed storage/provider contracts before implementation; do not introduce per-entity runtime branches or allow Studio to execute business DDL. This audit does not authorize a generated-table backend or reinterpret existing values.
+
+Legacy identity reconciliation is F9, a prerequisite of F8 whenever a live request joins legacy pinned contracts to current stable identities. It is distinct from F7's custom-value local FK projection: read-only security mapping cannot wait for extension-write delivery. Produce an immutable governed mapping resource from exact legacy release/hash and scoped field/operation coordinates to stable identities and their current supported semantic contracts. Do not join on a bare field_key or assume legacy row UUID stability. Record source owner/entity, parent path, source revision and verified lineage; ambiguous renames, collisions, splits or incompatible type reuse return rebind_required rather than guessed matches.
+
+Distribute that mapping through the existing signed dependency/installation path with exact key/version/hash and local activation receipts. Preserve original artifact bytes and retain mappings while supported pins need them; current revocation/identity compatibility still applies. F9 fixtures cover legacy pinned field → verified stable identity → current security restriction, multi-plane installation lag, conflicting mappings, renamed operations, missing lineage and retired identities. The resource is read-only derived migration evidence, not a second identity-authoring source. If a release cannot map, isolate its blocked capability and plan rebind; do not silently weaken security or claim every legacy artifact is automatically readable.
+
+### 5.1 Activation concurrency and record erasure
+
+Close the metadata-head race in the parent record's owning database: record/custom-value transactions acquire a shared transaction-level lock on each applicable local active-head coordinate in deterministic order before resolving the verified closure and retain it through commit. Activation/rollback acquires the conflicting exclusive lock on those same coordinates before dependency verification and pointer switching. Check pinned hashes/versions under that lock. The provider and activation adapter must both participate; an implementation missing either side is unqualified. Include relevant local security-generation coordinates in the compatible control contract so a concurrent restriction cannot be ignored. No cross-plane lock or synchronous Studio read is claimed. Long-running jobs use bounded transactions and re-resolve between them.
+
+The qualified delete/erasure path locks the real parent and owned custom values, evaluates retention/holds, and deletes or tombstones them together in the parent database transaction as the published provider contract requires. Soft-deleted parent values remain inaccessible except through explicitly authorized retention/recovery paths. A hard-delete path that leaves unexplained orphan values is not qualified; legal retention may instead require an inaccessible tombstone with a reviewed erasure schedule. Field/entity metadata retirement does not cascade-delete business values. Erasure jobs are idempotent, scoped, audited and must cover all typed payloads, indexes and derived data according to their owning retention contracts. Backup disposal follows the approved platform retention policy, not this metadata editor. No arbitrary polymorphic FK or silent cascade is claimed; direct and bulk parent deletion must use the same qualified provider boundary.
+
+Activation locking is scoped to the exact local entity/source-owner/tenant active-head coordinates, never a plane-wide lock. Registered provider/activation policies define numeric shared-transaction duration limits, activation lock-acquisition timeout, total retry budget and bounded backoff before enablement. On timeout, rollback the entire activation attempt and report deferred/conflict; do not leave an exclusive waiter indefinitely blocking new shared transactions or switch the pointer without locks. Long-running work uses bounded batches and re-resolves between transactions. Qualification measures p95/p99 write latency and maximum observed stall under a long reader plus concurrent activation, verifies cancellation releases locks, and checks unrelated entities remain available. Choose thresholds from measured budgets, not arbitrary constants in this blueprint.
+
+**Parent integrity and orphan detection (F7).** The field-identity projection does not prove parent existence. For local table-backed parents, qualify a database-enforced parent-delete boundary alongside the provider: a registered per-parent-table adapter supplies a guard/trigger or equivalent trusted constraint path using explicit storage-authority and record-identity mappings. It locks the relevant parent/value scope and prevents hard delete while custom values remain unless the same authorized transaction has performed the approved erase/tombstone disposition. Custom-value insertion must acquire the matching parent lock and verify existence so a concurrent insert cannot race deletion. Ordinary application/legacy roles cannot bypass the guard through direct DELETE or TRUNCATE; qualified administrative migration paths must supply explicit scoped reconciliation evidence. No trigger guesses table names, invents polymorphic FKs or grants delete authority. Parent-delete guards complement, not replace, provider authorization/audit/retention.
+
+The F7 manifest inventories every deletion path, including legacy handlers, maintenance, bulk operations, schema migration and restore. Unsupported parent storage/providers cannot enable new extension writes. A periodic bounded, tenant-scoped reconciliation job independently checks custom-value parent existence against registered providers and records scan watermark, scope, completeness and uncertain/unavailable checks. Missing parents yield quarantined/inaccessible values and a durable incident for governed repair; the job never silently deletes data or treats provider unavailability as absence. Authorized repair must establish a valid parent/provenance or retention-approved disposal. Record orphan counts without exposing foreign-tenant data; F7 acceptance requires zero unexplained orphans in a complete qualification scan, plus detection fixtures for bypass/restore faults. Reconciliation is detection/recovery, not proof that bypass writes are safe or a substitute for synchronous prevention. Privileged operators capable of disabling database controls remain an explicit operational trust boundary.
+
+### 5.2 Derived identity integrity and query capability evidence
+
+Prioritize a derived, immutable per-plane identity projection as an early extension-provider integrity deliverable after the first read-only Entity slice. It is populated only by verified activation from exact signed product/extension dependencies and retained while custom values or active/retained releases reference it. A proposed composite local FK from custom values to the installed (Entity, source owner, stable field identity) projection enforces identity membership without a Studio database FK. Source-owner coordinates must distinguish product fields with tenant-local values from tenant-owned extension fields; do not incorrectly equate the value tenant with the field source owner. F0 must specify the projection key, FK and activation/retention migration before enabling it. The projection is read-only to business/authoring clients.
+
+This FK does not establish the existence of a polymorphic parent record, current field writability, active type compatibility, caller rights or retirement policy; the provider and head-lock contract still enforce those. No unqualified soft-reference fallback is allowed when a required local projection is unavailable. Existing provider-only behavior is not claimed unsafe or automatically removed: retain it only where independently qualified, with the concentrated integrity risk explicit. Unsupported custom-field writes fail with a readiness finding, not silent feature disappearance. Runtime metadata comes from the locally installed closure, not a synchronous cross-plane Studio read on every transaction.
+
+A registered query-capability manifest, pinned alongside the storage/provider catalogue, declares supported combinations of semantic type, cardinality, storage adapter, plane and search/filter/sort/group operators. Include null behavior, collation/timezone, ordering and index requirements plus provider key/version/hash. A SQL type alone cannot promise contains/range/full-text support. External/virtual providers publish equivalent capability evidence without pretending to be physical storage objects. The composer disables unsupported enrollments with reasons before save; import/compiler/runtime reject incompatible supplied selections, never silently drop them. Preserve the separate effective field-access intersection: provider support is capability, not authorization.
+
 ## 6. JSON ↔ relational codec
+
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
+
+| Term | Precise meaning |
+| --- | --- |
+| Portable authoring JSON | The versioned import/export snapshot in section 6.1.1; portable envelope, authoring manifest and portable snapshot refer to this same contract |
+| Service mutation DTO | The typed command-batch API in section 2.3.1; it is not the portable snapshot and does not replace the relational authority |
+| Published runtime JSON | The compiler's qualified projection; not a complete portable authoring snapshot |
+| ownership_model | Entity record ownership classification (system/package/tenant/overlay); not permission to author or approve metadata |
+| publication_owner | Platform/tenant author-and-independent-review authority for a publication |
+| authoringOwnership | Legacy source property mapped by the adapter to publication_owner; not a new target column |
+| source_kind | Product/tenant-entity/tenant-extension graph composition; distinct from record ownership and publication review authority |
+
 
 ### 6.1 Two JSON contracts with different purposes
 
@@ -1518,34 +2046,77 @@ Round-trip laws:
 - `compile(model) = compile(decode(encode(model)))` with identical semantic source/dependency hashes.
 - Import resolves every field/key/section/operation/profile reference before writing. Unknown properties, dangling references and unsupported selections produce path-specific errors.
 
-### 6.2 Country semantic authoring specimen
+### 6.1.1 Portable envelope, membership and version axes
 
-```json
-{
-  "schema": "athyper.entity-authoring-model/1",
-  "entity": {"code": "country", "class": "reference", "ownership": "system"},
-  "targets": [{"plane":"studio","requirement":"required"},{"plane":"neon","requirement":"required"},{"plane":"mesh","requirement":"required"}],
-  "localization": {"defaultLocale": "en", "requiredLocales": ["en", "ms", "ar"]},
-  "fields": [
-    {"key": "code", "type": "string", "required": true, "storage": {"kind": "column", "path": "code"}},
-    {"key": "name", "type": "string", "required": true, "storage": {"kind": "column", "path": "name"}}
-  ],
-  "surfaces": [{
-    "key": "detail", "kind": "detail", "titleField": "name", "codeField": "code",
-    "showGroupBand": true,
-    "navigation": {"groups": [{"key": "overview", "label": "navigation.overview", "sectionDisplay": "continuous", "position": 1}]},
-    "sections": [{"key": "overview", "group": "overview", "label": "entity.country.sections.overview", "position": 1}],
-    "fieldBindings": [
-      {"key": "code", "section": "overview", "field": "code", "position": 1},
-      {"key": "name", "section": "overview", "field": "name", "position": 2}
-    ]
-  }]
-}
-```
+The normative portable contract is a complete snapshot, distinct from the service mutation protocol below. Its root has exactly `schema`, `exportState`, `descriptor`, `entity`, `draft`, `members` and `dependencies`; unknown root/member properties reject. `schema` is `athyper.entity-authoring-model/1`; exportState is complete or incomplete_draft. Import into a complete-source/publication flow requires complete and all P checks; incomplete_draft is accepted only by an explicit draft-import action with findings. descriptor contains required version and SHA-256 hash. entity contains the stable logical code, class and ownership fields; draft contains the semantic change-set properties in the dictionary, excluding row IDs, lifecycle receipts, lock_version, source hashes and audit coordinates. Entity ownership is validated against the import destination, not trusted from the file.
 
-This is a section fragment, not a complete import package: a complete package also supplies the referenced labels, storage/provider contract, access and the full field/surface definitions. Studio validates it against the versioned authoring schema before save.
+`members` has one array for every applicable draft-member table, keyed by its exact dictionary table name without the metadata prefix; empty arrays are explicit. The registered descriptor enumerates that finite set, including applicability/source-kind conditions. It excludes catalogue-owned profiles/components, immutable evidence, excluded Phase 2 tables and business record values. Each row contains the camelCase dictionary scalar members and scoped logical references, replacing internal row FKs with typed coordinates. References contain owner path plus logical key; anonymous membership rows use their declared composite owner/target coordinate. Duplicate logical coordinates reject; position is ordering, never identity. Stable field identities use governed entity/field keys, preserving nested parent identity. Catalogue/external references additionally pin resource version/hash; `dependencies` is the exact, deduplicated set of those references, checked against actual uses.
 
-A database import allocates field and section UUIDs, resolves those logical references, and inserts row memberships. A database export joins label/profile references and emits the same logical values. Compiler output emits `recordPresentation.sections`, tab `sectionKeys`, localizedLabels and validated component fields from these rows.
+R members must be present and valid; missing conditional P members may appear only in an explicitly incomplete draft export and cannot qualify a complete import/preview. N scalars are omitted when absent; explicit null is accepted only by the dictionary's tagged-null semantics. Required arrays are present, optional scalar-array omission differs from an explicit empty array. Required booleans are explicit true/false. No database default fills a missing portable property silently. Runtime artifact schemas are not portable input schemas.
+
+| Version axis | Selection and upgrade rule |
+| --- | --- |
+| Portable schema | Selects envelope, membership/reference encoding and canonicalization; unknown versions reject |
+| change_set.schema_version + authoring_schema_hash | Pins the descriptor's typed member set, validation and codecs; immutable version/hash pairing |
+| Compiled contract_schema_version | Selected compiler output contract, qualified against host/plane support; never inferred from portable version |
+| Legacy source schema | Selects one explicit migration adapter and source-position convention; cannot masquerade as a portable snapshot |
+
+A registered compatibility tuple binds all applicable axes and exact codec/compiler versions. A v1 portable export never becomes v2 by relabeling: decode under its pinned schema, run an explicit versioned typed transformation with path diagnostics, validate the v2 target, show a semantic diff and save only after the author accepts the upgrade. Missing adapters or lossy/unresolved transformations block. Original input and historical signed artifacts retain their hashes.
+
+This envelope is normative design, not an implemented JSON Schema. Before portable import/export ships, the descriptor build must emit a closed machine-readable schema for every member, with all required/null/absent/composite-key rules and fixtures. A partial handwritten specimen is insufficient qualification.
+
+D27 is also a protected-control blocker: the current repository deletes operation rows in keyed graph reconstruction (kysely-authoring-repository.ts around line 822), includes requiresMfa in its accepted operation projection (around line 1206), and the physical column defaults to false (metadata/03_tables.sql around line 902). Thus omission/defaulting and supplied values must be audited as potential loss/change of existing protected state, not only row-identity or created_by loss. The target section 6.1.5 preservation contract is not evidence that current saves enforce it. Gate affected editor qualification on a verified correction and preservation tests. This documents the issue only: code touching MFA preservation, DTOs or enforcement requires the owner's specific prior approval; no such implementation is authorized by this blueprint update.
+
+Import provenance declares source_position_convention for every ordered source family using the closed values zero_based / one_based / unknown, together with source contract/version, exporter or producer identity/version, immutable input hash and attestation reference. unknown blocks conversion. The importer verifies the declaration against the registered boundary contract and trusted source evidence; a caller-supplied convention is not authority to reinterpret arbitrary numbers. Conflicting declarations reject with POSITION_PROVENANCE_CONFLICT; missing/unknown evidence yields POSITION_PROVENANCE_REQUIRED. A migrated one-based receiving database remains compatible with a verified zero-based source. Persist the verified import receipt separately from authored graph positions; normalized save never re-applies the offset. This makes provenance explicit, but cannot mathematically prove a producer's false declaration from round-trip tests alone.
+
+### 6.1.2 Canonical bytes and label identity
+
+Canonical authoring hashing uses version `entity-authoring-canonical/1`: first normalize through the pinned portable schema; exclude only the expressly nonsemantic audit/row-ID envelope. Reject duplicate JSON keys, invalid Unicode, unknown members, non-finite numbers and unsafe numeric values. Integers in the safe JSON range use base-10 without leading zeroes; exact decimal/bigint values use normalized decimal strings (no exponent, redundant leading/trailing zeroes or negative zero). Dates use YYYY-MM-DD; instants use UTC ISO with fixed schema-declared precision. Text is preserved without Unicode normalization or whitespace trimming.
+
+Sort object keys by UTF-16 code-unit order. Emit compact UTF-8 JSON: quote/backslash escape; control characters use lowercase four-digit Unicode escapes; other characters are literal Unicode. No BOM, spacing or trailing newline. Preserve semantic ordered arrays; sort sets by their canonical element bytes; sort unordered member arrays by canonical logical coordinate. Serialize booleans/null literally and omit absent properties. SHA-256 hashes these exact bytes, with a domain prefix `entity-authoring-canonical/1` followed by one zero byte. Required test vectors cover Unicode, decimal/date values, empty/absent/null, reordered unordered members and ordered arrays. Existing release/artifact hash algorithms are unchanged; a compiler-contract upgrade must explicitly map any new semantic hash into its established envelope.
+
+Label deduplication means identical **scoped logical identity**, not identical text: owned labels use draft/entity scope plus label_key; shared labels use exact shared resource/hash/key. Repeated declarations of the same identity must agree on default text, locale and all translations or block conversion. Different label keys with equal text remain distinct. Neither compiler nor importer merges labels by text. Explicit author-selected reuse changes the graph intentionally and is visible in its diff.
+
+New/edited labels and translations reject bidi override/isolate controls and nonprinting control characters under a pinned label-validation policy; reviewed Unicode script diagnostics flag mixed-script/confusable text without rejecting legitimate multilingual labels wholesale. Review renders logical keys alongside safely escaped labels and surfaces suspicious code points. Validation does not normalize hash input or rewrite historical artifacts. Legacy unsafe text receives explicit diagnostics and a governed correction before reuse in a new release; historical inspection remains safely escaped.
+
+F1 defines `entity.jsonb-preservation-equality/1` solely for comparing stored legacy JSONB values during scoped save/import preservation. SQL NULL is a tagged outer absence distinct from JSON null. Object membership is exact (missing key differs from a present null value); object-key order and JSON formatting are ignored. Strings compare exact Unicode contents with no trimming/normalization. Arrays preserve order, length and duplicates. Booleans and strings never coerce to numbers. JSON numbers compare exact mathematical decimal values without conversion through a lossy JavaScript Number; 1, 1.0 and 1e0 are equivalent, as are signed numeric zero spellings where supported by the JSONB input contract. Reject unsupported/non-finite values. Duplicate object keys are rejected at raw import boundaries; stored JSONB cannot recover discarded duplicates.
+
+Vectors include SQL NULL/JSON null/missing key, reordered objects, reordered/duplicated arrays, numeric versus string values, decimal/exponent equivalence, integers above the safe JavaScript range and distinct Unicode spellings. An equal comparison is not permission to rewrite untouched rows: partial saves leave them unmodified. This comparator is independent of entity-authoring-canonical/1 and existing artifact signatures, which retain their declared canonical bytes/hashes.
+
+### 6.1.3 Relation bootstrap, pinning and rebind
+
+Self-relations use target_binding_kind=same_graph and resolve keys, fields and presentation against the same saved graph. The compiler emits a symbolic self dependency; it does not embed its own final hash recursively. Activation resolves self to the containing qualified release. A saved draft preview uses its exact saved graph. A self reference cannot select another entity, bypass record scope or weaken target authorization.
+
+Cross-entity references use published_release. Country v2 does not silently upgrade a source pinned to Country v1: the resolver uses the v1 key/surface/view contracts and exact artifact hash while reading authorized current records through a compatible qualified provider. If v1 dependencies are unavailable or the physical contract becomes incompatible, reads fail with a configuration finding; there is no latest-release fallback. Keep dependencies available while active sources reference them.
+
+Data model › Relations exposes a shared Rebind target action. It selects a sealed candidate release, compares key/type mappings, surfaces/views, reference tokens, scope and authorization, and reports every affected source binding. Accepting it creates a draft change; full validation, compiler qualification and independent release review are required. The existing active source is unchanged until its successor activates.
+
+Phase 1 has no co-publication/release-set protocol. First-publication cycles between different entities with mandatory target dependencies are blocked as CYCLIC_UNSEALED_RELEASE_DEPENDENCY. Authors may explicitly create complete initial releases without optional reverse relations and add them later through governed successors; the adapter never drops or weakens a required relation to break a cycle. A cycle that cannot be staged needs a separately approved shared release-set design before publication. This limitation is explicit; preallocated UUIDs or unsigned drafts are not sealed releases.
+
+### 6.1.4 Governed resource references and dependency boundaries
+
+Standardize identity/provenance resolution incrementally around existing typed references: resource kind, source owner, stable logical key, exact revision and content hash, with required contract compatibility at the usage. This is a shared contract seam, not a new polymorphic SQL table or permission to replace existing FKs. Preserve the distinct same_graph and published_release relation contracts in section 6.1.3. No implicit latest-release resolution is allowed; explicit rebind produces a dependency diff and revalidation.
+
+The common resolver verifies identity, scope and provenance. Capability-specific validators retain semantic checks: relations require target keys/fields and authorized reads; components require installed compatible slots/renderers; AI bindings require permitted tools/exposure; future print bindings require approved data inputs; future workflow bindings require compatible operations/lifecycle semantics. A matching hash or compatibility label alone is insufficient.
+
+| Dependency boundary | Required treatment |
+| --- | --- |
+| Draft references | Typed ownership/graph checks under the resource's declared draft contract |
+| First publication with mandatory mutual dependencies | Preserve section 6.1.3's CYCLIC_UNSEALED_RELEASE_DEPENDENCY limitation until a separately qualified release-set protocol exists |
+| Coordinated activation in one target database | Reuse the qualified local transaction and exact-head preconditions where supported |
+| Rollout across independent planes | Explicit compatibility, sequencing and partial-failure handling; no cross-plane atomicity claim |
+
+server/packages/services/publication/src/coordinated-entity-adoption.ts currently validates Entity-specific artifacts; its atomicity is per target database. publication/21_coordinated_worker_source_read.sql and 22_coordinated_deployment_recovery.sql provide scoped Entity access/recovery evidence, not universal cross-resource coordination. Generalizing those paths requires qualification, not a second ledger or reinterpretation of existing receipts.
+
+### 6.1.5 Protected existing operation state
+
+The semantic authoring-model/1 root remains unchanged and excludes editable MFA properties. A complete portable **package** additionally carries a server-produced `athyper.entity-protected-state/1` sidecar, bound to the exact portable-document hash and trusted source snapshot/release hash. Its closed entries identify the source operation by owner-qualified logical coordinate, destination operation mapping, and the existing boolean requiresMfa. New destinations reference their explicitly governed source of protected state; unknown/missing source evidence blocks reconstruction. The sidecar is verification evidence, not an editable property bag or permission to import arbitrary control values.
+
+The server-owned full snapshot retains the existing entity_operation.requires_mfa value; normal graph edits preserve it in place. Export reads that value from trusted persisted evidence. Import/restore/fork/duplicate compare every applicable sidecar entry with the authenticated source, apply the verified operation remap atomically, and reject missing/extra/mismatched entries. A client signature or supplied source hash alone is not source authority. Historical packages without this sidecar require an explicit trusted-source reconstruction adapter or block; false is never invented from absence. Internal snapshot schema changes need a versioned decoder without rewriting prior hashes. The read-only load/inspection DTO may show protected state; mutation DTOs cannot set it. Existing storage remains the canonical column, not the sidecar. This documents preservation only; MFA-related implementation requires the owner's specific prior approval.
+
+### 6.2 Portable specimen qualification
+
+The former Country illustration is preserved in section 9 as historical, non-importable evidence. Normative portable fixtures must use the closed section 6.1.1 envelope and generated per-member schema. F1 must supply a complete Country fixture; an abbreviated legacy shape is not accepted as the portable contract.
 
 ### 6.3 Canonical property mapping
 
@@ -1612,13 +2183,15 @@ Authoring service DTOs use the camelCase equivalent of dictionary columns, inclu
 | ordered membership | Positive DB position and logical member reference; array index converts index+1 | Drag order; atomic reorder with conflict detection |
 | sealed dependency | Exact source identity/version/hash from governed release/catalogue | Read-only qualification; never accepts client-forged hashes |
 
-Position samples preserve source spelling: shared-reference and table-entity `keyFields[].position` are already one-based, while `surfaceFieldBindings[].position` and view-field sort/visible positions are zero-based in source and store index+1. The adapter applies the +1 uniformly to every zero-based family; it never stores a source `0` as `0`.
+Position samples preserve source spelling: shared-reference and table-entity `keyFields[].position` are already one-based, while `surfaceFieldBindings[].position` and view-field sort/visible positions are zero-based in source and store index+1. The adapter invokes the schema-specific boundary codec once for each declared zero-based family; it never applies another +1 to normalized output. Already one-based source positions pass through unchanged. Source schema and source-path evidence, not the observed number, select the conversion.
 
-<!-- generated:begin source-path-ledger; inputs=metadata/entities/**/*.json; regenerate per section 9 provenance rule; do not hand-edit -->
+<!-- generated:begin source-path-ledger; inputs=metadata/entities/**/*.json; regeneration_status=pending; dictionary_revision=2026-10-06-audit-reconciliation; generator_revision=unverified; manual_mapping_corrections=D05,D07; regenerate before executable use -->
+
+**Regeneration status: pending.** Resolver mappings are manually reconciled with D05 and capability-action permission mapping with D07. D07 requires an explicit plane coordinate; the sample permission string alone is insufficient conversion evidence. Full generator/input-hash verification has not been run; this region is design evidence, not an executable import or seed. Sample cells preserve source values; only the mapping/codec defines stored values.
 
 #### `athyper.compiled-entity-artifact/2.0-draft`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `accessAuthority` | "operation_authorized_parent_flow" | **E** immutable artifact + registered compiler projection; never a second writable authoring source |
 | `artifactHash` | "sha256:c400650d5e7621d87146faa84de3ad6601736047bd8e3359b940ae… | **E** immutable artifact + registered compiler projection; never a second writable authoring source |
@@ -1782,7 +2355,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.entity-activity-source/1`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `profile.code` | "platform.activity.standard" | **C** entity_capability.profile_id → exact capability_profile.profile_code/profile_version |
 | `profile.version` | 2 | **C** entity_capability.profile_id → exact capability_profile.profile_code/profile_version |
@@ -1790,7 +2363,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.entity-placement/1`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `entityCode` | "address" | **C** entity.entity_code (verify selected entity) |
 | `name` | "Addresses" | **C** placement.name_label_id → labels |
@@ -1803,7 +2376,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.entity-source/2`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `activity` | "activity.json" | **C** versioned source manifest reference → selected resource/hash/provenance; no UI property copy |
 | `artifacts[]` | "core.json" | **C** versioned source manifest reference → selected resource/hash/provenance; no UI property copy |
@@ -1822,7 +2395,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.meta-entity-localization/1`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `defaultLocale` | "en" | **C** change_set.default_locale |
 | `requiredLocales[]` | "en" | **C** change_set.required_locales |
@@ -1831,7 +2404,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.shared-reference-product/1`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `definition.ai.actions[].id` | "open_record" | **C** entity_ai_binding kind/contract_key/contract_version/required/operation_id/position |
 | `definition.ai.actions[].operationKey` | "read" | **C** entity_ai_binding kind/contract_key/contract_version/required/operation_id/position |
@@ -1852,10 +2425,10 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.codeKeyFields[]` | "country_code" | **C** entity_key + ordered key_field |
 | `definition.columns[]` | "code" | **C** default view_field.visible_position |
 | `definition.entityCode` | "country" | **C** entity.entity_code |
-| `definition.entityLabel.defaultText` | "Country" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.entityLabel.labelKey` | "entity.country.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.fields[].choices[].label.defaultText` | "Active" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.fields[].choices[].label.labelKey` | "reference.status.active" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.entityLabel.defaultText` | "Country" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.entityLabel.labelKey` | "entity.country.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.fields[].choices[].label.defaultText` | "Active" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.fields[].choices[].label.labelKey` | "reference.status.active" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.fields[].choices[].tone` | "success" | **C** entity_field_choice value_text/label_id/tone/position; domain XOR check |
 | `definition.fields[].choices[].value` | "active" | **C** entity_field_choice value_text/label_id/tone/position; domain XOR check |
 | `definition.fields[].domainCode` | "shared.ref_status_d" | **C** metadata.entity_field.domain_code |
@@ -1864,8 +2437,8 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.fields[].keyReference.fields[].target` | "code" | **C** relation/target/field rows; target lookup presentation; repeated structure equality required |
 | `definition.fields[].keyReference.labelField` | "name" | **C** relation/target/field rows; target lookup presentation; repeated structure equality required |
 | `definition.fields[].keyReference.targetEntity` | "language" | **C** relation/target/field rows; target lookup presentation; repeated structure equality required |
-| `definition.fields[].label.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.fields[].label.labelKey` | "entity.country.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.fields[].label.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.fields[].label.labelKey` | "entity.country.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.fields[].required` | true | **C** metadata.entity_field.required |
 | `definition.fields[].semanticRole` | "status" | **C** metadata.entity_field.semantic_role |
 | `definition.fields[].type` | "uuid" | **C** metadata.entity_field.data_type |
@@ -1876,17 +2449,17 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.navigation.tabs[].localizedLabel.defaultText` | "Overview" | **C** group key/label/order, section memberships; mode maps to section_display only by registered lossless codec; show_group_band must be authored |
 | `definition.navigation.tabs[].localizedLabel.labelKey` | "navigation.overview" | **C** group key/label/order, section memberships; mode maps to section_display only by registered lossless codec; show_group_band must be authored |
 | `definition.navigation.tabs[].sectionKeys[]` | "overview" | **C** group key/label/order, section memberships; mode maps to section_display only by registered lossless codec; show_group_band must be authored |
-| `definition.runtimeBindings[].handler` | "entity.record.list.v1" | **C** entity_operation.handler_key/version + operation_scope_binding.resolver_key/version; registered version resolution |
-| `definition.runtimeBindings[].operation` | "list" | **C** entity_operation.handler_key/version + operation_scope_binding.resolver_key/version; registered version resolution |
-| `definition.runtimeBindings[].resolver` | "tenant.record.v1" | **C** entity_operation.handler_key/version + operation_scope_binding.resolver_key/version; registered version resolution |
+| `definition.runtimeBindings[].handler` | "entity.record.list.v1" | **C** entity_operation.handler_key/version; resolve exact registered contract and verify duplicate handler declarations |
+| `definition.runtimeBindings[].operation` | "list" | **V** resolve existing entity_operation.operation_key; no second operation or resolver authority |
+| `definition.runtimeBindings[].resolver` | "tenant.record.v1" | **C** tenant ownership resolver → entity_authorization_profile.ownership_resolver_key/version (D05); only an explicitly declared relation_resolver scope source maps to operation_scope_binding.resolver_key/version; ambiguous/conflicting contracts block |
 | `definition.searchFields[]` | "code" | **C** search_profile + ordered search_field |
 | `definition.sections[].fields[]` | "name" | **C** entity_surface_section key/label/order + field_binding section/field/order; missing groups remain blocking P findings |
 | `definition.sections[].key` | "overview" | **C** entity_surface_section key/label/order + field_binding section/field/order; missing groups remain blocking P findings |
-| `definition.sections[].label.defaultText` | "Country" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.sections[].label.labelKey` | "entity.country.sections.overview" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.sections[].label.defaultText` | "Country" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.sections[].label.labelKey` | "entity.country.sections.overview" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.storageObject` | "country" | **C** runtime_profile.storage_object (registered source) |
-| `definition.title.defaultText` | "Countries" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.title.labelKey` | "entity.country.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.title.defaultText` | "Countries" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.title.labelKey` | "entity.country.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.titleField` | "name" | **C** surface.title_field_id |
 | `moduleCode` | "rel" | **C** entity.module_id → control.module |
 | `planes[]` | "studio" | **V** entity_target.target_plane; reconcile manifest requiredness |
@@ -1894,7 +2467,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `athyper.table-entity-product/1`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `definition.ai.actions[].id` | "open_record" | **C** entity_ai_binding kind/contract_key/contract_version/required/operation_id/position |
 | `definition.ai.actions[].operationKey` | "read" | **C** entity_ai_binding kind/contract_key/contract_version/required/operation_id/position |
@@ -2018,7 +2591,7 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.surfaces[].layoutConfig.authorization.operations[].permissionCode` | "neon.workforce.address.read" | **V** operation/permission/scope typed authority; conflicts block before deduplication |
 | `definition.surfaces[].layoutConfig.authorization.operations[].requiresParentRead` | false | **V** operation/permission/scope typed authority; conflicts block before deduplication |
 | `definition.surfaces[].layoutConfig.authorization.operations[].requiresPreflight` | false | **V** operation/permission/scope typed authority; conflicts block before deduplication |
-| `definition.surfaces[].layoutConfig.authorization.operations[].scope` | "tenant.record.v1" | **V** operation/permission/scope typed authority; conflicts block before deduplication |
+| `definition.surfaces[].layoutConfig.authorization.operations[].scope` | "tenant.record.v1" | **V** verify tenant ownership contract against entity_authorization_profile.ownership_resolver_key/version; do not copy it into scope-binding resolver columns; explicit scope-source disagreement blocks |
 | `definition.surfaces[].layoutConfig.authorization.operations[].target` | "collection" | **V** operation/permission/scope typed authority; conflicts block before deduplication |
 | `definition.surfaces[].layoutConfig.authorization.ownership` | "tenant.record.v1" | **C** authorization_profile ownership resolver/directory_operation_id/directory_population/record_read_operation_id |
 | `definition.surfaces[].layoutConfig.authorization.planeKey` | "neon" | **V** selected entity + entity_target plane |
@@ -2026,9 +2599,9 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.surfaces[].layoutConfig.authorization.relationships[]` | [] | **V** canonical relation / surface permission projection; nonempty unqualified shape blocks |
 | `definition.surfaces[].layoutConfig.authorization.schemaVersion` | 1 | **V** registered input/compiler contract version |
 | `definition.surfaces[].layoutConfig.authorization.surfaces[]` | [] | **V** canonical relation / surface permission projection; nonempty unqualified shape blocks |
-| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].handler` | "entity.record.list.v1" | **C** operation handler and scope resolver selections; versioned runtime projection |
-| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].operation` | "list" | **C** operation handler and scope resolver selections; versioned runtime projection |
-| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].resolver` | "tenant.record.v1" | **C** operation handler and scope resolver selections; versioned runtime projection |
+| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].handler` | "entity.record.list.v1" | **C** entity_operation.handler_key/version; resolve exact registered contract and verify duplicate handler declarations |
+| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].operation` | "list" | **V** resolve existing entity_operation.operation_key; no second operation or resolver authority |
+| `definition.surfaces[].layoutConfig.authorizationRuntime.bindings[].resolver` | "tenant.record.v1" | **C** tenant ownership resolver → entity_authorization_profile.ownership_resolver_key/version (D05); only an explicitly declared relation_resolver scope source maps to operation_scope_binding.resolver_key/version; ambiguous/conflicting contracts block |
 | `definition.surfaces[].layoutConfig.authorizationRuntime.runtimeVersion` | "entity-authorization.v1" | **V** operation handler and scope resolver selections; versioned runtime projection |
 | `definition.surfaces[].layoutConfig.authorizationRuntime.schemaVersion` | 1 | **V** registered input/compiler contract version |
 | `definition.surfaces[].layoutConfig.defaultState.density` | "comfortable" | **C** surface_view.density/mode/query_text or view_field field binding/sort_position/sort_direction |
@@ -2052,14 +2625,14 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.surfaces[].layoutConfig.limits.countMode` | "exact" | **C** metadata.entity_surface.count_mode |
 | `definition.surfaces[].layoutConfig.limits.defaultPageSize` | 25 | **C** metadata.entity_surface.default_page_size |
 | `definition.surfaces[].layoutConfig.limits.maxSortLevels` | 3 | **C** metadata.entity_surface.max_sort_levels |
-| `definition.surfaces[].layoutConfig.localizedLabels.entity.defaultText` | "Principal" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.entity.labelKey` | "entity.principal.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.fields.{fieldKey}.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.fields.{fieldKey}.labelKey` | "entity.principal.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.options.{fieldKey}.{choice}.defaultText` | "User" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.options.{fieldKey}.{choice}.labelKey` | "entity.principal.options.principal_type.user" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.title.defaultText` | "Principals" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.localizedLabels.title.labelKey` | "entity.principal.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.surfaces[].layoutConfig.localizedLabels.entity.defaultText` | "Principal" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.entity.labelKey` | "entity.principal.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.fields.{fieldKey}.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.fields.{fieldKey}.labelKey` | "entity.principal.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.options.{fieldKey}.{choice}.defaultText` | "User" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.options.{fieldKey}.{choice}.labelKey` | "entity.principal.options.principal_type.user" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.title.defaultText` | "Principals" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.localizedLabels.title.labelKey` | "entity.principal.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.surfaces[].layoutConfig.mutationPolicy.handlerKey` | "platform.notifications.preferences.v1" | **C** runtime_profile.write_handler_key/version only after storage-writer contract qualification |
 | `definition.surfaces[].layoutConfig.mutationPolicy.schemaVersion` | 1 | **V** registered input/compiler contract version |
 | `definition.surfaces[].layoutConfig.ownerAccess.administerPermission` | "common.identity.principal.administer" | **C** authorization_profile.administer_permission_code |
@@ -2080,8 +2653,8 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.message.labelKey` | "entity.principal.related.profile.empty.message" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.setupLabel.defaultText` | "Set up profile" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.setupLabel.labelKey` | "entity.principal.related.profile.empty.setup" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
-| `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.title.defaultText` | "Set up your profile" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.title.labelKey` | "entity.principal.related.profile.empty.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.title.defaultText` | "Set up your profile" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].emptyState.title.labelKey` | "entity.principal.related.profile.empty.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].fields[].source` | "id" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].fields[].target` | "principal_id" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].key` | "profile" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
@@ -2089,14 +2662,14 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].targetEntity` | "principal_profile" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].tenant.source` | "tenant_id" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
 | `definition.surfaces[].layoutConfig.recordPresentation.entityRelationships[].tenant.target` | "tenant_id" | **C** relation/target/field + section target surface/view/read/create/labels; exact target release qualification |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.entity.defaultText` | "Principal" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.entity.labelKey` | "entity.principal.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.fields.{fieldKey}.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.fields.{fieldKey}.labelKey` | "entity.principal.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.options.{fieldKey}.{choice}.defaultText` | "User" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.options.{fieldKey}.{choice}.labelKey` | "entity.principal.options.principal_type.user" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.title.defaultText` | "Principals" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
-| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.title.labelKey` | "entity.principal.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by equality |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.entity.defaultText` | "Principal" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.entity.labelKey` | "entity.principal.label" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.fields.{fieldKey}.defaultText` | "Record ID" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.fields.{fieldKey}.labelKey` | "entity.principal.fields.id" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.options.{fieldKey}.{choice}.defaultText` | "User" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.options.{fieldKey}.{choice}.labelKey` | "entity.principal.options.principal_type.user" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.title.defaultText` | "Principals" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
+| `definition.surfaces[].layoutConfig.recordPresentation.localizedLabels.title.labelKey` | "entity.principal.title" | **C** entity_label.label_key/default_text + label FK of the declared owner; deduplicate by scoped label identity and full value equality (section 6.1.2), never by text alone |
 | `definition.surfaces[].layoutConfig.recordPresentation.navigation.mode` | "scroll" | **C** group/section membership; per-group section_display; missing explicit band choice blocks |
 | `definition.surfaces[].layoutConfig.recordPresentation.navigation.tabs[].key` | "overview" | **C** group/section membership; per-group section_display; missing explicit band choice blocks |
 | `definition.surfaces[].layoutConfig.recordPresentation.navigation.tabs[].label` | "Overview" | **C** group/section membership; per-group section_display; missing explicit band choice blocks |
@@ -2124,13 +2697,13 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 #### `capability-sidecar`
 
-| Source leaf path | Sample | Disposition and canonical authority |
+| Source leaf path | Source sample (not stored value) | Disposition and canonical authority |
 | --- | --- | --- |
 | `[].binding.actions[].concurrency` | "none" | **C** entity_capability_binding.concurrency_mode |
 | `[].binding.actions[].handlerKey` | "platform.comments.read.v1" | **C** entity_capability_binding.contract_key/version |
 | `[].binding.actions[].idempotency` | "none" | **C** entity_capability_binding.idempotency_mode |
 | `[].binding.actions[].key` | "read" | **C** entity_capability_binding.binding_key |
-| `[].binding.actions[].permissionCode` | "common.collaboration.comment.read" | **C** entity_capability_binding.permission_code |
+| `[].binding.actions[].permissionCode` | "common.collaboration.comment.read" | **C** entity_access_permission.permission_code, owned by capability_binding_id (action only); target_plane must resolve from explicit source publication/binding coordinates and permission_kind from the governed catalogue. Missing/ambiguous plane blocks conversion; never infer plane from the code |
 | `[].binding.admissionResolverKey` | "platform.records.admission.v1" | **C** capability_profile.admission_key/version |
 | `[].binding.allowedAudiences[]` | "public" | **C** capability_profile.comment_allowed_audiences; pinned profile or permitted finite enrollment override |
 | `[].binding.allowedContentTypes[]` | "application/pdf" | **C** capability_profile.attachment_content_types; pinned profile or permitted finite enrollment override |
@@ -2179,7 +2752,153 @@ Position samples preserve source spelling: shared-reference and table-entity `ke
 
 <!-- generated:end source-path-ledger -->
 
+### 6.5 Handlers, events and webhook bindings
+
+**Design status:** approved for detailed blueprint specification, not implemented or activated by this document update. Extend existing Entity and Integration contracts; do not create executable-code authoring, entity-specific dispatch, another provider stack or another publication ledger. New business handlers, workflow/case execution and MFA changes remain separately authorized. Section 11.20 records current implementation evidence and the qualification sequence. This section defines the target contract; future integration editor controls remain unavailable until their complete typed storage/API/compiler/runtime slice qualifies.
+
+#### 6.5.1 Responsibilities and authoritative sources
+
+| Concept | Authority and execution boundary |
+| --- | --- |
+| Storage read/write port | entity_runtime_profile handler key/version selects a registered storage contract; distinct from operation execution |
+| Entity operation handler | entity_operation handler key/version selects the owning domain implementation, invoked through shared authorization, transaction, audit, idempotency and concurrency controls |
+| Registered event | Owning capability defines the immutable event schema and emission semantics; Entity metadata selects supported bindings, never invents lifecycle hooks from entity names |
+| Outbound webhook subscription | Integration-owned governed definition binds an event to typed conditions, payload mapping, endpoint and delivery profile |
+| Inbound webhook subscription | Integration ingress authenticates/adopts an external event; a separately authorized adapter selects an approved operation/event consumer |
+| Runtime connection | Consuming-plane administration binds a logical connector to an approved destination and secret references |
+| Delivery/attempt | Existing Integration/event/job repositories own operational state and evidence; Studio reads authorized projections |
+
+control.webhook_subscription remains the existing administrative model; event.webhook_subscription is explicitly a plane-local compatibility projection. Governed draft/revision support must extend the Integration-owned definition path using the shared authoring adapter, without fabricating an Entity change set for a non-Entity resource. Integration definitions can be onboarded as records through the Entity Framework for their UI without becoming Entity-definition graphs. Do not author the same subscription in both tables. Existing notification delivery and general integration delivery paths need an explicit adapter/migration boundary; a third webhook runtime is prohibited.
+
+Entity bindings reference exact governed integration resources under section 6.1.4. Runtime endpoint availability, secrets and local suspension are separate from immutable reviewed configuration. Source owner, publication authority and execution destination remain distinct under section 2.4.1. A Studio-authored definition executes only in its declared qualified plane; existing Studio-only job routing is not evidence of Neon/Mesh support.
+
+#### 6.5.2 Handler catalogue and installation qualification
+
+A handler catalogue is a governed read-only manifest projection of installed implementations, not an author-uploaded program. Existing handler selectors are its consumers; keep one selection per declared role. Each key/version identifies one immutable manifest hash. An implementation build attestation maps that manifest to the installed binary/package digest; do not require one binary digest across different qualified platform builds, or confuse package installation with metadata approval.
+
+| Manifest contract | Required semantics |
+| --- | --- |
+| Identity | Stable key, positive version, manifest hash, owning capability/package and supported role |
+| Compatibility | Supported planes, operation kinds, authorization target/effect combinations, runtime contract version and dependency pins |
+| Data contracts | Pinned input/output/error schema identifiers and hashes; bounded payloads; full schema validation including nested types/unknown members |
+| Trusted context | Declared tenant/record/parent coordinates and their registered server resolvers; request values never become authority |
+| Transaction | Required transaction participation, storage ports, commit boundary and prohibition on independent commits where the operation must be atomic |
+| Authorization | Existing Entity checks plus declared policy/preflight contracts; no handler-private grants or entity-name permission construction |
+| Idempotency | Required/optional/unsupported mode, semantic key scope, payload-hash conflict behavior, durable receipt and retention requirements |
+| Concurrency | Required record version or qualified alternative; atomic compare/write and conflict result |
+| Effects/events | Permitted effect classes and exact emitted event contracts; network delivery is separate from the record transaction |
+| Resilience | Execution deadline, cancellation behavior, retry eligibility and error classification |
+| Preview/testing | Inert preview support or explicit unavailability; separately qualified external-effect tests |
+| Lifecycle | Deprecation/replacement and compatible consumer/support requirements |
+
+Composition rejects duplicate ambiguous registrations instead of selecting the first match. Compile and target activation verify key/version/hash, role, installed attestation, declared dependencies and target support; dispatch uses the qualified resolved binding, never a silent fallback to another version. Unknown/uninstalled contracts fail closed. Versioned legacy keys are decoded by an explicit adapter, not parsed as proof that the matching manifest is installed.
+
+The dispatcher resolves the published operation, validates effective access and trusted scope, validates the full input schema, and invokes the handler inside its qualified execution boundary. The transaction-owning service supplies the transaction context/ports; the domain implementation cannot bypass shared audit or idempotency by opening another commit path. Exact responsibility assignment is part of adapter qualification, not inferred from the presence of expectedVersion/idempotencyKey arguments. For new-record operations, no fabricated record ID is required before the handler's authorized allocation stage.
+
+An idempotency key repeated with the same semantic input returns the durable prior outcome or an explicit in-progress result; different input under that key rejects. The record mutation, receipt, required audit evidence and event/outbox append share the declared atomic boundary. Handler deadlines/cancellation do not prove rollback or absence of effects: resolve an uncertain outcome from durable evidence before retrying. Output/error validation and redaction apply before exposing receipts.
+
+#### 6.5.3 Event contracts and commit semantics
+
+Before-save validation/computation is a synchronous registered operation responsibility, not an outbound webhook. Outbound notification originates only from a successfully committed transaction. A callback named after_insert is insufficient: record changes and durable event/outbox append must commit together in the record-owning database; rollback emits no deliverable event. Reuse the existing event/outbox service and adapters. External delivery failure does not undo committed business state.
+
+The event envelope carries an immutable event identity, tenant/source-owner coordinates, Entity stable identity where applicable, internal record identity, operation identity, record version, event key/version/schema hash, source release/hash, occurrence time, authenticated actor provenance, correlation/causation identifiers and bounded typed data. Internal identifiers are not automatically disclosed externally. Event identity is allocated once and preserved across relay retries. An envelope contains data, not arbitrary code, SQL or client-selected authorization.
+
+Default mapping input is the declared immutable event snapshot, limited to eligible enrolled data. A mapping may instead request a qualified authorized current-record read only through an explicit input-mode contract; it must name missing/deleted-record and changed-version behavior. Never silently switch between event-time and current state. Delete events use explicitly approved minimal snapshots/tombstones, not an unauthorized resurrection read. Conditions evaluate deterministically against the declared input and trusted event context; wall-clock or random values require explicit qualified semantics and cannot change a retry's selected payload.
+
+Durable routing deduplicates each event/subscription-revision fan-out. Event source/revision and the effective subscription revision are retained in the delivery evidence. Define the subscription-selection cutoff: the first durable routing decision pins the active subscription revision; retries reuse it, later edits do not reclassify that event. Revocation/suspension still applies at dispatch. Unavailable routing evidence leaves work pending or blocked with a diagnostic, not silently dropped. Delivery is at least once; remote exactly-once effects require receiver deduplication and are not promised by the sender.
+
+#### 6.5.4 Governed subscription and typed authoring model
+
+The authoring unit is an Integration-owned revision with optimistic concurrency, human authorship, independent review, exact dependency hashes and publication linkage. The following storage allocation extends existing control models; proposed families require concrete generated dictionaries, constraints and migration mapping before any editor ships. They are not a second writable JSON representation in Entity metadata.
+
+| Property family | Canonical ownership / target storage | API, validation and compiled disposition |
+| --- | --- | --- |
+| Subscription identity | Existing control.webhook_subscription code/name/description plus scoped source revision evidence | Readable identity, direction, authoring ownership and declared targets; reject namespace/scope conflicts |
+| Event enrollment | Proposed Integration-owned revision child rows: position, event-contract reference/version/hash, source Entity reference where applicable | Typed event selectors; compiler emits only registered supported event subscriptions |
+| Authored enablement | Explicit boolean on the governed subscription revision | Compiled intent; cannot override local suspension or missing activation |
+| Conditions | Proposed typed condition-node rows owned by subscription revision, with one root, purpose=event_trigger, typed operands and bounded all/any tree | Closed schema with field/type/operator checks; deterministic evaluation. Do not add event_trigger to Entity presentation predicates implicitly |
+| Payload mapping | Proposed ordered revision child rows: output-path tokens, source kind/path, typed literal/context/reference, optional registered transform key/version | Validate output schema, missing/null behavior, types, unique nonoverlapping destinations and disclosure. No whole-record wildcard or executable template |
+| Endpoint binding | Exact governed endpoint contract/revision plus logical connector binding | Existing control.integration_endpoint method/content type/path/limits are reused through a qualified revision adapter |
+| Path/query parameters | Proposed typed mapping children with declared parameter name, source and encoding | Only declared parameters within a fixed approved origin; block host/scheme/port/user-info substitution, path traversal and origin escape |
+| Headers | Proposed typed rows for approved name plus literal or secret-reference source; no secret bytes | Reject duplicates case-insensitively, CR/LF, reserved transport/signature headers and undeclared data exposure |
+| Payload contract | Pinned schema key/version/hash and explicit data input mode | Schema identifier alone is insufficient; validate exact mapping result and size before enqueue/send |
+| Delivery profile | Governed typed limits: timeout, max attempts, backoff base/cap, jitter, retryable results, delivery age, concurrency/rate limits and ordering mode | Compiler selects installed transport/job capabilities; server enforces bounds; queue name is infrastructure-owned |
+| Authentication/signing | Registered protocol/version, credential/signing reference and rotation policy | Secret resolution stays in consuming plane; no generic enable-security switch |
+| Inbound operation binding | Exact approved adapter and target operation/input mapping, execution-principal binding and schema references | Compile through shared Entity authorization and operation contracts; admission is not permission to mutate |
+
+Use finite typed scalar columns and related rows for authored condition/mapping/retry/header structure. Existing event_filter/retry_policy/headers JSONB is compatibility input, not authorization to expand arbitrary authoring bags. A pinned JSON Schema or immutable compiled artifact remains a legitimate derived/registered document; it is not another mutable source. Resolve current definition_version and payload_contract_version semantics explicitly during migration; neither integer alone attests review or immutable content.
+
+The implementation slice must name exact Integration-owned table/column names, types/bounds, keys, revision/tenant guards, save/load DTOs, portable codec and compiler paths in the single generated contract before activation. This section allocates ownership and semantics but does not claim that those proposed tables or codecs exist. Do not broaden the section 3 Entity dictionaries with copied endpoint configuration. Registered handler and event catalogues remain read-only; end users author bindings, not implementation manifests.
+
+#### 6.5.5 Disclosure, masking and payload persistence
+
+Read access does not by itself authorize external disclosure. Enroll every exported field and apply the effective Entity read/exposure/query/scope closure plus the applicable governed destination-disclosure policy. Conditions must not become an oracle over fields that the execution context may not query. Existing valid-absent Entity permission semantics are preserved; missing required integration/disclosure configuration is an invalid binding, not permission absence. No new entity permission codes or MFA assumptions are introduced.
+
+Mask/omit values before external serialization. Declare an execution identity from governed workload bindings; never reuse an arbitrary author's browser session or accept a principal from the event body. Recheck active subscription/suspension, destination policy, secret availability/revocation and applicable disclosure at enqueue and each attempt. Stable approved payload bytes/hash are retained under bounded retention and encrypted-storage controls where applicable. Retries must not silently reconstruct a newer record or mapping. If new restrictions make the pinned payload ineligible, block/cancel it with evidence; a newly authorized remapped delivery is a distinct linked delivery, not a retry with changed content.
+
+Separate business payload from routing/job/channel-detail metadata; do not serialize internal subscription IDs or arbitrary channel_detail as business data. Attempts retain redacted metadata, payload hashes, response status/size and bounded diagnostic codes; raw headers, tokens, signed URLs and response bodies are not generic log content. Retention/erasure/holds cover pending, terminal, test and dead-letter payloads under the owning service contract.
+
+#### 6.5.6 Plane-local configuration and transport security
+
+Publish immutable definitions through the existing resource adapters; activate only after the consuming plane verifies handlers, schemas, event support, endpoint policy, secret bindings and delivery capabilities. Compile logical destination/credential references, not environment URLs containing credentials or raw secret material. Plane-local administration resolves the approved origin, environment/instance and secret versions, recording its own authorized binding revision. Operational suspension can stop dispatch without editing the signed definition; resume cannot enable an unpublished or revoked subscription.
+
+Transport enforces destination policy at connection time, including DNS answers, IPv4/IPv6 and mapped addresses, reserved/private/metadata networks and approved egress. The validated address must be the address used to connect while preserving the intended hostname for TLS verification. A prior DNS check followed by an independent fetch resolution is insufficient. Redirects are rejected by default; any explicitly supported redirect contract revalidates every hop and never forwards credentials across origins. TLS verification remains enabled. Internal endpoints require a distinct approved private-network connector contract, not a global localhost bypass; development exceptions are scoped to the exact local target and environment.
+
+Timeout covers the defined connect/request budget; request/response sizes and decompression limits are bounded. Method/content type are endpoint-qualified (POST JSON first where that is the installed capability), not arbitrary controls rendered ahead of support. Response content does not execute code, alter target bindings or become a business mutation without a separate qualified operation contract.
+
+Signing is a registered versioned protocol. Preserve existing body-only HMAC compatibility for explicitly pinned legacy receivers; new timestamped contracts declare exact bytes (for example timestamp + '.' + raw body), header names, digest encoding, key identifier and accepted skew. Inbound and outbound implementations are not assumed interoperable merely because both say HMAC-SHA256. Resolve secrets by reference at execution, record nonsecret key-version evidence, and qualify rotation/overlap/revocation. Timestamp/signature may change per retry while business payload and delivery identity remain stable. Do not change an existing receiver protocol silently or store raw secrets in Studio/artifacts/preview.
+
+#### 6.5.7 Durable delivery, fencing and replay
+
+Adapt the existing delivery stores to the following semantic lifecycle; do not create a parallel ledger just to obtain these labels. Map existing notification/integration states explicitly and preserve historical evidence.
+
+| Semantic state | Required transition/evidence |
+| --- | --- |
+| Ready / waiting retry | Durable event/subscription selection, frozen invocation plan/payload hash, due time and attempt budget |
+| Claimed / sending | Atomic eligible-and-due claim; worker lease, monotonically increasing fencing token, attempt identity and bounded lease expiry |
+| Delivered | Qualified success acknowledgement and matching claim token; final evidence |
+| Waiting retry | Classified transient/rate-limit outcome, bounded next eligible time, remaining attempt/age budget |
+| Blocked / suspended | Current binding, disclosure, credential or operational restriction; no automatic send until qualified resolution |
+| Dead-letter / terminal failure | Exhausted or permanent result, redacted reason and retained replay lineage |
+| Cancelled | Authorized cancellation; cannot assert that an already in-flight remote effect was undone |
+
+Claims check next_retry_at/due time, terminal state, tenant/plane/instance, suspension and attempt budget in the database. Completion/heartbeat/retry scheduling compare the exact current attempt and fencing token; an expired worker cannot overwrite a newer claim. Fencing protects local state, not remote effects: stable delivery idempotency keys and receiver deduplication address duplicate sends. A crash after remote acceptance but before local acknowledgement yields an uncertain outcome; retry follows the same key/payload and never claims exactly-once behavior.
+
+One durable due-time/budget calculation is authoritative. Queue retries are wake-ups, not another independent schedule that bypasses next_retry_at. Backoff with bounded jitter and Retry-After is clamped to policy limits; classify auth/permanent/transient/rate-limit outcomes under the endpoint contract. Max attempts means total attempts; convert legacy max_retries explicitly to avoid an off-by-one policy change. Exhaustion records one terminal disposition with idempotent dead-letter insertion. Per-destination/tenant limits prevent one failing endpoint starving other work.
+
+Ordering is explicitly none or a qualified record/partition ordering mode. Ordered streams declare the sequence source and whether a blocked earlier event blocks later ones; unsupported ordering cannot appear as an editor toggle. Concurrent workers cannot assume timestamps establish order.
+
+Replay is a separate authorized command with reason, source delivery, exact payload/plan hash and current policy checks. Exact redelivery preserves semantic idempotency identity; a deliberate new business delivery receives a new identity and explicit linkage. A different endpoint, mapping or payload requires a newly reviewed/authorized plan, not a hidden retry mutation. Definition rollback does not retract external requests already accepted.
+
+#### 6.5.8 Inbound admission and Entity dispatch
+
+Ingress resolves a subscription from trusted routing, not a tenant/Entity/principal declared in the payload. Enforce body limits before parsing, authenticate the exact raw bytes with the selected protocol, validate timestamp/replay policy and then validate the pinned input schema. Signature verification alone does not authorize business operations. Duplicate identity is scoped to subscription/provider and tenant: same identity/body hash returns the prior admission receipt; a reused identity with different content rejects. Define the replay-retention window and acknowledgement behavior explicitly.
+
+Persist the admitted receipt and durable work atomically before acknowledging queued acceptance. Return a bounded admission receipt, not a false business-success result. The registered adapter maps declared fields to an exact published operation and trusted execution principal; target-record lookup uses authorized business keys/resolvers and locked scope. It then uses the existing Entity dispatch, current authorization, transaction, audit, concurrency and idempotency path. Unknown target/operation/schema is a configuration failure, not a generic handler invocation fallback. Revalidate relevant active controls at execution and separate admission failures from business-operation failures.
+
+No inbound endpoint may call arbitrary handler keys, issue arbitrary SQL, impersonate a supplied principal or grant permissions. Suppress unintended webhook loops through causation/origin metadata and bounded, explicitly governed routing rules; do not silently drop legitimate events by entity name. Provider verification handshakes, if needed, require their own narrow registered contract.
+
+#### 6.5.9 Composer, preview and operational controls
+
+Entity Access and behaviour shows the handler manifest selection and derived capabilities; supported emitted events link to their catalogue. Integration subscription records use shared Entity list/detail hosting with registered editor sections: Identity/targets, Event and conditions, Payload mapping, Endpoint and headers, Delivery/security, Preview and Review/release. This is a proposed Integration authoring adapter, not a bespoke route or an extra Entity-definition property bag. Operational delivery/attempt/dead-letter records are onboarded read models with locked scope and readable identities; no custom history explorer is introduced.
+
+The screenshot's DocType/Doc Event selectors become published Entity/event-contract selectors. Its expression box becomes a typed event-condition editor; dynamic URL becomes declared path/query parameter mapping; Enable Security becomes an explicit protocol/reference selector; background queue becomes an installed delivery-profile selection. Disabled controls must explain unsupported capability rather than save inert settings.
+
+Preview evaluates conditions and builds a schema-validated, disclosure-filtered payload using marked fixtures or authorized live reads under section 2.4.2. Show mapping provenance, omitted/masked fields, destination alias, size and validation findings without resolving secret bytes or sending network traffic. Its saved revision/schema/dependency hashes use section 11.9's preview envelope; it cannot serve as review or activation evidence.
+
+Test delivery is a separate authorized external-effect operation, never automatic on preview/save. It names the exact target binding/revision, payload hash, effect mode and caller context; uses qualified test destinations/fixtures where configured; and retains normal transport, disclosure, rate, signing and audit controls. The UI explicitly states that a request will be sent. Unsupported live testing stays unavailable. Existing health/GET test behavior does not qualify arbitrary mutation tests. Testing grants no subscription activation authority.
+
+#### 6.5.10 Migration, evidence and enablement gate
+
+Before implementation, trace both existing delivery paths end to end: administrative write → projection → job creation → transport → completion/attempt evidence → retry/dead-letter. Inventory active consumers, direction semantics, definition versions, secret handling and operational state. Choose an explicit owning adapter for each supported path; reuse infrastructure without merging unrelated state or losing delivery lineage.
+
+Convert legacy filters, retry/header bags and mappings through versioned typed adapters with path diagnostics; expressions without a supported lossless conversion block. Preserve original signed artifacts and applied SQL hashes. Move legacy event.webhook_subscription.signing_secret handling to qualified secret references through an audited rotation/migration plan with no secret output and no unreviewed receiver change; do not assume existing text storage is already a vault reference. Once cut over, compatibility projections are derived and cannot be independently authored. Migrate in-flight deliveries using exact frozen plans/due times/attempt evidence or drain them under a documented policy; do not reset attempts, resubmit completed effects or silently switch destinations.
+
+The complete slice must qualify contracts/DDL, authoring repository/DTO/codec, validator/compiler, installed manifest registry, publication/activation adapter, shared editor, outbox/routing, transport, runtime repositories and operational read models together. Section 11.20 lists required adversarial fixtures. No existing table, worker registration or unit-test filename alone establishes this end-to-end capability. No delivery or secret migration is performed by this blueprint update.
+
 ## 7. Studio authoring behavior
+
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
 
 The versioned AuthoringSchemaDescriptor combines these DDL types/constraints/FKs with explicit labels, section/tab order, readable identity selectors and registered control contracts. Studio renders the shared editor from it; it does not introspect arbitrary SQL or derive a screen from column order.
 
@@ -2202,9 +2921,34 @@ Every dictionary scalar maps to the camelCase service DTO member and SQL column;
 
 Save returns draft identity, new revision and validation findings even when P completeness is unfinished. Preview requires a valid model and reports missing selections instead of selecting a component, tab or identity. Submit/publication also validates dependency installation and exact source hashes. A usable component control requires all its typed options and slot mappings to be supported; unsupported options cannot be stored in a fallback bag.
 
+### 7.1.1 Incremental shared authoring contract
+
+Use the Entity adapter first, backed by the existing authoring services and repository. This contract describes shared capabilities without imposing identical tables or lifecycle details on unrelated resources.
+
+| Contract area | Required behavior |
+| --- | --- |
+| Identity/ownership | Resource kind, stable identity, source ownership and authoring authority |
+| Draft operations | Load, revision-checked save and explicit mutation semantics |
+| Validation | Structured findings with severity and navigable property paths |
+| Review | Semantic diff, affected dependencies and exact reviewed revision |
+| Compilation | Deterministic output with pinned compiler and dependency evidence |
+| Preview | Registered versioned preview implementation and permitted effects |
+| Publication | Link an approved resource revision to the existing publication system |
+| Inspection | Read publication/deployment evidence without inventing active runtime state |
+
+The workspace shares navigation, validation presentation, review controls and release inspection. Resource repositories retain typed persistence and domain semantics. A separately authorized second resource must qualify against this interface before common persistence is extracted; measured duplication or concrete capability requirements, not the desire for a universal schema, justify extraction. The contract design can proceed alongside Entity delivery and must not block the section 7.9 foundation with speculative non-Entity infrastructure.
+
 ### 7.2 Composer modules and navigation map
 
-The composer is the shared change-set record page. Its navigation groups are explicitly authored metadata (no synthesized tab), and they group the DDL into the modules below. Every dictionary table has one canonical editing home, partitioned by purpose where stated below. Contextual entry points invoke that same registered editor and canonical mutation contract; they do not maintain separate form state, validation rules or persistence paths. Other modules link to that home or invoke its shared contextual editor. A table appears only when the draft's source_kind and content make it applicable.
+The composer is the shared change-set record page. Its navigation groups are explicitly authored metadata (no synthesized tab), and they group the DDL into the modules below.
+
+**Host prerequisite.** That page does not exist yet. `metadata.entity_change_set` has no Entity definition under `metadata/entities`. The only Studio surfaces today are the `/api/meta-entity-authoring/*` routes and the Atlas learning inbox. The composer is therefore delivered as Entity onboarding, following the Country reference path:
+
+1. A platform-owned Entity definition for the change set. It declares a readable identity (`change_set_code` plus entity label, never the UUID), a list surface and a detail surface whose navigation groups are exactly the modules below.
+2. Published permissions for those surfaces and operations, taken from the existing `metadata.entity.author` / `metadata.entity.review` codes that the authoring routes already check. No new or derived code is introduced.
+3. Each editor (fields grid, layout tree, view designer and so on) is a registered `content_kind=component` section contract. It reads and writes the change-set graph through the existing authoring service and its lock_version.
+
+Platform Admin authors this definition and Platform Owner independently reviews it, like every product default. It is bootstrapped through the governed baseline import, never through the composer it defines. Until it is published, Studio has no composer route, and nothing replaces it with a bespoke page. Every dictionary table has one canonical editing home, partitioned by purpose where stated below. Contextual entry points invoke that same registered editor and canonical mutation contract; they do not maintain separate form state, validation rules or persistence paths. Other modules link to that home or invoke its shared contextual editor. A table appears only when the draft's source_kind and content make it applicable.
 
 | # | Module (navigation group) | Sections, in order | Tables edited here | Read-only links shown here |
 | --- | --- | --- | --- | --- |
@@ -2231,6 +2975,12 @@ Navigation aids are part of the contract, not decoration:
 - **Experience surface tree** is the module's local navigation. Selecting a surface shows only the editors valid for its surface_kind.
 - **Inherited vs owned**: in tenant extension drafts, baseline members render read-only with an "inherited" marker; only owned members and overlays are editable.
 
+Bootstrap and recovery execute through the existing governed baseline import/publication API or a typed command-line client that does not depend on the composer host. An authenticated Platform Admin proposes exact source/graph/dependency hashes; a distinct authenticated Platform Owner reviews those exact immutable contents/diff and records a verifiable approval receipt through the existing governance service. Publication verifies signer/actor identity, contributor separation, freshness and unchanged hashes. A service may transport/attest execution of this receipt but cannot manufacture human approval from a ticket, flag or its own identity. Qualify bootstrap with the composer route entirely unavailable, including foreign-tenant/module and forged/stale receipt rejection. Preserve existing audit and security controls; no direct SQL or bespoke recovery UI.
+
+**B0 — bootstrap resource package:** after F0, the shared authoring contract maintainer delivers the minimal entity.authoring-schema version/hash, selected typed DTO/codec/validator/compiler and registered component manifests, applicable entity.storage-catalogue/1 and entity.permission-catalogue/1 hashes, plus F6 storage-authority evidence. The governed host definition pins these exact resources through its manifest. Baseline import uses the existing publication API or typed CLI contract; implementation evidence must record the actual registered command/route/version, input graph/dependency hashes and independent reviewer receipt. No endpoint name or resource hash is invented here. Bootstrap first qualifies immutable resource installation and API/CLI validation with the composer unavailable, then host activation, then a scoped save/read smoke test. Missing pins, forged approval or unavailable resources block; no manual SQL or temporary hardcoded host bypass breaks the dependency chain.
+
+B0 negative fixture: an unsealed or unactivated composer-host definition cannot authorize its own editor/service path. Bootstrap remains the independently authorized API/CLI flow until the exact host release and target receipt qualify; a preview of the host cannot stand in for activation. Also verify that a newly proposed host successor does not replace the currently authorized host before reviewed activation.
+
 ### 7.3 Control derivation and the standard control set
 
 The dictionary's **Authoring intent** cells explain semantics; they are not control IDs or a second editor registry. The versioned AuthoringSchemaDescriptor selects the stable control IDs below using explicit semantic roles, ownership, scoped references and declared groups, checked against DDL types. Column suffixes, arbitrary SQL CHECK parsing and entity names never select behavior. These are Studio property editors, distinct from the runtime display/input/filter/format component catalogue. They cannot infer entity identity, navigation, authorization or published runtime component selections.
@@ -2246,7 +2996,7 @@ For example, minimum/maximum belong to one `range` group rather than two `number
 
 | Stable control ID | Explicit semantic contract | Behavior |
 | --- | --- | --- |
-| `code` | Authored logical code/key with declared pattern | Suggest from label only through an explicit author action; persist accepted value |
+| `code` | Authored logical code/key with declared pattern | Suggest from label only through an explicit author action; persist accepted value. Editable until the row's first save; afterwards read-only with the Rename key command (section 2.3), because the graph guard makes logical coordinates immutable |
 | `text` | Free text with declared bounds, if any | Show applicable bounds; no invented maximum |
 | `label` | Draft-owned entity_label reference | Shared inline label editor and translation editor; readable text, scoped row ownership |
 | `number` | Integral or exact decimal scalar | Declared bounds/step; bigint and decimal use lossless codecs, never forced JS-number conversion |
@@ -2272,6 +3022,94 @@ For example, minimum/maximum belong to one `range` group rather than two `number
 
 `schema_form` does not authorize structured custom-field values before their provider qualifies, nor workflow/case fixtures or arbitrary executable inputs. Schema selection and editor availability remain subject to the existing Phase 1 scope. Temporal editors are also used as children of range and typed-value controls; this shares implementation without creating another SQL owner. Registered record pickers require a qualified target contract; a UUID type alone is insufficient.
 
+### 7.3.1 Versioned descriptor and storage catalogue contracts
+
+These are proposed shared contracts, not claims of existing registries or endpoints. Register their typed schemas with the shared authoring contract package (`contracts/meta-entity-authoring`), and qualify their implementations through the existing Studio host/contract composition. Do not add an entity-specific registry or provider stack. Generate JSON Schema and TypeScript from one contract source and reject unknown members.
+
+The registered descriptor resource is `entity.authoring-schema`, selected by change_set.schema_version and pinned by change_set.authoring_schema_hash. One version resolves to one immutable hash; changing it requires a new version and an explicit draft upgrade with full revalidation. Neither the browser nor a deployment silently upgrades saved drafts. Release qualification includes this dependency hash without changing existing release hash/signature semantics. Overview › Provenance displays schema_version and authoring_schema_hash through read-only controls; only the explicit shared draft-upgrade command changes the pin.
+
+| Descriptor member | Typed shape and rule |
+| --- | --- |
+| schemaVersion / contentHash | Positive integer / canonical SHA-256; hash computed over canonical content excluding its own hash field |
+| ddlContractHash / graphSchemaHash | Exact approved target DDL contract and typed graph schema hashes; not a claim that the target DDL is deployed |
+| modules | Ordered module keys, label references and editor references; no arbitrary UI property bags |
+| properties | Entries with stable propertyPath, sqlOwners (table/column), dtoPath, canonicalEditorKey, mutationContractKey/version, controlId/version, applicabilityRuleIds, securityClass/change-classifier rule (section 2.3.3) and classification (authorable/read_only/derived/excluded) |
+| groups | Stable group key, purpose, consumed property paths and qualified child-control variants; each leaf consumed exactly once |
+| constraints | Tagged finite rules: bounds, length, domain, nullability, ownership, XOR, applicability and P completeness; registered validator key/version for cross-row rules, never arbitrary expressions |
+| mappings | Each property names save/load codec, portable codec and compiler mapping keys/versions, or explicit non-runtime disposition |
+| diagnostics | Stable rule code, severity, property/group path and label reference; suitable for the canonical composer deep link |
+
+Bounds include inclusive/exclusive endpoints, precision/scale, length and collection cardinality where applicable. No omitted ceiling is interpreted as unlimited: a descriptor must distinguish an explicit unbounded domain from an unknown constraint. A dictionary/DDL difference needs a declared forward-change decision. Descriptor builds reject missing bounds and compare domains/NULL/default semantics with the approved DDL. Existing search weight remains numeric(6,3), NOT NULL, >0 and <=100; minimum_query_length remains 1..64; key/relation positions remain 1..64 and search positions 1..256. Database defaults do not supply missing author choices implicitly.
+
+The proposed external resource `entity.storage-catalogue/1` is a read-only, per-plane publication generated from approved DDL alongside Kysely types. Its envelope contains schemaVersion=1, plane, contentHash, ddlInputHash and generatorVersion. Each object has schema, object, backingKind and ordered columns; each column has name, SQL/domain type, nullable, ordinal, length, numeric precision/scale, registered bounds and a declared generated/default classification. Unknown bounds/defaults are reported, never guessed or exposed as editable SQL. Physical columns grant no authoring or record access.
+
+Overview › Storage owns the catalogue selection and shows storage_catalogue_hash read-only. `entity_runtime_profile.storage_plane/schema/object` select the object and storage_catalogue_hash pins the exact resource; the resource key/version are fixed by this contract version, not duplicated writable settings. The registered shared catalogue reader verifies the hash, plane and author access. Add-from-storage is disabled with an actionable finding if the resource is absent, stale against the selected approved DDL, or unsupported. Selecting a newer catalogue requires an explicit rebind/diff and field revalidation. Storage type is server-owned; nullable authoring values must be compatible with the physical contract rather than overwriting it. No live cross-plane introspection, DDL execution or additional metadata catalogue table is authorized.
+
+Activation schema attestation supplements the approved-DDL catalogue. The consuming plane inspects its own local schema through a trusted adapter and compares a canonical projection of the referenced objects/types/nullability/keys with the pinned approved storage contract. Do not compare a source-file hash directly to an arbitrary live-schema serialization. Record the expected catalogue hash, actual schema fingerprint, relevant migration identity and adapter version in activation evidence. Unsupported/missing/drifted required facts block activation and affected operations on subsequent detected drift; unrelated schema objects do not invalidate the projection. Schema changes participate in the same compatibility protocol. Studio performs no live cross-plane introspection and cannot claim repository DDL alone attests deployed schema.
+
+The proposed `entity.permission-catalogue/1` resource is a read-only per-plane governed publication with schemaVersion, plane, contentHash, generatorVersion and source catalogue revision. Entries carry exact permission code, kind, lifecycle and applicable policy-contract references. Pin it through the existing dependency manifest; no new writable permission catalogue or constructed codes. Studio selectors/import/compiler resolve references against this evidence without querying remote databases. Activation verifies the local catalogue projection and current revocation state; unavailable, removed or mismatched referenced permissions block the affected binding and can never decode as none. Compatible additions need not invalidate unrelated bindings; revocation cannot be bypassed by a historical pin. Define bounded refresh/invalidation and conformance alongside entity.effective-security/1 before live qualification. The catalogue attests existence/classification, never user grants or human review.
+
+Descriptor/compiler/codec trust is governed independently of immutable pins. A versioned trust-policy resource records exact revoked hashes, compatible minimum versions per contract family and required revalidation, with issuer, reason and security generation. Check it at draft load for diagnostics and at preview, submit, publication, installation and activation for enforcement; live consumers react to affected trust revocation through existing local security invalidation. No global lexical version comparison or silent upgrade is permitted. An affected draft requires an explicit schema/codec upgrade and fresh validation/review; affected releases need compatible reviewed recompilation/successors or a scoped recovery disposition. Preserve original artifacts for authorized historical inspection, without serving a revoked artifact as active evidence. F0 qualifications include revoked classifier, codec and compiler fixtures and offline/stale trust-policy behavior.
+
+#### Contract inventory and generation coverage
+
+F0 includes a first-class resources inventory alongside relational property mappings. Each entry records resource key, schema version and schema hash, content version/hash where applicable, owning package/service, producer, consuming adapters, dependency pins, trust/revocation policy and conformance-suite identifier/results. Pending identifiers/hashes are explicit pending evidence, never fabricated values. Distinguish a resolver interface schema from its implementation version and a catalogue schema from a particular catalogue publication. Resource inventory entries are typed contract inputs; runtime publication content remains owned by its existing resource service.
+
+| Contract family | Producer / accountable owner | Consumers | Qualification and drift evidence |
+| --- | --- | --- | --- |
+| Entity relational authoring | Shared authoring contracts/persistence maintainer | Repository, composer, codec and compiler | Generated section 3 mappings, SQL constraints and section 11.13 DDL comparison; selected-property round trips |
+| entity.authoring-schema and portable codec | Shared authoring contract maintainer | Host, API/CLI and compiler | Closed schemas, canonicalization vectors, version upgrade/rejection and generated-output drift |
+| entity.effective-security/1 | Existing authorization framework maintainer | Shared readers, previews and disclosure channels | Input/output/cache-coordinate schemas, implementation pin, state/composition fixtures and security-generation invalidation |
+| entity.permission-catalogue/1 | Governing permission publisher per plane | Selectors, compiler and activation | Envelope/entry schemas, exact code/kind/hash checks, local attestation and revocation fixtures |
+| entity.storage-catalogue/1 and storage authority | Storage/provider maintainer and governance owner | Storage authoring, readers and activation | Catalogue/authority schemas, lineage and binding evidence, local schema attestation and F6 bypass tests |
+| entity.predicate-query/1 | Shared query-provider maintainer | List/read providers and scoped query compilation | Closed plan schema, bind/identifier separation, operator matrix, differential and injection vectors |
+| Property readiness manifest | Shared build/qualification pipeline | Composer and server command/import gates | Exact deployment/descriptor/property pins, full dependency closure, stale-manifest rejection |
+| Compiled Entity runtime contract | Entity compiler/runtime maintainers | Registered consuming-plane readers/renderers | Explicit compiler/schema/reader compatibility matrix, field/permission closure tests and immutable artifact hashes |
+| Integration subscriptions/events/webhooks | Owning Integration resource maintainer | Its future authoring adapter and installed delivery runtime | Separate complete typed dictionary/codec/migration/compiler and effect/retry/security conformance before editor enablement; section 6.5 |
+| Future preview, view, label and other adapters | Owning registered capability maintainer | Declared shared host/plane consumers | Named resource-specific schema/dependency suite; unavailable until that adapter qualifies |
+
+Generation checks cover both relational and external contracts, but apply different evidence: SQL/DDL comparison covers SQL-owned properties; external resources require schema/manifest drift and interface conformance checks, not invented metadata tables. Section 6.5 is a separately owned future authoring resource contract whose required gate stays in this inventory. It cannot ship from prose alone, and its complete Integration DDL is not a prerequisite for the Entity reference milestone. First F0 coverage is a small dependency-complete slice; unimplemented properties/resources explicitly reject rather than falling through to generic JSON.
+
+#### Compiled permission compatibility and review example
+
+The labels LEGACY and EXPLICIT below identify contract families, not assigned version numbers. F0 must replace their implementation manifest entries with registered compiler/schema/reader versions and test hashes before live qualification. Interpretation is selected by compiled contract schema/version, never by authoring schema_version or property presence.
+
+| Compiler output family | Reader capability | Required behavior |
+| --- | --- | --- |
+| LEGACY validated absence semantics | Qualified legacy reader | Apply that exact historical schema's validation and absence rules |
+| LEGACY validated absence semantics | New reader with registered legacy decoder | Preserve historical interpretation; invalid legacy evidence rejects |
+| EXPLICIT none/defined union | Reader supporting that exact schema | Require valid tagged requirement; resolve defined code/kind against pinned and current authority evidence |
+| EXPLICIT none/defined union | Legacy-only reader | Reject unsupported contract before data access; no downgrade or discriminator stripping |
+| Unknown/revoked schema or unsupported version | Any reader | Block; use explicit upgrade/recovery path, never guess a decoder |
+
+Illustrative requirement fragments for the proposed EXPLICIT schema (not importable complete artifacts or permission grants):
+
+```json
+{"permissionRequirement":{"state":"none"}}
+```
+
+```json
+{"permissionRequirement":{"state":"defined","permissionCode":"<catalogue-selected-code>","permissionKind":"entity_operation"}}
+```
+
+The closed tagged union rejects missing/unknown state, defined without code/kind and none carrying a code/kind. These examples do not introduce mandatory authoring none rows or change valid authoring permission absence. Existing independent authentication, scope, deny and governance controls still apply.
+
+Publish the compiler/schema/reader compatibility matrix as a hashed build/qualification artifact referenced by target installation receipts. Roll out readers supporting qualified LEGACY decoding and EXPLICIT validation first, plane by plane; keep the existing compiler output during that stage. Only enable EXPLICIT output for a release whose declared target readers satisfy its contract and delivery policy, and recheck at activation. A capable reader on one plane need not wait to be installed on other planes. Mixed installations cannot justify stripping discriminators or weakening a release's target requirements. Retain legacy decoding while supported active/pinned historical artifacts need it; retirement is a reviewed dependency decision. Rolling a reader back to legacy-only is blocked while an active EXPLICIT artifact needs it.
+
+Worked semantic review: an author removes an operation's plane-specific permission row. Base H_BASE resolves defined; result H_RESULT resolves none. Emit access_widening with the exact operation logical key, plane, old/new requirement and removed catalogue reference; reviewer text states “Entity permission requirement removed; independent controls still apply.” The evidence tuple includes source head H_SOURCE, destination heads H_TARGET[plane], H_BASE, H_RESULT, dependency hash H_DEP, semantic diff hash H_DIFF, classifier/compiler versions and test-suite hash H_TEST. All H_* values here are symbolic placeholders; executable fixtures compute actual hashes. A non-contributor eligible reviewer approves that exact tuple. Changed graph/dependency/head or revoked tooling invalidates the applicable evidence and requires revalidation/review. Historical release approval is not reused, and absent permission is not relabeled invalid solely because it widens access.
+
+#### Predicate query compilation and property readiness
+
+Register proposed `entity.predicate-query/1` as a first-class external resource in the F0 inventory. Its input is the validated predicate AST, purpose, exact field/relation identities, authorized query-use/scope closure and pinned provider capability manifest. Its output is a closed typed filter plan with resolved provider columns/paths, typed bind parameters and plan/dependency hashes; it contains no caller SQL fragment. SQL providers map identifiers through the approved storage contract and bind all values, including set and pattern operands; non-SQL adapters use an equivalent closed grammar. Locked scope is conjoined by the server and cannot be removed by a user filter.
+
+The operator/type/purpose matrix declares null and three-valued logic, empty sets, collation/timezone, string-pattern escaping, supported relationships, collection cardinality and complexity limits. Unknown operators/paths reject; capability support does not grant authorization. Registered query adapters own physical planning; no index-efficiency guarantee is inferred from AST validity. Conformance covers hostile strings/identifiers, wildcard and escape inputs, cross-tenant references, null/set edges, masked-condition restrictions, oversized plans and differential evaluation against a bounded reference interpreter. Qualify actual query plans and latency on representative data before exposing a supported operator. This contract is an adapter in the existing provider stack, not another query service.
+
+Property readiness is derived evidence, not an author-editable feature flag. A versioned deployment readiness manifest keys each descriptor property/control to schema/compiler/consumer hashes and passing DDL/API/save-load/codec/validation/render tests. Intersect it with descriptor classification, source-kind applicability, authorization and complete dependency closure to derive authorable/read-only/unavailable plus diagnostics. The server enforces the same intersection on commands/imports; changing a browser flag grants nothing. A composite editor exposes only independently complete properties, or remains unavailable where its invariant closure cannot be split. R32 remains per-property end-to-end qualification; module slices are planning groups, not permission to expose unfinished neighbors. Preserve untouched unsupported legacy content only through its qualified compatibility mapping, never silently discard it.
+
+F0 generates capability/profile/override applicability CHECKs and matching API validators from the same closed kind/property matrix used by the inspector. Every setting has explicit allowed kinds, nullability, bounds and override semantics; generation rejects an unclassified column. Negative fixtures populate every property on each disallowed kind and test inherited/override combinations. Compare generated constraints to the approved DDL rather than trusting handwritten wide-table checks. This closes P01 applicability coverage without requiring capability expansion in the reference slice.
+
+Register proposed `entity.catalogue-resolution/1` for placement and component references. Studio-owned UUIDs resolve before compilation to resource kind, source owner, namespace, logical key, exact version/hash and required member/slot identity. Workspace/module association and component/slot ownership are verified in the source graph; the consuming-plane adapter maps those scoped identities to its installed catalogue and returns installation/compatibility evidence. Missing, ambiguous, revoked or incompatible mappings block that target; bare codes or coincidentally equal UUIDs are not fallback resolution. F0 inventories this external contract with source/target schema pins and conformance for product/tenant collisions, absent modules, incompatible slots and installation drift. Registered implementations remain selected by shared capability contract, never Entity-name branches.
+
 ### 7.4 Reusable column groups — defined once
 
 These groups share primitive codecs, structural validators and registered editor components. Each use declares its purpose-specific DTO union and permitted variants; reuse does not make distinct null, default, ownership or authorization semantics interchangeable. Tables reference the common primitive contract and their purpose refinement rather than restating or broadening it. Column patterns below are descriptive, not name-based discovery rules.
@@ -2280,9 +3118,9 @@ These groups share primitive codecs, structural validators and registered editor
 | --- | --- | --- | --- |
 | Typed value | `*_kind` discriminator + one of `*_text/_numeric/_boolean/_date/_datetime/_uuid/_*_set/context_key+version` | entity_field defaults, entity_predicate, entity_policy_parameter_binding, master.entity_custom_field_value | Shared scalar codecs and editor primitives composed with the purpose contracts below |
 | Profile override | `override_<setting>` mirroring exactly one capability_profile setting; NULL means inherit | entity_capability override columns | Profile override control, driven by the pinned override rule; no per-column editor code |
-| Label reference | any `*label_id` | about 21 columns across surfaces, sections, bindings, operations, choices, views, placement | Inline label editor; label rows owned by the draft |
-| Registered contract reference | `*_key` + `*_version` (+ hash where published) | about 20 pairs: components, handlers, computation/validation, context, entry contracts | Catalogue picker; all-or-none pair check |
-| Ordered membership | `position` within a declared sibling scope | about 20 tables | Order control; deferred dense-order validator |
+| Label reference | any `*label_id` | 20 columns across the change-set root, fields, choices, operations, surfaces, navigation groups, sections, bindings, views and placement | Inline label editor; label rows owned by the draft |
+| Registered contract reference | `*_key` + `*_version` (+ hash where published) | 20 pairs: storage/operation handlers, preflight, resolvers, computation/validation, context, entry contracts, capability services, AI contracts | Catalogue picker; all-or-none pair check |
+| Ordered membership | `position` within a declared sibling scope | Target ordered memberships; three retained tables (section, field binding, surface operation) have legacy zero-based positions; a fourth legacy table (component binding) is retired. Complete source-boundary inventory and tests are required by section 7.9.1 | Order control; deferred dense-order validator |
 | Member lifecycle | status, replacement key, deprecated_since/planned_removal release numbers | independently versioned members (section 2.5) | Lifecycle panel; replacement picker of the same kind |
 | Ownership path | local owner XOR overlay owner; root owner XOR (predicates, policy parameters) | bindings, predicates, policy parameters | Server-owned; never a user control |
 | Paired audit | created/updated at/by | all draft members | Read-only Technical details |
@@ -2310,6 +3148,26 @@ Every refinement rejects unrelated payload columns and unsupported variants at t
 8. **Technical identity stays hidden.** UUIDs, hashes and change-set IDs appear only under Technical details. This exception is limited to authorized Studio metadata inspection. It never enables raw UUIDs in Entity list/default/saved-view columns, embedded lists, cards, search hints or fallback reference labels. Selectors, normal lists, cards and diffs use readable keys and labels; invalid presentation rejects rather than silently hiding or substituting values.
 9. **Keyboard and accessibility parity.** Drag order has keyboard move controls. Every control has a label, error association and focus target reachable from its validation finding.
 10. **One canonical editor and mutation contract per property.** Inline labels and the translation matrix invoke the same label editor/command; Field hub placement actions invoke the Experience placement editor/command. Contextual entry points preserve the same ownership checks, validation and optimistic concurrency. Reused labels show their affected usages before a shared text edit; authors can explicitly create a separate label instead. There is no second independently writable representation (section 7.2).
+
+### 7.5.1 Contextual entry, recovery and explainable authoring
+
+The surface tree, canvas and searchable contextual inspector invoke the same canonical editors. A selected placement links to its field definition, access, validation and where-used/change-impact views. Contextual creation, bulk placement and keyboard reordering preserve section 7.5's ownership and mutation rules. Provide explicit discard, safe duplication and conflict resolution; duplication allocates new eligible member identities and validates/remaps references rather than cloning immutable evidence. Local undo/redo follows section 2.3.1 and never erases committed history.
+
+Explain hidden, read-only, required and unavailable states from their qualified metadata and validation findings; explanations do not expose unauthorized data or bypass policy. Viewport and locale previews use the saved revision. Show provider-specific storage limits, index/migration implications and unsupported changes from qualified catalogue evidence instead of a generic row-size percentage or live cross-plane introspection.
+
+Contextual entry from Neon/Mesh (for example Customize → the canonical Studio editor) is a deferred integration contract. Ordinary URL parameters are untrusted selection hints: Studio resolves the resource, tenant, target and caller's author/read authority independently. Handoffs carrying trusted assertions or sensitive context require an appropriately protected, scoped, expiring server contract; signing every ordinary navigation link is not required. Context does not grant author/reviewer rights. Do not place credentials or sensitive record payloads in links, accept arbitrary return destinations, or create duplicate plane-local designers.
+
+Review displays **Open access (no entity permission)** per operation/plane separately from its review status. The chip describes only the entity permission requirement, not anonymous access or freedom from tenant/scope/explicit-deny controls. Group identical first-release findings for readability while retaining every operation/plane coordinate and effective diff; no automatic acknowledgement or suppression of widening findings.
+
+Fixture preview should generate bounded synthetic values from pinned field constraints and approved catalogue facts, including valid/invalid boundaries and declared relation fixtures. Use a reproducible seed and show unsatisfied/unsupported constraints; do not sample production data or imply successful generation proves authorization. This is a shared preview adapter and command-contract follow-on, not a separate renderer or permission to invoke business handlers.
+
+Publication data-impact dry-run is a qualified provider capability: for requiredness, length/range narrowing, removed choices and new unique keys, return authorized aggregate violation counts per plane with source release/schema hash, snapshot coordinate, scan completeness and limits. Partial, stale or unavailable scans are explicitly unknown, never zero. Prevent aggregate inference across unauthorized scope, including small-count disclosure under the applicable policy. Recheck data at enforcement/cutover under the provider's consistency contract; a dry-run does not guarantee future writes comply or authorize DDL. Until its typed result and provider qualify, show unsupported rather than a placeholder successful scan.
+
+A release that tightens constraints on populated storage requires data-impact evidence before target activation: a complete authorized provider scan or an explicitly qualified equivalent constraint-validation/migration attestation. Unknown/partial/stale evidence blocks the affected activation; unsupported providers cannot claim zero violations. An empty/new object needs verified emptiness rather than a fabricated scan. Bind evidence to the release/schema and provider consistency boundary, and revalidate or prevent intervening violating writes at cutover. Aggregate UI preview may be unavailable to an author lacking count access; a separately authorized validator can return a bounded pass/fail attestation without disclosing records. Studio still does not execute schema changes.
+
+The CSV export format contract uses typed cell serialization and spreadsheet-safe neutralization for untrusted textual cells beginning with formula triggers (=, +, -, @), including qualified leading whitespace/control-character cases. Ordinary CSV quoting does not prevent formula execution. Preserve genuine numeric/date values through typed serializers; do not corrupt negative numeric values with a blanket text rule. Pin the format policy and test supported spreadsheet clients, delimiters, multiline cells and formulas after whitespace. Apply exposure/masking first, then neutralization. Export files have an approved bounded expiry, scoped authorized download, revocation checks and deletion/retention behavior; logs and temporary files cannot retain raw forbidden values. A raw machine-data format, if needed, requires a separately named qualified contract rather than silently disabling spreadsheet safety.
+
+Grouped open-access review retains individual, immutable acknowledgement for each newly open write, delete, export or externally effectful operation/plane. Record reviewer identity, exact member/plane, graph/diff hashes and acknowledgement; a group-level click cannot substitute for those decisions. This is review evidence, not a new permission or a change to valid permission absence. “Who gains access” reports compare authorized before/after policy cohorts or bounded fixture scenarios, with unknown dynamic membership explicit; do not expose user/tenant membership beyond reviewer scope or claim exact populations from permission removal alone.
 
 ### 7.6 Experience editors by surface kind
 
@@ -2362,7 +3220,7 @@ The inspector for a selected member shows collapsible panels in the order below.
 | Panel | Columns | Shown when |
 | --- | --- | --- |
 | Basics | surface_key, surface_kind, label_id, description_label_id, icon_key, is_default | always |
-| Rendering | component_contract_id, layout_kind, column_count, embedded_mode | embedded_mode only on embedded; other controls constrained by kind/mode; lookup shows neutral layout values read-only and has no component selector |
+| Rendering | component_contract_id, layout_kind, column_count, embedded_mode | embedded_mode only on embedded; other controls constrained by kind/mode; lookup shows neutral stack layout read-only, NULL column_count and no component selector |
 | Access | entity_access_permission rows for this surface, one per plane (contextual entry to the Permissions and scope editor) | always; no rows means no added surface permission |
 | List settings | supported_modes, default_page_size, allowed_page_sizes, max_page_size, max_sort_levels, count_mode, max_filters, max_filter_depth, search_profile_id | list or collection embedded |
 | Empty state | empty_title_label_id, empty_description_label_id | list or collection embedded |
@@ -2399,6 +3257,26 @@ entity_surface_id is fixed by the tree position and is never an inspector contro
 
 entity_surface_id and overlay_id are fixed by context (surface or tenant overlay) and are never inspector controls. Read-only state, requiredness, visibility and column eligibility are shown as derived badges from the field, field access and operation enrollment; they have no binding columns to edit.
 
+### 7.7.1 Consolidated readiness requirements
+
+This matrix indexes the normative P rules in the dictionaries; the descriptor expresses the executable rules once. It is not a second editable checklist. All applicable rows combine, including child-member and dependency rules. Valid incomplete drafts may save, but preview/publication requires zero P findings; existing R and integrity rules still reject invalid saves.
+
+| Applies to | Required before preview/publication |
+| --- | --- |
+| Every surfaced graph | P labels/locales, qualified schema/descriptor and dependencies, eligible storage/provider, exact operation/field access and scope contracts, and qualified components for every selected control; undefined permission in valid metadata needs no grant |
+| list | Explicit readable identity, allowed modes and bounded list settings, enrolled readable columns and default view; no UUID presentation |
+| detail | Explicit readable title, navigation groups with labels/order/section_display, explicit show_group_band and complete owned section tree |
+| form | Qualified submit placements and their operation enrollment, complete layout and supported input controls; create/edit modes derive from submit placements |
+| embedded | Explicit embedded_mode plus compatible component/provider; collection satisfies list readiness; sectioned satisfies section-tree readiness without navigation groups; parent relation scope is locked server-side |
+| lookup | Readable title, target key, reference format and every referenced token; only qualified readable token selections; no section/group/view/action rows |
+| fields section | Valid group/parent context and explicit layout; direct bindings or child sections, never both; each selected field placement complete |
+| related_list section | Exact local-graph or published-release relation target, embedded surface, read operation, cardinality and target view for collection; setup operation/label when setup is selected |
+| component section | Compatible registered section component and all mandatory slots; finite options and field-slot access qualified |
+| capability section | Enrollment and compatible layout binding with pinned profile; dependent shared capability qualified |
+| Any selected optional feature | Its conditional P rules become mandatory: reference narrowing, component slots, predicates, policies, AI, overlays and custom fields cannot bypass qualification because their owner is optional |
+
+`show_group_band` NULL on detail is incomplete, false is an explicit choice, and NULL on other surface kinds means inapplicable. `entity_surface_view_field.grouped` is R: new rows require explicit true/false; NULL rejects. An omitted patch member leaves the stored choice unchanged. A complete-source import missing a required choice reports a finding instead of accepting a database default. This does not turn grouped into a nullable tri-state column.
+
 ### 7.8 DDL-led authoring flows
 
 Sections 7.2–7.7 say *where* each property is edited. This section says *how an author gets from an empty draft to a publishable one*. Each flow is a sequence of the canonical editors above, not another editor or persistence path.
@@ -2421,7 +3299,9 @@ Sections 7.2–7.7 say *where* each property is edited. This section says *how a
 
 **2. Add fields from registered storage.** For column-backed storage, the Fields grid offers "Add from storage". It lists the registered storage object's columns that no field binds yet, with SQL type, nullability, length and numeric precision. Selecting columns creates fields whose `storage_path`, `storage_type`, `nullable` and compatible type bounds (`max_length`, `precision`/`scale`) are taken from the catalogue. The author must still supply the label, data_classification and `required`, which DDL cannot determine. Enum domains are proposed only when the column type is a registered domain. The proposal is shown before save and persisted as authored values (7.5 rule 4). It never sets readable identity, list columns, placement or access, and it never runs DDL against the business table.
 
-**3. Fields grid plus inspector.** Data model › Fields is a grid with one row per entity_field. Its columns are the descriptor's grid-eligible scalars: key, label, data_type, required, nullable, write_mode, data_classification and storage_path, plus a completeness dot. Bulk selection drives the 7.5 rule 5 actions. Cell edits use the same canonical mutation as the inspector. The inspector holds everything else, so the grid stays narrow.
+The column list comes from a **registered storage catalogue**, not from live introspection by Studio. The storage object usually lives in another plane's database (neon or mesh), which Studio cannot and must not query. The catalogue is generated from the approved DDL by the same path that generates the Kysely types (section 8). It is published per plane as a pinned resource (plane, schema, object, columns with SQL type/nullability/length/precision/scale/domain) with a content hash. The draft pins that hash in entity_runtime_profile.storage_catalogue_hash under the section 7.3.1 external resource contract, and `entity_field.storage_type` / `nullable` are checked against it at save and re-verified at publication. An object missing from the catalogue cannot be selected as `storage_object`. external and virtual backings have no column list, so their fields are authored without this flow.
+
+**3. Fields grid plus inspector.** Data model › Fields is a grid with one row per entity_field. Its columns are the descriptor's grid-eligible scalars: key, label, data_type, required, nullable, write_mode, data_classification and storage_path, plus a completeness dot. Bulk selection drives the 7.5 rule 5 actions. Cell edits use the same canonical mutation as the inspector. The key cell is editable only on unsaved rows; saved rows show it read-only with the Rename key action (section 2.3). The inspector holds everything else, so the grid stays narrow.
 
 **4. Variant changes are explicit.** Changing data_type, value_origin, content_kind, surface_kind, binding_kind or a typed-value discriminator can make populated columns irrelevant, and those columns must then be NULL (section 2.5). The composer shows a confirmation dialog listing each value that will be cleared, using readable names, and clears them in the same save. Hidden-but-populated values are never left behind and never silently dropped.
 
@@ -2433,7 +3313,324 @@ Sections 7.2–7.7 say *where* each property is edited. This section says *how a
 
 **8. Ownership is always visible.** Chips mark members as *inherited* (tenant extension baseline), *shared* (shared label or pinned profile) or *owned*. Inherited and shared values are read-only in place, with the explicit action that makes them editable where the contract allows one (create overlay, "Customize for this entity").
 
+### 7.9 Build order against the current DDL
+
+#### Foundation deliverables and acceptance order
+
+These are explicit unbuilt deliverables. F0 gates generated schemas, target migration implementation and new composer contracts. Read-only investigation, migration rehearsal design and isolated repository diagnosis may proceed independently. Start with the contract source before expanding the proposed migration surface. Existing repository diagnosis may proceed in parallel; an editor cannot ship until every prerequisite it uses is qualified.
+
+| Milestone | Deliverable | Required evidence before dependent delivery |
+| --- | --- | --- |
+| F0 — contract source | Canonical typed package contract plus descriptor/document generation | Reach `slice-passed` for the exact section 7.9.3 manifest before its dependent target migration/adapter implementation: reproduce selected dictionaries, descriptor, source-path ledger (including applicable D05/D07 mappings) and section 11.13 diff from pinned inputs; complete types/bounds/owners/applicability and rejection fixtures. Full-inventory classification is tracked separately as `inventory-complete`; it is not a prerequisite for the bounded slice |
+| F1 — portable codec | Closed member schemas, compatibility tuples, canonical encoder/decoder | Null/absence/key and hashing vectors, explicit version upgrades and full Country round trips; no hand-maintained alternative schema |
+| F2 — physical storage catalogue | Approved per-plane DDL catalogue generated alongside Kysely types | Exact hash pin, missing/stale resource rejection, explicit rebind/diff and incompatible type/nullability findings; gates storage-backed fields only |
+| F3 — shared save reconciliation | Scoped command batches preserving member identity and creation attribution | Existing ID ownership checks; atomic insert/update/remove/reorder; stale conflict/no-op/retry behavior; immutable snapshots and representative save-cost measurements |
+| F4 — order and composer host | D01 boundary conversion plus explicit change-set Entity bootstrap | Position matrix and migration rehearsal; readable host identity/navigation/components; operations authorized through shared framework with independent review preserved |
+| F5 — production history decision | Accountable role: Platform Owner, with platform operations supplying capacity, backup/restore and retention evidence | Record approved snapshot retention/archive/disposal and protected-review policy before production enablement; preserve all existing history until approved, without silently choosing infinite retention |
+| F6 — storage-authority boundary | Accountable role: shared storage/provider maintainer with platform governance review; closed authority resource, exact owner/projection lineage and effective-security composition | Required before any new storage binding serves live data, including priority 3. Reject alternate-Entity open-access bypass, missing/mismatched owner hashes, tenant-scope mismatch and unmappable multi-owner projections; verify activation and request-time revocation behavior |
+| F7 — extension write integrity | Accountable role: shared extension-provider maintainer; local identity projection/FK, active-head locks, aggregate version checks and parent/value erasure | Required before any new normalized extension writes at priority 6. Pass invalid/foreign/retired identity, activation race, mixed/extension-only conflict, crash/retry and authorized retention/erasure fixtures atomically; unqualified writes stay unavailable |
+| F8 — bounded effective-security v1 | Existing authorization-framework maintainer; versioned resolver adapter proven on Country/State Region | Before live reads, prove exact permission conjunction, tenant/record scope intersection, union of explicit denies, plain/omitted and supported mask composition, trust/revocation invalidation and human principal context. Unsupported obligations/combiners block; no existing protected control may be dropped to meet v1 scope |
+| F9 — legacy identity reconciliation | Shared identity/migration maintainer with authorization-framework reviewer; named person/date assigned before affected migration | Before F8 serves legacy pins, install exact source-hash→stable-identity mappings and pass ambiguity/current-security/plane-lag fixtures; unmappable pins explicitly require rebind |
+| E1 — extension enrollment boundary | Shared authoring/authorization maintainer; named person and due date required before extension editor scheduling | Before any extension enrollment editor/API enablement, prove exact sealed baseline, source/tenant/field ownership, extension-point authorization and permitted read/write exposure through DB guards and service tests; no composite FK alone qualifies it |
+
+F8 makes the live-security dependency explicit without building a second policy language or evaluator. Its implementation resolves pinned/current metadata, invokes existing authorization/provider decisions and composes their typed restrictions. New mask/obligation combiners are later extensions; the algebra specifies required laws, not a mandate to implement every possible combination before v1. Missing necessary existing controls still block the affected entity rather than silently falling outside v1. Contract fixtures and dependency pins are F0 resources; fixture-only preview does not attest F8.
+
+Country is the first scoped conversion and end-to-end qualification target. Implement only its required shared typed contracts first, then exercise the same conversion on a second eligible entity before expanding to the remaining source inventory. The importer selects sources from governed manifests; this staged rollout does not authorize entity-name branches, hardcoded grants or reduced authorization.
+
+
+**Composer host dependency:** slice 0 delivers service/contract qualification only. Before any composer UI is enabled, the change-set Entity itself needs governed readable identity/labels, explicit navigation, qualified component sections and component catalogue bindings. Those host requirements from slices 1–2 are foundation dependencies, even when the first exposed editor only edits an existing column. The bootstrap is an explicit reviewed baseline through the shared onboarding/import path, not a hidden hardcoded host.
+
+Host mutations (save command batch, import/restore, rename, rebind and lifecycle actions) are declared entity_operation rows on the change-set Entity and bind registered shared authoring-service capabilities. They enter the existing Entity Framework authorization, transaction, audit and idempotency controls, then delegate to the same authoring service and fn_advance_entity_change_set transaction. A component cannot invoke an alternative write path. Existing author/reviewer permissions are selected explicitly in published metadata; names never derive permissions. Review/publication independence remains intact. This is required target wiring, not a claim that the current authoring routes already satisfy it.
+
+**Foundation gate before affected editors ship:** qualify D27 scoped reconciliation and composer/descriptor bootstrap before any editable composer; qualify D01 migration plus boundary codecs before any affected order editor; qualify D24 catalogue generation, hash verification and rebind/diff before storage-backed Add from storage or field verification. Physical-catalogue prerequisites do not apply to external/virtual fields, but those still require qualified provider contracts. These foundations are deliverables, not assumptions hidden in slice numbering.
+
+Slice 0 is foundation and contract qualification with no committed UI delivery. Existing-column inspectors may subsequently be enabled only after their complete dependency gate passes. Slice 2 is the first complete normalized list/detail preview milestone, not a claim that no usable field/key editor can exist earlier. A physical column, or a populated legacy JSON field, alone never enables an editor.
+
+
+The DDL status lines in section 3 identify which composer properties need typed columns. The counts below are approximate inventory evidence from the D19 review, not a deployment manifest; regenerate the section 11.13 comparison after dictionary changes before estimating or implementing migrations. Of the 58 dictionary entries, 29 tables (and the two setting/override column groups) are proposed, and existing tables gain about 190 proposed columns. Readable identity, navigation groups, labels, views, field constraints, defaults, AI and capability settings exist today only inside legacy JSONB: `entity_surface.layout_config` (`identityField`, `experience`, `iconKey`, `ai`, `collectionRelationship`, …), `entity_field.type_config` / `default_spec`, and the `entity_capability` JSON columns. The repository rule forbids authoring into those blobs. A composer editor is therefore enabled only when every property it owns has its typed DDL. There is no interim JSON-backed editor (R03).
+
+| Slice | DDL needed first | Candidate editor scope after host/dependency qualification | Still read-only or absent |
+| --- | --- | --- | --- |
+| 0. Foundation qualification (no UI promise) | No new business-member columns for this subset; shared descriptor/governance pin migrations and host/repository prerequisites still apply | Overview › Identity (`entity`, existing `entity_change_set` governance columns); Storage (`entity_runtime_profile` existing columns; field coordinates stay `*_field_key` until slice 1); Data model › Keys, key fields, search profiles/fields, relations, relation targets (without release pin), relation fields; Access › operation permissions, scope bindings, operation rules, context requirements, policy bindings (without `input_mapping`); Review › contract tests (existing columns), release list, draft-save history | Every editor that shows or writes a label (operations, surfaces, sections, bindings, fields), because the label catalogue does not exist and R33 forbids writing the legacy `title`/`label` strings as new authoring. Experience, Labels, Capabilities, AI and Extensions modules |
+| 1. Labels and field contract | `entity_label`, `entity_label_translation`, change-set locale columns; `entity_field_identity`; the typed `entity_field` columns (label, nullable/required, storage_kind/type, family bounds, typed defaults, contracts, relation_id); `entity_field_choice`; runtime-profile `*_field_id` FKs; `entity_target` | Owned Labels and languages (shared label selection/customization unavailable until its resource qualifies); full Field inspector and Fields grid; Add from storage (needs the section 7.8 storage catalogue); operation labels; Overview › Ownership and targets | Experience |
+| 2. Record experience | Navigation groups; typed `entity_surface` identity/title/code/show_group_band/column_count/list-limit columns; section `navigation_group_id`/`label_id`/`content_kind`/variant columns; binding `binding_kind`, label and component columns; `entity_surface_view`/`_view_field`; `entity_predicate` (list_filter, visibility, editability); `ui_component_contract`/`_slot`; the section 11.12 constraint changes (one-based positions, deferrable sibling uniques, navigation-group-scoped section order, relaxed `title`/`label` NOT NULL) | Experience module for list, detail, form, lookup and sectioned/collection embedded; Header, Navigation groups, Layout tree, Columns and views, Filters, Actions | Capability sections, overlays |
+| 3. Access contract | `entity_access_permission`, `entity_authorization_profile`, `entity_field_access`, `entity_operation_field`, `entity_policy_parameter_binding`, record_lock predicates, the remaining `entity_operation` columns | Access › Permissions and scope, Field access, Record lock, Policies with parameters | — |
+| 4. Capabilities, AI, extensions | `capability_profile`(+rules), enrollment columns, `entity_capability_binding`; the five `entity_ai_*` tables; `entity_navigation_placement`; `entity_surface_overlay`; `master.entity_custom_field_value` | Capabilities, AI, Overview › Placement, Extensions | — |
+
+Slice 0 is a candidate existing-column subset, not a promise of zero migrations or immediately usable editors. Each selected property still needs a complete graph DTO, save/load mapping, validation, compiler disposition and qualified shared control. Relations without a target-release pin may be incomplete authoring inventory only; they cannot drive live embedded reads or publication. Policy bindings that require unsupported parameters remain unavailable until their typed parameter contract exists. Contract-test inputs require the registered bounded fixture schema, even when their physical column already exists. Existing keys and fields may be read-only dependencies; this slice does not claim to author a complete new entity.
+
+The composer-host onboarding, explicit bootstrap source and registration, descriptor version/hash pins, storage pins where used, scoped repository reconciliation and preserved author/reviewer controls are release prerequisites. Existing current-DDL columns alone do not satisfy these prerequisites. Build order is not security order: slice 2 may preview synthetic fixtures, but any live data requires already qualified operation authorization, field exposure, target authorization and locked record scope; those controls cannot wait for slice 3.
+
+Each slice is one shared-framework delivery, qualified as R32 requires: DDL and forward migration, regenerated Kysely types, typed DTO, save/load, validation, compiler, legacy-JSON conversion for the moved properties and composer editors together. Within a slice, the conversion adapter (section 11.7) moves each property's legacy JSON value to its new column in the same cutover. The blob path for that property is then read-only compatibility input, never dual-written. Slice 2 is the first that can render a list/detail preview without layout_config. Earlier slices must not present a preview that silently falls back to the legacy blob.
+
+The current graph save (`kysely-authoring-repository.ts`) deletes and reinserts every member row on each save. It reuses client-supplied row IDs or generates `randomUUID()` values, and it stamps `created_by` with the current saver. That conflicts with section 8 (DB-default `shared.uuidv7()`, IDs preserved by logical key, untrusted client IDs) and with the paired-audit group (creation evidence is lost on every save). Before slice 0 editors ship, save becomes a scoped keyed reconciliation by existing logical coordinate, preserving database row identity. This may use insert/update/delete statements; it does not require a single SQL ON CONFLICT statement. That upsert inserts new rows, updates changed rows, deletes removed rows and preserves `created_at`/`created_by`, and the Rename key rule of section 2.3 applies. Untouched persisted members and legacy JSONB columns must not be rewritten by a partial editor save. JSONB round-trip preservation comparisons use entity.jsonb-preservation-equality/1 (section 6.1.2), because PostgreSQL JSONB does not preserve original text bytes or object-key order. Immutable artifact/source files retain exact byte/hash identity. Interactive changes follow the command-batch protocol in section 2.3.1; omission leaves members unchanged and removeMember declares deletion. Full import/restore uses its separate replaceGraph command and dependency validation. Unknown client IDs never establish ownership; the server resolves and verifies scoped identities before updates.
+
+**Host foundation H (dependency subset, not another numbered slice):** before any candidate editor from slice 0 is exposed, deliver the required slice 1–2 host label, field, surface/navigation, predicate and component contracts plus its access/publication dependencies. Slice 0 remains service/contract qualification with no independent UI exit. The milestone table in section 7.9.3 identifies the bounded host/reference set; do not interpret “candidate editors” as permission to render before H. This preserves the existing F0-first order and avoids a second migration sequence.
+
+### 7.9.1 Position conversion runbook and foundational qualification
+
+This runbook stays inside the single blueprint. Section 11.12 supplies the lock/constraint cutover mechanics; the matrix and fixture requirements here are its acceptance contract. Executable rehearsal fixtures remain implementation work, not evidence of a completed migration.
+
+All normalized DTO and target database positions are one-based. Portable arrays express order by zero-based array index; legacy formats with explicit position fields follow their registered schema. Only the boundary decoder converts to normalized positions; repository save accepts normalized positions without conversion. A database upgrade and a legacy JSON import are separate source boundaries, not two stages of one offset operation.
+
+| Boundary/family | Input convention | Transformation and qualification |
+| --- | --- | --- |
+| Existing DB entity_surface_section.position | zero-based historical contract | Forward migration maps each valid position p to p+1 once; new CHECK >=1; verify navigation/parent sibling scope |
+| Existing DB entity_surface_field_binding.position | zero-based historical contract | Same one-time migration; preserve field/section ownership and ordering |
+| Existing DB entity_surface_operation.position | zero-based historical contract | Same one-time migration; preserve action placement/sibling scope |
+| Existing DB entity_surface_component_binding.position | zero-based historical contract, table retired by target | Explicitly retire/convert through the existing-table disposition; do not migrate it into a newly active composer table or leave an unclassified position source |
+| Existing DB entity_materialization_field_mapping.position | zero-based legacy CHECK >=0 | Phase 2 excluded; preserve as-is with explicit source provenance. No migration/editor authorization; require a new scoped conversion decision before later use |
+| Existing DB key_field / relation_field / search_field positions | one-based | No offset; retain bounds 1..64 / 1..64 / 1..256 |
+| Legacy surfaceFieldBindings[].position | zero-based for the qualified source families | Decoder applies p+1 once; normalized graph save applies no offset |
+| Legacy view-field visible/sort positions | zero-based where declared by source schema | Convert present values once; absence remains absent, never becomes first |
+| Legacy keyFields[].position | one-based for the qualified source families | Preserve; reject zero rather than guessing |
+| Overlay positions and local binding positions | one-based in their respective declared target/anchor and overlay scopes | Preserve on save/export; compile merged effective positions once without persisting them back to baseline or overlay; portable array boundary alone converts indexes |
+| Portable ordered arrays | array index 0..N-1 | Decode index+1; encode position-1 after checking dense order |
+| All new normalized ordered memberships | one-based | Identity conversion; each descriptor declares owner/sibling scope, bounds and applicable uniqueness |
+
+Surface-operation sibling scope includes source tenant/graph ownership, entity_surface_id, nullable entity_surface_section_id and interaction_target. Preserve interaction_target in the deferrable target uniqueness, one-time offset, dense-order checks and reorder commands. Moving an action between interaction targets is an explicit transfer validating both final sibling collections, not one merged reorder. Tests include independent primary/toolbar/submit collections with equal positions and transfer rollback.
+
+F0 inventories every ordered column in the reviewed schema, including excluded and retired families. Record physical type/bounds, source convention/provenance, complete uniqueness/sibling coordinates and retain/convert/retire disposition; no unclassified ordered column passes CI. Excluded-family inventory does not authorize its migration.
+
+The descriptor build inventories every ordered property, including newly added memberships, against this matrix's source-family rules. Unknown families or missing base declarations block conversion; numeric zero/one values cannot determine the base. Current legacy CHECK >=0 alone does not prove rows are contiguous or valid under target sibling rules: preflight reports gaps, duplicates and out-of-range values; corrections require an explicit scoped decision, not guessed reordering. Forward migrations are recorded once and never rerun as part of save/load.
+
+Required tests cover first/last position, empty/single/multiple siblings, independent navigation groups, absent optional positions, declared bounds, invalid/duplicate/gapped input, repeated save-load-export, migration followed by normalized save, and legacy import followed by normalized save. Specifically assert 0 → 1 → 1 and 1 → 1 → 1 for their respective declared boundaries, with no double shift. Retired tables have a verified conversion/retirement disposition rather than an editor requirement.
+
+The storage-catalogue proof must generate one approved Country storage contract alongside the existing Kysely generation path, pin and verify its hash, display available columns, and demonstrate explicit rebind/diff after a type/nullability change. Missing resource, mismatched hash and unsupported constraint information must fail before field authoring accepts the facts. This proof is required implementation work; the blueprint does not assert an existing generator.
+
+The first end-to-end qualification is Country through approved DDL → typed graph → scoped save/load → validation → compiler → shared production renderer in saved-draft preview. Include one invalid-configuration case and authorized data/reference reads where qualified. Reuse the same descriptor/control contracts for a second eligible entity before claiming framework generality. No Country-name branch, bespoke preview or business handler is permitted. This is a proof of the foundation before expanding the remaining slices, not authorization to publish without independent review.
+
+F0 remains the first executable deliverable: generate dictionaries, descriptors, DTO/schema, codec mappings and DDL comparison from the single machine-readable contract before qualifying editors. These audit corrections are target inputs to that contract, not a claim generation has run. After F0 and the required save/identity/access/storage prerequisites, prioritize a complete read-only reference-entity vertical slice: owned labels, navigation, sections, bindings, views, lookup and authorized shared readers, using Country then a second eligible entity. Deliver the required subset of existing slices together; do not wait for unrelated AI/capability/extension editors, and do not defer live-data authorization or fabricate a preview from legacy blobs. Measure graph limits and validation/snapshot capacity. Preserve the Phase-1 release-set limitation; mutually mandatory first-publication cycles remain blocked pending a separately approved protocol rather than weakened relations or inferred draft releases.
+
+Combined position fixture: begin with the already-migrated one-based target database, import an artifact explicitly declared zero-based, decode each source position p to p+1 once, save normalized positions unchanged, then export/re-import through its registered codec. Assert order and stable logical membership across the entire sequence. The target database convention is not evidence that the source schema is wrong; that difference is the expected codec boundary. Block unknown/untrusted source-schema provenance, contradictory source metadata or invalid decoded bounds/dense order with a named diagnostic. Numeric values alone cannot establish a mislabeled convention, so do not guess a correction or reject valid legacy input merely because the database has migrated.
+
+Position qualification is a permanent seeded generative/differential CI suite, not only one-time rehearsal. Generate valid and invalid collections across every declared boundary, checking encode/decode normalization, logical identity/order preservation and migration→save→export→reimport. Record seeds and minimal failing cases. Independently specified expected conventions and provenance fixtures prevent a codec testing only its own mistaken assumption. No round trip can prove mislabeled historical provenance; unknown source contracts remain blocking evidence gaps.
+
+### 7.9.2 Consolidated delivery sequence
+
+This is the delivery priority for the existing section 7.9 slices and F0–F5 gates. It replaces the earlier broad A–G staging without renumbering those contracts or creating another migration plan. Priorities identify the next useful evidence and experience; independent rehearsal and capacity work may proceed in parallel. A later priority never defers a mandatory authorization, integrity, review or publication prerequisite used by an earlier delivery. All milestones below remain unqualified until their implementation evidence is recorded.
+
+| Priority | Deliverable | Exit evidence and dependency boundary |
+| --- | --- | --- |
+| 1 | F0 executable contract/generation proof and compiled-contract version discrimination | Generate reviewed dictionaries, API schemas, descriptors, codec mappings and DDL comparison from the single canonical contract. Pin permission interpretation to the compiled artifact's registered contract schema/version; qualify paired compiler/reader compatibility and rejection cases. The full persistence/rendering proof follows dependent save/host qualification |
+| 2 | Database validation prototype and effective-security conformance | Prove the section 2.3.5 transaction registry in isolated SQL before replacing existing guards. Qualify concrete entity.effective-security/1 schemas, compositions, invalidation and blocking states through the existing authorization framework. Record correctness and performance separately; live reads require their qualified security path |
+| 3 | Independent governed bootstrap and Reference Entity Authoring | Prove API/typed-CLI bootstrap with independently authenticated human review before relying on the composer host. Deliver section 7.9.3 for Country and State Region, including F1–F4, B0, F6 and F8 dependencies, selected typed migrations, basic storage/provider evidence, scoped saves and production-renderer preview. Record reviewed publication and target activation separately; F5 additionally gates production enablement |
+| 4 | Early bulk exposure, semantic review, contract-test preflight and dependency impact | Deliver explicit exposure suggestions/copy commands, semantic diffs and authorized reverse-dependency findings in publication preflight and retirement planning. Bind reports to exact graph/dependency/test/compiler evidence. This expands authoring and review ergonomics; mandatory tests, independent review, reference validation and live-access checks already gate priority 3 |
+| 5 | Constraint-enriched storage catalogue and explicitly accepted starter drafts | Extend basic F2 evidence with ordered key members, FK targets, uniqueness/null semantics and supported constraint classifications. Propose typed mappings from approved facts, retain unsupported constraints as diagnostics, and require author acceptance. Unresolved required decisions block publication; incomplete drafts remain visibly incomplete |
+| 6 | Local identity projection before new normalized extension writes | Complete F7: qualify the derived projection, local FK, synchronization/recovery, head locks, aggregate concurrency and retirement/erasure before enabling those writes. Separately prove parent-record scope, current field semantics and provider/access checks. Existing paths continue only where independently qualified; this gate does not block the first read-only reference experience |
+| 7 | Measured snapshot optimization and safe concurrent-edit reconciliation | Use representative capacity and multi-author evidence to decide whether physical deduplication or read-set-aware reconciliation is justified. Preserve exact logical snapshots and explicit conflict handling; qualify read sets, semantic conflicts and phantom dependencies before accepting stale batches. Neither optimization is a prerequisite for the first reference composer |
+| Later | Additional types, shared-label expansion, selected parity and additional resource capabilities | Complete each property's typed storage/API/compiler/consumer contract and applicable section 7.10 gates. Shared labels require their governed resource; additional resource adapters require separate scope authorization. Generalize persistence or coordination only when measured requirements justify it |
+
+F6 and F7 are numbered qualification gates, not chronological extensions of F5: F6 precedes priority 3 live reads; F7 precedes priority 6 writes and does not block read-only reference delivery. B0 specifies the existing host bootstrap dependency. Their accountable roles receive named assignments and measured limits in the implementation manifest.
+
+Baseline semantic diff, independent reviewer eligibility/routing and required per-change acknowledgements are prerequisites of the first submit/publication, including priority 3. Priority 4 improves their ergonomics and impact reporting; it does not defer the review mechanism. The compiler/validator produces a versioned exposure-coverage report keyed by graph/dependency/compiler hashes: effective field × target plane × representation, operation binding, query uses, source ownership and missing/incompatible cells. Include required surface placements and inherited constraints; masked/omitted representation is displayed as metadata, not sample raw data. This report supplies review and explicit bulk commands, not a second writable access matrix.
+
+Basic **Copy exposure from plane** and **Apply suggested exposure** belong with the first field-access editor used by priority 3, including owned/inherited coverage and target-plane validation. Priority 4 expands the review/impact experience; it does not postpone basic matrix authoring usability. Suggestions are explicit accepted command batches with per-cell provenance/diff, never implicit access defaults. Inherited restrictions remain immutable; incompatible copies report precise findings without partial silent application.
+
+**Priority 1 proof:** use valid Country and State Region configurations and deliberate failures for missing readable identity, wrong member ownership, invalid navigation and unsupported field exposure. F0 generation precedes target migration/adapter implementation; the full database mapping → saved graph → compiler → shared-renderer proof accumulates as priorities 2–3 qualify. Use the typed package source decision in section 1 and section 11.21 fail-on-drift checks. The package and generated document regions never become two editable contract sources.
+
+**Priority 2 proof:** registry fixtures cover every member-table mutation, direct authorized DML, savepoint rollback, SET CONSTRAINTS IMMEDIATE followed by more writes, multiple saves/snapshots in one transaction, nonrecursive validation-marker updates, unforgeable registry state and bounded validation for large reorders. Compare against existing guards before retiring them. Security fixtures cover pinned plain/current masked exposure, query-use intersection, incompatible mask composition blocking, removed/unmappable operations, current explicit denies, valid absent entity permission and security-generation cache invalidation. The resolver composes existing controls; its request-scoped closure is not a reusable durable grant or another policy language.
+
+**Early operational evidence:** rehearse the selected offline position migration and measure lock duration/downtime before affected order editors ship. Establish approved latency, storage, migration and complexity budgets from representative workloads. Exceeding a budget opens a reviewed design decision; it does not automatically authorize a second position convention or reverse P01/P03. Start snapshot capacity and restore measurements during foundation work; priority 7 defers optimization, not F5's production capacity and owner retention decision. Preserve existing history pending that decision. Keep the first implementation's single draft revision; investigate read-set reconciliation before introducing module locks. Snapshot deduplication does not itself resolve edit conflicts.
+
+**Onboarding and impact evidence:** a unique key or FK can suggest a key/relation, but cannot establish readable identity, navigation, exposure or authorization. Only qualified finite constraints or registered domains may suggest choices; arbitrary SQL CHECK expressions are not inferred UI enums. Dependency inspection identifies exact consuming revisions and reference paths within the viewer's scope. Cross-tenant impact uses only authorized counts/restricted findings without exposing private metadata, and incomplete visibility must not be reported as no dependencies.
+
+Country remains the reference integration; qualify other eligible entities through metadata. The first milestone authors read-only reference experiences; its governed draft editing and publication still require their full mutation controls. Preserve shared navigation/list/detail components, shared authorized readers and contextual authoring entry. Track designed, implemented, published and runtime-verified states separately. No priority completion alone establishes publication approval or deployed behavior.
+
+### 7.9.3 Minimum viable reference-authoring milestone
+
+Priority 3 in section 7.9.2 delivers the first usable vertical slice, **Reference Entity Authoring**. Country and State Region are its metadata-selected qualification targets, not runtime allowlists. Scope is owned labels, fields/keys, read-operation field access, list/detail/lookup surfaces, explicit navigation, sections/bindings, views, supported search/filters and shared authorized readers. The host, F0 descriptors, scoped saves and applicable storage/provider catalogue must qualify first. Conditional live access additionally requires entity.effective-security/1; cross-plane fixtures may qualify presentation only.
+
+The milestone implementation manifest must enumerate these table families and the exact used columns; this is a bounded scope inventory, not a claim that all their columns need editors:
+
+| Reference milestone dependency | Required tables/contracts |
+| --- | --- |
+| Identity and release governance | entity, entity_change_set, entity_release, entity_target; existing review/import/recovery/provenance tables used by the governed publication path |
+| Labels, fields and storage | entity_label, entity_label_translation, entity_field_identity, entity_field, entity_runtime_profile; entity_field_choice when selected enum fields require it; basic catalogue and storage-authority dependencies |
+| Keys, search and relations | entity_key, entity_key_field, entity_search_profile, entity_search_field, entity_relation, entity_relation_target, entity_relation_field, entity_field_reference_binding for the selected reference bindings |
+| Shared host and reference experience | entity_surface, entity_surface_navigation_group, entity_surface_section, entity_surface_field_binding, entity_surface_view, entity_surface_view_field, entity_surface_operation, entity_predicate; ui_component_contract, ui_component_slot and entity_surface_component_field for selected host components |
+| Access and review | entity_operation, entity_operation_permission, entity_access_permission, entity_operation_scope_binding, entity_operation_field, entity_authorization_profile, entity_field_access, entity_contract_test_case; entity_policy_binding, entity_field_policy_binding, entity_policy_parameter_binding, entity_operation_rule and entity_operation_context_requirement wherever required by existing published controls |
+
+**F0 acceptance boundary:** the versioned bounded manifest identifies selected properties/columns, source hashes, consumer versions, target planes, dependencies and fixture-only versus live scope. It includes the complete dependency closure of labels, identities, catalogues and external resources actually used. Each dependency has an implemented interface and passing evidence appropriate to this gate, or the dependent capability remains unavailable; a dangling reference to an unbuilt resource cannot pass by being listed. A pinned synthetic resource qualifies only the fixture path, never live authority.
+
+Track two distinct evidence claims against pinned inputs: `slice-passed` means the manifest's generation, validation, codec/compile round trips and rejection suite pass; `inventory-complete` means every dictionary/ledger property is classified with its mapping or explicit unsupported/deferred disposition. Inventory completeness does not claim every editor is implemented. The first milestone requires `slice-passed`, not full-inventory coverage. CI regenerates selected schemas, mappings, documentation and comparison outputs from the one typed source and fails on mismatches; uncovered inventory stays visibly pending. Unsupported properties reject with a stable named diagnostic (registered by F0), covered by a rejection fixture, rather than a generic JSON/text control.
+
+The selected manifest must name conditional dependencies or record why they are unused; absence is never permission to drop existing controls. Defer capability/AI authoring, overlays, custom-value storage, handler/webhook authoring additions, shared labels, optional badges and navigation-placement editors unless the scoped host/reference definition genuinely requires them. Registered existing host handlers remain necessary; deferred handler DDL does not defer host save/publication authorization. F0 produces the exact per-column migration manifest from this selection before implementation; the historical 29-table/~190-column inventory is not an MVP prerequisite list.
+
+Exit evidence: both definitions load/save/export/compile through the same contracts; missing readable identity/navigation and forbidden field exposure reject; revision conflicts preserve edits; default swaps and position round trips retain order; reviewer scopes isolate tenants/modules; production renderer previews the exact saved revision; a reviewed publication and separately recorded target activation/runtime read prove delivery. No placeholder controls, silent legacy-blob fallback or entity-name branch satisfies the milestone. Full unrelated AI/integration/extension editors need not land first. Mandatory first-publication cycles remain a reported blocker rather than an excuse to omit required relations.
+
+A thinner first demonstration is **Reference inspection and saved-fixture preview**: owned labels, existing-column reference fields, explicit identity/navigation and read-only list/detail rendering, using the same typed authoring repository and shared host. No business mutation, extensions, AI or capability authoring is included. It is an intermediate non-production demonstration, not completion of Reference Entity Authoring or permission to skip H, F0, field-access or storage-authority dependencies. Partial scope does not permit legacy JSON writes or inferred navigation.
+
+**Enumerated reference acceptance set:** the manifest binds each item below to test identifiers, input hashes, observed results and its responsible gate. Contract proof, fixture demonstration and complete reference delivery remain separate statuses.
+
+1. F0 generation passes the bounded manifest and CI drift checks; Country and State Region exercise the same metadata-selected contracts without entity-specific dispatch.
+2. Codec/validation fixtures cover stable identities, order conversion, null/absence, explicit navigation and round trips. Negative cases include missing readable identity, wrong member ownership, invalid/missing navigation and unsupported field exposure. Empty legacy `type_config` must not substitute for a required typed variant: incomplete required type evidence blocks conversion/qualification with a diagnostic, without prohibiting the explicitly permitted partial draft saves.
+3. INV-002 has paired fixtures: a valid absent entity permission requires no entity grant; a broken defined-permission/catalogue reference blocks. Authentication, tenant/record scope, explicit denies and existing protected controls still apply to the absent-permission case.
+4. Before editable product-host/B0 activation, prove the NULL-tenant write path through the actual role/grants/RLS/function/session composition, including `fn_advance_entity_change_set` and its transaction-local write guard. Include authorized authoring, independent review and rejected forged scope/direct unauthorized DML/self-approval. The token is not database authority; neither a SECURITY DEFINER implementation nor elevated-role execution is assumed without evidence. No broad NULL-tenant policy relaxation or seed-as-human-approval qualifies this gate.
+5. F3 save fixtures preserve member identity, creation attribution, protected controls, revisions and immutable snapshots across update/remove/reorder, conflict, retry and rollback. Separate prevention, historical contributor reconstruction and protected-state impact diagnosis; no captured historical MFA value authorizes restoration.
+6. Shared renderer/reader exit blockers are explicit: missing navigation produces an actionable configuration error, never a synthesized Overview or section-key inference; reference preview uses the metadata-selected shared reader, never an Address branch. The shared detail-runtime maintainer owns navigation; the shared authoring/provider maintainer owns preview. Both are required for the applicable fixture demonstration and full reference exit; named assignees/dates remain pending in the register.
+7. Host qualification resolves the authoritative provenance/initialization rule for new operations' protected state before those operations are enabled. Trace whether the current authority is a catalog, seed, policy or explicit column; record the owner decision and verified source. Do not infer false, introduce true or change MFA enforcement under foundation-scope approval.
+8. Full Reference Entity Authoring exit additionally proves reviewed publication, exact target activation and authorized runtime reads with applicable F6/F8/F9 evidence. Synthetic preview is not live-read evidence. Product-authoring authority remains required for authoring mutations even when business-record preview is fixture-only.
+
+**Position boundary for the thinner demonstration:** a strictly read-only inspector may defer the physical D01 cutover and deferrable sibling-unique migration if it performs no normalized/order writes, declares the existing source convention and uses the qualified boundary decoder. It cannot claim normalized save/order qualification. D01 inventory, conversion/rejection fixtures and a reviewed cutover disposition remain in the first implementation review. Before any affected normalized writer or order editor is enabled, complete the applicable migration and F4 qualification; importing declared zero-based JSON into migrated one-based storage remains valid through one decode.
+
+Qualification is finite evidence, not an unlimited review loop. Implementation planning assigns a named person to each accountable role below and records fixture/input hashes and actual results; assignments remain pending until made. Existing mandatory security/review gates still apply.
+
+| Gate | Accountable role (assignment pending) | Measurable exit |
+| --- | --- | --- |
+| F0 | Shared authoring contract maintainer | Deterministic generation with zero unexplained drift; complete selected-property mappings/classification; valid Country/State Region round trips and rejection vectors pass |
+| Database/save proof | Shared authoring persistence maintainer | All enumerated transaction/concurrency fixtures pass; one committed revision/snapshot per accepted batch; measured largest supported graph/reorder within an explicitly approved budget |
+| Security and host | Platform governance/authorization maintainer | All scoped save/review/publication and operation/field closure fixtures pass, including removed host permissions and foreign-tenant requests; bootstrap succeeds without composer UI |
+| Reference milestone | Shared Entity Framework maintainer | Both metadata-selected entities pass save/export/compile/render tests, reviewed publication and distinct target activation/runtime evidence; zero unsupported controls presented as functional |
+| Production/F5 | Platform Owner, with platform operations | Recorded capacity/restore evidence, explicit retention decision and approved production limits; no production enablement with pending decision |
+
+Budgets must have numeric values, workload coordinates and an approving owner before their gate is evaluated; include the largest supported graph, the approximately 1,365-binding representative fixture where applicable, maximum validation-pass count, save/validation latency and snapshot bytes, with hardware/concurrency and measurement method recorded; this document does not fabricate measurements or deadlines. Stop broadening tests after the declared acceptance set passes unless new changes or unresolved findings justify it.
+
+F5 planning includes draft-health telemetry: measured bytes per committed snapshot × observed saves per draft per day × active drafts, plus indexes, backups and retained dependency overhead, projected over the owner-selected planning horizon. Record p50/p95 snapshot sizes, growth rate, restore duration and available capacity; compare forecasts to explicitly approved alert thresholds and escalate before projected exhaustion. Platform operations supplies the forecast during foundation planning. Thresholds/horizon and accountable decision date remain pending until agreed; alerts do not authorize deletion, sampling or an undocumented save cutoff.
+
+Snapshot capacity and retention are separate gates. Before any production composer enablement, F5 must record both measured capacity under representative save frequency and the Platform Owner's explicit retention/archival/disposal decision. While pending, preserve existing snapshots and block new production rollout requiring that decision; do not assume a rolling deletion window or silently approve indefinite growth. Content-addressed deduplication is a future physical-storage optimization only if every committed logical snapshot remains exactly reconstructible and hash-verifiable, protected references remain reachable, and restore/GC/crash behavior is qualified. No sampling, history pruning or new snapshot backend is authorized by this recommendation.
+
+F5 workload evidence can be collected in an isolated pre-production harness using representative recorded/synthetic graph sizes and replayed command batches; production composer deployment is not a measurement prerequisite. Explicit author save remains a committed audit boundary. A review checkpoint may name an existing immutable saved revision/hash and reason for review, but does not suppress the snapshots of intervening committed revisions or reset contributor history. A future snapshot-per-checkpoint policy would change reconstruction/governance semantics and requires a separate decision; it is not a free capacity optimization. F3/F5 comparisons include per-save full storage, lossless physical dedup/deltas and checkpoint-only proposals with their lost-intermediate-history risk made explicit.
+
+F3 and F5 jointly produce a pre-production snapshot strategy decision: compare full snapshots, lossless compression/content addressing and bounded delta/checkpoint chains against measured save frequency, largest supported graphs, storage/index/backup cost and restore latency. Retention governs which evidence must survive; encoding governs how it is stored. They are related but not the same decision, and neither implies permission to delete history. Select the least complex strategy meeting approved budgets; retain full logical snapshots and existing physical behavior until a replacement qualifies. Optimization is no longer assumed to wait until after production, but no append-log/delta architecture is mandated without evidence.
+
+F5 evidence includes owner-approved numeric RPO/RTO, point-in-time recovery/backup scope, snapshot plus dependency/key/catalogue recovery, corruption detection and an isolated restore rehearsal proving graph hash reconstruction and retained review/publication reachability. A passing capacity forecast alone does not pass recoverability. Authoring-pipeline telemetry uses the shared authorized operator experience to report save/compile/validation latency, graph/snapshot bytes, validation-pass counts and admission limits without logging protected graph payloads.
+
+The F0 pipeline emits a versioned qualification dependency graph for F0–F9, B0, F7 prerequisites, extension-enrollment readiness, CYCLE-01 and each separately scoped capability. Nodes identify contract/interface, accountable role/person, four-state status, evidence hashes and due decision; edges distinguish design/implementation/activation prerequisites. Validate missing nodes and cyclic prerequisite graphs; product release dependency cycles are separately diagnosed and must not be confused with gate scheduling. Readiness is derived from current evidence and consumer versions, never from a manually edited green status. The graph and generated index remain proposed outputs until their generator qualifies. Any dashboard uses the shared Entity list/detail framework with scoped evidence access; it is not a bespoke planning application.
+
+Execution tracking separates three deliverables: D27 prevention of future identity/attribution/protected-state loss; historical contributor reconstruction for reviewer eligibility; and protected-control impact diagnosis for potentially affected drafts/releases. Schedule diagnosis alongside the minimal F0 proof; do not equate a risky reconstruction path with verified deployed impact. A captured requires_mfa value is not automatically a restoration baseline: verify its authenticated source, revision, actor, capture semantics and legitimate intervening changes before proposing repair. Code fixes or data repair touching MFA require specific prior owner approval, separate from approval of this document. No historical values are restored by this design decision.
+
+#### Delivery decisions and near-term execution
+
+Use one release-planning decision register with the columns below; these rows establish accountability but do not fabricate staffing or dates. The named person and calendar due date must be supplied before dependent work is scheduled. A missed decision escalates to the Platform Owner at the listed boundary; the dependent gate remains blocked, with independent work continuing. Changes to an accepted architectural decision update its canonical section and this register together.
+
+| Decision / gate | Accountable role; named person | Due boundary; calendar date | Dependency and escalation | Current outcome |
+| --- | --- | --- | --- | --- |
+| F0 source location | Shared authoring contract maintainer; named implementer unassigned | Before generator implementation; date unset | Follow section 1 source decision; escalate missing implementation ownership | Design resolved to contracts/meta-entity-authoring package; definition/generator remain unbuilt |
+| Class-profile lifecycle | Platform-defaults owner; unassigned | Before changing class-profile keys/install behavior; date unset | Preserve current immutable single-row contract pending decision | Single-installed versus retained-history semantics unresolved |
+| Product-authoring DB authority | Platform/tenant governance maintainer; unassigned | Before B0/product-host activation; date unset | Block unsupported NULL-tenant writes; never relax tenant policy as a shortcut | Complete role/grants/function/RLS path proof pending |
+| F0 minimal executable coverage | Shared authoring contract maintainer; unassigned | Before dependent target adapters/migrations; unset | Platform Owner resolves scope/funding blockage | Pending dependency-complete generation/round-trip proof |
+| F1 codec and F3 save proof | Shared codec and authoring persistence maintainers; unassigned | Before dependent codec/save enablement; dates unset | Fail round-trip, ownership, conflict or preservation evidence blocks the affected writer | Pending bounded fixtures and numeric graph/latency budgets |
+| Reference navigation exit | Shared detail-runtime maintainer; unassigned | Before shared fixture/reference rendering exit; date unset | Missing navigation must error; synthesized Overview/section-key inference cannot pass | Correction and negative fixture pending |
+| Reference preview exit | Shared authoring/provider maintainer; unassigned | Before shared fixture/reference preview exit; date unset | Metadata-selected reader required; Address-specific branch cannot qualify | Correction and generic-reader fixture pending |
+| Deferred scope and production gates | Platform Owner; unassigned | Confirm on bounded-scope approval; date unset | Reopen only on explicit scope decision; F5 remains mandatory before production | Release sets, shared labels, live extension writes and webhook authoring excluded from this milestone; no production enablement inferred |
+| F5 capacity/retention | Platform Owner with operations; unassigned | Foundation planning, before production scheduling; unset | Missing evidence/decision blocks production enablement | Pending measured forecast, retention and restore decision |
+| F6 storage authority | Storage/provider maintainer; unassigned | Before reference live reads; unset | Escalate missing ownership/lineage contract to governance owner | Pending interface and adversarial evidence |
+| F7 extension-write integrity | Extension-provider maintainer; unassigned | Before normalized extension writes; unset | Keep write capability unavailable; escalate failed integrity proof | Pending projection/lock/version/erasure evidence |
+| F8 security v1 | Existing authorization-framework maintainer; unassigned | Before live reference reads; date unset | Block unsupported controls; escalate missing conformance evidence | Pending Country/State Region adapter and negative tests |
+| F9 identity reconciliation | Shared identity/migration maintainer; unassigned | Before legacy-pin live qualification; date unset | Block unmappable pin; escalate continuity/rebind decision | Mapping resource and migration evidence pending |
+| E1 extension enrollment | Shared authoring/authorization maintainer; unassigned | Before extension editor/API scheduling; date unset | No enrollment enablement without guard/conformance evidence | Exact-baseline/owned-field/non-widening tests pending |
+| B0 bootstrap | Shared authoring maintainer with independent owner reviewer; unassigned | Before composer-host activation; unset | Escalate missing resources/approval path; no bypass | Pending pinned package and API/CLI proof |
+| CYCLE-01 acceptance or release-set work | Platform Owner; unassigned | Before scheduling an onboarding with mandatory cycles; unset | Block affected model pending decision | Phase-1 cycles remain unsupported |
+| Per-plane surface enrollment | Shared Entity Framework maintainer; unassigned | First real divergent-plane onboarding; unset | Escalate product limitation before promising delivery | Typed follow-on; current coverage gate remains |
+| New-operation protected-state provenance | Platform Owner; unassigned | Before new-operation qualification; unset | No inferred value or MFA implementation | Explicit owner decision remains required |
+
+Near-term execution is: implement F0 in the already-selected contracts/meta-entity-authoring package and prove a small complete contract; deliver shared read-only inspection and synthetic preview within its qualified host/contract boundary; complete security/catalogue/F6 prerequisites for live reads; deliver starter drafts, semantic review and dependency impact; prioritize delegated preview and plane-specific surfaces from actual onboarding evidence. This refines the existing priority sequence without requiring live-read controls for fixture-only evaluation, or dropping controls the host/draft service itself needs. F7 and future Integration authoring remain outside the first read-only slice.
+
+State the Phase-1 collaboration limit in the composer: one optimistic revision per draft, no automatic disjoint-edit merge. Revision-bound reads, preserved local edits and explicit conflict/rebase are the supported experience; separate module tabs do not promise separate locks. A successful save never silently absorbs another author's stale changes.
+
+#### First implementation review: finite correction agenda
+
+Record each disposition against the bounded manifest before implementing the affected schema change; items outside its dependency closure remain deferred rather than silently adopted.
+
+| Item | Required disposition and boundary |
+| --- | --- |
+| A1 class-profile versioning | Owner chooses single-installed defaults versus retained history before changing keys/install behavior; reconcile immutable/copied semantics. A pinned existing read-only default does not require this redesign |
+| A3 section-kind conversion | Classify each source row by verified semantics: navigation tab becomes navigation group; layout grouping becomes subsection/fieldset; ambiguity blocks. No blanket group conversion |
+| Reference-binding CHECK narrowing | Convert verified entity relations to relation tables before narrowing three-way text CHECK to lookup_domain/resolver; retire legacy columns only after preservation evidence. Keep section 3 status, section 6.4 source ledger and section 11.7 conversion mapping consistent; this is not a table drop |
+| Plane/tone vocabulary domains | Preflight existing values and preserve per-column nullability before vocabulary normalization. A domain value does not attest plane support |
+| D03 lock-version bound | Include the forward JSON-safe integer upper bound (9007199254740991) and boundary fixtures for affected normalized writes; preserve applied migration hashes |
+| D01 positions and sibling uniqueness | Apply the explicit read-only deferral boundary above; record source convention, migration scope and fixture evidence before any affected normalized writer/order editor. Do not infer readiness from a successful read |
+| R33 legacy title/label columns | Resolve NOT NULL retirement with the owned-label slice; prove canonical label mapping without dual-writing entity_surface.title or entity_operation.label |
+
+### 7.9.4 Design-lock readiness and capability status
+
+Canonicalization closure requires a traceability inventory mapping each unique section 11.14–11.26 rule to an invariant ID, exact canonical anchor, evidence/gate and retain/move/duplicate disposition. Deduplicate only after that mapping proves no normative requirement, unresolved qualification or historical evidence is lost. INV-010–014 extend coverage for this consolidation; they do not claim the entire appendix inventory is complete. Release sets, shared labels and live extension writes are not reference-slice design-lock prerequisites when their limitations are explicitly accepted.
+
+**Foundation-scope decision wording (proposed; owner approval not recorded by this documentation edit):** “Authorize the bounded foundation build and freeze the section 7.9.3 reference-slice scope. This approves scope, sequencing and acceptance criteria only. It does not attest F0/F1/F4/B0/F6/F8 or other gate passage, lock the whole blueprint, approve a release/publication, or enable production authoring.” Record the actual deciding owner, date and pinned scope revision when approved. This planning decision is not an independent human release-review receipt. Named assignments, calendar dates and approved numeric budgets remain execution commitments, not fabricated documentation values.
+
+Design lock means an explicitly approved scope and internally consistent canonical contracts, not implemented tooling, passing tests or production approval. This blueprint is **not yet declared locked**. Freeze additional audit appendices after the current register: future corrections amend their canonical section and record a short disposition here. Do not delete sections 11.14–11.26 until every unique requirement/evidence item has a traced destination and preserved anchor. The editability warning now also resides in the predicate contract; no claim is made that all remaining appendix-only rules have been migrated.
+
+| Capability / boundary | Designed | Implemented | Published | Runtime verified |
+| --- | --- | --- | --- | --- |
+| Normalized authoring/F0 and compiler transition | Specified; executable contract still pending | Not established by this document | Not established | Not established |
+| Shared composer host/B0 and reference slice | Scoped and gated | Not established | Not established | Not established |
+| D27 save/identity/protected-state preservation | Required correction | Current conflicting code evidenced; fix pending | Not established | Not established |
+| Effective security, catalogues and F6 | Contract and evidence requirements specified | Pending conformance evidence | Not established | Not established |
+| Extension placement/F7 integrity | Bounded design; search/view overlays excluded | Pending | Not established | Not established |
+| Tenant search/view overlays and per-plane surfaces | Follow-on contracts incomplete | Not claimed | Not claimed | Not claimed |
+| Release sets and new-operation protected provenance | Explicit unresolved decisions | Not claimed | Not claimed | Not claimed |
+
+These statuses concern the target redesign, not a claim that the repository has no existing services. Replace a status only with linked revision/contract/release/target evidence. Assigning an accountable role is not assigning a named person or a calendar date.
+
+Before lock: verify all F0 source references agree with the package decision in section 1; expand the extension family matrix into the exact F0 table inventory; record acceptance of Phase-1 surface/search/view/concurrency limitations; reconcile unique appendix rules into the canonical index; and confirm the scope fence below. Delivery dates and named owners must be supplied before scheduling dependent work. F5 measurements/retention, F6/F7/F8 qualification and B0 implementation remain execution gates; documentation lock cannot mark them passed. New-operation protected-state provenance remains an explicit owner decision, with MFA code approval separate.
+
+**Parked — NOT AUTHORIZED for current implementation:** Integration-owned webhook/subscription authoring in section 6.5; workflow/case execution and print/workflow resource editors in section 11.6.1; environment-promotion automation and scheduled activation in section 11.23. These sections retain design/reference evidence in this same file, but “accepted direction” does not authorize implementing them. Entity handler contracts, existing provider integration, immutable release/dependency checks and shared authorization remain in scope where necessary for Entity onboarding. No parked subsystem may be cited to expand that scope without explicit owner instruction.
+
+| Latest audit point | Lock disposition |
+| --- | --- |
+| Foundation pre-lock audit | Section 7.9 separates bounded F0 evidence from inventory completeness, enumerates negative/DB-authority/reference exit tests and seven first-review dispositions, and records proposed scope-only approval wording. No gate passage, owner assignment, MFA change or whole-blueprint lock is implied |
+| L1 protected state | Added explicit D27 blocker and source evidence; MFA-related implementation awaits specific owner approval |
+| L2 missing F0 | Still unbuilt; do not treat prose or generated ledger markers as an executable contract. Source-location decision remains in the delivery register |
+| L3 extension search/views | Corrected section 5 promise; these require their own typed overlays and remain unavailable in Phase 1 |
+| L4 baseline input tightening | Optional-or-qualified-default omission compatibility is required; PATCH omission stays unchanged |
+| L5 Principal cycle | Verify actual dependency graph; blocked mandatory cycles are explicit acceptance limitations, not assumed or worked around by weakened relations |
+| L6 pinned consumer breakage | Ordinary successor publication now gates unmappable active dependencies; activation rechecks freshness. Security revocation remains a separate restrict-only path |
+| L7 AI principal | Added human-scoped context and index/query/result disclosure rules, including derived caches and background-job principals |
+| L8 open review | Individual acknowledgements for newly open effectful operations despite grouped presentation |
+| L9 capability parent gate | Required explicit admission semantics through existing authorization; no inferred permission or UI-only gate |
+| L10 incident restriction | Design candidate below; no undocumented emergency bypass |
+| L11 scope | Explicit parked boundary above supersedes any implication of implementation authority from roadmap wording |
+| L12 canonical rules | Predicate warning promoted; complete appendix traceability remains a lock checklist item rather than an unverified bulk deletion |
+| L13 namespace | Database reservation guard/proof required beyond tenant/code uniqueness |
+| Executable-foundation follow-up | F0 location resolved to typed package; F8 bounds security v1; predicate-query contract and property readiness added. None claims implemented tooling |
+| Storage and recovery follow-up | EXT-STORAGE-01 compares extension backends before F7; F3/F5 jointly select measured storage strategy with explicit RPO/RTO and restore evidence |
+| Migration follow-up | Priority-1 provenance inventory, permanent position CI and reader-first compatibility rollout now explicit; legacy inventory counts remain unverified |
+| Consolidated publication/compiler/migration review | Adopted INV-010–014: sealed target projection, scoped receipt aggregation, versioned JSONB comparison, generated applicability and catalogue mapping, complete positions and constraint dispositions. No new release ledger |
+| Review-correction execution boundary | D27 prevention, contributor reconstruction and protected-state impact diagnosis remain separate; MFA implementation/repair needs specific approval. Reference cycles require actual dependency evidence; narrow extension demonstrations do not bypass E1/F7 |
+| Latest provenance/readiness audit | Added F9 identity mapping, E1 enrollment guard, import convention receipts, coverage/readiness projections and continuity planning. Per-section banners distinguish requirements from implementation |
+| Snapshot/review sequencing clarification | Pre-production workloads supply F5 evidence; checkpoints preserve per-save history. Basic exposure bulk tools and baseline semantic review already precede the first applicable publication; priority 4 expands them |
+| Product constraints clarification | No inert extension list UI, no self-authorized first-release live preview, and no claim that read-only discovery has zero governance exposure or covers an unverified production entity count |
+| Scope and history follow-up | Phase-1 boundary promoted to section 1; preserve unique appendix evidence until canonical traceability is complete. No broad archive/deletion or new release-set protocol authorized |
+
+The consolidated DDL review adopts the three-bucket ledger in section 11.12 and the product-authoring database authority gate in section 2.3. The class-profile lifecycle decision remains open; contiguity is now explicitly a graph-validator invariant, and reference-binding DDL annotations include their legacy CHECK/column delta. These are documentation corrections, not applied migrations.
+
+Promotion/compliance findings remain outside this Entity DDL approval and inside the parked-scope fence. Each reported claim needs exact file/revision references, inspected composition/configuration path, confidence and runtime evidence separately. An import search can suggest an unwired service but is not a complete route/composition proof; configured trust mapping is not verified deployed behavior; absence of a compliance gate in inspected files is not proof none exists elsewhere. Evidence reported by another reviewer stays attributed until inspected. No new promotion appendix, pipeline or compliance implementation is authorized by this ledger correction.
+
+A proposed **restrict-only incident control** would let an already authorized operations authority suspend an Entity operation/surface for an exact tenant/plane scope through existing control/revocation infrastructure. It needs typed scope, reason, actor, audit, immediate cache invalidation, API/background enforcement and explicit restoration governance; suspension never grants access, changes MFA or silently expires into access. It is not currently claimed implemented. A pre-reviewed rollback candidate may be recorded as evidence, but changing active heads/security/dependencies requires refreshed checks and the established review contract; it is not an unconditional future activation approval.
+
+Product priorities remain metadata-as-code proposals through the existing portable codec/typed command API, starter drafts and server-enforced cross-field validation, followed by measured divergent-plane/search/view needs. Git files are proposal inputs, never a second runtime authoring source. Candidate-baseline rebase may be investigated against an exact sealed but inactive product release; it must preserve current-active semantics, hash/review isolation and later activation rechecks, with no silent repin. Server-side recovery buffers are a separate bounded, scoped ephemeral contract requiring authorization, expiry, conflict handling and exclusion from publication; they cannot replace immutable committed saves. None of these suggestions creates a hidden JSON authoring store.
+
+Position smallint/integer differences are deliberate physical contract facts where bounds differ. F0 verifies each domain/bound and codec overflow behavior; do not normalize types cosmetically or rewrite applied migrations. Generate new invariant IDs only alongside canonical definitions and independent tests; extend INV-001–009 through a reviewed inventory rather than numbering duplicate audit paragraphs.
+
+### 7.10 Reference-composer parity and improvement register
+
+The supplied reference screenshots establish authoring use cases, not evidence of Athyper implementation. This register records accepted improvement direction. Track design, implementation, publication and runtime verification separately with exact evidence/release coordinates; no row below attests completion. Existing dictionary-backed features retain their current contracts. Gap rows require a complete dictionary/API/compiler/runtime design amendment before enabling controls; they do not silently extend section 7.6 applicability, predicate purposes or existing operation semantics. Every new property needs one canonical SQL owner, typed API, save/load mapping, validation, portable codec, compiler mapping, shared control and qualified consumer. No fallback property bag is permitted.
+
+| Area | Coverage and required improvement |
+| --- | --- |
+| Visual composition | Deliver the existing layout tree, canvas selection, contextual inspector, sections/columns, collapsibility and accessible ordering through registered components |
+| Fields, keys and defaults | Complete existing typed labels/types, required input, uniqueness keys, value origin, defaults and operation enrollment; no duplicate placement authority |
+| Form navigation | Gap: explicit form-tab parity needs a contract amendment; current navigation groups remain detail-only and forms have no groups until that amendment qualifies |
+| Conditional requiredness | Gap: operation-owned conditional validation and matching UI indicators; current visibility/editability predicates do not authorize a new requiredness purpose |
+| Quick entry | Gap: select a compact form and existing create operation; validate all required inputs/defaults and authorization |
+| Copy behavior | Gap: define copied/excluded fields, identity regeneration, defaults and child handling through qualified operations |
+| Reference fetching | Gap: distinguish live displayed references from copied stored values; define mappings, timing, overwrite/only-if-empty behavior, access and server enforcement |
+| Child tables | Related-list/repeated-value coverage does not prove editable owned rows; qualify add/edit/delete, locked parent scope, concurrency and transaction semantics separately |
+| Runtime record preview | Gap: authorized record popup/preview selection is distinct from Studio saved-draft preview |
+| Search, filters, columns and views | Complete coherent authoring for enrollment, supported operators, sorting, pagination, defaults, readable identity and saved-view validation |
+| Actions and related links | Qualify placement, grouping, selection, confirmation and target access using existing operations/relations |
+| Formatting and images | Complete declared help/placeholder/width/format controls; register any missing emphasis/image options rather than accept free-form styling |
+| State presentation | Choices/badge tones describe presentation; they do not authorize lifecycle transitions |
+| Attachments | Distinguish per-batch and total per-record limits, image selection, protection, association removal and file deletion; do not equate private authorized downloads with public-default attachments |
+| Activity and view tracking | Complete declared change/history capabilities; view/access event capture is a separate purpose with explicit retention and access contracts |
+| Translation and lookup labels | Qualify labels, readable title/reference templates and locale behavior across selectors, forms and lists; never substitute visible UUIDs |
+
+Section 11.6.1 records broader parity outside the current delivery phase. Scripting screenshots identify calculation, validation and presentation needs; they do not authorize uploaded executable code, permission-bypass controls or unrestricted HTML. Existing registered contracts remain the permitted integration boundary.
+
 ## 8. Kysely keys, IDs and typed data access
+
+> Status: target design. Implementation, publication and runtime verification require the applicable gate evidence in section 7.9.4; illustrative DDL and candidate mechanisms are not applied or qualified implementations.
 
 Kysely is the typed query builder; UUID generation belongs to the declared database default/key contract. Metadata row PKs use `DEFAULT shared.uuidv7()`. The repository omits PKs on new inserts and receives them through `returning`. It does not build IDs from entity names or infer business numbering.
 
@@ -2476,9 +3673,44 @@ Tenant extensions have an explicit baseline source release/hash and permitted ex
 
 ## 9. Entity and field specimens
 
+### Historical Country illustration — non-importable
+
+This abbreviated semantic illustration predates the complete envelope in section 6.1.1. It is not a valid standalone portable import or a schema fixture; qualification must generate a full envelope from the typed descriptor.
+
+```json
+{
+  "schema": "athyper.entity-authoring-model/1",
+  "entity": {"code": "country", "class": "reference", "ownership": "system"},
+  "targets": [{"plane":"studio","requirement":"required"},{"plane":"neon","requirement":"required"},{"plane":"mesh","requirement":"required"}],
+  "localization": {"defaultLocale": "en", "requiredLocales": ["en", "ms", "ar"]},
+  "fields": [
+    {"key": "code", "type": "string", "required": true, "storage": {"kind": "column", "path": "code"}},
+    {"key": "name", "type": "string", "required": true, "storage": {"kind": "column", "path": "name"}}
+  ],
+  "surfaces": [{
+    "key": "detail", "kind": "detail", "titleField": "name", "codeField": "code",
+    "showGroupBand": true,
+    "navigation": {"groups": [{"key": "overview", "label": "navigation.overview", "sectionDisplay": "continuous", "position": 1}]},
+    "sections": [{"key": "overview", "group": "overview", "label": "entity.country.sections.overview", "position": 1}],
+    "fieldBindings": [
+      {"key": "code", "section": "overview", "field": "code", "position": 1},
+      {"key": "name", "section": "overview", "field": "name", "position": 2}
+    ]
+  }]
+}
+```
+
+This is a section fragment, not a complete import package: a complete package also supplies the referenced labels, storage/provider contract, access and the full field/surface definitions. The current portable importer rejects this historical shape; it must be converted into the closed section 6.1.1 envelope before validation/save.
+
+A database import allocates field and section UUIDs, resolves those logical references, and inserts row memberships. A database export joins label/profile references and emits the same logical values. Compiler output emits `recordPresentation.sections`, tab `sectionKeys`, localizedLabels and validated component fields from these rows.
+
+
+
 These samples inventory the selected repository definition (or core-only specimen where no definition exists). They illustrate business values and logical fields; source required/type spellings are input evidence, not overrides of the reconciled field semantics. DDL and selected-source conflicts block conversion. The codec resolves required input separately from physical nullability/defaults and never makes a technical identity editable. Technical identity/audit fields remain internal or explicitly read-only; a sample label does not make them visible list columns. Values are illustrative, not fixtures to load or asserted production values.
 
-<!-- generated:begin entity-specimens; inputs=selected specimen sources listed below; do not hand-edit -->
+<!-- generated:begin entity-specimens; inputs=selected specimen sources listed below; regeneration_status=pending; dictionary_revision=2026-10-06-audit-reconciliation; generator_revision=unverified; do not hand-edit -->
+
+**Regeneration status: pending.** Source hashes identify the specimens; they do not certify agreement with the latest target dictionary. Regenerate and compare before qualification.
 
 ### `country` — `country`
 
@@ -2999,7 +4231,7 @@ A field-level composer control is complete only when its column/row owner, SQL t
 
 The supported model uses explicit metadata for all surface hierarchy, shared components, capabilities, fields and access. Published profile/tool dependencies are immutable version/hash selections. Independent review binds the exact semantic graph and compiled output. This document defines architecture and contracts; it does not attest a deployed implementation or authorize a release approval.
 
-## 11. Reconciled audit decisions and compatibility contract — 5 October 2026
+## 11. Reconciled audit decisions and compatibility contract — 6 October 2026
 
 **Status: reconciliation incorporated into the design; implementation and release qualification are separate.** This section records how the four audits resolve into sections 1–10. It is a decision/compatibility appendix, not an alternative model. The field dictionaries are the target contract. Source findings describe inspected evidence and do not authorize deletion or business execution.
 
@@ -3007,7 +4239,7 @@ The supported model uses explicit metadata for all surface hierarchy, shared com
 
 The repository checks establish:
 
-- `server/db/ddl/planes/studio/metadata/03_tables.sql` declares **36** tables. The metadata DDL directory declares **42 distinct tables**, including baseline, recovery, ancestry and human-review records. These are file-inventory scopes, not live database counts.
+- `server/db/ddl/planes/studio/metadata/03_tables.sql` declares **36** tables. The metadata DDL directory declares **42 distinct `metadata.*` tables**, including baseline, recovery, ancestry and human-review records, plus four `publication.*` link/payload tables (baseline release, authorization successor, runtime restoration) that are publication evidence rather than authoring members. These are file-inventory scopes, not live database counts.
 - The sources contain **15 product definitions: nine table-entity products and six shared-reference products**, plus **22 core.json files**. Only Country and Principal definitions declare navigation. Four definitions select UUID `id` as list identity: Address, Person Address Use, Principal Profile and Principal UI Profile.
 - `packages/platform/entity/runtime/form-detail/src/detail-workspace.tsx` constructs an Overview group when navigation is absent. That is incompatible with the standing explicit-navigation requirement.
 - Address selects `platform.address.fields.v1` in its definition and `platform.postal-address.v1` in its section artifact. This is an unresolved contract conflict, not evidence that the keys are interchangeable.
@@ -3186,6 +4418,26 @@ This is a design disposition, not an instruction to delete tables or data. No li
 | `entity_learning_ancestry` | Keep provenance | Immutable approved learning/source ancestry; no copied AI knowledge store. |
 | `entity_product_review_receipt` | Keep independent review | Preserve exact human authorship/review attestation; service receipts do not replace it. |
 
+### 11.6.1 Separately scoped resource editors and capability parity
+
+Record these as future integration requirements, not current-phase implementation approval. Preserve any existing capability and its records; this table does not claim these domains are absent from the platform. New workflow/case execution, business handlers and MFA changes remain excluded.
+
+| Future authoring/capability area | Intended boundary |
+| --- | --- |
+| Print designer | Specialized Studio editor, typed layout structure and approved Entity data bindings; production-renderer preview; qualify print visibility/widths, page layout and default-template selection |
+| Workflow designer | Independently versioned definitions and isolated simulation; approved Entity operation/lifecycle bindings; execution and operational tasks remain domain/plane-owned |
+| Numbering | Governed policy revisions and Entity field/operation bindings, including naming formats where supported; mutable counters remain in the execution plane |
+| Notifications/email | Governed templates/event bindings; sending remains in the owning service; email-created records additionally require qualified ingestion, parsing and duplicate handling |
+| Handler/event/webhook integration | Detailed design in section 6.5; existing handler selection retained, Integration-owned subscription/resource editors deferred until their full typed authoring/publication/delivery slice qualifies; section 11.20 |
+| Business-record import | Mapping, dry-run validation, row diagnostics, authorization and resumability; metadata JSON import is not this feature |
+| Calendar/Gantt | Explicit date/range/dependency mappings and qualified query providers/renderers |
+| Recurrence/background work | Registered scheduling/job contracts with retries, idempotency, status and cancellation; an execution-mode setting alone does not qualify the capability |
+| Script use cases | Declarative rules and registered versioned computations/validators/handlers; new business implementations require separate scope and domain ownership |
+
+All new editors use shared governance contracts and existing framework hosting, not Entity-specific apps or plane-local duplicate designers. Shared definitions retain their own resource ownership even with one initial consumer.
+
+Conversion-ledger rows are path coverage evidence, not risk clearance. regeneration_status=pending or unverified conflict analysis prevents any C/E count from proving conversion readiness. The known Address definition/artifact renderer disagreement remains a blocking semantic conflict even though individual historical rows carry C and E dispositions. Regeneration must correlate paths across each source package, emit blocking findings for inconsistent renderer/owner/schema selections, and retain source hashes and both sides of the conflict. Do not hand-edit generated rows to fabricate a successful run or infer that zero B rows means zero blockers.
+
 ### 11.7 Bounded conversion contract and property mapping
 
 This appendix specifies compatibility behavior without making old JSON another writable source. Conversion runs through the shared authoring service as a draft operation. It does not activate a release, execute a workflow/case, grant permissions or change MFA. Publication still requires the exact governed human authorship and independent review.
@@ -3236,7 +4488,7 @@ The adapter records the chosen source identity/hash and every dependency before 
 | collectionConfiguration | embedded surface, views, enrolled fields and qualified collection provider | One scoped collection model; quick-field/view membership remains ordered and authorized. Unsupported paths block. |
 | historyReadModel | shared Entity read-model/provider enrollment | History follows Entity onboarding. No history explorer, separate route or alternate API. |
 
-referenceCapability maps to runtime_profile.reference_capability_key/version and pinned dependencies; dataOperations export selections map to operation.export_formats/export_max_records. collectionConfiguration and historyReadModel accept only registered Entity surface/provider schema versions. Audit-only payload shapes without a supplied qualified schema are BLOCK_UNQUALIFIED_SOURCE_SHAPE. They are not routed into a catch-all column or enabled in the composer.
+referenceCapability maps to runtime_profile.reference_capability_key/version and pinned dependencies; dataOperations export selections map to operation.export_formats/export_max_records and must qualify the effective read/exposure closure in section 2.4.2; a legacy shape that cannot preserve masking or read authority blocks conversion. collectionConfiguration and historyReadModel accept only registered Entity surface/provider schema versions. Audit-only payload shapes without a supplied qualified schema are BLOCK_UNQUALIFIED_SOURCE_SHAPE. They are not routed into a catch-all column or enabled in the composer.
 
 #### Other JSON/spec properties
 
@@ -3251,7 +4503,7 @@ referenceCapability maps to runtime_profile.reference_capability_key/version and
 | computation_spec / validation_spec | Installed computation/validation contract selections with complete finite typed parameters when required; no arbitrary config or executable expressions. |
 | display_config.defaultVisible | Default view visible membership/order, after no-UUID validation. |
 | display_config.statusTones / semanticRole / width / alignment / format | Canonical tones and field semantic role; presentation geometry/format selection only on binding. |
-| visibility_rule / editability_rule / surface_operation.visibility_rule | Qualified condition grammar with typed owner and purpose. surface_operation_id is an explicit root predicate owner; section visibility uses surface_section_id. Predicate ownership is constrained by purpose. |
+| visibility_rule / editability_rule / surface_operation.visibility_rule | Qualified condition grammar with typed owner and purpose. surface_operation_id is an explicit root predicate owner; section visibility uses surface_section_id; navigation-group visibility uses navigation_group_id. Predicate ownership is constrained by purpose. |
 | section.layout_config | Consume registered typed section properties only; unknown or ambiguous properties block. |
 | capability declaration/binding/profile/profile_definition/overrides | One pinned effective-profile authority, finite allowed overrides and exact action/layout selections. |
 | test.input_context | Pinned schema-bound fixture value; retain structured payload rather than flattening test data into composer configuration. |
@@ -3271,6 +4523,20 @@ The source-path ledger in section 6.4 enumerates the repository input families a
 
 A failed complete-source import is retained only as quarantined recovery evidence and findings. Interactive Studio draft saving follows section 2.3: missing P values are saved with incomplete findings, while invalid supplied values or broken ownership always reject. These are separate request modes; neither incomplete draft nor failed import can publish.
 
+Priority-1 read-only provenance inventory precedes migration of affected legacy drafts and can run independently of F0 implementation. Repository evidence: snapshot.entity_draft_save has change_set_id, lock_version, tenant_id, graph, graph_hash, captured_at, captured_by and capture_kind (saved/previous), as declared in snapshot/03_tables.sql. captureDraftSave in kysely-authoring-repository.ts receives an actor and inserts both kinds with that captured_by; ON CONFLICT keeps the existing snapshot while verifying graph hash. A previous capture may identify the actor capturing old content, not the human who originally authored it. Therefore captured_by alone is not a complete contributor history.
+
+The audit must enumerate actual deployed revisions, missing intervals, saved versus previous capture semantics, verified request/proposal actors and retained import/fork lineage. Check every claimed contributor against immutable evidence and report recoverable/unrecoverable counts per authorized scope. No live database completeness audit was performed by this documentation edit, and the audit's approximate change-set count is not adopted as verified inventory. New clean-provenance drafts may proceed independently; unrecoverable legacy drafts do not block every new Entity or gain an approval bypass.
+
+Continuity plan: inventory each existing Entity's active signed release, supported reader/schema, complete contributor/review lineage and candidate successor independently. An existing verified active release may continue under current authorization/revocation and compatibility rules while a blocked draft is investigated; migration does not automatically retire all published entities. Verified release/import/proposal lineage may establish a reviewable successor without relying on overwritten member created_by, but the conservative contributor set and independent reviewer test still apply. New clean-provenance onboarding is independently schedulable.
+
+If evidence is genuinely unrecoverable, that content remains blocked from new review/publication. The owner chooses continued supported operation with a recovery deadline, governed retirement, or an explicitly designed recovery/re-authoring protocol; no blanket waiver is defined here. Copying unknown-provenance content into a fresh draft or relabeling it re-authored does not establish independence. Report per-Entity continuity outcome, affected operations, named decision owner and due date before migration cutover; do not assert the whole corpus is unreviewable from the save implementation alone. Production counts and recovery feasibility require the actual authorized inventory, not audit estimates.
+
+Legacy authorship reconstruction is a first-class D27 conversion deliverable. Inventory immutable save/proposal/audit/import records per draft, retain their original identities/hashes and reconstruct a conservative contributor set from verified actors across all revisions. Member created_by rewritten by delete/reinsert is insufficient by itself, but does not prove the immutable save trail is also lost. Keep source-predecessor reconstruction and human-contributor reconstruction as separate findings; neither proves the other.
+
+Classify each migrated draft as attribution_verified or attribution_unrecoverable with evidence references and missing intervals; do not infer a clean history from the most recent saver. Verified contributors remain ineligible to review even after their edits were reverted. Unrecoverable drafts remain inspectable/exportable within normal access but blocked from review/publication. No owner re-attestation waiver or fork may launder unknown prior contributions. A future recovery protocol needs explicit governance design and proof of independence before it can unblock such content. Migration acceptance includes intact save history despite rewritten member attribution, incomplete audit intervals, conflicting actor evidence and rollback of failed reconstruction. Retain original snapshots; a generated backfill report is evidence, not rewritten historical authorship.
+
+Legacy navigation conversion is semantic. Where verified source layout semantics establish tabs/navigation, create explicit navigation-group metadata, preserve labels/order/section behavior and rebind section.navigation_group_id. A legacy group that denotes only layout may map to a subsection/fieldset under the registered source adapter; it does not automatically create a tab. Ambiguous or unsupported grouping blocks conversion with a path diagnostic. Fixtures distinguish navigational tab, layout group, nested grouping and conflicting correlated layout/section declarations; no blanket tab/group→subsection or group→navigation-group rewrite qualifies.
+
 ### 11.8 Concrete round-trip examples
 
 These rows illustrate the defined mappings; aliases denote owned UUID references and are not database string IDs.
@@ -3284,6 +4550,26 @@ These rows illustrate the defined mappings; aliases denote owned UUID references
 | Notification patch is_enabled omitted versus is_enabled=NULL versus false | No patch member versus explicit typed null versus boolean false | Three distinct requests/results; omission does not clear a stored value |
 | Tenant adds preferred_contact_time to a product section | Tenant-owned field identity/definition and overlay binding referencing pinned baseline surface/section keys | Effective compiled graph records baseline and tenant source identities/hashes; no product-row mutation |
 
+#### Worked overlay composition subgraph
+
+This is a complete placement/merge example, not an independently publishable full entity fixture. The baseline entity, labels, field definitions, component contracts, permissions and providers are already qualified dependencies; aliases identify exact immutable releases/owned rows, not invented hashes. The example adds read-only detail presentation only and grants no write operation.
+
+| Record | Explicit coordinates and values |
+| --- | --- |
+| Product baseline | Entity principal_profile, sealed release @B with verified hash H_B; detail surface; group overview (section_display=continuous, show_group_band=true) |
+| Baseline section | key=profile, content_kind=fields, section_kind=section, column_count=1, group=overview, position=1, extension_point_key=extra_profile_fields; no child sections |
+| Baseline bindings | display_name at position=1 and locale_name at position=2, binding_kind=field; both readable business fields with qualified display components |
+| Tenant draft | @T, source_kind=tenant_extension, tenant=@tenantA, entity=principal_profile, base_release_id=@B; baseline read operation explicitly permits owned extension fields |
+| Owned field/access | Preferred contact note: stable identity @note, scalar string, storage_kind=extension, value_origin=stored, nullable=true, required=false, write_mode=read_only; owned label and qualified read exposure through @B's permitted operation; no operation_field write enrollment |
+| Overlay @O1 | tenant/draft=@tenantA/@T, baseline_release_id=@B, surface_key=detail, section_key=profile, extension_point_key=extra_profile_fields, anchor_binding_key=display_name, insertion_mode=after, position=1 |
+| Owned binding @N | overlay_id=@O1; entity_surface_id=NULL; entity_surface_section_id=NULL; entity_field_id=@note; binding_key=preferred_contact_note; binding_kind=field; position=1; column_span=1; meaningful_for_form=false; exact qualified string component_display_id; other optional component/filter/reference/label-override settings absent |
+
+The compiler resolves @B by release identity/hash, verifies tenant/field exposure and finds the single declared anchor in profile. It emits effective order **display_name → preferred_contact_note → locale_name**, with effective positions 1/2/3 in the compiled projection. Persisted baseline positions remain 1/2; the overlay's local positions remain 1; neither source is rewritten to the merged order. The compiled dependency set retains both @B/H_B and the reviewed tenant successor identity/hash.
+
+For several overlays at the same target/anchor/insertion side, explicit overlay.position orders them and each overlay's binding.position orders its own members; duplicate positions or conflicting logical binding keys reject. before and after are distinct sides; end has no anchor and follows baseline members. Anchors must be baseline bindings in the declared target, not another tenant overlay's output. Missing/ambiguous/cross-section anchors, wrong tenant/base hash, removed extension points or unauthorized field exposure block compilation. This defines stable ordering without relying on insert time, row UUIDs or extension discovery order. A view does not automatically acquire this field; form/write enrollment remains separate.
+
+Expected negative fixtures: duplicate @O1 position for the same coordinate; anchor absent from @B; tenantB attempting @T; base rebound without renewed compatibility review; field read exposure not permitted by the baseline. Each rejects without mutating @B or activating an incomplete tenant successor.
+
 ### 11.9 Shared Studio composer contract
 
 Use the existing shared change-set record experience with explicitly authored navigation and registered framework editor components. A layout tree, field inspector or view designer is a **reusable authoring capability** hosted there; it is not a custom entity app, explorer, route or provider stack.
@@ -3294,7 +4580,41 @@ The Authoring Schema Descriptor is versioned and explicitly records control orde
 
 Preview compiles a validated draft descriptor using the same compiler and qualified renderer as publication. Draft preview is visibly scoped, read-only and cannot masquerade as an activated release. Authorized reference readers remain authorized in preview; placeholder fixture data cannot prove live runtime coverage. Invalid configuration is shown as a configuration error, not suppressed through a fallback.
 
+#### Saved-draft preview integration
+
+The proposed shared preview reader accepts change_set_id and expected lock_version; the server verifies draft authorship/read access, tenant scope and the pinned descriptor/dependency hashes. It loads a consistent saved graph through the existing authoring repository, runs the publication validator/compiler without activation, and returns the same qualified runtime descriptor type consumed by the production Entity renderer (including EntityDetailDescriptorV1 where supported). This is an adapter in the shared Studio/Entity integration, not a new preview renderer, entity-specific route or data provider.
+
+An outer preview envelope identifies draft, revision, graph/compiler/dependency hashes, expiry and mode=draft_preview. It is separate from the runtime descriptor and cannot be accepted as a published release or generate approval evidence. A server-issued preview handle binds those coordinates and caller/tenant; clients cannot post a fabricated descriptor to gain reference/data access. Cache keys include the preview identity and principal scope, never only entity or published release identity. Stale revision/hash returns a conflict and requests a fresh saved preview.
+
+For Studio-side live preview as well as delegated preview, evaluate the published read operation and every field-read closure against the authenticated previewing human’s authorization context, including current grants/denies and record scope. A service may transport the request but its broader privileges cannot supply missing human access; no authoring grant implies record-read authority. Qualify the negative case of an authorized draft author without record-read rights: only marked fixtures or blocked live data, never a service-authorized record. Live records, references and embedded lists use the existing authorized Entity readers and locked relation scope, with the active-published-access/draft-presentation intersection in section 2.4.2 enforced before fetching or returning values. Preview access does not grant an unpublished business operation: if no valid published read authority exists, use explicitly marked synthetic fixtures or report unavailable data. Mutations, setup actions and submit controls remain disabled; preview proves presentation only. Unsupported compiled descriptor variants block preview rather than producing a bespoke adapter that invents missing behavior. Required work qualifies this server handoff and production renderer together.
+
+For Phase 1, non-Studio business data preview uses marked synthetic fixtures unless a delegated consuming-plane reader is independently qualified. Studio never queries another plane's database directly. A future delegated read sends an audience-bound, expiring, resource/revision/tenant-scoped preview handle to the selected plane; the plane verifies its issuance, exact descriptor/dependency hashes and the previewing human's own active read authority, then applies section 2.4.2 before returning permitted fields. Author rights and a broad service credential cannot substitute for that human's access. No caller-posted descriptor or tenant/principal assertion is trusted. Cache/replay/stale-generation checks are plane-local; mutation remains disabled. Until this adapter exists, live cross-plane preview is unavailable, not simulated as verified runtime evidence.
+
+First-release preview remains synthetic when no independently published read authority exists, including when a delegated transport is available. A future pre-activation snapshot reader needs separately governed storage-owner/provider authorization for the human, exact scoped data/field exposure, snapshot provenance/expiry and effect-free execution. A draft read contract cannot authorize itself, and staging alone does not confer rights. Treat this as a separately qualified adapter rather than a loophole in the current preview intersection. Authorized aggregate data-impact attestation may address data-shape concerns without releasing records to the author.
+
+#### Resource preview contract and effect limits
+
+The shared preview envelope additionally identifies resourceKind and a versioned preview contract, pinned authoring-schema/compiler versions, dependency hashes, saved revision, caller scope, expiry and mode. These are target adapter requirements; adding a discriminator to an existing response does not qualify another resource. The runtime descriptor remains owned by its capability, and the outer preview envelope cannot be accepted as publication or activation evidence. Existing Entity schema/version consumers require an explicit compatible adapter transition.
+
+| Resource | Permitted preview effects |
+| --- | --- |
+| Entity | Production Entity rendering with authorized reads or marked fixtures; no business mutation |
+| Print, future scope | Production print rendering from approved inputs; no implicit sending or publication |
+| Workflow, future scope | Isolated simulation; no live transitions, notifications or external side effects |
+
+Stale handles/revisions are detectable; unsaved edits remain visibly distinct from the saved rendered revision. Viewport/locale and permitted explanatory scenarios cannot grant additional live data access. Preview completion proves neither human review nor target activation.
+
+#### Deployment inspection and rollback boundary
+
+Review and release projects existing publication evidence by plane, environment, instance and attempt: intended release/artifact, delivery progress, last acknowledged active release, receipt timestamp/freshness, failure code/detail, pending targets, partial rollout and recovery state. Missing or stale observations remain unknown/stale; a historical activated event cannot establish the current head everywhere. Trace newer activations/rollbacks through target evidence. Do not add an author-writable active-state field.
+
+Reuse publication/03_tables.sql deployment coordinates and receipts. Recovery must retain exact artifact/hash/target and active-head preconditions, retry/replay semantics and partial-failure evidence. Compatibility is checked against actual contracts and installed consumers, not only compatibility_level. Any missing shared inspection capability is implementation work, not an invented receipt.
+
+Rollback is a new governed signed release under the existing publication contract, preserving historical evidence. Definition rollback does not reverse business effects. Each future capability must specify compatibility with existing records/instances, explicit migration or compensation, and historical retention: prior templates do not rewrite generated documents, prior numbering policies do not unallocate numbers, and prior workflow definitions do not reverse completed tasks. Runtime instance-version changes require their own qualified migration contract.
+
 ### 11.10 Acceptance and review gates
+
+The gates below also apply to sections 6.5, 7.10 and 11.18–11.21, including the audit and handler/webhook qualification fixtures. Retain separate designed/implemented/published/runtime-verified evidence for each selected feature; documentation approval cannot advance the other states. Before enabling a new resource adapter, additionally qualify source-owner versus authority-tenant isolation, exact reference/hash rebinding, independent review, preview effect limits, target compatibility, active-head preconditions, retries/replays and partial-failure reporting. Contextual entry tests reject foreign-tenant, unauthorized and malformed hints without conferring access. Inspection tests distinguish historical activation from fresh target evidence. Future-kind gates become applicable only when that kind is separately authorized.
 
 | Gate | Evidence needed |
 | --- | --- |
@@ -3303,9 +4623,31 @@ Preview compiles a validated draft descriptor using the same compiler and qualif
 | Property-level coverage | For each supported property, evidence names SQL column/row owner, typed API path, control ID/version and consumed group, canonical mutation contract, save/load mapping, validation, portable codec and compiler destination (or explicit non-runtime disposition). Catalogue/evidence/excluded properties have read-only or excluded dispositions. Table counts alone do not pass this gate |
 | Purpose-specific editors | Qualify numeric/date/instant ranges, grouped contract references, authorized record pickers, schema-bound fixture inputs and text collections; verify default/predicate/policy/custom-value variants and null/omission behavior separately; no text/JSON fallback for unsupported shapes |
 | Surface/editor reconciliation | Qualify token-only lookup rejection of section rows; explicit embedded_mode save/load/export/compile without row-based inference; summary placement creation through the shared inspector; lookup-domain field editing and read-only database defaults; conflicting kind/mode changes fail atomically until explicitly corrected; contextual inspectors invoke their canonical editor contracts |
+| Descriptor and storage pins | Validate schema_version/hash and storage catalogue hash through registered shared contracts; no silent upgrade or browser-supplied storage facts; bounded values agree across dictionary/DDL/API/editor |
+| Generated evidence freshness | Each generated region has one regeneration_status, input hashes, dictionary revision/hash and generator version; pending/stale blocks use as qualified conversion evidence. Regeneration compares every mapping and reports unresolved paths. Status becomes current only after reproducible checks; no fabricated hashes |
+| Saved-draft preview handoff | Revision/hash-pinned server adapter feeds the production descriptor/renderer; tenant and record access tested; stale/replayed/wrong-tenant handles reject; fixtures cannot attest live access and mutation controls are inert |
+| Position boundaries | Complete per-family inventory and section 7.9.1 matrix tests; migration/import followed by normalized saves never double-offset; no order editor ships against incompatible constraints |
+| Predicate tree qualification | Before exposing each purpose, test self/multi-node cycles, depth limits, cross-draft/tenant references, multiple/missing root owners, descendant owner injection, purpose mismatch, invalid operator/type/payload, nullary/set/context variants and reorder/round trips. Visibility/editability only narrow presentation; record_lock and list_filter never become alternative authorization paths. One shared purpose-discriminated validator, not entity-specific rules |
+| Tenant extension authorization | Before cross-draft access enrollment or overlays are enabled (slice 3/4), reject unsealed/wrong-entity/wrong-tenant/wrong-base-release operation references, forbidden extension_field_mode, unowned fields, grants beyond baseline exposure, explicit-deny bypass, widened read/write or relation scope, conflicting overlays and stale hashes. Positive case adds only a permitted owned field; baseline rows/hashes remain unchanged. Repeat against server save, compiled effective graph and authorized read/write evaluation |
+| Portable contract and hashes | Closed generated schema for all descriptor members; version compatibility/upgrade fixtures; canonical-byte test vectors and label-identity preservation; illustrative fragments never accepted as complete imports |
+| Relation bootstrap/rebind | Self graph compiles without recursive hashes; sealed cross-entity pins retain exact target behavior; mandatory unsealed cycles reject; explicit rebind shows dependencies and cannot activate before reviewed publication |
+| Cross-plane custom values | No remote metadata FK; owning-plane provider checks activated identity/type/tenant and pinned hashes transactionally; absent or incompatible metadata fails closed |
+| Mutation/host gate | Command-batch semantics, stale conflicts, no-op behavior, atomic reorder and explicit replacement tested; host operations enter shared framework controls; full snapshot cost qualified at representative graph size |
+| DB/validator conformance | Feed the same invariant fixture corpus through the shared validator and isolated DB transactions (forcing deferred checks at transaction end). Compare acceptance/rejection and normalized invariant codes, not raw SQL error strings or diagnostic ordering. Cover same-owner/surface, XOR, tree cycles, ordering, component-level and variant constraints. DB-only and service-only checks have explicit dispositions; missing P remains a valid incomplete save but fails qualification |
+| Capability override drift | Generate the correspondence checks from the F0 contract source rather than a second hand-maintained list. Every override column maps to exactly one profile setting with compatible type/domain and explicit NULL=inherit semantics. Each pinned rule's permitted keys are a subset of the registered override-capable columns for that capability kind; unknown keys or missing counterparts fail generation. Test bounds, denied overrides, profile upgrades and each default/inherit/value case; nullable baseline settings require explicit representable semantics, not an inferred clear-to-NULL override |
+| Overlay worked graph | Section 11.8 example round-trips to the same merged sequence with baseline order/hash unchanged; duplicates, missing/cross-section anchors, stale base and wrong-tenant/forbidden fields fail closed. Repeated compilation yields identical semantic output |
+| Capability permission conversion | Ledger D07 mapping creates only plane-qualified entity_access_permission rows with action owner; missing plane, incompatible permission kind or duplicate/conflicting declarations block. Generated output must reproduce this correction before status becomes current |
+| Explicit record navigation blocker | Remove Overview synthesis and section-key-based navigation inference from detail-workspace.tsx before qualifying the new record experience. Correct affected sources through governed metadata; missing navigation yields an actionable configuration error. Qualify explicit groups and missing-config rejection on Country and a second eligible entity |
+| Shared reference-preview blocker | Replace Address-specific route, callback and relay/client selection before qualifying composer reference preview. Exercise metadata-selected authorized readers on Country/State Region and a second eligible reference use; no fixed entity targets survive under a renamed endpoint. Preserve existing authentication and target/tenant scope checks |
+| Shared-label pin | Label-row typed resource coordinates survive save/load/export; generated dependency inventory equals actual row references; mismatched/missing resource/key/hash rejects; explicit customization is atomic. Disabled until the full shared-label resource path qualifies |
+| Operational rollout | Explicit snapshot capacity/retention decision recorded before production; target-plane dependency closure installed and verified before activation; qualified reads continue with installed artifacts during Studio unavailability and reject missing/revoked/incompatible dependencies |
+| Stable identity lifecycle | Retirement payload/status consistency, exact sealed authorizing release, scoped acyclic successor and matching revision replacement; ordinary saves cannot retire identities; historical values retain identity/type and no implicit value conversion occurs |
+| Cross-plane provider adversarial tests | Inject wrong hash, stale/revoked or missing dependency, activation change during a transaction, wrong type and identical record UUIDs under different tenants/entities. Assert denial/rollback with no orphaned or misattributed custom values. The server pins one authorized metadata coordinate per transaction and uses tenant/entity/record/field together; do not treat field/record UUID alone as authority |
+| Baseline-operation FK arms | Separately test operation_field.operation_change_set_id and field_access.read_operation_change_set_id: composite FK rejects missing/mismatched operation IDs; deferred guard rejects valid but wrong/unsealed baseline, foreign tenant/entity, denied extension enrollment and widened exposure. Run DB/service conformance with local and exact-baseline positive cases |
+| Derived and chain consistency | Creation/fork/rename/rebind recomputes parent_field_id and storage_type or rejects atomically; mismatched catalogue hash fails; replacement cycles/self-links and invalid inverse chains reject; no client can assign derived values |
 | Existing-table compatibility | All 42 reviewed DDL declarations have an explicit disposition; preserved governance/security behavior is demonstrated |
 | Country | Readable identity, required explicit group behavior, ordered four-section record experience, labels and list controls |
-| Principal | Multiple groups and scoped related records through exact target surfaces; tenant isolation and target authorization |
+| Principal | Multiple groups and scoped related records through exact target surfaces; tenant isolation and target authorization. Inventory actual mandatory release dependencies first; a back-reference does not itself prove a mandatory cycle. If CYCLE-01 applies, mark this later acceptance case blocked pending owner disposition; Country/State Region reference delivery does not claim it passes or weaken relations |
 | Address | One qualified renderer, exact field-slot roles, readable identity and authorized reference labels |
 | Principal Profile | Shared create/edit form where equal, exact mode-specific submit labels, operation-field access and nullable value handling |
 | Notification Preferences | Omitted/null/false preservation in import, save, export and qualified operation input |
@@ -3321,7 +4663,7 @@ The reconciled model is the basis for owner review and subsequent shared-framewo
 
 ### 11.11 DDL-verified review decisions — 6 October 2026
 
-This review compared every section 3 dictionary against `server/db/ddl/planes/studio/metadata/*.sql`, the change-set functions and `snapshot.entity_draft_save`. **Applied** decisions are already incorporated into sections 2–8. **Proposed** decisions need owner acceptance; until accepted, the section 3 dictionaries stay authoritative.
+This review compared every section 3 dictionary against `server/db/ddl/planes/studio/metadata/*.sql`, the change-set functions and `snapshot.entity_draft_save`. **Applied** decisions are already incorporated into sections 2–8. P01–P03 now record the owner's accepted design disposition: defer the capability split, retain inline related-list columns and retain the single field row. These decisions approve the documented model, not a deployment or independently reviewed publication.
 
 | ID | Status | Finding | Decision |
 | --- | --- | --- | --- |
@@ -3329,7 +4671,7 @@ This review compared every section 3 dictionary against `server/db/ddl/planes/st
 | D02 | Applied | Save semantics described a generic lock. The DDL already has `fn_advance_entity_change_set` and a transaction-local write token. | Section 2.3 names the real mechanism. New member tables must require the token. |
 | D03 | Applied | The blueprint required a decimal-string revision; the repository returns `Number(lock_version)`. | Revision is a JSON integer, with a forward CHECK at 2^53−1. One fewer codec exception. |
 | D04 | Applied | runtime_profile omitted `draft_ttl_hours` and the `append_only` concurrency mode. It marked `storage_plane` R (the DDL allows NULL for virtual) and handler keys optional (the DDL requires them iff facade). | Rows corrected; `*_field_key` text columns map to `*_field_id`. |
-| D05 | Applied | The scope-binding dictionary made `resolver_key` R and its sample violated `entity_operation_scope_binding_source_pair_chk`. | Resolver required iff relation_resolver; coordinate_key iff field source. Knock-on for the generated 6.4 ledger: legacy `runtimeBindings[].resolver` values on tenant-scoped bindings (for example `tenant.record.v1`) convert to `entity_authorization_profile.ownership_resolver_key`. They do not go to scope_binding.resolver_key; the generator must be corrected and the region regenerated. |
+| D05 | Applied | The scope-binding dictionary made `resolver_key` R and its sample violated `entity_operation_scope_binding_source_pair_chk`. | Resolver required iff relation_resolver; coordinate_key iff field source. Knock-on for the generated 6.4 ledger: legacy `runtimeBindings[].resolver` values on tenant-scoped bindings (for example `tenant.record.v1`) convert to `entity_authorization_profile.ownership_resolver_key`. They do not go to scope_binding.resolver_key. The ledger mappings are manually reconciled; its region marker explicitly remains pending until generator correction and full regeneration are verified. Applied denotes the design decision, not completed generation. |
 | D06 | Applied | `permission_kind` sample `entity` is outside the DDL domain (entity_operation/capability). | Sample and rule corrected. |
 | D07 | Applied | `entity_surface.permission_code` and `entity_capability_binding.permission_code` were single text codes with no plane, while operation permissions are per plane. | New `entity_access_permission` (owner XOR, per plane). Both columns removed. |
 | D08 | Applied | `cardinality` zero_or_one duplicated `nullable`, and the blueprint needed a rule to keep them consistent. | cardinality is one/many; optionality is nullable only. |
@@ -3343,11 +4685,49 @@ This review compared every section 3 dictionary against `server/db/ddl/planes/st
 | D16 | Applied | The regeneration rule required delimited generated regions, but there were none. | Markers added around the section 6.4 ledger and section 9 specimens. |
 | D17 | Applied | The UI described *where* to edit, not how to reach a publishable draft from an empty one. | Section 7.8 flows: P checklist, add-from-storage, fields grid, explicit variant clearing, view designer, layout tree, row-level diff and restore. |
 | D18 | Applied | Many DDL columns had no disposition (see 11.12). | Column-level ledger added; JSONB columns stay in the 11.5 map. |
-| P01 | Proposed | `entity_capability` carries 36 `override_*` columns that mirror 44 profile setting columns. All three capability kinds share one wide row, so every new setting needs two migrations plus a rule row. | Use one typed settings table per capability kind (`capability_comment_settings`, `capability_attachment_settings`, `capability_activity_settings`). Each table's owner is profile_id XOR entity_capability_id. A profile row holds the baseline; an enrollment row holds overrides, where NULL means inherit. `capability_profile_override_rule.property_key` then becomes a domain over that table's columns. Still no JSON and no EAV; about 80 columns become three narrow, kind-pure tables. |
-| P02 | Proposed | The related_list variant adds 11 columns to every section row and needs the largest variant CHECK in section 2.5. | Use a 1:1 subtype `entity_surface_section_related_list` (PK = section id, deferred guard on content_kind=related_list). component (1 column) and capability (2 columns) stay inline. |
-| P03 | Proposed | entity_field holds about 50 columns, most of them family-specific bounds and typed defaults. | Keep the single row: NULLs are cheap, the 7.7 panels already scope the UI, and splitting by family would multiply joins for every field read. Recorded as considered and rejected unless profiling shows otherwise. |
+| D19 | Applied | The dictionaries did not say which tables and columns exist. 29 of the listed tables and about 190 columns on existing tables are proposed, so readers could not tell a buildable editor from a design target. | DDL status line on every dictionary (section 3 preamble) and the section 7.9 build order. |
+| D20 | Applied | About 40 existing columns were typed `text`/`integer` where the DDL declares a `metadata.*_d` domain, `smallint` or `numeric(6,3)`. The descriptor chooses `choice` controls from domains, so it would have produced free-text editors. | Actual DDL types restored; domain value lists written into the rules. |
+| D21 | Applied | Wrong rules against the DDL: runtime-profile `storage_schema`/`storage_object` were R (they are NULL for external/virtual, as the table's own prose said); search `weight` was N (NOT NULL, 0 < w <= 100); `minimum_query_length` was "nonnegative" (1..64); `idempotency_mode` listed a nonexistent `revision` value (none/optional/required); `handler_key` was a P gap (the DDL requires it at save for every non-read operation). | Rows corrected; the handler CHECK is kept (11.12). |
+| D22 | Applied | The graph guard makes logical coordinates immutable on UPDATE, but the `code` control and Fields grid allowed editing keys at any time. | Section 2.3 Rename key command; key cells read-only after the first save. |
+| D23 | Applied | Section 2.3 prescribed `(change_set_id, id)` composite FKs without acknowledging that existing tables enforce same-graph ownership with triggers. | Both mechanisms are named; existing tables migrate one at a time and must agree with the shared validator. |
+| D24 | Applied | 7.8 "Add from storage" had no defined column source, and the storage object is usually in another plane's database. | Registered, hash-pinned per-plane storage catalogue generated with the Kysely types. |
+| D25 | Applied | The composer was specified as "the shared change-set record page", but the change set is not an onboarded Entity. | Section 7.2 host prerequisite: onboard it through the Country path with existing author/review permissions; bootstrap by baseline import. |
+| D26 | Applied | Constraints that block the target model were missing from 11.12: section position uniqueness ignores the navigation group; sibling uniques are not deferrable; `title`/`label` NOT NULL forces the dual write that R33 forbids; binding `entity_surface_id` NOT NULL prevents overlay ownership; legacy domain values had no retirement row. | 11.12 rows added. |
+| D27 | Applied | The current save deletes and reinserts all member rows, accepts supplied row IDs or uses `randomUUID()`, and resets `created_by`, contrary to section 8. | Section 7.9 requires scoped keyed reconciliation preserving identities, creation evidence and existing protected controls before slice 0 editors ship. Operation reconstruction also risks omitted/defaulted or client-supplied requires_mfa; section 6.1 specifies the blocker. Implementation remains pending and MFA-related changes require specific prior owner approval. |
+| P01 | Owner accepted — split deferred | Capability baseline and override columns were proposed for replacement by per-kind settings tables. | Retain the current typed profile/enrollment columns and override rules. Do not introduce the proposed settings tables. Reconsider only through an explicit future design decision triggered by an independently governed second override consumer, repeated inability to enforce kind-specific constraints without duplicated rules, or measured query/write/migration cost exceeding an agreed service budget. Supply representative usage and a compatibility proof; no arbitrary NULL-percentage or column-count threshold triggers a schema split. |
+| P02 | Owner accepted — inline retained | A separate related-list subtype table was proposed to reduce nullable section columns. | Retain inline related-list columns with the declared content_kind CHECKs and ownership guards for Phase 1. Do not create a parallel subtype representation. Revisit only if measured related-list query/write cost or independently governed subtype lifecycle requirements justify the change, with a compatibility proof and explicit owner decision. |
+| P03 | Owner accepted — single row retained | Field-family splitting was considered for the wide entity_field dictionary. | Keep one typed entity_field row with purpose-specific inspector panels and validators. No field-family split is part of this design. Revisit only with measured storage/query/migration cost beyond an agreed budget or a concrete independent consumer requiring different lifecycle constraints, followed by an explicit owner design decision. |
+
+#### Finalized review corrections and owner decisions
+
+The DDL/status annotations and exact domain/bound corrections are accepted design clarifications. A domain constrains values but does not select a dropdown on its own: section 7.3 still requires an explicit semantic descriptor and registered finite-domain catalogue. Current-DDL existence proves neither composer wiring nor deployed functionality. Counts such as 29 proposed tables and approximately 190 columns are dated inventory evidence, not independent acceptance gates.
+
+Read-only code inspection confirms that `kysely-authoring-repository.ts` deletes the listed graph-member tables by change_set_id before insertion, accepts supplied string IDs or generates randomUUID(), and supplies the current actor as created_by. This demonstrates identity/audit preservation problems; it does **not** by itself establish an exploitable tenant-isolation bypass, because database guards and transaction authorization also apply. Section 7.9 specifies the shared correction and qualification boundary; no repository implementation is claimed complete here.
+
+The Address-specific preview route is confirmed as active code wiring: `planes/studio/meta-entity-authoring/src/routes.ts` registers `/inspection/address-preview-choices`, `platform-host/src/composition/register-services.ts` supplies an addressPreviewChoices callback that selects `iso.country` and `shared.state_region`, and the BFF relay allowlist includes that route. It has authentication and author/reviewer checks; those checks do not resolve its entity-specific architecture. The target design must replace this route/callback selection with the existing shared, metadata-selected authorized reference reader and the saved-draft preview contract. Trace callers, helper behavior and tenant/target authorization before implementation; preserve working access checks and qualify both Country and State Region plus another eligible reference through metadata. Do not merely rename the endpoint while retaining fixed target selection. This finding authorizes no live deletion or change to unrelated applications; the present activity is documentation only.
+
+Owner-accepted design decisions (6 October 2026):
+
+- **P01:** defer the capability-settings split. NULL override inheritance is not automatically interchangeable with baseline null semantics, and an owner-XOR table still needs profile-versus-enrollment constraints. Keep the current typed authoritative columns until a concrete reuse/constraint benefit is demonstrated; column count alone is insufficient.
+- **P02:** retain inline related-list columns for Phase 1. A subtype table is a possible later normalization, not necessary for correctness with the declared variant constraints. Do not build both.
+- **P03:** retain the existing single field row and purpose-specific panels, consistent with the current dictionary. No field-family split is required. This is the accepted field-storage design, not a competing schema.
+
+The five review corrections are incorporated into the authoritative design: scoped graph reconciliation preserving creation evidence; replacement of Address-specific preview selection by shared authorized reference readers; prerequisite-gated existing-column delivery; semantic JSONB preservation without rewriting untouched members; and authorization/record scope before any live preview. Repository implementation, migration execution, runtime qualification and independent release approval remain separate pending work. This design approval must not be reported as completion of those activities.
+
+These comments supersede the phrase “no new DDL” as a release promise and “byte-equal JSONB” as a persistence requirement. They do not reverse the exact existing-DDL bounds, DDL-first authoring, or the prohibition on writable layout/type property bags.
 
 ### 11.12 Legacy column retirement ledger
+
+#### Forward migration mechanics
+
+These mechanics are a design gate, not executable SQL or permission to modify a live deployment. Rehearse against representative snapshots with the exact source DDL hash, row counts and qualified rollback procedure. Identify mutable drafts separately from sealed release/source evidence. Preserve signed artifacts and historical graph/hash semantics; a historical compatibility decoder remains version-specific. If a proposed constraint cannot preserve sealed-row validity, stop and use an explicit version-scoped constraint/storage transition rather than rewriting review evidence.
+
+For the position cutover, pause authoring commands and scheduled writers, drain in-flight graph transactions, and acquire database locks on the affected member tables in a fixed order. Reads resume only against a compatible schema/decoder. In one controlled migration transaction, preflight sibling groups and ranges, drop the exact old uniqueness constraints that would collide during p→p+1, transform eligible rows once, install the new positive-position CHECK and correctly scoped DEFERRABLE uniqueness constraints, and force constraint validation before commit. Restore authoring only with the matching codec and repository version. A failure rolls back the transaction; retries consult the migration ledger and never apply +1 twice.
+
+The chosen strategy is lock/drop/recreate in one transaction, not a temporary +N offset. A two-phase bump can overflow bounded positions or violate existing CHECKs and is not automatically safe. Do not use both strategies or leave a concurrent dual-write window. If the measured lock interval is unacceptable, a separately reviewed online migration design is required before execution.
+
+Labels and overlays cut over within their complete shared slices: introduce typed columns/rows and scoped guards, validate conversion and dependencies, relax the legacy title/label NOT NULL requirements when the typed label path becomes authoritative, then activate the matching save/compiler path. Preserve historical string evidence without dual-writing new authoring. Likewise relax binding.entity_surface_id NOT NULL only in the same deployment that installs local/overlay XOR and ownership guards. Database guards, audit/write-token checks and server author rights remain enforced. Constraint relaxation alone never enables an editor.
+
 
 This ledger covers the existing DDL columns that have no row in the section 3 dictionaries, other than JSONB (see the 11.5 map) and the standard ownership/lifecycle columns. Every retirement is a forward migration after validated conversion. Applied migration hashes and historical artifacts are untouched.
 
@@ -3355,7 +4735,7 @@ This ledger covers the existing DDL columns that have no row in the section 3 di
 | --- | --- | --- |
 | `entity.status_changed_at/by` | unchanged | Keep; server-owned audit pair, Technical details only |
 | `entity_runtime_profile.record_version_field_key / tenant_field_key / soft_delete_field_key` | `*_field_id` FKs | Convert by key within the same change set; unresolved keys block |
-| `entity_field.field_key` | `entity_field_identity.field_key` via field_identity_id | Convert; allocate or reuse the stable identity |
+| `entity_field.field_key` | `entity_field_identity.field_key` via field_identity_id | Convert; reserve or reuse only with verified introduction/first-release provenance and compatible identity contract (section 3 field identity) |
 | `entity_*.replacement_*_key` (field, key, search, relation, surface, operation) | `replacement_*_id` resolved, exported as logical key (section 2.5) | Convert |
 | `entity_relation.inverse_relation_key` | `inverse_relation_id` | Convert |
 | `entity_surface.title / description` | `label_id` / `description_label_id` | Convert into owned labels |
@@ -3375,3 +4755,467 @@ This ledger covers the existing DDL columns that have no row in the section 3 di
 | `entity_field_reference_binding.target_entity_code / lookup_domain`, kind `entity_relation` | relation tables / `entity_field.domain_code` | Convert, then narrow the kind domain to lookup_domain/resolver |
 | `entity_surface_component_binding.*` | related-list section + component slots (11.4) | Replace loose pointer path |
 | `entity_change_set.lock_version` | unchanged | Add the CHECK `<= 9007199254740991` (D03) |
+| `entity_surface.title`, `entity_operation.label` NOT NULL | nullable compatibility projection | Drop NOT NULL in the slice that adds `label_id` (section 7.9). Otherwise the composer must write both the string and the label FK, which R33 forbids. Existing rows keep their values as read-compatibility input |
+| `entity_surface_section` position unique key `(tenant_id, entity_surface_id, parent_section_id, position)` | add `navigation_group_id`; make DEFERRABLE INITIALLY DEFERRED | Replace the constraint. Without the group, two top-level sections in different navigation groups cannot both be first |
+| sibling position unique keys on section, field binding, surface operation, key/search/relation field | DEFERRABLE INITIALLY DEFERRED | Replace the constraints. They are immediate today, so an atomic reorder (section 7.3 `order`) violates them mid-statement |
+| `entity_surface_field_binding.entity_surface_id` NOT NULL | nullable, XOR `overlay_id` | Relax together with adding `overlay_id`. The guard's coordinate columns become (`entity_surface_id`, `overlay_id`, `binding_key`) |
+| `entity_field.cardinality` value `zero_or_one`; `write_mode` value `computed`; `data_type` value `reference` | one/many + `nullable`; `value_origin`; scalar type + relation (D08, D09, R04) | Convert, then narrow each domain for new authoring once no draft uses the value. Applied hashes and historical artifacts keep the old values |
+| `entity_relation.resolution_kind` value `polymorphic` | none in this version | Keep the domain value; block qualification until an installed resolver exists (section 3 rule) |
+| `entity_operation_handler_required_chk` (handler required unless kind=read) | unchanged | Keep. Handler selection is part of creating a non-read operation, not a P gap |
+| `entity_operation.description` | unchanged | Keep as bounded author documentation (section 3) |
+
+The field cutover manifest includes a per-constraint retain/replace/retire decision, exact migration dependency and positive/negative/null fixtures. Treat the cluster together for compatibility analysis, without dropping every member indiscriminately:
+
+| Existing contract | Required disposition |
+| --- | --- |
+| entity_field_type_config_chk and type_config NOT NULL/default | Retire JSONB-kind coupling when typed authoring becomes authoritative; explicitly resolve compatibility-column nullability/default and preserved legacy reads. No empty-blob dual-write workaround |
+| entity_field_computation_chk | Replace legacy write_mode=computed/computation_spec coupling with typed value_origin/read_only and registered computation requirements |
+| entity_field_default_chk and optional_specs checks | Replace or retire only the retired JSONB dependencies; preserve equivalent typed default/schema/type constraints |
+| entity_field_projected_write_chk | Retain projected→read_only semantics if compatible; do not remove merely because adjacent constraints change |
+| entity_field_storage_chk | Verify against target storage_kind/value_origin/path rules and retain or replace with explicit equivalent guards |
+| default_spec/computation_spec/validation_spec column nullability/defaults | Inventory individually in the same cutover; do not infer all are NOT NULL or that all must be dropped |
+
+The current type_config CHECK can accept an empty object: its kind comparison evaluates to SQL NULL, and PostgreSQL CHECK accepts true or NULL. Column NOT NULL does not enforce a nested kind property. This is a validation weakness, not proof that every empty object fails migration. F0 tests SQL unknown semantics explicitly; supplying `{}` is still not a valid substitute for complete typed authoring. Preserve applied migration hashes and correct through forward migrations.
+
+#### Approval-ready migration ledger structure
+
+Generate the selected reference-slice manifest from F0 and current reviewed DDL; historical approximate table/column counts are not execution scope. Keep three explicit buckets:
+
+| Bucket | Required treatment |
+| --- | --- |
+| Confirmed current defects or validation gaps | Record exact source evidence, affected behavior and impact confidence; distinguish observed effects from possible effects. For missing-kind JSONB validation, decide whether the legacy writable path needs hardening before cutover; audit data before changing its acceptance rules |
+| Planned target-model migrations | Name contract/gate, dependency order, source data preflight, conversion, validation, failure recovery, retained-history treatment and accountable owner. At normalized cutover retire obsolete JSONB coupling and install typed constraints; do not automatically harden a CHECK solely to remove it immediately afterward |
+| Excluded/preserved or retired scope | Preserve the section 11.6 disposition and explicit read/compatibility boundaries. Missing an editor dictionary does not make a table orphaned; exclusion does not authorize migration or execution features |
+
+Design decisions such as class-profile history remain unresolved decision references, never silently classified as confirmed bugs. Generated index entries specify owner/sibling coordinates, null semantics, lifecycle predicates, immediate/deferrable behavior and relevant query-plan evidence. Retain index requirements in the manifest rather than deleting them because the current prose list is incomplete.
+
+The entity_surface_component_binding retirement is already defined in sections 7.9.1, 11.4 and this ledger. Its remaining qualification requirement is an exhaustive source-column/path manifest covering component_surface_id, contract_slice_pointer, cardinality, ownership, position, lifecycle and attribution. Each path receives a verified target mapping, immutable-evidence retention or blocking unsupported disposition; related-list navigation and registered component composition are not interchangeable. No active section-3 editor dictionary is required for the retired table.
+
+Plane/tone domain additions normalize vocabulary only. Preflight existing values without coercion, preserve each column's required/nullable behavior and verify dependent constraints/casts. They do not attest target-plane capability. Surface-kind conversion follows the semantic navigation adapter in section 11.7, never a blanket group-to-subsection rewrite.
+
+For entity_capability, the cited existing FKs point to Entity, change set, tenant and creating principal. Review retention/delete behavior against those actual parents; NO ACTION is not changed for stylistic consistency or misdescribed as a profile-deletion rule. Inventory updated_by FK absence separately, including historical actor validity before proposing an FK addition. Preserve historical evidence and use forward changes.
+
+### 11.13 Forward additions and change inventory
+
+Sections 7.10 and 11.6.1 are improvement/scope registers, not additional implemented column inventories. Section 6.5.4 allocates proposed Integration-owned authoring families; its exact dictionaries/forward schema comparison must qualify before editor enablement, without copying endpoint/subscription configuration into Entity tables. Any selected gap must first amend the single dictionary and generated comparison with its exact storage/API/compiler contract; future resource editors remain separately authorized. Preserve Entity graph FKs, immutable artifacts and applied migration hashes. The shared authoring interface introduces no automatic generic-resource-table migration.
+
+#### Finite-domain inventory and descriptor enforcement
+
+The following are proposed target domains, not existing-DDL claims. Forward migration must preserve current NULL and CHECK behavior and update DDL-status/type comparisons. Domains constrain values; the descriptor explicitly selects the corresponding finite choice control. Text with a CHECK is also a valid finite contract and does not inherently require a free-text editor.
+
+| Proposed reusable domain | Values / target consumers | Migration and qualification |
+| --- | --- | --- |
+| metadata.entity_plane_d | studio/neon/mesh; scalar target_plane and storage_plane members in this dictionary | Preserve per-column required/nullable conditions and existing plane CHECK semantics; arrays use the same registered element domain and distinctness rules; reject unknown planes at DB and API boundaries |
+| metadata.entity_tone_d | neutral/success/warning/danger; entity_field_choice.tone and entity_surface_badge_tone.tone | Preserve optional choice tone versus required override tone; bind both controls to one finite registered set |
+
+Other finite choices remain CHECK-backed text with explicit descriptor enumerations unless an existing domain already owns them. The F0 domain inventory must enumerate their exact dictionary sets: navigation section_display; surface/embedded modes; section content/layout; binding/view kinds; predicate purpose/node_kind/conjunction/operator/value_kind; field/default/reference/source variants; permission classification; identity lifecycle. Context-sensitive sets (especially predicate operators and payload kinds) retain purpose/type constraints in addition to the finite vocabulary. New enum values require a versioned contract/migration, not an unregistered string. F0 emits the complete per-column domain/CHECK inventory and rejects missing enums, incompatible samples or descriptor drift; this summary is not a substitute for that output.
+
+
+The per-table DDL status annotations in section 3 own the detailed additions inventory; section 11.12 owns retirements and constraint replacements. Do not maintain another hand-copied column list. A migration review must expand those annotations into one comparison of approved target dictionaries against the exact current DDL hash, covering **every** table, column, domain, FK, CHECK, unique constraint, index and write-token/ownership guard. Classify each item as retain/add/alter/retire or excluded; no unclassified difference passes. Applied historical SQL is immutable.
+
+| Addition/change family | Authoritative target and completion boundary |
+| --- | --- |
+| Proposed tables | Every section 3 table marked proposed, including identities, choices, labels, navigation, views, overlays, predicates, access permissions and AI; use their dictionaries, not the audit's illustrative absent-table list |
+| Extensions of existing tables | Each section 3 proposed-column list, including typed field/surface settings, handler versions, surface FKs and export settings; retain existing constraints unless section 11.12 explicitly changes them |
+| Audit reconciliation pins | change_set.authoring_schema_hash (required server-verified SHA-256); runtime_profile.storage_catalogue_hash (conditional physical backing pin); entity_label.shared_resource_key/version/hash (conditional shared-label pin); contracts in section 7.3.1 and the entity_label dictionary |
+| Descriptor and storage resources | Registered shared schemas/resources from section 7.3.1, not new business tables; qualify generator, registry resolution, hashes and installed implementations |
+| Constraint and guard changes | Sections 2 and 11.12: position conversion, same-owner/token checks, NULL semantics, variant applicability and explicit governed source references |
+| Owner-decided scope | P01 split deferred; P02 inline related-list model retained; P03 single field row retained. Do not create the proposed split tables or retire the authoritative inline columns |
+
+For each addition, the migration evidence must name its exact type/bounds, null/default behavior, backfill source or blocking finding, dependency order, repository mapping, compiler mapping and required qualification. In particular, existing drafts cannot receive fabricated descriptor/catalogue hashes to satisfy new NOT NULL or readiness requirements. Resolve and validate the exact historic contract or block their upgrade. This section defines the completeness gate, not a claim that a migration diff/generator or deployment exists.
+
+### 11.14 Qualification review clarification
+
+The latest audit supports the target direction, but “safe to proceed” is not a qualification receipt. The foundation and negative-test gates above must pass before their dependent editors or runtime behavior are enabled. Sparse typed columns are intentional: finite declared members, purpose-specific unions and SQL/API constraints distinguish them from unrestricted key/value authoring. No new parameter name or component option may be accepted merely because a generic payload column can store it.
+
+The generated source-path ledger and specimens remain regeneration_status=pending. Do not assert that a generator ran or upgrade those markers based on a document review. Before conversion qualification, establish the reproducible generator, verify D05 ownership-resolver mappings, compare pinned source/dictionary hashes and retain diagnostics. The E-only artifact rows stay as path-coverage evidence for now; compressing them is acceptable only if reproducible tooling retains exact path/hash coverage and unknown-path detection inside this document's evidence contract. No companion design report or loss of requested specimens is authorized.
+
+Audit sequencing is narrowed deliberately: storage catalogue qualification is mandatory for storage-backed authoring, not unrelated external/virtual providers; slice 2 denotes a complete record-preview milestone, not the first possible editor. Immutable history remains byte/hash preserved, while JSONB persistence uses semantic equality. P01 remains deferred under the explicit evidence triggers recorded in its decision row; P02/P03 remain the owner-approved inline/single-row designs.
+
+### 11.15 Portable-contract and bootstrap audit disposition
+
+The audit's “stale-reference table above” was not included in the supplied comments; no unseen reference corrections are claimed. Named references are reconciled through sections 2.3.1, 6.1.1–6.1.3 and 7.9. Self-target resolution, explicit release rebinding and cross-plane field-identity validation are now target contracts. Mandatory simultaneous first-publication cycles remain a declared Phase 1 limitation, not an implicit release-set implementation.
+
+The package contract in section 1 supersedes the former delimited-Markdown source decision. Generate human-readable dictionaries, DTO/schema, descriptor, codec mappings and DDL comparison from that finite typed source and pinned evidence. It must carry every type/bound/default, owner/key, applicability, null/absence rule, editor and codec mapping; generation rejects missing annotations. The source/generator remain unbuilt. Existing reviewed prose/table corrections are conversion inputs, not a second permanent executable schema.
+
+Retain the existing section numbering and evidence rows for this correction. A major A/B/C reorder would invalidate references and obscure the current semantic changes. Sections 1–6 define the target model/contracts, 7–8 define shared authoring and delivery integration, 9 holds specimens, and 10–11 hold gates and decision/conversion evidence. Compression of E-only rows still requires reproducible path coverage and hashes; pending generated evidence cannot safely be replaced by an invented coverage hash. Common architectural prohibitions remain in section 1; table-specific constraints remain beside the properties they govern.
+
+### 11.16 Delivery-readiness audit clarification
+
+The latest audit's phrase “undefined-permission ≠ allow” is incorrect if read literally. Valid applicable metadata with no defined permission requires no entity permission grant; authentication, tenant/record scope and explicit denies still apply. Invalid, unavailable or broken permission metadata never becomes an implicit allow. The existing normative rule is unchanged.
+
+Shared labels remain deferred until a governed platform label resource and its selection/customization path qualify. Phase 1 uses owned labels; estimates must not count cross-entity shared-label deduplication or claim shared-to-owned customization has been tested. This dependency is a later shared-framework capability, not authorization for workflow/case Phase 2.
+
+The conformance gates compare equivalent outcomes within each enforcement layer's scope. P completeness, installed provider evidence and authorization are not all SQL constraints; requiring identical raw DB and service diagnostics would be incorrect. Capability override tests compare permitted subsets to a finite supported contract, not an equality that would force every profile to permit every override. P01–P03 stay at their owner-approved dispositions; reconsideration triggers gather evidence and require an explicit new decision, not automatic schema changes.
+
+### 11.17 Identity and integrity audit disposition
+
+The stable-identity retirement gap is closed in the dictionary, with server-owned evidence and a governed replacement path. The surface-permission finding is resolved by distinguishing owner from permission classification: existing entity_operation/capability values classify the selected permission, while the owner XOR identifies where its check applies. A surface-specific permission taxonomy is not introduced without catalogue evidence.
+
+The audit's claim that cross-change-set operation references cannot have SQL FKs is incorrect: composite (operation_change_set_id, entity_operation_id) and (read_operation_change_set_id, read_operation_id) references can enforce existence across graphs. They do not enforce the exact-base-release/tenant/extension authorization rule by themselves; deferred guards and the named adversarial tests enforce that additional boundary. Likewise, provider-validated cross-plane identity is a concentrated integrity risk, not evidence that present tenant checks are absent or that a bypass has been demonstrated.
+
+The historical source customFields.capabilities.enabled/reasonCode describes custom-field support/readiness; it is separate from comments/attachments/activity enrollment. The compiler derives its status/reason from the qualified extension contract and cannot use it as another writable permission or capability profile. F0 must keep these source namespaces distinct.
+
+F0/F1 remain unbuilt prerequisites and generated evidence remains pending. The domain inventory, identity columns and new tests here are target-design corrections only. F5 assigns the production snapshot-policy decision to the Platform Owner with operational evidence; it grants no automatic deletion or weakening of existing history controls.
+
+### 11.18 Consolidated Studio authoring audit disposition
+
+The owner authorized incorporating the consolidated recommendation into this blueprint. This approves the recorded architectural direction and improvement sequence, not code delivery, migration execution, future resource editors, release approval or deployed qualification. Existing section numbers, Entity dictionaries, F0–F5 identifiers and owner decisions remain authoritative. No companion design or competing plan is introduced.
+
+| Audit point | Final disposition and canonical section |
+| --- | --- |
+| Published versus active needs a new model | Corrected: reuse the existing release/deployment distinction; section 2.4.1 |
+| Studio owns the active runtime head | Rejected: consuming planes establish local state; Studio projects scoped, timestamped receipts; section 11.9 |
+| Publication is generic | Accepted for the ledger; each compiler/delivery/activation adapter still needs qualification; sections 2.4.1 and 7.1.1 |
+| Existing coordinated activation solves every dependency | Narrowed: Entity-specific, per-target-database implementation; no universal cross-resource/cross-plane atomicity or first-publication cycle solution; section 6.1.4 |
+| Generic authoring is the only foundation gap | Rejected: governed composer hosting, generated contracts, scoped saves, conversion, authorized references and saved-draft preview remain prerequisites; section 7.9 |
+| Replace entity_change_set with generic drafts now | Deferred: preserve Entity persistence/guards; qualify the Entity adapter first and a second resource only under separate scope; sections 1.1 and 7.1.1 |
+| One governed reference mechanism | Accepted incrementally for identity/provenance resolution; retain typed capability semantics and existing FKs; section 6.1.4 |
+| resourceKind alone generalizes preview | Incomplete: versioned adapter, saved revision, dependency/access checks and effect limits are required; section 11.9 |
+| Every contextual link must be signed | Revised: ordinary selections are untrusted hints; protected handoff is required for trusted assertions/sensitive context; section 7.5.1 |
+| Specialized editors share one thin workspace | Accepted through registered framework contracts with resource-specific typed storage and domain ownership; sections 1.1 and 7.1.1 |
+| Reuse an existing release/activation ledger | Accepted; do not add another; sections 2.4.1 and 11.9 |
+| Reference-composer functional parity | Accepted as an evidence-tracked improvement register; gaps do not silently alter current contracts; section 7.10 |
+| Print/Workflow/Notifications/Numbering and broader capability parity | Recorded future scope, not current-phase implementation approval; section 11.6.1 |
+
+Implementation remains complete only when each selected property's storage, typed API, save/load, validation, codec, compiler, registered editor and runtime consumer qualify together. Verify Country plus other eligible entities through metadata, including representative large drafts, stable creation evidence, conflict/no-partial-write behavior, no silent conversion loss, no-UUID list presentation, explicit navigation and locked embedded scope. Preserve the distinction between absent permissions in valid metadata and invalid/unavailable metadata. Workflow/case execution, new business handlers and MFA changes remain outside this update.
+
+### 11.19 Dual-audit correctness and product follow-up disposition
+
+Both supplied audits are reconciled here into the single blueprint. These are target-design corrections, not findings of demonstrated deployed exploits or evidence of implemented migrations. Sections 2.3.3–2.3.4 and 2.4.2 own the release, integrity and effective-security rules; dictionary changes remain subject to F0 generation and complete implementation slices. Preserve all historical artifact/schema semantics and applied migration hashes.
+
+| First audit | Disposition |
+| --- | --- |
+| L1 stale draft publication | Accepted: serialized source-head compare and explicit reviewed rebase; extension predecessor and product base are distinct; section 2.3.3 |
+| L2 pinned security | Accepted with correction: immutable contracts remain pinned, current compatible controls can only restrict effective access; incompatible/unavailable security mapping blocks rather than silently replacing the graph; section 2.4.2 |
+| L3 preview exposure | Accepted: server-enforced intersection with active read authority; unpublished fields use fixtures; section 2.4.2 |
+| L4 namespace shadowing | Accepted: scoped identities, product reservations, collision checks in both registration directions and namespaced labels; section 2.3.4 |
+| L5 permission removal | Accepted: access-widening review and a versioned explicit none/defined compiled contract; valid historical absence semantics remain intact; section 2.4.2 |
+| L6 AI origin tenant | Accepted and strengthened: typed origin ownership, exact candidate verification and blocked cross-tenant promotion until a qualified AI-owned path exists; entity_ai_term dictionary |
+| L7 reviewer independence | Accepted across all contributing revisions/import/rebase actors with retained proposal provenance; section 2.3.3 |
+| L8 product record UUID literals | Accepted for record-value literals, distinct from internal metadata identities; section 2.4.2 |
+| L9 deployed storage drift | Accepted: local normalized-schema attestation against pinned catalogue expectations at activation; section 7.3.1 |
+| L10 editability and root ambiguity | One typed root per owner/purpose enforced in SQL; editability remains explicitly presentation-only with the rule below |
+| L11 plane-specific search | Accepted: per-plane qualification against query/exposure closure; incompatible enrollment blocks; section 2.4.2 |
+| L12 batch-local new references | Accepted: typed request-local $tempRef, scoped allocation and idempotent mapping; section 2.3.1 |
+| L13 custom-value deletion/erasure | Accepted: owning-provider transaction, retention/holds and idempotent erasure coverage; section 5.1 |
+| L14 composer self-recovery | Accepted: independently reachable governed import/publication and signed rollback; no bespoke recovery page; section 2.3.3 |
+| Lookup column_count contradiction | Resolved to NULL; stack is the sole neutral layout value; explicit legacy conversion in the surface dictionary |
+| Administration permission catalogue | Added paired administer_permission_kind and exact plane-qualified catalogue validation; no inferred permission |
+| Deferred trigger performance | Accept bounded/deduplicated validation; reject claiming PostgreSQL statement triggers can be deferred; section 2.3.4 |
+| F0 and earlier useful slice | F0 first; qualified read-only reference vertical slice after its full dependencies; section 7.9.1 closing delivery note |
+| Bring release sets forward | Deferred as an execution protocol; dependency analysis/dry-run surfaces the blocker early, but mandatory cycles remain blocked |
+| Compatibility computation | Accepted conservative versioned semantic rules plus independent security classes; section 2.3.3 |
+| Graph limits | Accepted as required measured descriptor limits, not invented numeric budgets; section 2.3.4 |
+| ASCII snake_case everywhere | Narrowed to existing per-key ASCII grammars; dotted/hyphenated governed keys are preserved, Unicode labels remain allowed |
+| Security change classes | Accepted as separate review findings bound to exact source/result/dependency evidence |
+
+| Second audit | Disposition |
+| --- | --- |
+| 1.1 competing query_text filters | Clarified as literal keyword search only, ANDed with typed filters and independent locked scope; expressions reject; surface_view dictionary |
+| 1.2 export exposure | Accepted: export consumes effective read-operation/field-access closure and representations; writable entity_operation_field is not repurposed as read enrollment; section 2.4.2 |
+| 1.3 branch/merge ambiguity | Lineage retained; general sibling merge/promotion UI excluded in Phase 1; reviewed rebase is explicit; section 2.3.3 |
+| 1.4 default uniqueness | Accepted scoped partial unique indexes with immediate clear-then-set swap; exactly-one remains completeness; section 2.3.4 |
+| 1.5 field CHECKs | Added concrete row-local templates; enum-choice and ownership rules remain deferred cross-row checks; section 2.5 |
+| 1.6 whole-entity retirement | Accepted governed retirement, affected dependencies, retained artifacts and explicit rebind/revocation handling; section 2.3.3 |
+| 1.7 requires_preflight | Nullable unresolved server-derived fact, P resolved boolean; not client-authored input; operation dictionary |
+| 1.8 activation TOCTOU | Accepted local shared/exclusive head-lock protocol covering record transactions and activation; section 5.1 |
+| 1.9 authorization intent | Added concrete target/effect compiler-to-runtime responsibilities and rejection of unsupported combinations; operation dictionary |
+| 1.10 default currency | Resolve through explicit record currency field and qualified context default as described below; no implicit third currency authority |
+
+Editability predicates narrow presentation only and are labeled **UI editability condition — not write authorization** in the inspector. Runtime writes must pass operation enrollment and registered server policy/validation independently. Validation emits an actionable warning when a UI editability condition has no corresponding qualified server restriction; authors may acknowledge a presentation-only condition, but cannot claim it enforces a business invariant. A declared business restriction without a server contract blocks qualification. Do not automatically convert arbitrary UI predicates into policy or authorize writes from visibility. The one-root rule in section 2.3.4 supplies explicit boolean-tree semantics.
+
+Money retains currency_field_id XOR currency_code. For a tenant/record default, select an explicit currency field whose value is supplied by a qualified trusted context/default operation contract; money references that persisted record value. Absence of such a provider blocks that option. Changing a tenant default cannot silently reinterpret existing amounts. No third implicit tenant-default setting or per-money-field copied default is introduced. Selecting a new context contract must qualify its typed binding and server enforcement first.
+
+#### Product improvements and their qualification boundary
+
+| Improvement | Accepted direction and constraints |
+| --- | --- |
+| Dependency health and coordinated rebind | Read-only dependency inspection through the shared Entity experience; affected-source proposals carry semantic diffs and exact pins. Each source still requires its own authorization/review; a bulk proposal does not claim atomic cross-plane activation |
+| Tenant baseline drift | Show baseline-superseded/rebase-needed findings, validate overlay anchors and extension points against the proposed new hash, and apply section 2.4.2 suspension rules; never mutate baseline pins automatically |
+| Starter surfaces | Future governed template resource proposes supported fields/keys/search/surfaces. Apply suggested settings explicitly, persist canonical typed rows, retain provenance, and validate installed capabilities. No hidden ongoing inheritance or alternate authoring store |
+| Whole-entity duplication | Future qualified draft-creation command allocates a new stable entity/field identity set, remaps internal references, retains external pins/provenance and checks namespace/storage authority. It copies neither records, approvals, signatures nor activation state, and does not create physical tables implicitly |
+| Personal saved-view predicates | Shared typed predicate grammar in existing user-owned view storage, with effective access, scope and no-UUID checks; surface_view dictionary |
+| Semantic review diff | Primary human-readable review object bound together with complete base/result/dependency hashes; section 2.3.3, never diff-only approval |
+| Programmatic authoring SDK | Typed client over the same command API, concurrency/idempotency, validation and authorization. No direct DB writer or CI-generated human approval; service-origin proposals retain attribution and require independent human review |
+| Draft-health telemetry | Counts/P gaps, validation latency, snapshot bytes and rejected-limit metrics scoped to authorized operators; avoid field values/secrets in telemetry. Use evidence for the existing F5 capacity/retention decision, not automatic history deletion |
+| Publication dry-run | Read-only pre-submit report of exact dependency closure per target, installed provider/renderer evidence and compatibility findings. Pin report inputs and observation time; stale reports require refresh. Dry-run does not reserve target heads, approve, deploy or replace activation rechecks |
+
+These product capabilities are design backlog, not claims of current implementation or permission for new domain handlers. Starter templates, duplication and SDK need their complete contract/control mappings before exposure; dependency inspection must use shared framework hosting, never a bespoke explorer. F0 remains unbuilt and generated regions remain pending until reproducible tooling runs.
+
+#### Added qualification fixtures
+
+Extend section 11.10 with: two drafts publishing from one predecessor (only one may advance without rebase); extension source-head versus baseline-head mismatch; contributor edits/import/rebase followed by attempted review; diff/result-hash mismatch; pinned old permissions/profile versus tightened active controls; incompatible security identity mapping; live preview unmasking and draft-only fields; masked export/background download and masked import rejection; per-plane forbidden query enrollment; bidirectional product/tenant namespace collisions; duplicate defaults/root trees and atomic default swaps; temp-reference forward/duplicate/unknown/replayed tokens; learned-term origin-tenant mismatch; product UUID literal conversion; field-family SQL/service conformance; activation versus concurrent custom-value write; parent hard/soft deletion with holds and orphan detection; deployed-schema drift; retired pinned dependency disposal; and composer-host recovery. Assert preservation of valid absent-permission access and existing MFA throughout. These are required future fixtures, not tests reported as run by this document update.
+
+Forward inventory additions from these audits: entity_change_set.source_predecessor_release_id; entity_authorization_profile.administer_permission_kind; entity_ai_term.origin_source_kind/origin_tenant_id; requires_preflight nullability/derivation; scoped default/root indexes; and any required participant, source-head, provenance or semantic-review evidence extensions discovered while mapping existing stores. F0 must inventory exact storage locations for all such evidence before qualification; do not hide unmapped requirements in a generic JSON bag. Runtime permission-state, preview, effective-security and schema-attestation contracts require versioned transitions. Their schemas/adapters and migration execution remain pending.
+
+### 11.20 Handler, event and webhook qualification disposition
+
+Section 6.5 is the canonical detailed target design requested after the handler/webhook review. Source inspection establishes reusable pieces and qualification gaps; it does not attest a deployed exploit, a working governed webhook composer or completed runtime remediation. Existing Entity operation/storage handler selections stay authoritative. Integration-owned definitions remain independent resources selected through governed bindings, and all editors/read models use the shared Entity Framework.
+
+| Existing source evidence | What it establishes | Required qualification/correction |
+| --- | --- | --- |
+| server/apps/platform-host/src/composition/shared/entity-runtime/handler-registry.ts | Composition-selected handler keys; first-match registry behavior | Exact manifest key/version/hash resolution, duplicate rejection, installed-build attestation and no incompatible fallback |
+| server/packages/platform/experience/src/entity-operation-dispatcher.ts | Pinned operation dispatch, permission/input/target checks and required idempotency/version inputs | Full schema contract, trusted scope, transaction/audit ownership, actual idempotency and atomic version enforcement through the handler; argument presence alone is insufficient |
+| server/db/ddl/common/control/03_tables.sql | Connector/endpoint/subscription administrative models, secret references and version/limit fields | Qualified immutable authoring revision/publication adapter; typed filter/header/retry/mapping normalization; version number alone is not release evidence |
+| server/db/ddl/common/event/03_tables.sql | event.webhook_subscription explicitly documented as compatibility projection | Single administrative authority, exact projection lineage and safe secret-reference cutover; no independent editor |
+| server/packages/platform/jobs/src/webhook-delivery.handler.ts | Outbound POST JSON, body-only optional HMAC, payload/timeout limits, redirect rejection and destination checks | Connection-time destination enforcement, comprehensive address handling, scoped dev exceptions and versioned signing protocol; no assumption of inbound interoperability |
+| server/packages/platform/notifications/src/kysely-webhook-repository.ts | Delivery claims, attempt recording, retry timestamps and dead-letter updates | Claim enforces due time; completion uses attempt/lease fence; frozen business payload excludes internal channel detail; terminal transitions are idempotent |
+| server/packages/services/integration/src/integration-service.ts | Versioned invocation planning, origin constraint, schema/size validation and semantic delivery keys | Governed source/activation pin, disclosure policy and explicit resource adapter; extend rather than duplicate |
+| server/packages/services/integration/src/delivery-jobs.ts | Secret resolution, retries, attempts and integration job registration | Resolve queue/database retry authority, claim fencing and declared plane execution; current Studio routing does not qualify Neon/Mesh |
+| server/packages/services/integration/src/inbound-webhook.ts | Timestamped raw-body HMAC, admission checks and duplicate storage handoff | Exact protocol/version alignment, payload/schema and replay-conflict semantics, durable admission-to-work handoff and authorized business dispatch |
+
+#### Acceptance evidence
+
+| Boundary | Required positive and negative fixtures |
+| --- | --- |
+| Handler installation | Exact supported manifest succeeds; duplicate key/version, wrong hash/build/role/plane and uninstalled dependency reject; first-match ordering cannot change dispatch |
+| Entity execution | Same key/input replays durable receipt, changed input conflicts, stale record version rejects, transaction rollback removes record/audit/outbox effects together, cancellation/timeout uncertain outcome resolves from evidence |
+| Event/outbox | Commit emits one durable event; rollback emits none; relay crash/replay does not create duplicate logical delivery; event source and subscription revision remain pinned |
+| Condition/mapping | Unknown/inaccessible fields, invalid operators, multiple roots, cycles, depth/size overflow, overlapping destination paths, unsupported transforms and executable templates reject; missing/null semantics are deterministic |
+| Exposure | Masked/omitted fields never leak through payload/condition/preview/log; foreign tenant/principal cannot select source or destination; current revocation blocks pending disclosure without silently changing retry bytes |
+| Destination policy | Private/reserved/metadata and IPv4-mapped IPv6 targets, DNS changes between validation/connect, redirected origin and dynamic-host injection reject; approved public connection uses validated address with correct TLS identity; local exception cannot allow arbitrary private hosts |
+| Secrets/signing | No raw secret in draft/export/artifact/log/preview; supported body-only legacy and timestamped protocols tested independently; rotation/revocation, skew and exact-byte signature mismatch behave as declared |
+| Delivery concurrency | Not-yet-due claims reject; lease expiration/reclaim fences stale completion; crash after remote acceptance reuses idempotency identity; attempts/age limits, Retry-After clamping and dead-letter insertion remain consistent |
+| Ordering/replay | Explicit partition ordering survives retries and declares blocking behavior; unsupported ordering rejects; exact replay versus new delivery has correct identity/lineage; cancelled or revoked deliveries cannot be silently revived |
+| Inbound | Invalid signature/expired timestamp/oversize/schema failure rejects; same identity/hash deduplicates; same identity/different hash conflicts; durable acceptance precedes acknowledgement; supplied tenant/principal/handler cannot bypass trusted routing |
+| Business dispatch | Inbound adapter must pass current Entity permission/scope/input/idempotency/concurrency controls; authenticated admission alone cannot invoke arbitrary handlers or direct database writes |
+| Preview/test | Preview performs zero network/secret-resolution effects and obeys active exposure; test send is separately authorized and names exact target/payload; neither produces approval/activation evidence |
+| Publication/planes | Exact source/dependency review and local binding verification required; suspension and missing transport/secret policy block; Studio/Neon/Mesh qualified independently without hardcoded plane fallback |
+| Migration/operations | Typed adapter reports unsupported legacy paths; historical hashes stay unchanged; in-flight plans/due times/attempt counts preserved or deliberately drained; no duplicate completed effects; operational records retain locked scope and readable identity |
+
+Qualification receipts identify source commit, schema/compiler/transport versions, tested target and exact fixture results. These are required fixtures, not tests run by this documentation update.
+
+#### Delivery order and remaining design work
+
+1. Extend the existing handler catalogue/registry contract and document transaction/idempotency/concurrency responsibility through one existing eligible operation, then a second metadata-selected use. No new business handler is implied.
+2. Reconcile notification versus integration delivery ownership and administrative-to-projection flow. Complete typed revision/member dictionaries and versioned adapters, including exact SQL/DTO/codec/compiler paths for section 6.5.4's proposed families. Their physical schema and installed adapters remain pending; do not expose editors before this gate.
+3. Qualify durable event routing, disclosure, destination/secret protocols and lease-fenced delivery using existing workers/repositories. Add inbound execution only through the qualified adapter boundary.
+4. Publish the registered Integration authoring/editor and operational read-model contracts through the existing governed path when that implementation slice is authorized and ready. Prove inert preview separately from explicit test delivery.
+5. Rehearse legacy/in-flight migration and target activation, independently review exact releases, and verify runtime per declared plane. Report implementation, publication and verified delivery separately.
+
+These stages complement section 7.9 and do not block the core Entity composer with unimplemented integration editors. The owner authorized detailed design additions, not immediate network requests, secret rotation, migration execution, arbitrary code authoring, workflow/case execution, new business handlers or MFA changes.
+
+### 11.21 Foundation, access-expansion and delivery audit disposition
+
+These two audits refer partly to the earlier 4,228-line version. Handler/webhook section 6.5 and its qualification gates remain intact. Corrections below are design changes only; existing generated evidence remains pending and no code, MFA behavior, production retention or release-set protocol is implemented by this update.
+
+#### Generation, migration and first-live-compiler gates
+
+The section 1 package-source decision replaces the former in-blueprint contract region. F0 validates the closed typed package definition, rejects duplicate/missing/unknown definitions, generates contract tables/descriptors/DTO/codec mappings and DDL comparison, and fails CI on regenerated mismatch. Pin canonical source artifact hash, generated-region hashes, generator version and DDL/evidence hashes in an external manifest to avoid self-reference. Hash canonical source artifacts rather than arbitrary executable module formatting. Values remain pending until generation runs. No prose-table parsing or second hand-maintained schema is permitted; existing tables remain reviewed inputs until conversion qualifies.
+
+Permission interpretation is selected by the compiled artifact’s registered contract schema/version, never the authoring schema_version or the presence/absence of a property. An unknown or unsupported compiled contract blocks decoding rather than selecting a permissive legacy interpretation. The explicit none/defined permission-state variant and entity.effective-security/1 are prerequisites of the first normalized live compiler/reader slice, including live previews. Historical readers continue only under their qualified schema validation/absence rules; a new discriminator is not retroactively added to signed artifacts. The audit's assertion that current schemas cannot distinguish any valid absence from invalid evidence is too broad: this depends on their actual validators. The required migration gate is a paired new compiler/reader contract plus regression tests, not an unverified claim about every current path.
+
+Position cutover is automated inside the section 11.12 controlled transaction: consult the existing applied-migration ledger under the cutover lock, validate exact source schema/position convention, perform the one-time transformation, force deferred constraints, and assert positive positions and dense 1..N per nonempty retained sibling scope using count/min/max/distinct checks. Record the migration identity/input hash and successful target assertion atomically with commit. A rerun validates the target and does not apply +1; an ambiguous/partial source state blocks. Empty collections have no min=1 requirement. Preserve historical signed artifacts and do not add a second migration ledger. Include interruption/rollback/retry and already-converted fixtures.
+
+#### Disposition of the access and delivery audit
+
+| Point | Resolution |
+| --- | --- |
+| L1 newly introduced open access | Diff every effective member × plane requirement, including additions; newly introduced none is a security review finding, with write/delete/export highlighted; section 2.4.2 |
+| L2 MFA state lost on graph reconstruction | Protected read-only source value/evidence must survive snapshot/export/import/restore/fork/duplication and reject mismatch; operation dictionary prose. Current DTO/repository requiresMfa exposure is source evidence, not authority to modify MFA code without explicit owner approval |
+| L3 related-list release cycles | Genuine cycles remain blocked; not every parent/child pair necessarily has mandatory bidirectional dependencies. Existing local coordinated activation is not sealed co-publication. Release sets remain separately scoped; no mandatory relation is dropped |
+| L4 tenant/product field collisions | Reserved ext_ field-key namespace for new extensions, product reservation, explicit legacy migration and qualified payload resolution; field dictionary |
+| L5 overbroad authoring grant | Published tenant/product/module record scope required on every host/service action; section 2.4.3 |
+| L6 cross-plane live preview | Phase-1 fixtures unless a consuming-plane delegated human-authorized reader qualifies; section 11.9 |
+| L7 ledger without blocked rows | Pending path inventory cannot attest semantic readiness; correlated renderer conflicts block conversion until regenerated; section 11.6.1 closing conversion note |
+| L8 stale tenant baselines | Current target product baseline plus exact qualified overlays; reviewed rebase or affected-overlay suspension, no automatic repinning; section 2.4.2 |
+| Move F0 source out of Markdown | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| Compress/reorder the document | Preserve anchors and evidence for this correction; future generated index/decision summary can reduce repetition without deleting unresolved gates or losing exact source coverage |
+| Named minimal milestone | Reference Entity Authoring: Country and State Region through shared contracts; section 7.9.3 |
+| Automatically accept disjoint edits | Deferred pending read-set and phantom-dependency proof; revision-bound comparison/read ergonomics and multi-author qualification added |
+| Content-addressed snapshots | Potential physical optimization with exact logical snapshot reconstruction; no new backend/deletion authorization; section 7.9.3 |
+| Bulk exposure setup | Explicit copy-plane and classification/class-profile suggestions, validated per target, added below |
+
+#### Disposition of the foundation audit
+
+| Point | Resolution |
+| --- | --- |
+| 1.1 deferred validation scalability | Transaction dirty-generation registry with narrow member guards, one shared validator and commit revalidation; exact private SQL objects must qualify before old guards retire; section 2.3.5 |
+| 1.2 custom-value soft integrity | Early derived local identity projection/FK qualification; still requires parent/provider/access checks and no remote FK claim; section 5.2 |
+| 1.3 global draft revision | Explicit optimistic same-draft limitation, revision-consistent module reads and measured multi-author scenarios; no claim of single writer per Entity |
+| 1.4 missing F0/drift loop | Closed-region generation and CI mismatch/hash gate specified above; no generator execution claimed |
+| 1.5 security resolver | Named versioned input/output/state/cache/lock contract and live-data prerequisite; section 2.4.3 |
+| 1.6 retention growth | Production enablement requires both capacity evidence and explicit owner retention decision; no unapproved rolling deletion default |
+| 1.7 none/defined permission state | First normalized compiler/reader transition gate, preserving historical schema validation and valid absent-permission access |
+| 1.8 extension query matrix | Pinned provider/type/cardinality/operator capability manifest alongside storage evidence; section 5.2 |
+| 1.9 bootstrap review | Independently authenticated human approval via existing API/typed CLI, not service-manufactured attestation; section 7.2 |
+| 1.10 position cutover | Atomic migration-ledger check and automated dense-order postconditions; no second ledger |
+
+#### Product backlog prioritization and limits
+
+Section 7.9.2 is the consolidated delivery order: executable foundation proofs, governed reference authoring, early review/exposure/impact improvements, richer onboarding, extension-write integrity, then measured optimizations. Semantic review diffs, contract-test preflight and publication dry-run/dependency health support that order; mandatory controls are prerequisites of the first applicable publication, not deferred backlog. Contract tests run under the qualified bounded fixture schemas and installed validators before submit/publication; failing mandatory tests block. Fixtures remain synthetic/authorized and cannot invoke workflow or external effects merely to increase coverage. Reports bind graph, dependency, test-suite and compiler hashes and are invalidated by changes; live target activation still rechecks changing evidence.
+
+Add explicit **Copy exposure from plane** and **Apply suggested exposure** bulk commands through the canonical field-access editor. Suggestions may use governed classification/class profiles: restricted fields can propose masking/omission and exclusion from export/AI. Authors explicitly apply persisted rows; per-target provider, access and scope validation still runs. Plain exposure of restricted fields receives a separate review finding. No automatic permission invention, runtime fallback or MFA change results.
+
+After the core slice, prioritize starter drafts from approved storage plus explicit class-profile suggestions and templates: propose fields/keys/search/surfaces, prompt for readable identity and navigation, validate, then persist an ordinary typed draft. Do not assume the first field is identity, auto-publish, create physical columns or copy reviews. Whole-entity duplication retains its existing new-identity/provenance requirements. The typed SDK remains a client of that same command API and cannot attest human review.
+
+Extend the Field hub into authorized lineage inspection (approved storage column → stable field → placements/views/filters/AI → compiled artifact/release) using the shared Entity experience; do not create a bespoke explorer. Shared labels are a high-priority follow-on only after the governed label resource qualifies; owned labels remain the first-slice path. Tenant translation overlays require typed owned locale/label bindings to exact approved baseline extension points, conflict rules and publication semantics before use; existing mention of translation points does not claim that editor/storage exists.
+
+Type extensions remain explicit backlog: time-of-day, local datetime with timezone, duration and percentage require scalar/storage/codec/validation/format/query semantics before new types are selectable. Email/phone/URL use installed registered validators rather than ad-hoc string flags. File/image presentation binds an authorized attachments contract. Many-valued enum can use a qualified text[] storage adapter with a pinned API array schema; a schema contract does not mandate JSONB. Conditional requiredness with server validation is prioritized among section 7.10 gaps but cannot be enabled through UI-only predicates. None of these recommendations changes existing type domains or creates new business handlers in this documentation update.
+
+#### Additional qualification evidence
+
+Add tests for newly introduced none on added targets/operations/actions; protected existing control preservation through every reconstruction path (MFA-related implementation requires prior owner approval); product/extension field collision migration; module-scoped host enumeration and addressed writes; delegated-preview forged audience/principal/tenant and unavailable adapter; current-baseline activation with incompatible overlays; dirty-generation callbacks across repeated saves/savepoints/direct DML/SET CONSTRAINTS; local identity FK mismatch and retirement retention; two-author disjoint and overlapping edits; security-generation cache staleness under activation locks; generated-table drift; bootstrap without a composer host; position migration replay; query-capability versus permission mismatch; and failing preflight fixtures. Record performance separately from correctness. These are pending acceptance requirements, not tests claimed executed by this audit reconciliation.
+
+
+### 11.22 Storage-boundary and authoring-safety audit disposition
+
+This audit strengthens existing contracts in place; it does not attest implemented controls. Sections 2–7 contain the operative amendments. Preserve sections 11.14–11.21 anchors and evidence rather than performing a broad audit-history rewrite during a correctness correction. The compact register below records qualifications and deferred proposals; section 7.9.2 remains the delivery order.
+
+| Finding | Disposition and qualification |
+| --- | --- |
+| H1 storage rebinding bypass | Accepted with qualification: independent storage-authority/projection gate in runtime profiles, including multi-owner lineage. Row-scoped tenancy requires its verified tenant coordinate; dedicated tenant storage uses explicit provider isolation. DDL catalogue facts cannot self-grant authority |
+| H2 undefined relation actions | Phase 1 verify-only physical-FK semantics; mutations triggering physical cascades still need transactional affected-record authorization/audit. Logical/cross-plane/release-resource cascades remain unsupported |
+| M3 custom-value versions | Aggregate parent/extension expected-version and snapshot-consistent reads; concurrent mixed/extension-only patches are qualification fixtures |
+| M4 incomplete exposure | Full effective field × plane coverage, explicit omitted and paired nullable read binding only for omitted. Negative fixtures cover API/export/AI/events as well as rendered fields |
+| M5 visibility mistaken for security | Explicit presentation-only warning, authorized predicate inputs and independent server field exposure; hidden UI does not attest omitted payload |
+| M6 incomplete security diff | F0 property classifications plus effective graph/dependency classification; listed widening changes and unknown classifications covered in section 2.3.3 |
+| M7 host group visibility | Add typed entity_predicate.navigation_group_id root owner, matching FK/index/XOR, compiler and renderer qualification; no ad-hoc host tab branch |
+| M8 slice 0 sequencing | Clarified host foundation H as a dependency subset of existing slices, not a new standalone migration stage. Existing text already prohibited slice 0 UI without host qualification |
+| L9 rename/recreation | Rename preserves/remaps security children atomically with explicit lineage; delete/add remains explicit removed-controls/new-none review evidence |
+| L10 misleading labels | Pinned control-character validation, safe historical display, script diagnostics and visible logical keys; canonical hashing remains unchanged |
+| L11 regex cost | Registered bounded linear-time regex dialect/engine; no backtracking fallback; qualify unsupported syntax and long-input behavior |
+| L12 read-only contradiction | Reject generic storage mutations under write_mode=none at authoring/publication and runtime |
+
+| Product/design proposal | Decision and delivery boundary |
+| --- | --- |
+| Consolidate invariants/audit sections | Defer wholesale renumbering and deletion. Future F0-generated index may link one canonical invariant definition to usages while preserving anchors and unresolved gates; no competing report |
+| Move F0 source | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| Exact MVP dependency cut | Added bounded table-family manifest in 7.9.3; F0 must resolve conditional dependencies and exact used columns before migration implementation |
+| Intentional open access | Explicit per-operation/plane chip and separate review state; presentation grouping never weakens independent review or permission semantics |
+| Binding classification floors | Qualified follow-on, not an implicit policy change: register an explicitly governed class policy with exact source/release/hash, typed field binding and exception contract. Resolve floors through existing field-policy/effective-security controls, never from a label or data_classification alone. Missing required policy blocks qualification. Any exception must be independently reviewed, scoped, expiring where required and unable to weaken non-overridable platform controls. No MFA default or code change is authorized |
+| Browser draft recovery | Defer durable local buffers until a scoped recovery contract qualifies principal/tenant isolation, sensitive-content handling, expiry/logout clearing and explicit stale-revision reconciliation. Recovery never auto-saves/publishes or copies secrets/raw preview records into browser storage |
+| Member-level versions | Defer; retain one draft revision. Read-set/phantom-dependency proof precedes stale-batch acceptance; per-member counters alone cannot establish merge safety |
+| Useful Neon/Mesh preview | Prioritize bounded reproducible synthetic fixture generation in the shared preview path. Production data access still requires a qualified delegated reader |
+| F5 decision timing | Request the Platform Owner's retention decision during foundation planning, before scheduling production enablement. Track accountable owner, capacity/restore evidence, requested decision date and outcome in release evidence; date and decision remain pending until explicitly supplied, not invented by this document |
+| Data-impact dry-run | Accept qualified aggregate provider preflight with snapshot/completeness evidence and scope protection, as specified in 7.5.1; no direct Studio data scans |
+| Declarative cross-field validation | Accept as a follow-on design candidate, not a new active predicate purpose yet. Define typed record_validation ownership, operation enrollment, finite grammar, error paths and old/new/null semantics; validate assembled parent/extension state server-side for API/import/bulk and enforce conditional requiredness there. Complete DDL/DTO/codec/compiler/provider contracts before enabling |
+| Audience-targeted published views | Deferred typed audience/priority/default-resolution contract; views must not grant field/record access. Resolve role/group membership through published policy bindings, not hardcoded roles or inferred permissions |
+| External API schema per release | Accept derived contract-export direction. Pin schema to immutable release identity/hash plus compiler-contract version, not release number alone; export only declared API operations and preserve effective runtime authorization. OpenAPI/JSON Schema generation needs a qualified mapping and compatibility tests before claiming integration support |
+| Review routing by change class | Qualified governance follow-on: exact published reviewer-policy bindings and independently authenticated eligible reviewers. Presentation-only routing may simplify review but cannot waive contributor separation or required owner approval; unknown classification blocks routing |
+| AI-assisted drafting | Existing attributed proposal/command API is the only path. A service proposal retains model/tool/input provenance and human contributor attribution on acceptance; synthetic suggestion is not review evidence, and no autonomous approval/publication is authorized |
+| Usage before removal | Extend governed lineage with authorized runtime usage evidence, including saved views/integration/AI consumers. Report observation window, freshness, coverage and unknown consumers; no observed use never proves safe removal or authorizes deletion |
+
+Qualification adds alternate-Entity storage bypass attempts, stale/missing owner mappings, tenant-scope mismatch, denied transitive cascades and cascade races, extension-only conflicts, missing non-UI field exposure, hidden sensitive-value payload checks, full security-classification coverage, group visibility round trips, rename security preservation, unsafe label display, regex limits and read-only mutation rejection. New dictionary fields and changed nullability feed F0 and regenerated DDL/codec comparisons before implementation; generated ledger/specimen evidence remains pending. Existing handler/webhook contracts, historical artifact hashes and MFA behavior are unchanged by this documentation update.
+
+
+### 11.23 Governance, identity and target-contract audit disposition
+
+The current audit is reconciled into sections 2–7 above. This register preserves the distinction between accepted clarification, new unbuilt contract and proposals requiring a separate decision. Section 7.9.2 still determines delivery priority; additional resources do not displace the executable F0 proof.
+
+| Finding | Decision |
+| --- | --- |
+| Host permissions can be removed | Preserve independent published platform/tenant governance authority outside the host draft and qualify every host capability against it. No hardcoded extra entity permission or weakening of valid permission absence; section 2.4 |
+| Missing authoring permission intent | Mandatory none/defined authoring rows are not adopted because they would make valid absence a new completeness failure. Show explicit derived state and exact unreviewed/approved change evidence; compiled versioned none/defined stays mandatory |
+| Stable field identity allocation | Reserved identities carry introducing draft and first-release provenance; serialized allocation/publication, compatibility checks and retention-aware reclamation. Abandonment alone cannot release retained keys or permit semantic reuse |
+| List versus field read operation | Enforce both operation and field-read authorization, including record/query scope before pagination. Unsupported intersections block rather than infer coverage |
+| Permission catalogue | Proposed pinned per-plane resource, activation/current-revocation verification and broken-reference rejection; no live Studio-to-plane catalogue query |
+| Classification free text | Governed domain reference and exposure-relevant change classification. Binding policy floors remain explicit governed follow-on, not inferred from text |
+| Plane-specific surface mismatch | Named SURFACE_EXPOSURE_COVERAGE gate: Phase-1 surfaces qualify for all declared entity targets; incompatible omitted fields block target qualification. Per-plane surface enrollment deferred |
+| Tenant views without storage | Removed implied tenant-view authoring capability; only separately qualified persisted views may select overlay additions |
+| False generation annotation | Corrected to maintained cross-reference; no generator execution claimed |
+| Reduce repeated audit prose | Retain established anchors/evidence during this change. Future index/decision consolidation must preserve unresolved acceptance gates; no competing report or silent normative deletion |
+| Move F0 source | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| Service-only graph validation | Not adopted without equivalence proof. Exclusive service-role writes alone do not prove every transaction/import/recovery path validates its final graph. Keep existing DB controls until the isolated prototype or a separately reviewed alternative proves the same invariants; no integrity reduction to meet schedule |
+| Smaller first cut and stopping criteria | Added bounded intermediate reference demonstration and accountable-role/exit-evidence matrix in 7.9.3. Role-to-person assignment and numeric budgets remain explicit planning work |
+
+| Capability suggestion | Scope and qualification disposition |
+| --- | --- |
+| Environment promotion | Accept design direction: promote the same immutable signed release/hash; record environment-specific installation, dependencies, schema attestation, active-head precondition and activation receipt. Environment identity and deployment configuration require a typed target contract; secrets stay external references. Different compiled bytes require a new reviewed artifact, not an unchanged-signature claim. No production promotion is authorized here |
+| Schema-change proposals | Accept governed dependency direction: reference reviewed forward-migration identity/hash and consuming-plane applied evidence through existing dependency/attestation contracts. Schema compatibility precedes metadata activation; schema execution stays in the owning migration process. Preserve applied hashes, use compatible staged changes and do not claim metadata rollback reverses destructive DDL |
+| View as role | Qualified synthetic server-side simulation only, using exact published policy/principal-context fixtures. It cannot impersonate users, issue grants or fetch otherwise unauthorized records. Report unevaluated dynamic conditions as unknown; a simulation result is not a runtime access receipt |
+| Any-of/all-of permissions | Deferred typed expression contract, codec and authorization compatibility change. Keep current exact single-code bindings and existing registered policies; do not encode expressions in permission strings or infer new codes |
+| Per-operation record locks | Deferred typed predicate ownership/enrollment extension. Existing operation policy bindings may express qualified rules; do not weaken the plane-level lock automatically. Future composition must specify intersected scope and mutation-specific conditions without treating UI editability as authorization |
+| Scheduled activation | Deferred scheduler capability with typed environment/time/cancellation contract. Approval does not guarantee future activation: recheck authority, dependencies, schema, revocation and active-head preconditions at execution; record failed/deferred status, never silently activate stale evidence |
+| Release sets | Remain separately scoped. First measure blocked mandatory cycles in real onboarding and prioritize from evidence. Earlier scheduling cannot replace sealed dependency/co-publication, independent review and partial-failure contracts; Phase-1 cycles still block |
+
+New conformance cases cover host-authority removal through UI/API/CLI, valid absent permissions versus broken catalogue entries, concurrent incompatible same-key field proposals, retained abandoned reservations, first-publication rollback, stricter field reads behind open directory operations, catalogue revocation, classification downgrade and omitted fields on one target plane. Permission and classification resources, identity provenance columns and downstream DTO/codec/compiler mappings must feed F0 before qualification. Generated inventories and specimens remain historical/pending evidence, not regenerated artifacts. No runtime permission or MFA implementation changes accompany this documentation update.
+
+
+### 11.24 Boundary qualification and post-reference roadmap audit
+
+This audit used an earlier 4,627-line revision. Sections 11.22–11.23 already resolve several findings. Operative clarifications have been placed in sections 3 and 7 and the saved-draft preview contract; this register records remaining qualifications without claiming implementation.
+
+| Audit point | Disposition |
+| --- | --- |
+| 1.1 storage authority | F6 now names the resource/lineage qualification boundary, accountable role and negative tests; it gates priority 3 live reads. It is not combined with extension-only prerequisites |
+| 1.2 custom-value integrity | F7 unifies local projection/FK, activation locks, aggregate concurrency and erasure tests before new normalized writes; section 5 remains a target contract, not proof of deployed integrity |
+| 1.3 same-plane preview | Explicit human authorization context and no-record-read negative fixture added to 11.9; service credentials cannot elevate preview |
+| 1.4 replacement pointers | Qualified correction: draft successor is the authored proposal; committed identity successor is derived at approved retirement publication. Deriving the draft solely from current identity would prevent safe preapproval proposals or make drafts mutate shared state |
+| 1.5 mandatory release cycles | Track capability gap CYCLE-01: mandatory unsealed cycles remain unsupported. Platform Owner must explicitly accept this ceiling for any rollout containing such models or authorize the release-set design first. Record affected models and decision in rollout evidence; no blanket claim that every bidirectional model is cyclic and no omission of mandatory relations |
+| 1.6 F0 location/tooling | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| 1.7 bootstrap | B0 names the minimum pinned resource package, responsible role and API/CLI evidence required before host activation; the host is never authored through an unavailable composer |
+| 1.8 exposure matrix | Basic copy/suggest/apply commands move alongside the first field-access editor; full coverage and explicit acceptance remain mandatory |
+| 1.9 retention | F5 now includes early growth forecasts and approved alert thresholds; no guessed retention, automatic disposal or unannounced write cutoff |
+| 1.10 ext_ boundary | Existing field dictionary already requires descriptor/save/compile enforcement. Add negative fixtures rejecting new product ext_ keys and new extension keys outside ext_ before save. Serialized publication checks handle registry races; legacy collisions require explicit migration, not best-effort acceptance |
+| 1.11 multilingual search | Pinned analyzer/language capability evidence is required for full_text/hybrid. Normalization alone is insufficient; locale routing remains a typed follow-on and unsupported language behavior is explicit |
+| Operation schema pins | Resolve and emit immutable handler contract input/result schema pins, including generic specialization, without introducing duplicate editable schema authorities |
+| Compiled form modes | Explicit derived formModes projection references shared compiled geometry; no additional writable form_modes property |
+| Money default provider | Named proposed entity.money-default-currency/1 and bounded qualification vectors; no claim it is installed |
+| Reviewer routing | Prioritize qualification of existing governed reviewer-policy routing with review/release delivery. New routing schemas remain a follow-on; no hardcoded role, lighter independent-review requirement or default route for unknown change classes |
+
+Post-reference priority is shared onboarding productivity and safe change: accepted starter drafts/templates/duplication through the same typed command API, authorized Field-hub dependency impact and constraint-tightening preflight. Cross-field record-validation design follows the reference slice and must complete its typed/server contracts before exposure. Derived per-release API schemas, the governed shared-label resource and audience-targeted views remain separately qualified follow-ons; schema generation is not automatically low-risk or a substitute for effective authorization. Shared labels retain scoped identity rather than text-only deduplication.
+
+Fund bounded feasibility proofs for read-set reconciliation and release sets early when measured collaboration conflicts or CYCLE-01 blockers justify them; proofs can run independently of the first usable reference delivery. Production support remains deferred until conflict/phantom-dependency, sealed closure, independent review, activation and recovery gates pass. A local coordinated activation mechanism alone does not implement co-publication or cross-plane atomicity. These priorities do not authorize workflow/case execution, business handlers or MFA changes.
+
+Acceptance additions: F6 alternate-owner/lineage rejection; F7 head-lock/version/erasure races; same-plane service-credential preview escalation; competing replacement proposals with unchanged committed identity until approval; ext_ save-time rejection; per-language analyzer/index consistency; derived operation schema and form-mode hash stability; explicit exposure bulk-copy conflict handling; money-context failures; bootstrap without UI; capacity forecast thresholds; and constraint-tightening activation with partial/stale impact evidence. Preserve generated source/specimen evidence until F0 regenerates it; no tests or migrations are claimed executed by this documentation change.
+
+
+### 11.25 Presentation, lifecycle and operational audit disposition
+
+Sections 1–7 now contain the applicable corrections. This compact register records scope and deferred decisions; earlier audit anchors remain available rather than being deleted before their unique evidence is reconciled. Documentation changes are not implementation, activation or runtime verification.
+
+| Finding | Disposition |
+| --- | --- |
+| L1 masked presentation oracle | Added presentation dependency/read-closure rule, qualified condition use and server-side sensitive evaluation. A permitted condition or server-side boolean is not by itself disclosure-safe; raw masked-value inference still rejects |
+| L2 extension membership | Closed source-kind family matrix, F0 exact-table expansion and database/service guards. Unclassified extension families are forbidden; inherited product rows remain read-only |
+| L3 rollback baseline | Diff against current sealed source head and every destination's current active/effective controls; head changes require renewed evidence/review |
+| L4 signing | Mandatory for new publications across source kinds; trusted issuer/key policy, activation verification, rotation/revocation and explicit historical unsigned compatibility |
+| L5 tooling revocation | Governed hash/version trust policy for descriptors, codecs and compilers, with explicit upgrade/revalidation; pins do not override revocation |
+| L6 new-operation protected state | Unresolved owner decision. Preserve verified existing state; do not invent false, introduce true, copy unrelated operation settings or implement MFA behavior. Platform Owner must specify the authorized provenance/initialization rule for new operations before that capability qualifies. Existing-operation inspection/editing remains separately eligible |
+| L7 partial draft CHECKs | Currency and structured-schema checks now allow consistent incomplete drafts; exact required selections remain preview/publication completeness gates |
+| L8 resource growth and reservations | Typed operational budget contract and atomic admission required before production; no history deletion as quota enforcement. Reclamation requires removal of all references through approved retention, not just setting draft status to abandoned |
+| L9 activation stalls | Coordinate-scoped locks, approved acquisition/transaction limits, bounded retry and measured stall tests; no indefinitely queued exclusive activation |
+| L10 export formulas/lifetime | Typed spreadsheet-safe serialization plus approved artifact expiry/download/retention contract |
+| L11 collision disclosure | Restricted diagnostics and separately authorized investigation; no foreign-tenant names/keys leaked by collision checks |
+
+| Delivery/design recommendation | Decision |
+| --- | --- |
+| Relocate F0 now | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| Replace audit history | Added invariant index and evidence definition; wholesale compression deferred until unique rules/evidence have a verified canonical destination. Keep current anchors and no companion report |
+| Time-box inspection demo | Use the bounded section 7.9.3 demonstration; shared Entity Framework maintainer supplies start/end dates and assigned owner in implementation planning. No date or staffing commitment is fabricated. Existing-draft read-only inspection may be investigated independently; normalized saved-fixture claims retain their contract/host gates |
+| Fix code blockers | Current inspection confirms Overview synthesis in form-detail/src/detail-workspace.tsx and the Address-specific preview route in meta-entity-authoring/src/routes.ts. They remain shared-framework remediation work, with generic metadata navigation/readers and negative fixtures required. D27 save reconciliation remains independently tracked; do not infer its completion from this audit. L1 runtime coverage needs its own data-flow inspection. This documentation-only change fixes none of those implementations |
+| Decision accountability | Platform Owner owns F5 retention, CYCLE-01 acceptance, L6 and governance review of F0 implementation; shared authoring maintainer owns F0's exact L2 table matrix and gate evidence, subject to governance review. Named assignees and target dates must be recorded before the dependent implementation/rollout is scheduled. An overdue/undecided prerequisite stays blocked rather than acquiring an implicit default |
+| Early snapshot measurements | Already required by F5 foundation forecasting; keep optimization later while recording representative save/restore measurements early |
+
+Product follow-ons remain within shared typed contracts: prioritize starter drafts and server-side cross-field validation. Per-plane surface enrollment is accepted as the next design candidate, but needs typed surface/target membership, completeness/default rules and codec/compiler/consumer mappings before replacing SURFACE_EXPOSURE_COVERAGE. Form navigation groups likewise require explicit form ownership, submit geometry, section behavior and accessibility/renderer qualification; existing detail-only constraints remain until that complete amendment. This review does not expose unsupported tabs or per-plane controls.
+
+Authorized runtime **Explain access** should project existing resolver states and safe rule references without exposing hidden record values, membership, foreign-tenant metadata or reusable grant evidence. Reviewer role simulation remains fixture-only under section 11.23. Metadata-generated conformance vectors supplement independent negative/adversarial tests; they must enforce the exact permitted masked representation in each channel, not assert that every masked field is forbidden from export/AI/events regardless of its policy. No-UUID presentation checks span default/saved/embedded views and derived labels.
+
+Translation exchange through versioned XLIFF/CSV adapters is a proposed client of the same scoped label commands: validate logical identities/locales, preserve placeholders, reject foreign labels and retain attribution/review. Translators need explicit narrowly scoped published access, not automatically broad Studio rights or a bypass. Parameterized computation/validation contracts remain deferred until typed parameter bindings, deterministic semantics, budgets and server enforcement qualify; never add a free-form parameter bag. Release sets remain governed by measured CYCLE-01 impact.
+
+Acceptance additions cite INV-001–009 and cover masked conditional/format/badge inference, forbidden extension operations/profiles, rollback widening from multiple active heads, unsigned/revoked-key artifacts, revoked tooling, incomplete money/schema saves, quota races, retained reservation reclamation, activation lock starvation, spreadsheet formulas and redacted namespace collisions. F0 must incorporate the changed condition-use contract, source-kind matrix and CHECK semantics before regeneration. Generated ledger/specimen history and applied migrations remain unchanged.
+
+
+### 11.26 Integrity and implementation-mechanism audit disposition
+
+This review adds concrete contracts to their existing sections rather than treating every recommendation as an approved implementation. All new mechanisms remain subject to F0/prototype and owning-provider qualification.
+
+| Finding / recommendation | Disposition |
+| --- | --- |
+| Polymorphic parent integrity | F7 now requires synchronous parent-delete/insert coordination through a qualified database/provider boundary plus periodic bounded orphan detection and governed repair. A local field-identity FK remains insufficient; reconciliation alone is not prevention |
+| Delta snapshots in F3 | Not adopted as a mandatory default. Full snapshots remain the first correctness contract, with F3 benchmarks and F5 capacity/admission limits before production. Compression/dedup/deltas require exact reconstruction, bounded chain depth, checkpoint, corruption/crash/restore and retention-reachability evidence. A future versioned physical format need not rewrite every historical snapshot; qualify coexistence/migration explicitly. Do not add an unmeasured storage engine to unblock a missing retention decision |
+| Security algebra | Added per-family order/meet laws, union of denies, intersected allows, obligation conjunction and explicit unsupported combinations; conformance must establish algebraic laws without treating unrelated masks as ordered |
+| Dirty registry | Named the private transaction-keyed relation prototype, privileged mutation/marker rules and post-commit cleanup obligations. It is not implemented or proven; retain existing guards until direct-DML/savepoint/immediate-constraint/crash tests pass |
+| Legacy authorship | Added independent provenance-reconstruction deliverable and explicit unrecoverable disposition. Rewritten member created_by does not establish that immutable save actors are unavailable. No automatic re-attestation or fork bypass |
+| Bootstrap | Existing B0 resource/package/API path breaks the conceptual cycle; unbuilt prerequisites and unassigned people remain delivery risks, not a reason for hidden bootstrap grants |
+| Per-plane surfaces | Keep a named priority follow-on triggered by real divergent-plane onboarding. Do not make its schema a prerequisite for single-plane reference delivery or introduce an interim omit flag. Existing all-surface coverage remains until the complete typed membership/default/compiler migration qualifies |
+| Immediate default uniqueness | Added descriptor-driven clear-then-set reconciliation phase before final validation/snapshot, with final-state conflict and rollback tests |
+| F0 source and index | Earlier deferral superseded by section 1: canonical typed package contract, generated document regions; source/generator still unbuilt and no dual authority |
+| Integration scope | Section 6.5 remains separately owned future authoring capability, explicitly in the resource inventory; no Integration implementation is authorized by Entity milestone work |
+| Earlier concurrent merge | Allow a bounded read-set/phantom-dependency feasibility proof when measured author conflicts justify it, without weakening Phase-1 optimistic revision checks or delaying the first usable reference slice |
+
+Post-reference product priority remains starter drafts/shared command API, review/dependency health and server-enforced cross-field validation. SDK/CI proposals must retain attribution and independent review; Git-managed files are import/proposal inputs, not a second live writable authoring authority. API schema export and environment promotion preserve exact release/hash and target evidence. Shared labels, audience views, explain-access and AI proposals keep their existing typed-resource and authorization gates. This audit does not automatically reorder those features ahead of missing foundations.
+
+Qualification additions cover parent deletion/insertion races and bypass attempts, restore-created orphans, incomplete reconciliation scans, algebra law vectors and incompatible masks, dirty-marker recursion/cleanup isolation, legacy contributor reconstruction and immediate-index default swaps. Generated source/specimen evidence and applied migrations remain unchanged. No runtime, database, MFA or retention implementation is performed by this documentation update.
