@@ -11219,7 +11219,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql",
-          "line": 33
+          "line": 39
         }
       ],
       "decisionSource": "schema_default",
@@ -11237,7 +11237,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql",
-          "line": 21
+          "line": 27
         }
       ],
       "decisionSource": "schema_default",
@@ -11255,7 +11255,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql",
-          "line": 5
+          "line": 11
         }
       ],
       "decisionSource": "schema_default",
@@ -11273,7 +11273,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql",
-          "line": 51
+          "line": 57
         }
       ],
       "decisionSource": "schema_default",
@@ -11291,7 +11291,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql",
-          "line": 67
+          "line": 73
         }
       ],
       "decisionSource": "schema_default",
