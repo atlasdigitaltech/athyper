@@ -999,191 +999,251 @@ it("requires a nonempty registered nested composition", () => {
   ).toThrow("NATIVE_CONVERSION_NESTED_ADAPTERS_REQUIRED");
 });
 
-it("binds derived section identities to exact inline declarations through the scalar layout adapter", async () => {
-  const { createLegacyNativeDetailSectionsAdapter } =
-    await import("./native-detail-sections.js");
-  const { createLegacyNativeLayoutAdapters } =
-    await import("./legacy-native-layout-adapters.js");
-  const f = fixture(),
-    c = layoutFixtureContext(),
-    l = layoutFixture();
-  const detail = c.core.surface.find((s) => s.surfaceKind === "detail")!;
-  const declaration = {
-    key: "details",
-    label: "Fixture label",
-    fields: ["code"],
-  };
-  const refs = emptyReferenceMembers();
-  (refs.members as { navigationGroup: unknown }).navigationGroup = [
-    {
-      id: coreFixtureId(70),
-      entitySurfaceId: detail.id,
-      groupKey: "details",
-      labelId: coreFixtureId(32),
-      iconKey: null,
-      sectionDisplay: "continuous",
-      position: 1,
-    },
-  ];
-  const source = {
-    ...f.source,
-    fields: f.source.fields.map((f) => ({
-      ...f,
-      fieldKey: c.coreContext.identities.find(
-        (i) =>
-          i.id === c.core.field.find((n) => n.id === f.id)!.fieldIdentityId,
-      )!.fieldKey,
-      dataType: c.core.field.find((n) => n.id === f.id)!.dataType,
-    })),
-    referenceMembers: refs,
-    surfaces: c.core.surface.map((s) => ({
-      id: s.id,
-      surfaceKey: s.surfaceKey,
-      surfaceKind: s.surfaceKind,
-      title: "Fixture label",
-      layoutKind: s.layoutKind,
-      isDefault: s.isDefault,
-      ...(s.id === detail.id
-        ? { layoutConfig: { recordPresentation: { sections: [declaration] } } }
-        : {}),
-    })),
-    surfaceSections: [],
-    surfaceFieldBindings: [
+it.each([false, true])(
+  "binds derived sections and optional explicit UUID disposition (%s) through the scalar layout adapter",
+  async (retirement) => {
+    const { createLegacyNativeDetailSectionsAdapter } =
+      await import("./native-detail-sections.js");
+    const { createLegacyNativeLayoutAdapters } =
+      await import("./legacy-native-layout-adapters.js");
+    const f = fixture(),
+      c = layoutFixtureContext(),
+      l = layoutFixture();
+    const detail = c.core.surface.find((s) => s.surfaceKind === "detail")!;
+    const declaration = {
+      key: "details",
+      label: "Fixture label",
+      fields: ["code"],
+    };
+    const refs = emptyReferenceMembers();
+    (refs.members as { navigationGroup: unknown }).navigationGroup = [
       {
-        id: l.binding[0]!.id,
+        id: coreFixtureId(70),
         entitySurfaceId: detail.id,
-        entityFieldId: coreFixtureId(2),
-        bindingKey: "code",
-        position: 0,
-        displayConfig: { defaultVisible: true },
+        groupKey: "details",
+        labelId: coreFixtureId(32),
+        iconKey: null,
+        sectionDisplay: "continuous",
+        position: 1,
       },
-    ],
-  };
-  const resource = {
-    owner: "synthetic-tests",
-    key: "inline-section-adapter",
-    version: 1,
-    hash: "8".repeat(64),
-  };
-  const nested = createLegacyNativeDetailSectionsAdapter({
-    source,
-    sourceHash: sha256(source),
-    resource,
-    dependencies: [],
-    positionConvention: "zero-based",
-    mappings: {
-      [detail.id]: {
-        context: {
-          surface: detail,
-          maximumMembers: 10,
-          fields: [
-            {
-              id: coreFixtureId(2),
-              key: "code",
-              uuid: false,
-              representation: "plain",
-            },
-          ],
-          label: () => ({ label: "Fixture label" }),
+    ];
+    const source = {
+      ...f.source,
+      fields: f.source.fields.map((f) => ({
+        ...f,
+        fieldKey: c.coreContext.identities.find(
+          (i) =>
+            i.id === c.core.field.find((n) => n.id === f.id)!.fieldIdentityId,
+        )!.fieldKey,
+        dataType: c.core.field.find((n) => n.id === f.id)!.dataType,
+      })),
+      referenceMembers: refs,
+      surfaces: c.core.surface.map((s) => ({
+        id: s.id,
+        surfaceKey: s.surfaceKey,
+        surfaceKind: s.surfaceKind,
+        title: "Fixture label",
+        layoutKind: s.layoutKind,
+        isDefault: s.isDefault,
+        ...(s.id === detail.id
+          ? {
+              layoutConfig: { recordPresentation: { sections: [declaration] } },
+            }
+          : {}),
+      })),
+      surfaceSections: [],
+      surfaceFieldBindings: [
+        ...(retirement
+          ? [
+              {
+                id: coreFixtureId(62),
+                entitySurfaceId: detail.id,
+                entityFieldId: coreFixtureId(1),
+                bindingKey: "technical",
+                position: 1,
+                displayConfig: { defaultVisible: true },
+              },
+            ]
+          : []),
+        {
+          id: l.binding[0]!.id,
+          entitySurfaceId: detail.id,
+          entityFieldId: coreFixtureId(2),
+          bindingKey: "code",
+          position: 0,
+          displayConfig: { defaultVisible: true },
         },
-        sections: { details: l.section[0]! },
-        bindings: { details: { code: l.binding[0]! } },
-      },
-    },
-  });
-  const prepared = nested.forward(source);
-  const layout = createLegacyNativeLayoutAdapters({
-    surfaces: prepared.surfaces!,
-    surfaceSections: prepared.surfaceSections!,
-    surfaceFieldBindings: prepared.surfaceFieldBindings!,
-    positionConvention: "zero-based",
-    labelText: () => "Fixture label",
-    resources: {
-      surfaces: f.adapters.surfaces.resource,
-      surfaceSections: f.adapters.surfaceSections.resource,
-      surfaceFieldBindings: f.adapters.surfaceFieldBindings.resource,
-    },
-    mappings: {
-      surfaces: Object.fromEntries(
-        c.core.surface.map((s) => [
-          s.id,
-          {
-            sourceHash: sha256(prepared.surfaces!.find((r) => r.id === s.id)),
-            initialization: s,
+      ],
+    };
+    const resource = {
+      owner: "synthetic-tests",
+      key: "inline-section-adapter",
+      version: 1,
+      hash: "8".repeat(64),
+    };
+    const nested = createLegacyNativeDetailSectionsAdapter({
+      source,
+      sourceHash: sha256(source),
+      resource,
+      dependencies: [],
+      positionConvention: "zero-based",
+      ...(retirement
+        ? {
+            bindingRetirements: [
+              {
+                id: coreFixtureId(62),
+                surfaceId: detail.id,
+                fieldId: coreFixtureId(1),
+                sourceHash: sha256(source.surfaceFieldBindings[0]),
+                reason: "unplaced_uuid" as const,
+              },
+            ],
+          }
+        : {}),
+      mappings: {
+        [detail.id]: {
+          context: {
+            surface: detail,
+            maximumMembers: 10,
+            fields: [
+              {
+                id: coreFixtureId(2),
+                key: "code",
+                uuid: false,
+                representation: "plain",
+              },
+            ],
+            label: () => ({ label: "Fixture label" }),
           },
-        ]),
-      ),
-      surfaceSections: {
-        [l.section[0]!.id]: {
-          sourceHash: sha256(prepared.surfaceSections![0]),
-          initialization: l.section[0]!,
+          sections: { details: l.section[0]! },
+          bindings: { details: { code: l.binding[0]! } },
         },
       },
-      surfaceFieldBindings: {
-        [l.binding[0]!.id]: {
-          sourceHash: sha256(prepared.surfaceFieldBindings![0]),
-          initialization: l.binding[0]!,
+    });
+    const prepared = nested.forward(source);
+    const layout = createLegacyNativeLayoutAdapters({
+      surfaces: prepared.surfaces!,
+      surfaceSections: prepared.surfaceSections!,
+      surfaceFieldBindings: prepared.surfaceFieldBindings!,
+      positionConvention: "zero-based",
+      labelText: () => "Fixture label",
+      resources: {
+        surfaces: f.adapters.surfaces.resource,
+        surfaceSections: f.adapters.surfaceSections.resource,
+        surfaceFieldBindings: f.adapters.surfaceFieldBindings.resource,
+      },
+      mappings: {
+        surfaces: Object.fromEntries(
+          c.core.surface.map((s) => [
+            s.id,
+            {
+              sourceHash: sha256(prepared.surfaces!.find((r) => r.id === s.id)),
+              initialization: s,
+            },
+          ]),
+        ),
+        surfaceSections: {
+          [l.section[0]!.id]: {
+            sourceHash: sha256(prepared.surfaceSections![0]),
+            initialization: l.section[0]!,
+          },
+        },
+        surfaceFieldBindings: {
+          [l.binding[0]!.id]: {
+            sourceHash: sha256(prepared.surfaceFieldBindings![0]),
+            initialization: l.binding[0]!,
+          },
         },
       },
-    },
-  });
-  const context = {
-    ...f.context,
-    source: { ...f.context.source, graphHash: sha256(source) },
-    installedAdapters: [...f.context.installedAdapters, resource],
-    resolveLayout: (core: typeof c.core) => ({ ...c, core }),
-  };
-  const adapters: NativeConversionAdapters = {
-    ...f.adapters,
-    ...layout,
-    fields: {
-      ...f.adapters.fields,
-      reverse: (rows) =>
-        rows.map((r) => ({
-          id: r.id,
-          legacyToken: r.id,
-          fieldKey: c.coreContext.identities.find(
-            (i) => i.id === r.fieldIdentityId,
-          )!.fieldKey,
-          dataType: r.dataType,
-        })) as unknown as MetaEntityGraph["fields"],
-    },
-  };
-  const proof = prepareNativeGraphConversion(source, context, adapters, nested);
-  expect(proof.schema).toBe("entity.native-graph-conversion-proof/3");
-  expect(proof.nested!.sectionDerivations).toEqual(nested.sectionDerivations);
-  expect(proof.candidate.surfaceSections).toEqual(l.section);
-  expect(proof.candidate.surfaceFieldBindings).toEqual(l.binding);
-  for (const patch of [
-    { sectionDerivations: [] },
-    {
-      sectionDerivations: [
-        { ...nested.sectionDerivations![0]!, sourceHash: "0".repeat(64) },
-      ],
-    },
-    {
-      sectionDerivations: [
-        { ...nested.sectionDerivations![0]!, surfaceId: c.core.surface[0]!.id },
-      ],
-    },
-    {
-      sectionDerivations: [
-        nested.sectionDerivations![0]!,
-        nested.sectionDerivations![0]!,
-      ],
-    },
-  ])
+    });
+    const context = {
+      ...f.context,
+      source: { ...f.context.source, graphHash: sha256(source) },
+      installedAdapters: [...f.context.installedAdapters, resource],
+      resolveLayout: (core: typeof c.core) => ({ ...c, core }),
+    };
+    const adapters: NativeConversionAdapters = {
+      ...f.adapters,
+      ...layout,
+      fields: {
+        ...f.adapters.fields,
+        reverse: (rows) =>
+          rows.map((r) => ({
+            id: r.id,
+            legacyToken: r.id,
+            fieldKey: c.coreContext.identities.find(
+              (i) => i.id === r.fieldIdentityId,
+            )!.fieldKey,
+            dataType: r.dataType,
+          })) as unknown as MetaEntityGraph["fields"],
+      },
+    };
+    const proof = prepareNativeGraphConversion(
+      source,
+      context,
+      adapters,
+      nested,
+    );
+    expect(proof.schema).toBe(
+      `entity.native-graph-conversion-proof/${retirement ? 4 : 3}`,
+    );
+    if (retirement) {
+      expect(proof.nested!.bindingRetirements).toEqual(
+        nested.bindingRetirements,
+      );
+      expect(proof.candidate.fields).toHaveLength(source.fields.length);
+      expect(() =>
+        prepareNativeGraphConversion(source, context, adapters, {
+          ...nested,
+          bindingRetirements: [],
+        }),
+      ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
+      expect(() =>
+        prepareNativeGraphConversion(source, context, adapters, {
+          ...nested,
+          bindingRetirements: [
+            { ...nested.bindingRetirements![0]!, sourceHash: "0".repeat(64) },
+          ],
+        }),
+      ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
+    }
+    expect(proof.nested!.sectionDerivations).toEqual(nested.sectionDerivations);
+    expect(proof.candidate.surfaceSections).toEqual(l.section);
+    expect(proof.candidate.surfaceFieldBindings).toEqual(l.binding);
+    for (const patch of [
+      { sectionDerivations: [] },
+      {
+        sectionDerivations: [
+          { ...nested.sectionDerivations![0]!, sourceHash: "0".repeat(64) },
+        ],
+      },
+      {
+        sectionDerivations: [
+          {
+            ...nested.sectionDerivations![0]!,
+            surfaceId: c.core.surface[0]!.id,
+          },
+        ],
+      },
+      {
+        sectionDerivations: [
+          nested.sectionDerivations![0]!,
+          nested.sectionDerivations![0]!,
+        ],
+      },
+    ])
+      expect(() =>
+        prepareNativeGraphConversion(source, context, adapters, {
+          ...nested,
+          ...patch,
+        }),
+      ).toThrow();
+    // A manifest cannot authorize deletion of an existing binding.
     expect(() =>
       prepareNativeGraphConversion(source, context, adapters, {
         ...nested,
-        ...patch,
+        forward: (g) => ({ ...nested.forward(g), surfaceFieldBindings: [] }),
       }),
-    ).toThrow();
-  // A manifest cannot authorize deletion of an existing binding.
-  expect(() =>
-    prepareNativeGraphConversion(source, context, adapters, {
-      ...nested,
-      forward: (g) => ({ ...nested.forward(g), surfaceFieldBindings: [] }),
-    }),
-  ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
-});
+    ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
+  },
+);

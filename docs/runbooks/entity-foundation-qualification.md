@@ -483,3 +483,34 @@ Read-only DEV reinspection at /tmp/athyper-native-navigation-readiness.json conf
 Read-only DEV inspection at /tmp/athyper-native-presentation-readiness.json still reports zero missing selected tables/core-layout columns, cutoverQualified=false, qualification=not-established and productionEnabled=false. Repository inspection confirms reference commands cannot be separately applied to native drafts. A complete conversion therefore still needs one canonical transaction covering normalized additions, retired legacy values, original/new immutable snapshots, revision/idempotency receipt and exact readback; this continuation does not implement that application transaction or relax pending/legacy-required guards. Whole-release compilation and remaining authorization/runtime/AI/section/binding/target mappings remain unfinished. Host release/hash, approved protected-state initialization source and deployed F6/F8/F9 evidence remain missing. No migration, grant, operation initialization, publication or activation occurred.
 
 Verification: 535 authoring tests pass with three opt-in cases excluded, including the production navigation, list-settings, readable-header and resource-dependency cases. Source and focused native-test typechecks, the bounded dependency build and four generation drift checks pass. The nested conversion/compiler test files are included in foundation CI. This evidence establishes component behavior only; complete graph conversion, atomic application, whole-release publication and deployed qualification remain open.
+
+
+### Explicit UUID membership disposition checkpoint — 7 October 2026
+
+The existing section adapter and whole-graph preservation coordinator now account
+for explicitly declared redundant UUID presentation memberships. Both actual
+Country and State Region source binding rosters contain a hidden list UUID
+membership and an unplaced detail UUID membership. Tests retain every field and
+field identity, remove precisely those two presentation memberships, and restore
+the entire selected source graph with its exact original array order and optional
+coordinates. The inverse uses an immutable historical copy even if the caller
+mutates its original input after admission.
+
+The installed-adapter coordinator binds the disposition in conversion proof
+version 4 and verifies the exact source identities/hash and candidate inventory.
+Negative cases cover forged hashes, non-UUID fields, declared section/summary
+use, visible list membership, external binding references, additional display
+behavior, duplicate dispositions and unexplained deletion. A synthetic full
+coordinator/scalar-layout case exercises the version-4 proof path. This is not a
+whole Country/State Region source conversion or canonical database receipt.
+
+Application remains disabled. Complete normalized authorization/AI/presentation
+integration, atomic source-format conversion, whole-release lowering and
+canonical/deployed qualification still require implementation and evidence. No
+DEV migration, member deletion, grant, initialization, release or activation was
+performed by this checkpoint.
+
+Validation for this checkpoint: 596 authoring tests pass across 106 executed files,
+with three existing opt-in PostgreSQL cases excluded from the ordinary run.
+Source/test and focused native-test typechecks pass; all six generated-contract
+checks pass. No new skip or disabled assertion was introduced.

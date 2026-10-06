@@ -44,10 +44,155 @@ export interface NativeSectionDerivation {
   readonly sourceIndex: number;
   readonly sourceHash: string;
 }
+/** Removes only a redundant unplaced UUID presentation membership. The field,
+ * identity and immutable source revision survive; this is not field retirement. */
+export interface NativeBindingRetirement {
+  readonly id: string;
+  readonly surfaceId: string;
+  readonly fieldId: string;
+  readonly sourceHash: string;
+  readonly reason: "unplaced_uuid";
+}
+export function validateNativeBindingRetirements(
+  source: MetaEntityGraph,
+  retirements: readonly NativeBindingRetirement[],
+): void {
+  validateConversionJsonData(source, "/source");
+  validateConversionJsonData(retirements, "/nested/bindingRetirements");
+  if (
+    !Array.isArray(source.fields) ||
+    !Array.isArray(source.surfaces) ||
+    !Array.isArray(source.surfaceFieldBindings)
+  )
+    throw new FoundationContractError(
+      "NATIVE_CONVERSION_RETIREMENT_INVALID",
+      "/source",
+    );
+  if (
+    !Array.isArray(retirements) ||
+    retirements.some((r) => !r || typeof r !== "object" || Array.isArray(r)) ||
+    new Set(retirements.map((r) => r.id)).size !== retirements.length
+  )
+    throw new FoundationContractError(
+      "NATIVE_CONVERSION_RETIREMENT_INVALID",
+      "/nested/bindingRetirements",
+    );
+  for (const r of retirements) {
+    validateFoundationNode(
+      {
+        type: "object",
+        properties: {
+          id: referenceUuid,
+          surfaceId: referenceUuid,
+          fieldId: referenceUuid,
+          sourceHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          reason: { const: "unplaced_uuid" },
+        },
+      },
+      r,
+      "/nested/bindingRetirements",
+    );
+    const rows =
+      source.surfaceFieldBindings?.filter((b) => b.id === r.id) ?? [];
+    const row = rows[0];
+    const fields = source.fields.filter((f) => f.id === r.fieldId);
+    const surfaces =
+      source.surfaces?.filter(
+        (s) =>
+          s.id === r.surfaceId && ["detail", "list"].includes(s.surfaceKind),
+      ) ?? [];
+    const record = surfaces[0]?.layoutConfig?.recordPresentation as
+      Record<string, unknown> | undefined;
+    const sections = record?.sections;
+    // This selected disposition requires an explicit, complete inline field
+    // roster. Other presentation or binding behavior cannot be discarded.
+    const sectionRoster =
+      Array.isArray(sections) &&
+      sections.length > 0 &&
+      sections.every(
+        (section) =>
+          section &&
+          typeof section === "object" &&
+          Array.isArray(section.fields) &&
+          section.fields.every((key: unknown) => typeof key === "string"),
+      );
+    const visibleKeys = [
+      record?.titleField,
+      record?.codeField,
+      ...(Array.isArray(record?.badges)
+        ? record.badges.map((b) => b?.field)
+        : []),
+    ];
+    const containsValue = (needle: string, value: unknown): boolean =>
+      value === needle ||
+      (Array.isArray(value)
+        ? value.some((v) => containsValue(needle, v))
+        : !!value &&
+          typeof value === "object" &&
+          Object.values(value).some((v) => containsValue(needle, v)));
+    const outside = {
+      ...source,
+      surfaceFieldBindings: source.surfaceFieldBindings?.filter(
+        (b) => b.id !== r.id,
+      ),
+    };
+    if (
+      rows.length !== 1 ||
+      fields.length !== 1 ||
+      surfaces.length !== 1 ||
+      row!.entityFieldId !== r.fieldId ||
+      row!.entitySurfaceId !== r.surfaceId ||
+      row!.entitySurfaceSectionId != null ||
+      fields[0]!.dataType !== "uuid" ||
+      typeof fields[0]!.fieldKey !== "string" ||
+      !/^[a-z][a-z0-9_.-]{0,126}$/.test(fields[0]!.fieldKey) ||
+      !Number.isSafeInteger(row!.position) ||
+      row!.position < 0 ||
+      row!.position > 32767 ||
+      sha256(row) !== r.sourceHash ||
+      (surfaces[0]!.surfaceKind === "detail"
+        ? !sectionRoster
+        : row!.displayConfig?.defaultVisible !== false) ||
+      (Array.isArray(sections)
+        ? (sections as { fields: string[] }[])
+        : []
+      ).some((section) => section.fields.includes(fields[0]!.fieldKey)) ||
+      visibleKeys.includes(fields[0]!.fieldKey) ||
+      surfaces[0]!.layoutConfig?.identityField === fields[0]!.fieldKey ||
+      (record?.actions !== undefined &&
+        (!Array.isArray(record.actions) || record.actions.length !== 0)) ||
+      containsValue(r.id, outside) ||
+      containsValue(fields[0]!.fieldKey, record) ||
+      Object.keys(row!).some(
+        (k) =>
+          ![
+            "id",
+            "entitySurfaceId",
+            "entitySurfaceSectionId",
+            "entityFieldId",
+            "bindingKey",
+            "position",
+            "labelOverride",
+            "displayConfig",
+          ].includes(k),
+      ) ||
+      Object.keys(row!.displayConfig ?? {}).some(
+        (k) => k !== "defaultVisible",
+      ) ||
+      (row!.displayConfig?.defaultVisible !== undefined &&
+        typeof row!.displayConfig.defaultVisible !== "boolean")
+    )
+      throw new FoundationContractError(
+        "NATIVE_CONVERSION_RETIREMENT_INVALID",
+        "/nested/bindingRetirements/" + r.id,
+      );
+  }
+}
 export interface NativeNestedConversionAdapter {
   /** Only explicit inline field sections may introduce new section identities.
-   * No existing family member may be removed or replaced by this enrollment. */
+   * Existing members remain exact except explicit validated unplaced UUID binding dispositions. */
   readonly sectionDerivations?: readonly NativeSectionDerivation[];
+  readonly bindingRetirements?: readonly NativeBindingRetirement[];
   readonly resource: NativeConversionResource;
   readonly dependencies?: readonly NativeConversionResource[];
   forward(source: MetaEntityGraph): MetaEntityGraph;
@@ -226,6 +371,7 @@ export function prepareNativeGraphConversion(
         preparedHash: string;
         dependencies?: readonly NativeConversionResource[];
         sectionDerivations?: readonly NativeSectionDerivation[];
+        bindingRetirements?: readonly NativeBindingRetirement[];
       }
     | undefined;
   if (nested) {
@@ -375,6 +521,8 @@ export function prepareNativeGraphConversion(
           "/nested/sectionDerivations",
         );
     }
+    const retirements = nested.bindingRetirements ?? [];
+    validateNativeBindingRetirements(source, retirements);
     for (const kind of nativeConversionFamilies) {
       const before = source[kind],
         after = prepared[kind];
@@ -383,7 +531,13 @@ export function prepareNativeGraphConversion(
         !Array.isArray(after) ||
         canonicalJson(
           [
-            ...before.map((row) => row.id),
+            ...before
+              .filter(
+                (row) =>
+                  kind !== "surfaceFieldBindings" ||
+                  !retirements.some((r) => r.id === row.id),
+              )
+              .map((row) => row.id),
             ...(kind === "surfaceSections" ? derivations.map((d) => d.id) : []),
           ].sort(),
         ) !== canonicalJson(after.map((row) => row.id).sort())
@@ -418,6 +572,9 @@ export function prepareNativeGraphConversion(
       adapter: structuredClone(nested.resource),
       sourceHash: sha256(source),
       preparedHash: sha256(prepared),
+      ...(retirements.length
+        ? { bindingRetirements: structuredClone(retirements) }
+        : {}),
       ...(derivations.length
         ? { sectionDerivations: structuredClone(derivations) }
         : {}),
@@ -568,11 +725,14 @@ export function prepareNativeGraphConversion(
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema: nestedProof?.sectionDerivations?.length
-      ? ("entity.native-graph-conversion-proof/3" as const)
-      : nestedProof || Object.values(proof).some((p) => p.dependencies?.length)
-        ? ("entity.native-graph-conversion-proof/2" as const)
-        : ("entity.native-graph-conversion-proof/1" as const),
+    schema: nestedProof?.bindingRetirements?.length
+      ? ("entity.native-graph-conversion-proof/4" as const)
+      : nestedProof?.sectionDerivations?.length
+        ? ("entity.native-graph-conversion-proof/3" as const)
+        : nestedProof ||
+            Object.values(proof).some((p) => p.dependencies?.length)
+          ? ("entity.native-graph-conversion-proof/2" as const)
+          : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
     contextHash: sha256({
       coreLayoutEvidenceHash,
@@ -634,6 +794,13 @@ export function composeNativeNestedConversionAdapters(
       ? {
           sectionDerivations: steps.flatMap((a) =>
             structuredClone(a.sectionDerivations ?? []),
+          ),
+        }
+      : {}),
+    ...(steps.some((a) => a.bindingRetirements?.length)
+      ? {
+          bindingRetirements: steps.flatMap((a) =>
+            structuredClone(a.bindingRetirements ?? []),
           ),
         }
       : {}),

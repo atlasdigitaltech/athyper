@@ -251,7 +251,11 @@ it("keeps group order explicit and rejects gapped or duplicated member order", (
   ).toThrow("NATIVE_DETAIL_SECTION_KIND_UNSUPPORTED");
 });
 
-async function graphFixture(name = "country", fullRoster = false) {
+async function graphFixture(
+  name = "country",
+  fullRoster = false,
+  disposition = false,
+) {
   const { createLegacyNativeDetailSectionsAdapter } =
     await import("./native-detail-sections.js");
   const { emptyReferenceMembers } =
@@ -284,6 +288,24 @@ async function graphFixture(name = "country", fullRoster = false) {
   const input = {
     source,
     sourceHash: sha256(source),
+    ...(disposition
+      ? {
+          bindingRetirements: source.surfaceFieldBindings
+            .filter(
+              (b) =>
+                f.legacyGraph.fields.find(
+                  (field) => field.id === b.entityFieldId,
+                )?.dataType === "uuid" && !members.some((n) => n.id === b.id),
+            )
+            .map((b) => ({
+              id: b.id!,
+              surfaceId: b.entitySurfaceId,
+              fieldId: b.entityFieldId,
+              sourceHash: sha256(b),
+              reason: "unplaced_uuid" as const,
+            })),
+        }
+      : {}),
     resource: {
       owner: "test",
       key: "inline-sections",
@@ -432,4 +454,126 @@ it("rejects unrepresentable geometry changes instead of discarding them during i
       })),
     }),
   ).toThrow("NATIVE_DETAIL_SECTION_REVERSE_NOT_REPRESENTABLE");
+});
+
+it.each(["country", "state_region"])(
+  "explicitly accounts for %s's full UUID binding roster without deleting the field or source history",
+  async (name) => {
+    const f = await graphFixture(name, true, true);
+    expect(f.adapter.bindingRetirements).toHaveLength(2);
+    const retirement = f.adapter.bindingRetirements![0]!;
+    expect(
+      f.source.fields.find((field) => field.id === retirement.fieldId)
+        ?.dataType,
+    ).toBe("uuid");
+    expect(f.prepared.fields).toEqual(f.source.fields);
+    expect(
+      f.prepared.surfaceFieldBindings!.some((b) => b.id === retirement.id),
+    ).toBe(false);
+    expect(f.prepared.surfaceFieldBindings!.length).toBe(
+      f.source.surfaceFieldBindings!.length - 2,
+    );
+    expect(f.adapter.reverse(f.prepared, f.target)).toEqual(f.source);
+    const reintroduced = {
+      ...f.target,
+      surfaceFieldBindings: [
+        ...f.target.surfaceFieldBindings,
+        { ...f.target.surfaceFieldBindings[0]!, id: retirement.id },
+      ],
+    };
+    expect(() => f.adapter.reverse(f.prepared, reintroduced)).toThrow(
+      "NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID",
+    );
+    const original = structuredClone(f.source);
+    // Caller mutation after admission cannot replace the historical membership.
+    const retired = f.input.source.surfaceFieldBindings.find(
+      (b) => b.id === retirement.id,
+    )!;
+    retired.position = 999;
+    expect(f.adapter.reverse(f.prepared, f.target)).toEqual(original);
+  },
+);
+it("rejects stale, non-UUID, placed, referenced and behavior-bearing binding dispositions", async () => {
+  const { createLegacyNativeDetailSectionsAdapter } =
+    await import("./native-detail-sections.js");
+  const f = await graphFixture("country", true, true);
+  const retirement = f.adapter.bindingRetirements!.find(
+    (r) => r.surfaceId === f.c.surface.id,
+  )!;
+  for (const mutate of [
+    (g: typeof f.source) => {
+      Object.assign(
+        g.fields.find((field) => field.id === retirement.fieldId)!,
+        { dataType: "string" },
+      );
+    },
+    (g: typeof f.source) => {
+      g.surfaceFieldBindings.find(
+        (b) => b.id === retirement.id,
+      )!.displayConfig = { defaultVisible: true, defaultWidth: 120 };
+    },
+    (g: typeof f.source) => {
+      g.surfaceFieldBindings.find((b) => b.id !== retirement.id)!.bindingKey =
+        retirement.id;
+    },
+    (g: typeof f.source) => {
+      const record = g.surfaces!.find((s) => s.id === retirement.surfaceId)!
+        .layoutConfig!.recordPresentation as {
+        sections: { fields: string[] }[];
+      };
+      record.sections[0]!.fields.push("id");
+    },
+  ]) {
+    const source = structuredClone(f.source);
+    mutate(source);
+    const row = source.surfaceFieldBindings.find(
+      (b) => b.id === retirement.id,
+    )!;
+    expect(() =>
+      createLegacyNativeDetailSectionsAdapter({
+        ...f.input,
+        source,
+        sourceHash: sha256(source),
+        bindingRetirements: [{ ...retirement, sourceHash: sha256(row) }],
+      }),
+    ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
+  }
+  expect(() =>
+    createLegacyNativeDetailSectionsAdapter({
+      ...f.input,
+      bindingRetirements: [{ ...retirement, sourceHash: "0".repeat(64) }],
+    }),
+  ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
+});
+
+it("requires explicitly hidden list UUID membership and rejects UUID summary references or duplicate dispositions", async () => {
+  const { validateNativeBindingRetirements } =
+    await import("./native-graph-conversion.js");
+  const f = await graphFixture("state_region", true, true);
+  const list = f.adapter.bindingRetirements!.find(
+    (r) => r.surfaceId !== f.c.surface.id,
+  )!;
+  const detail = f.adapter.bindingRetirements!.find(
+    (r) => r.surfaceId === f.c.surface.id,
+  )!;
+  const source = structuredClone(f.source);
+  const row = source.surfaceFieldBindings.find((b) => b.id === list.id)!;
+  row.displayConfig = { defaultVisible: true };
+  expect(() =>
+    validateNativeBindingRetirements(source, [
+      { ...list, sourceHash: sha256(row) },
+    ]),
+  ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
+  const summary = structuredClone(f.source);
+  Object.assign(
+    summary.surfaces!.find((s) => s.id === detail.surfaceId)!.layoutConfig!
+      .recordPresentation as object,
+    { summaryView: { fields: ["id"] } },
+  );
+  expect(() => validateNativeBindingRetirements(summary, [detail])).toThrow(
+    "NATIVE_CONVERSION_RETIREMENT_INVALID",
+  );
+  expect(() =>
+    validateNativeBindingRetirements(f.source, [detail, detail]),
+  ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
 });

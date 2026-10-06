@@ -12,7 +12,9 @@ import type {
   NativeConversionResource,
   NativeNestedConversionAdapter,
   NativeSectionDerivation,
+  NativeBindingRetirement,
 } from "./native-graph-conversion.js";
+import { validateNativeBindingRetirements } from "./native-graph-conversion.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 export interface LegacyDetailFieldSection {
@@ -299,6 +301,7 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
   readonly resource: NativeConversionResource;
   readonly dependencies: readonly NativeConversionResource[];
   readonly positionConvention: "zero-based" | "one-based";
+  readonly bindingRetirements?: readonly NativeBindingRetirement[];
   readonly mappings: Readonly<
     Record<
       string,
@@ -319,6 +322,11 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
 }): NativeNestedConversionAdapter {
   validateConversionJsonData(input.source, "/source");
   const sourceHash = input.sourceHash;
+  const historicalBindings = structuredClone(
+    input.source.surfaceFieldBindings ?? [],
+  );
+  const retirements = structuredClone(input.bindingRetirements ?? []);
+  validateNativeBindingRetirements(input.source, retirements);
   if (sha256(input.source) !== sourceHash)
     fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/source");
   if (!["zero-based", "one-based"].includes(input.positionConvention))
@@ -375,6 +383,10 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
     if (sha256(graph) !== sourceHash)
       fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/source");
     const result = structuredClone(graph);
+    (result as { surfaceFieldBindings: unknown }).surfaceFieldBindings =
+      result.surfaceFieldBindings?.filter(
+        (b) => !retirements.some((r) => r.id === b.id),
+      );
     sectionDerivations.length = 0;
     const additions: NonNullable<MetaEntityGraph["surfaceSections"]>[number][] =
       [];
@@ -517,8 +529,20 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
     resource: structuredClone(input.resource),
     dependencies: structuredClone(input.dependencies),
     sectionDerivations: derivations,
+    ...(retirements.length
+      ? { bindingRetirements: structuredClone(retirements) }
+      : {}),
     forward,
     reverse(prepared, target) {
+      if (
+        target.surfaceFieldBindings.some((b) =>
+          retirements.some((r) => r.id === b.id),
+        )
+      )
+        fail(
+          "NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID",
+          "/target/bindings",
+        );
       if (sha256(prepared) !== preparedHash)
         fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/prepared");
       const result = structuredClone(prepared);
@@ -604,6 +628,27 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
         result.surfaceSections!.filter(
           (s) => !derivations.some((d) => d.id === s.id),
         );
+      if (retirements.length) {
+        // Reconstruct historical compatibility only from the exact immutable
+        // source pinned by this adapter. No backup blob enters target authoring.
+        const retired = historicalBindings.filter((b) =>
+          retirements.some((r) => r.id === b.id),
+        );
+        const rows = [
+          ...result.surfaceFieldBindings!,
+          ...structuredClone(retired),
+        ];
+        (result as { surfaceFieldBindings: unknown }).surfaceFieldBindings =
+          historicalBindings.map((original) => {
+            const matches = rows.filter((b) => b.id === original.id);
+            if (matches.length !== 1)
+              fail(
+                "NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID",
+                "/target/bindings",
+              );
+            return matches[0]!;
+          });
+      }
       return result;
     },
   };
