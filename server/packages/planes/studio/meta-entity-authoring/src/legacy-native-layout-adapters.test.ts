@@ -246,3 +246,87 @@ it("blocks an actual reference surface until all nested declarations have normal
     }),
   ).toThrow("NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED");
 });
+
+it("reconstructs nested list controls and readable identity through the production adapter without source replay", async () => {
+  const { coreFixture, coreFixtureContext } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-core.fixtures.js");
+  const { layoutFixtureContext } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
+  const core = coreFixture(),
+    context = coreFixtureContext(),
+    surface = core.surface[0]!;
+  const resource = {
+    owner: "synthetic-tests",
+    key: "provider",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const source = {
+    id: surface.id,
+    surfaceKey: "list",
+    surfaceKind: "list",
+    title: "Details",
+    layoutConfig: {
+      identityField: "code",
+      iconKey: "globe",
+      supportedModes: ["table"],
+      limits: {
+        defaultPageSize: 25,
+        allowedPageSizes: [10, 25, 50],
+        maxSortLevels: 3,
+        countMode: "exact",
+      },
+    },
+  };
+  const f = fixture();
+  const adapter = createLegacyNativeLayoutAdapters({
+    ...f,
+    surfaces: [source],
+    listSettings: {
+      [surface.id]: {
+        surfaceId: surface.id,
+        provider: resource,
+        modes: ["table"],
+        countModes: ["exact"],
+        maximumPageSize: 50,
+        maximumPageSizeChoices: 10,
+        maximumSortLevels: 3,
+        maximumFilters: 20,
+        maximumFilterDepth: 3,
+      },
+    },
+    surfaceIdentities: {
+      [surface.id]: {
+        entityId: context.entityId,
+        tenantId: null,
+        resource,
+        fields: core.field,
+        identities: context.identities,
+        presentation: layoutFixtureContext().fieldPresentation,
+        maximumFields: 10,
+      },
+    },
+    mappings: {
+      ...f.mappings,
+      surfaces: {
+        [surface.id]: { sourceHash: sha256(source), initialization: surface },
+      },
+    },
+  });
+  const native = adapter.surfaces.forward([source]);
+  expect(adapter.surfaces.dependencies).toEqual([resource]);
+  expect(adapter.surfaces.reverse(native)).toEqual([source]);
+  const changed = native.map((row) => ({
+    ...row,
+    defaultPageSize: 50,
+    identityFieldId: coreFixtureId(3),
+  }));
+  expect(adapter.surfaces.reverse(changed)[0]!.layoutConfig).toEqual({
+    ...source.layoutConfig,
+    identityField: "name",
+    limits: { ...source.layoutConfig.limits, defaultPageSize: 50 },
+  });
+  expect(() =>
+    adapter.surfaces.reverse(native.map((row) => ({ ...row, maxFilters: 21 }))),
+  ).toThrow("NATIVE_LIST_SETTINGS_CAPABILITY_DENIED");
+});

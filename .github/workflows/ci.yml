@@ -80,7 +80,7 @@ jobs:
       - name: Test Entity foundation contract
         run: |
           pnpm --filter @athyper/server-contract-meta-entity-authoring test
-          pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/owned-label-codec.test.ts src/label-command-reducer.test.ts src/native-structural-codec.test.ts src/normalized-core-codec.test.ts src/normalized-layout-codec.test.ts src/native-core-layout-command-reducer.test.ts src/native-core-layout-persistence.test.ts src/legacy-native-runtime.test.ts src/native-graph-conversion.test.ts src/legacy-native-core-adapters.test.ts src/legacy-native-layout-adapters.test.ts src/native-list-view.test.ts src/native-field-choices.test.ts src/native-detail-navigation.test.ts
+          pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/owned-label-codec.test.ts src/label-command-reducer.test.ts src/native-structural-codec.test.ts src/normalized-core-codec.test.ts src/normalized-layout-codec.test.ts src/native-core-layout-command-reducer.test.ts src/native-core-layout-persistence.test.ts src/legacy-native-runtime.test.ts src/native-graph-conversion.test.ts src/legacy-native-core-adapters.test.ts src/legacy-native-layout-adapters.test.ts src/native-list-view.test.ts src/native-field-choices.test.ts src/native-detail-navigation.test.ts src/native-list-settings.test.ts src/native-surface-identity.test.ts src/legacy-native-navigation-adapter.test.ts
           pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
       - name: Typecheck native Entity tests
         run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring typecheck:native-tests

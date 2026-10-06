@@ -274,6 +274,8 @@ it("runs all five implemented scalar adapters through the complete preservation 
     await import("./legacy-native-core-adapters.js");
   const { createLegacyNativeLayoutAdapters } =
     await import("./legacy-native-layout-adapters.js");
+  const { createLegacyNativeNavigationAdapter } =
+    await import("./legacy-native-navigation-adapter.js");
   const f = fixture(),
     c = layoutFixtureContext(),
     l = layoutFixture();
@@ -310,6 +312,38 @@ it("runs all five implemented scalar adapters through the complete preservation 
     title: "Fixture label",
     layoutKind: row.layoutKind,
     isDefault: row.isDefault,
+    ...(row.surfaceKind === "list"
+      ? {
+          layoutConfig: {
+            identityField: "code",
+            supportedModes: row.supportedModes!,
+            limits: {
+              defaultPageSize: row.defaultPageSize!,
+              allowedPageSizes: row.allowedPageSizes!,
+              maxSortLevels: row.maxSortLevels!,
+              countMode: row.countMode!,
+            },
+          },
+        }
+      : {
+          layoutConfig: {
+            recordPresentation: {
+              schemaVersion: 1,
+              titleField: "name",
+              codeField: "code",
+              navigation: {
+                mode: "scroll",
+                tabs: [
+                  {
+                    key: "details",
+                    label: "Fixture label",
+                    sectionKeys: ["details"],
+                  },
+                ],
+              },
+            },
+          },
+        }),
   }));
   const surfaceSections = l.section.map((row) => ({
     id: row.id,
@@ -373,8 +407,80 @@ it("runs all five implemented scalar adapters through the complete preservation 
       ]),
     ),
   });
+  const listProvider = {
+    owner: "synthetic-tests",
+    key: "list-provider",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const identityResource = {
+    owner: "synthetic-tests",
+    key: "readable-fields",
+    version: 1,
+    hash: "f".repeat(64),
+  };
+  const navigationResource = {
+    owner: "synthetic-tests",
+    key: "navigation-adapter",
+    version: 1,
+    hash: "9".repeat(64),
+  };
+  const labelResource = {
+    owner: "synthetic-tests",
+    key: "owned-labels",
+    version: 1,
+    hash: "d".repeat(64),
+  };
+  const detail = c.core.surface.find((s) => s.surfaceKind === "detail")!;
+  const nested = createLegacyNativeNavigationAdapter({
+    source,
+    sourceHash: sha256(source),
+    resource: navigationResource,
+    labelResource,
+    mappings: {
+      [detail.id]: {
+        context: {
+          surface: detail,
+          maximumSections: 10,
+          label: () => ({ label: "Fixture label" }),
+        },
+        sections: l.section,
+        groups: {
+          details: { id: coreFixtureId(70), labelId: coreFixtureId(32) },
+        },
+      },
+    },
+  });
+  const preparedSurfaces = nested.forward(source).surfaces!;
   const layout = createLegacyNativeLayoutAdapters({
-    surfaces,
+    surfaceIdentities: Object.fromEntries(
+      c.core.surface.map((s) => [
+        s.id,
+        {
+          entityId: c.coreContext.entityId,
+          tenantId: c.coreContext.tenantId,
+          resource: identityResource,
+          fields: c.core.field,
+          identities: c.coreContext.identities,
+          presentation: c.fieldPresentation,
+          maximumFields: 10,
+        },
+      ]),
+    ),
+    listSettings: {
+      [c.core.surface[0]!.id]: {
+        surfaceId: c.core.surface[0]!.id,
+        provider: listProvider,
+        modes: ["table"],
+        countModes: ["exact"],
+        maximumPageSize: 50,
+        maximumPageSizeChoices: 10,
+        maximumSortLevels: 3,
+        maximumFilters: 20,
+        maximumFilterDepth: 3,
+      },
+    },
+    surfaces: preparedSurfaces,
     surfaceSections,
     surfaceFieldBindings,
     positionConvention: "one-based",
@@ -388,7 +494,7 @@ it("runs all five implemented scalar adapters through the complete preservation 
       surfaces: Object.fromEntries(
         c.core.surface.map((r, i) => [
           r.id,
-          { sourceHash: sha256(surfaces[i]), initialization: r },
+          { sourceHash: sha256(preparedSurfaces[i]), initialization: r },
         ]),
       ),
       surfaceSections: Object.fromEntries(
@@ -410,9 +516,26 @@ it("runs all five implemented scalar adapters through the complete preservation 
     {
       ...f.context,
       source: { ...f.context.source, graphHash: sha256(source) },
+      installedAdapters: [
+        ...f.context.installedAdapters,
+        listProvider,
+        identityResource,
+        navigationResource,
+        labelResource,
+      ],
     },
     { ...core, ...layout },
+    nested,
   );
+  expect(proof.nested!.dependencies).toEqual([labelResource]);
+  expect(
+    proof.candidate.referenceMembers!.members.navigationGroup,
+  ).toHaveLength(1);
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/2");
+  expect(proof.families.surfaces!.dependencies).toEqual([
+    listProvider,
+    identityResource,
+  ]);
   expect(proof.candidate.fields).toEqual(c.core.field);
   expect(proof.candidate.surfaces).toEqual(c.core.surface);
   expect(proof.candidate.surfaceSections).toEqual(l.section);
@@ -619,4 +742,57 @@ it("rejects nested core identity replacement and inconsistent installed navigati
       f.nested,
     ),
   ).toThrow("added label or reference was not admitted");
+});
+
+it("pins installed family dependencies and rejects missing, duplicated or changed provider evidence", () => {
+  const f = fixture();
+  const dependency = {
+    owner: "synthetic-tests",
+    key: "provider",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const adapters = {
+    ...f.adapters,
+    surfaces: { ...f.adapters.surfaces, dependencies: [dependency] },
+  };
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, adapters),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_NOT_INSTALLED");
+  const context = {
+    ...f.context,
+    installedAdapters: [...f.context.installedAdapters, dependency],
+  };
+  const proof = prepareNativeGraphConversion(f.source, context, adapters);
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/2");
+  expect(proof.families.surfaces!.dependencies).toEqual([dependency]);
+  const changed = { ...dependency, hash: "f".repeat(64) };
+  expect(() =>
+    prepareNativeGraphConversion(f.source, context, {
+      ...adapters,
+      surfaces: { ...adapters.surfaces, dependencies: [changed] },
+    }),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_NOT_INSTALLED");
+  const second = prepareNativeGraphConversion(
+    f.source,
+    {
+      ...f.context,
+      installedAdapters: [...f.context.installedAdapters, changed],
+    },
+    {
+      ...adapters,
+      surfaces: { ...adapters.surfaces, dependencies: [changed] },
+    },
+  );
+  expect(second.targetHash).toBe(proof.targetHash);
+  expect(second.contextHash).not.toBe(proof.contextHash);
+  expect(() =>
+    prepareNativeGraphConversion(f.source, context, {
+      ...adapters,
+      surfaces: {
+        ...adapters.surfaces,
+        dependencies: [dependency, dependency],
+      },
+    }),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_INVENTORY_INVALID");
 });

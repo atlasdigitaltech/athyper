@@ -17,7 +17,10 @@
     "src/legacy-native-layout-adapters.test.ts",
     "src/native-list-view.test.ts",
     "src/native-field-choices.test.ts",
-    "src/native-detail-navigation.test.ts"
+    "src/native-detail-navigation.test.ts",
+    "src/native-list-settings.test.ts",
+    "src/native-surface-identity.test.ts",
+    "src/legacy-native-navigation-adapter.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

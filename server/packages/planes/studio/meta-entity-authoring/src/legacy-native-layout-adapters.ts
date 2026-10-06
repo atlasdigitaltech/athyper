@@ -4,6 +4,7 @@ import {
   validateNormalizedLayoutRow,
   type MetaEntityGraph,
   type NativeMetaEntityGraph,
+  type NormalizedCoreRow,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
@@ -12,6 +13,19 @@ import type {
   NativeConversionResource,
 } from "./native-graph-conversion.js";
 
+import {
+  compileNativeListSettings,
+  convertLegacyListSettings,
+  optionalListLimits,
+  type LegacyListSettings,
+  type NativeListSettingsContext,
+} from "./native-list-settings.js";
+import {
+  compileNativeSurfaceIdentity,
+  convertLegacySurfaceIdentity,
+  type LegacySurfaceIdentity,
+  type NativeSurfaceIdentityContext,
+} from "./native-surface-identity.js";
 type Family = "surfaces" | "surfaceSections" | "surfaceFieldBindings";
 type Source<K extends Family> = NonNullable<MetaEntityGraph[K]>;
 type Target<K extends Family> = NativeMetaEntityGraph[K];
@@ -32,6 +46,12 @@ export interface LegacyNativeLayoutAdapterInput {
   readonly surfaceFieldBindings: Source<"surfaceFieldBindings">;
   readonly mappings: { readonly [K in Family]: Mappings<K> };
   readonly resources: { readonly [K in Family]: NativeConversionResource };
+  /** Only selected list settings are supported; all other nested paths reject.
+   * Each independently admitted provider is bound as an adapter dependency. */
+  readonly surfaceIdentities?: Readonly<
+    Record<string, NativeSurfaceIdentityContext>
+  >;
+  readonly listSettings?: Readonly<Record<string, NativeListSettingsContext>>;
   readonly positionConvention: "zero-based" | "one-based";
   /** Resolve a label from independently admitted owned-label metadata. */
   labelText(labelId: string): string;
@@ -79,6 +99,36 @@ export function createLegacyNativeLayoutAdapters(
 ): Pick<NativeConversionAdapters, Family> {
   if (!["zero-based", "one-based"].includes(input.positionConvention))
     fail("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED", "/positionConvention");
+  const surfaceIdentities = structuredClone(input.surfaceIdentities ?? {});
+  const identitySourceIds = input.surfaces
+    .filter(
+      (s) =>
+        s.layoutConfig &&
+        ("identityField" in s.layoutConfig ||
+          "recordPresentation" in s.layoutConfig),
+    )
+    .map((s) => s.id);
+  if (
+    input.surfaceIdentities &&
+    Object.keys(surfaceIdentities).sort().join() !==
+      identitySourceIds.sort().join()
+  )
+    fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/surfaceIdentities");
+  const listSettings = structuredClone(input.listSettings ?? {});
+  if (
+    Object.keys(listSettings).sort().join() !==
+    input.surfaces
+      .filter(
+        (s) =>
+          s.layoutConfig &&
+          input.listSettings &&
+          ("supportedModes" in s.layoutConfig || "limits" in s.layoutConfig),
+      )
+      .map((s) => s.id)
+      .sort()
+      .join()
+  )
+    fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/listSettings");
   const shift = input.positionConvention === "zero-based" ? 1 : 0;
   function make<K extends Family>(family: K): NativeConversionAdapters[K] {
     validateConversionJsonData(input[family], "/" + family);
@@ -96,8 +146,43 @@ export function createLegacyNativeLayoutAdapters(
           .join()
     )
       fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/" + family);
+    const listShapes = new Map(
+      source.map((row) => [
+        row.id,
+        family === "surfaces" &&
+        (row as Source<"surfaces">[number]).layoutConfig
+          ? optionalListLimits.filter((k) =>
+              Object.hasOwn(
+                ((row as Source<"surfaces">[number]).layoutConfig!
+                  .limits as object) ?? {},
+                k,
+              ),
+            )
+          : [],
+      ]),
+    );
+    const identityShapes = new Map(
+      source.map((row) => {
+        const config = (row as Source<"surfaces">[number]).layoutConfig;
+        const record = config?.recordPresentation as
+          Record<string, unknown> | undefined;
+        return [
+          row.id,
+          {
+            root: Object.keys(config ?? {}).filter((k) =>
+              ["identityField", "iconKey"].includes(k),
+            ),
+            record: record ? Object.keys(record) : null,
+          },
+        ];
+      }),
+    );
     const allowed = new Set<string>([
       "id",
+      ...(family === "surfaces" &&
+      (input.listSettings || input.surfaceIdentities)
+        ? ["layoutConfig"]
+        : []),
       ...direct[family],
       ...Object.keys(labels[family]),
       ...(family === "surfaces" ? [] : ["position"]),
@@ -162,6 +247,113 @@ export function createLegacyNativeLayoutAdapters(
           fail("NATIVE_LAYOUT_POSITION_INVALID", `/${family}/position`);
         row.position = (position as number) + shift;
       }
+      if (family === "surfaces" && Object.hasOwn(legacy, "layoutConfig")) {
+        const config = legacy.layoutConfig as Record<string, unknown>;
+        if (
+          !config ||
+          typeof config !== "object" ||
+          Array.isArray(config) ||
+          Object.keys(config).some(
+            (k) =>
+              ![
+                "supportedModes",
+                "limits",
+                "identityField",
+                "iconKey",
+                "recordPresentation",
+              ].includes(k),
+          )
+        )
+          fail(
+            "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
+            "/surfaces/layoutConfig",
+          );
+        if ("supportedModes" in config || "limits" in config) {
+          const c = listSettings[String(legacy.id)];
+          if (!c)
+            return fail(
+              "NATIVE_LAYOUT_LIST_PROVIDER_REQUIRED",
+              "/surfaces/layoutConfig",
+            );
+          const settings = {
+            supportedModes: config.supportedModes,
+            limits: config.limits,
+          } as LegacyListSettings;
+          Object.assign(
+            row,
+            convertLegacyListSettings(
+              settings,
+              row as unknown as NormalizedCoreRow<"surface">,
+              c,
+              sha256(settings),
+            ),
+          );
+        }
+        if (
+          "identityField" in config ||
+          "iconKey" in config ||
+          "recordPresentation" in config
+        ) {
+          const c = surfaceIdentities[String(legacy.id)];
+          if (!c)
+            return fail(
+              "NATIVE_LAYOUT_IDENTITY_RESOURCE_REQUIRED",
+              "/surfaces/layoutConfig",
+            );
+          const presentation: Record<string, unknown> = {};
+          for (const key of ["identityField", "iconKey"])
+            if (Object.hasOwn(config, key)) presentation[key] = config[key];
+          if ("recordPresentation" in config) {
+            const record = config.recordPresentation as Record<string, unknown>;
+            if (
+              !record ||
+              typeof record !== "object" ||
+              Array.isArray(record) ||
+              record.schemaVersion !== 1 ||
+              Object.keys(record).some(
+                (k) =>
+                  ![
+                    "schemaVersion",
+                    "titleField",
+                    "codeField",
+                    "iconKey",
+                  ].includes(k),
+              )
+            )
+              return fail(
+                "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
+                "/surfaces/layoutConfig/recordPresentation",
+              );
+            for (const key of ["titleField", "codeField", "iconKey"])
+              if (Object.hasOwn(record, key)) {
+                if (
+                  Object.hasOwn(presentation, key) &&
+                  canonicalJson(presentation[key]) !==
+                    canonicalJson(record[key])
+                )
+                  fail(
+                    "NATIVE_LAYOUT_CORRELATED_PRESENTATION_CONFLICT",
+                    "/surfaces/layoutConfig/" + key,
+                  );
+                presentation[key] = record[key];
+              }
+          }
+          Object.assign(
+            row,
+            convertLegacySurfaceIdentity(
+              presentation as LegacySurfaceIdentity,
+              row as unknown as NormalizedCoreRow<"surface">,
+              c,
+              sha256(presentation),
+            ),
+          );
+        }
+        if (!Object.keys(config).length)
+          fail(
+            "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
+            "/surfaces/layoutConfig",
+          );
+      }
       validate(row);
       return row;
     };
@@ -173,6 +365,19 @@ export function createLegacyNativeLayoutAdapters(
     }
     return {
       resource: structuredClone(input.resources[family]),
+      ...(family === "surfaces" &&
+      (input.listSettings || input.surfaceIdentities)
+        ? {
+            dependencies: [
+              ...new Map(
+                [
+                  ...Object.values(listSettings).map((c) => c.provider),
+                  ...Object.values(surfaceIdentities).map((c) => c.resource),
+                ].map((r) => [canonicalJson(r), structuredClone(r)]),
+              ).values(),
+            ],
+          }
+        : {}),
       forward: (rows: Source<K>) =>
         rows.map((row) => {
           validateConversionJsonData(row, "/" + family);
@@ -197,6 +402,46 @@ export function createLegacyNativeLayoutAdapters(
           for (const [property, column] of Object.entries(labels[family]))
             if (keys.includes(property))
               values[property] = label(row, column, `/${family}/${property}`);
+          if (family === "surfaces" && keys.includes("layoutConfig")) {
+            const settings = listSettings[target.id],
+              identity = surfaceIdentities[target.id];
+            const shape = identityShapes.get(target.id)!;
+            const config: Record<string, unknown> = {};
+            if (settings)
+              Object.assign(
+                config,
+                compileNativeListSettings(
+                  target as NormalizedCoreRow<"surface">,
+                  settings,
+                  listShapes.get(target.id)!,
+                ),
+              );
+            if (identity) {
+              const properties = [
+                ...new Set([
+                  ...shape.root,
+                  ...(shape.record ?? []).filter((k) => k !== "schemaVersion"),
+                ]),
+              ] as (keyof LegacySurfaceIdentity)[];
+              const presentation = compileNativeSurfaceIdentity(
+                target as NormalizedCoreRow<"surface">,
+                identity,
+                properties,
+              );
+              for (const key of shape.root)
+                config[key] = presentation[key as keyof LegacySurfaceIdentity];
+              if (shape.record)
+                config.recordPresentation = Object.fromEntries(
+                  shape.record.map((k) => [
+                    k,
+                    k === "schemaVersion"
+                      ? 1
+                      : presentation[k as keyof LegacySurfaceIdentity],
+                  ]),
+                );
+            }
+            values.layoutConfig = config;
+          }
           if (family !== "surfaces")
             values.position = (row.position as number) - shift;
           const legacy = Object.fromEntries(

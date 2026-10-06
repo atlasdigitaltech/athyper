@@ -89,3 +89,9 @@ export * from "./native-list-view.js";
 export * from "./native-field-choices.js";
 
 export * from "./native-detail-navigation.js";
+
+export * from "./native-list-settings.js";
+
+export * from "./native-surface-identity.js";
+
+export * from "./legacy-native-navigation-adapter.js";

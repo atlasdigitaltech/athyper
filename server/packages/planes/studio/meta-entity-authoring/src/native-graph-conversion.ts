@@ -28,6 +28,7 @@ export interface NativeConversionResource {
  * The inverse is mandatory: unsupported source semantics cannot be discarded. */
 export type NativeFamilyConversionAdapter<K extends NativeConversionFamily> = {
   readonly resource: NativeConversionResource;
+  readonly dependencies?: readonly NativeConversionResource[];
   forward(source: NonNullable<MetaEntityGraph[K]>): NativeMetaEntityGraph[K];
   reverse(target: NativeMetaEntityGraph[K]): NonNullable<MetaEntityGraph[K]>;
 };
@@ -39,6 +40,7 @@ export type NativeConversionAdapters = {
  * consumes the converted graph, not a captured source-value backup. */
 export interface NativeNestedConversionAdapter {
   readonly resource: NativeConversionResource;
+  readonly dependencies?: readonly NativeConversionResource[];
   forward(source: MetaEntityGraph): MetaEntityGraph;
   reverse(
     prepared: MetaEntityGraph,
@@ -213,10 +215,25 @@ export function prepareNativeGraphConversion(
         adapter: NativeConversionResource;
         sourceHash: string;
         preparedHash: string;
+        dependencies?: readonly NativeConversionResource[];
       }
     | undefined;
   if (nested) {
     installed(nested.resource, "/nested/resource");
+    if (nested.dependencies) {
+      validateConversionJsonData(nested.dependencies, "/nested/dependencies");
+      if (
+        !Array.isArray(nested.dependencies) ||
+        new Set(nested.dependencies.map((d) => canonicalJson(d))).size !==
+          nested.dependencies.length
+      )
+        fail(
+          "NATIVE_CONVERSION_ADAPTER_INVENTORY_INVALID",
+          "/nested/dependencies",
+        );
+      for (const dependency of nested.dependencies)
+        installed(dependency, "/nested/dependencies");
+    }
     prepared = nested.forward(structuredClone(source));
     validateConversionJsonData(prepared, "/prepared");
     if (
@@ -330,6 +347,9 @@ export function prepareNativeGraphConversion(
       adapter: structuredClone(nested.resource),
       sourceHash: sha256(source),
       preparedHash: sha256(prepared),
+      ...(nested.dependencies?.length
+        ? { dependencies: structuredClone(nested.dependencies) }
+        : {}),
     };
   }
   const converted: Record<string, unknown> = {},
@@ -339,12 +359,30 @@ export function prepareNativeGraphConversion(
         sourceHash: string;
         targetHash: string;
         adapter: NativeConversionResource;
+        dependencies?: readonly NativeConversionResource[];
       }
     > = {};
   for (const kind of nativeConversionFamilies) {
     const adapter = adapters[kind];
     const r = adapter.resource;
     installed(r, "/adapters/" + kind);
+    if (adapter.dependencies) {
+      validateConversionJsonData(
+        adapter.dependencies,
+        "/adapters/" + kind + "/dependencies",
+      );
+      if (
+        !Array.isArray(adapter.dependencies) ||
+        new Set(adapter.dependencies.map((d) => canonicalJson(d))).size !==
+          adapter.dependencies.length
+      )
+        fail(
+          "NATIVE_CONVERSION_ADAPTER_INVENTORY_INVALID",
+          "/adapters/" + kind + "/dependencies",
+        );
+      for (const dependency of adapter.dependencies)
+        installed(dependency, "/adapters/" + kind + "/dependencies");
+    }
     // Every family must be explicitly present. Missing is not silently normalized
     // to [], which would erase source absence semantics.
     const original = prepared[kind];
@@ -371,6 +409,9 @@ export function prepareNativeGraphConversion(
       sourceHash: sha256(original),
       targetHash: sha256(target),
       adapter: structuredClone(r),
+      ...(adapter.dependencies?.length
+        ? { dependencies: structuredClone(adapter.dependencies) }
+        : {}),
     };
   }
   const core = {
@@ -453,15 +494,25 @@ export function prepareNativeGraphConversion(
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema: nestedProof
-      ? ("entity.native-graph-conversion-proof/2" as const)
-      : ("entity.native-graph-conversion-proof/1" as const),
+    schema:
+      nestedProof || Object.values(proof).some((p) => p.dependencies?.length)
+        ? ("entity.native-graph-conversion-proof/2" as const)
+        : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
     contextHash: sha256({
       coreLayoutEvidenceHash,
       retainedValidation: context.retainedValidation,
       authoringSchemaHash: context.authoringSchemaHash,
       ...(nestedProof ? { nested: nestedProof } : {}),
+      ...(Object.values(proof).some((p) => p.dependencies?.length)
+        ? {
+            dependencies: Object.fromEntries(
+              Object.entries(proof)
+                .filter(([, p]) => p.dependencies?.length)
+                .map(([kind, p]) => [kind, p.dependencies]),
+            ),
+          }
+        : {}),
     }),
     ...(nestedProof ? { nested: nestedProof } : {}),
     targetHash: sha256(candidate),
