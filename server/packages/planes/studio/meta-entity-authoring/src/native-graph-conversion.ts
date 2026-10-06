@@ -1,4 +1,8 @@
 import {
+  validateNativeRelationDerivations,
+  type NativeRelationDerivation,
+} from "./native-reference-relations.js";
+import {
   FoundationContractError,
   parseNormalizedLayoutGraph,
   validateFoundationNode,
@@ -191,6 +195,7 @@ export function validateNativeBindingRetirements(
 export interface NativeNestedConversionAdapter {
   /** Only explicit inline field sections may introduce new section identities.
    * Existing members remain exact except explicit validated unplaced UUID binding dispositions. */
+  readonly relationDerivations?: readonly NativeRelationDerivation[];
   readonly sectionDerivations?: readonly NativeSectionDerivation[];
   readonly bindingRetirements?: readonly NativeBindingRetirement[];
   readonly resource: NativeConversionResource;
@@ -370,31 +375,52 @@ export function prepareNativeGraphConversion(
         sourceHash: string;
         preparedHash: string;
         dependencies?: readonly NativeConversionResource[];
+        relationDerivations?: readonly NativeRelationDerivation[];
         sectionDerivations?: readonly NativeSectionDerivation[];
         bindingRetirements?: readonly NativeBindingRetirement[];
       }
     | undefined;
   if (nested) {
-    installed(nested.resource, "/nested/resource");
-    if (nested.dependencies) {
-      validateConversionJsonData(nested.dependencies, "/nested/dependencies");
+    const metadata = structuredClone({
+      resource: nested.resource,
+      dependencies: nested.dependencies,
+      sectionDerivations: nested.sectionDerivations,
+      bindingRetirements: nested.bindingRetirements,
+      relationDerivations: nested.relationDerivations,
+    });
+    installed(metadata.resource, "/nested/resource");
+    if (metadata.dependencies) {
+      validateConversionJsonData(metadata.dependencies, "/nested/dependencies");
       if (
-        !Array.isArray(nested.dependencies) ||
-        new Set(nested.dependencies.map((d) => canonicalJson(d))).size !==
-          nested.dependencies.length
+        !Array.isArray(metadata.dependencies) ||
+        new Set(metadata.dependencies.map((d) => canonicalJson(d))).size !==
+          metadata.dependencies.length
       )
         fail(
           "NATIVE_CONVERSION_ADAPTER_INVENTORY_INVALID",
           "/nested/dependencies",
         );
-      for (const dependency of nested.dependencies)
+      for (const dependency of metadata.dependencies)
         installed(dependency, "/nested/dependencies");
     }
     prepared = nested.forward(structuredClone(source));
     validateConversionJsonData(prepared, "/prepared");
+    const relationBranches = ["relations", "relationTargets", "relationFields"];
+    const relationDerivations = structuredClone(
+      metadata.relationDerivations ?? [],
+    );
+    if (relationDerivations.length)
+      validateNativeRelationDerivations(source, prepared, relationDerivations);
+    for (const d of relationDerivations)
+      installed(d.resource, "/nested/relationDerivations/resource");
+    const rootKeys = Object.keys(source).concat(
+      relationDerivations.length
+        ? relationBranches.filter((k) => !Object.hasOwn(source, k))
+        : [],
+    );
     if (
       prepared.contractSchema !== source.contractSchema ||
-      Object.keys(prepared).sort().join() !== Object.keys(source).sort().join()
+      Object.keys(prepared).sort().join() !== rootKeys.sort().join()
     )
       fail("NATIVE_CONVERSION_NESTED_GRAPH_INVALID", "/prepared");
     if (Buffer.byteLength(canonicalJson(prepared)) > context.maximumBytes)
@@ -405,6 +431,7 @@ export function prepareNativeGraphConversion(
       "referenceMembers",
       "ownedLabels",
       "fieldIdentities",
+      ...(relationDerivations.length ? relationBranches : []),
     ]);
     for (const key of retained) {
       if (
@@ -467,7 +494,7 @@ export function prepareNativeGraphConversion(
     for (const kind of nativeConversionFamilies)
       if (!Array.isArray(source[kind]) || !Array.isArray(prepared[kind]))
         fail("NATIVE_CONVERSION_FAMILY_REQUIRED", "/source/" + kind);
-    const derivations = nested.sectionDerivations ?? [];
+    const derivations = metadata.sectionDerivations ?? [];
     validateConversionJsonData(derivations, "/nested/sectionDerivations");
     if (
       !Array.isArray(derivations) ||
@@ -521,7 +548,7 @@ export function prepareNativeGraphConversion(
           "/nested/sectionDerivations",
         );
     }
-    const retirements = nested.bindingRetirements ?? [];
+    const retirements = metadata.bindingRetirements ?? [];
     validateNativeBindingRetirements(source, retirements);
     for (const kind of nativeConversionFamilies) {
       const before = source[kind],
@@ -569,17 +596,18 @@ export function prepareNativeGraphConversion(
       fail("NATIVE_CONVERSION_NESTED_GRAPH_INVALID", "/prepared/ownedLabels");
     context.validateRetained(structuredClone(prepared));
     nestedProof = {
-      adapter: structuredClone(nested.resource),
+      adapter: structuredClone(metadata.resource),
       sourceHash: sha256(source),
       preparedHash: sha256(prepared),
+      ...(relationDerivations.length ? { relationDerivations } : {}),
       ...(retirements.length
         ? { bindingRetirements: structuredClone(retirements) }
         : {}),
       ...(derivations.length
         ? { sectionDerivations: structuredClone(derivations) }
         : {}),
-      ...(nested.dependencies?.length
-        ? { dependencies: structuredClone(nested.dependencies) }
+      ...(metadata.dependencies?.length
+        ? { dependencies: structuredClone(metadata.dependencies) }
         : {}),
     };
   }
@@ -725,14 +753,16 @@ export function prepareNativeGraphConversion(
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema: nestedProof?.bindingRetirements?.length
-      ? ("entity.native-graph-conversion-proof/4" as const)
-      : nestedProof?.sectionDerivations?.length
-        ? ("entity.native-graph-conversion-proof/3" as const)
-        : nestedProof ||
-            Object.values(proof).some((p) => p.dependencies?.length)
-          ? ("entity.native-graph-conversion-proof/2" as const)
-          : ("entity.native-graph-conversion-proof/1" as const),
+    schema: nestedProof?.relationDerivations?.length
+      ? ("entity.native-graph-conversion-proof/5" as const)
+      : nestedProof?.bindingRetirements?.length
+        ? ("entity.native-graph-conversion-proof/4" as const)
+        : nestedProof?.sectionDerivations?.length
+          ? ("entity.native-graph-conversion-proof/3" as const)
+          : nestedProof ||
+              Object.values(proof).some((p) => p.dependencies?.length)
+            ? ("entity.native-graph-conversion-proof/2" as const)
+            : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
     contextHash: sha256({
       coreLayoutEvidenceHash,
@@ -790,6 +820,13 @@ export function composeNativeNestedConversionAdapters(
   const steps = [...adapters];
   return {
     resource: structuredClone(resource),
+    ...(steps.some((a) => a.relationDerivations?.length)
+      ? {
+          relationDerivations: steps.flatMap((a) =>
+            structuredClone(a.relationDerivations ?? []),
+          ),
+        }
+      : {}),
     ...(steps.some((a) => a.sectionDerivations?.length)
       ? {
           sectionDerivations: steps.flatMap((a) =>

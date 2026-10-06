@@ -425,3 +425,94 @@ it("preserves valid explicit permission absence without deriving a grant or perm
   };
   expect(a.reverse(stage.prepared, target)).toEqual(source);
 });
+it.each(["country", "state_region"])(
+  "enrolls %s canonical relations and AI reference IDs together, without dangling synthetic relationships",
+  async (name) => {
+    const { createLegacyNativeReferenceRelationsAdapter } =
+      await import("./native-reference-relations.js");
+    const { validateNativeSupplementalReferences } =
+      await import("./native-supplemental-storage.js");
+    const f = fixture(name),
+      source = f.stage.prepared;
+    const derivations = f.input.ai.context.relationships.map((r, i) => {
+      const field = source.fields.find((f) => f.id === r.sourceFieldId)!;
+      const reference = field.typeConfig.keyReference as {
+        targetEntity: string;
+        labelField: string;
+        fields: { source: string; target: string }[];
+      };
+      const targetId = id(5000 + i),
+        targetEntityId = id(6000 + i);
+      return {
+        sourceFieldId: field.id!,
+        sourceHash: sha256(reference),
+        labelFieldKey: reference.labelField,
+        resource: resource("synthetic-target-key"),
+        targetKey: {
+          entityId: targetEntityId,
+          entityCode: reference.targetEntity,
+          keyKey: "business_code",
+          fieldKeys: reference.fields.map((m) => m.target),
+        },
+        relation: {
+          id: r.relationId,
+          relationKey: r.key,
+          relationKind: "many_to_one",
+          resolutionKind: "logical",
+          ownershipMode: "reference",
+          mutationMode: "read_only",
+          onDelete: "restrict",
+          onUpdate: "restrict",
+          status: "active" as const,
+        },
+        target: {
+          id: targetId,
+          entityRelationId: r.relationId,
+          relationTargetKey: "default",
+          targetEntityId,
+          targetEntityCode: reference.targetEntity,
+          targetKeyKey: "business_code",
+          isDefault: true,
+        },
+        fields: reference.fields.map((m, j) => ({
+          id: id(7000 + i * 100 + j),
+          entityRelationTargetId: targetId,
+          sourceFieldId: source.fields.find((f) => f.fieldKey === m.source)!
+            .id!,
+          targetFieldKey: m.target,
+          position: j + 1,
+        })),
+      };
+    });
+    const relations = createLegacyNativeReferenceRelationsAdapter({
+      source,
+      sourceHash: sha256(source),
+      resource: resource("relations-adapter"),
+      derivations,
+    });
+    const prepared = relations.forward(source);
+    const target = {
+      ...f.target,
+      relations: prepared.relations,
+      relationTargets: prepared.relationTargets,
+      relationFields: prepared.relationFields,
+    };
+    expect(() =>
+      validateNativeSupplementalReferences(target, 200),
+    ).not.toThrow();
+    const { ai: _ai, ...coreTarget } = target;
+    expect(
+      relations.reverse(prepared, {
+        ...coreTarget,
+        contractSchema: "athyper.meta-entity-contract/2.4",
+        operations: source.operations,
+      }),
+    ).toEqual(source);
+    expect(f.adapter.reverse(source, target)).toEqual(f.source);
+    if (derivations.length) {
+      expect(() =>
+        validateNativeSupplementalReferences({ ...target, relations: [] }, 200),
+      ).toThrow("NATIVE_SNAPSHOT_REFERENCE_INVALID");
+    }
+  },
+);

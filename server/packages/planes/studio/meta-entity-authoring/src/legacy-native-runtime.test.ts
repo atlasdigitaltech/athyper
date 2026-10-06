@@ -104,3 +104,44 @@ it("requires explicit handler version evidence and rejects unsupported mapping p
     } as never),
   ).toThrow("NATIVE_RUNTIME_MAPPING_INVALID");
 });
+it("maps only an independently registered reference capability and rejects missing or ambiguous installation", () => {
+  const graph = coreFixture(),
+    c = coreFixtureContext();
+  const ref = {
+    kind: "reference" as const,
+    key: "registered.reference",
+    version: 2,
+    hash: "c".repeat(64),
+    parameterCount: 0,
+  };
+  const row = normalizeLegacyRuntime(
+    source(),
+    graph.field,
+    { ...c, contracts: [...c.contracts, ref] },
+    {
+      ...mapping(),
+      referenceCapability: { key: ref.key, version: ref.version },
+    },
+  );
+  expect(row).toMatchObject({
+    referenceCapabilityKey: ref.key,
+    referenceCapabilityVersion: 2,
+  });
+  expect(() =>
+    normalizeLegacyRuntime(source(), graph.field, c, {
+      ...mapping(),
+      referenceCapability: { key: ref.key, version: ref.version },
+    }),
+  ).toThrow("NATIVE_RUNTIME_REFERENCE_CAPABILITY_REQUIRED");
+  expect(() =>
+    normalizeLegacyRuntime(
+      source(),
+      graph.field,
+      { ...c, contracts: [ref, ref] },
+      {
+        ...mapping(),
+        referenceCapability: { key: ref.key, version: ref.version },
+      },
+    ),
+  ).toThrow("NATIVE_RUNTIME_REFERENCE_CAPABILITY_REQUIRED");
+});

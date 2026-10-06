@@ -597,3 +597,51 @@ host/initializer/product-write evidence and deployed F6/F8/F9 remain unavailable
 No DEV migration, grant, protected-state initialization, publication or activation
 occurred. This checkpoint is partial implementation evidence, not full request
 completion or a gate-pass receipt.
+
+### Source-bound relations, runtime capability and archival reads — 7 October 2026
+
+The shared reference-relation adapter now consumes explicit legacy key-reference
+semantics and independently supplied canonical identities/remote-key evidence.
+Its derived relation, target and ordered field rows are source-hash-bound and
+read-only. The outer coordinator/composition binds those additions in conversion
+proof version 5; existing relation rows remain exact, and absent root relation
+arrays are restored on inverse. Changed targets, duplicate/extra members,
+incomplete mappings, stale source hashes, changed controls and uninstalled
+resources reject. Nested resource/dependency/derivation pins are captured before
+adapter callbacks execute; a callback-mutation regression protects proof provenance.
+Label-field selection comes from an independently admitted
+projection, not a replayed key-reference blob.
+
+Actual Country and State Region declarations pass selected relation conversion
+and inverse fixtures. Combined operation/authorization/AI component tests now
+include the source-derived canonical relation rows and verify final supplemental
+reference integrity; removal of a required State Region relation rejects. Target
+entity/key/label identities and resources in these tests remain synthetic. They
+do not attest published remote keys, F9 lineage, a complete native core/layout
+graph, canonical SQL application or live-read authority.
+
+The surface capability-marker adapter verifies one explicit runtime identity and
+an exact installed resource pin. The scalar runtime mapping requires a registered
+reference contract and writes only the existing typed capability key/version
+projection. Both actual references round-trip their selected marker. Missing or
+ambiguous registration, wrong runtime/version and altered source reject. This is
+not a permission grant or host initialization.
+
+Installed native host policy may explicitly declare historical snapshot versions
+separately from active source versions. Tests verify admitted same-descriptor
+2.4 history on a 2.5 root without DML, and rejection when archival admission,
+source coordinates or descriptor hash disagree. Current authorization and schema
+qualification still precede history reads. Older 2.3 decoding, descriptor-version
+migration and restore/application are not implemented by this change.
+
+Validation: 635 authoring tests pass across 113 files; four existing opt-in SQL
+cases remain outside the ordinary run. Source/test and focused native-test
+checks, the six generation drift checks and the 13-task bounded build pass.
+The new ordinary tests are enrolled in foundation CI. No assertion was disabled.
+
+Remaining: localization/badge mappings and full reference-source integration,
+canonical 2.3-to-native atomic conversion with original/new immutable history and
+revision/idempotency/readback evidence, and native whole-release compilation.
+No canonical conversion transaction or release compiler is claimed by these
+component proofs. Cutover/publication guards remain enforced; no DEV migration,
+grant, protected-state initialization, publication or activation occurred.

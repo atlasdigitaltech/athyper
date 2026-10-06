@@ -1460,3 +1460,200 @@ it("rejects malformed supplemental output with a named diagnostic", async () => 
     ).toThrow("NATIVE_EXPANDED_SOURCE_INVALID");
   }
 });
+it("binds source-derived relation additions to version 5 and rejects undeclared or stale structural changes", async () => {
+  const { createLegacyNativeReferenceRelationsAdapter } =
+    await import("./native-reference-relations.js");
+  const f = fixture();
+  const field = f.source.fields[1]!;
+  const reference = {
+    targetEntity: "related_reference",
+    labelField: "name",
+    fields: [{ source: "code", target: "code" }],
+  };
+  const enriched = {
+    ...field,
+    fieldKey: "code",
+    valueOrigin: "stored",
+    typeConfig: { kind: "string", keyReference: reference },
+  };
+  const source = {
+    ...f.source,
+    referenceMembers: {
+      ...f.source.referenceMembers!,
+      members: {
+        ...f.source.referenceMembers!.members,
+        navigationGroup: layoutFixtureContext().navigationGroups.map((g) => ({
+          ...g,
+          groupKey: "details",
+          labelId: null,
+          iconKey: null,
+          sectionDisplay: "continuous" as const,
+        })),
+      },
+    },
+    fields: f.source.fields.map((r) => (r.id === field.id ? enriched : r)),
+  };
+  const resource = {
+    owner: "synthetic-tests",
+    key: "relation-adapter",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const dependency = { ...resource, key: "target-key-catalogue" };
+  const relationId = coreFixtureId(700),
+    targetId = coreFixtureId(701);
+  const derivations = [
+    {
+      sourceFieldId: field.id!,
+      sourceHash: sha256(reference),
+      labelFieldKey: "name",
+      resource: dependency,
+      targetKey: {
+        entityId: coreFixtureId(800),
+        entityCode: "related_reference",
+        keyKey: "code",
+        fieldKeys: ["code"],
+      },
+      relation: {
+        id: relationId,
+        relationKey: "related",
+        relationKind: "many_to_one",
+        resolutionKind: "logical",
+        ownershipMode: "reference",
+        mutationMode: "read_only",
+        onDelete: "restrict",
+        onUpdate: "restrict",
+        status: "active" as const,
+      },
+      target: {
+        id: targetId,
+        entityRelationId: relationId,
+        relationTargetKey: "default",
+        targetEntityId: coreFixtureId(800),
+        targetEntityCode: "related_reference",
+        targetKeyKey: "code",
+        isDefault: true,
+      },
+      fields: [
+        {
+          id: coreFixtureId(702),
+          entityRelationTargetId: targetId,
+          sourceFieldId: field.id!,
+          targetFieldKey: "code",
+          position: 1,
+        },
+      ],
+    },
+  ];
+  const nested = createLegacyNativeReferenceRelationsAdapter({
+    source,
+    sourceHash: sha256(source),
+    resource,
+    derivations,
+  });
+  const adapters = {
+    ...f.adapters,
+    fields: {
+      ...f.adapters.fields,
+      forward: (rows: typeof source.fields) =>
+        f.adapters.fields
+          .forward(rows)
+          .map((r) => (r.id === field.id ? { ...r, relationId } : r)),
+      reverse: (rows: Parameters<typeof f.adapters.fields.reverse>[0]) =>
+        f.adapters.fields
+          .reverse(rows)
+          .map((r) => (r.id === field.id ? enriched : r)),
+    },
+  };
+  const context = {
+    ...f.context,
+    source: { ...f.context.source, graphHash: sha256(source) },
+    installedAdapters: [...f.context.installedAdapters, resource, dependency],
+    resolveLayout: (core: Parameters<typeof f.context.resolveLayout>[0]) => {
+      const c = f.context.resolveLayout(core);
+      return {
+        ...c,
+        coreContext: { ...c.coreContext, relationIds: [relationId] },
+      };
+    },
+  };
+  const proof = prepareNativeGraphConversion(source, context, adapters, nested);
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/5");
+  expect(proof.nested!.relationDerivations).toEqual(derivations);
+  expect(proof.candidate.relations).toEqual(derivations.map((d) => d.relation));
+  expect(() =>
+    prepareNativeGraphConversion(source, context, adapters, {
+      ...nested,
+      relationDerivations: [],
+    }),
+  ).toThrow("NATIVE_CONVERSION_NESTED_GRAPH_INVALID");
+  expect(() =>
+    prepareNativeGraphConversion(source, context, adapters, {
+      ...nested,
+      relationDerivations: derivations.map((d) => ({
+        ...d,
+        sourceHash: "f".repeat(64),
+      })),
+    }),
+  ).toThrow("NATIVE_RELATION_DERIVATION_INVALID");
+  expect(() =>
+    prepareNativeGraphConversion(
+      source,
+      {
+        ...context,
+        installedAdapters: context.installedAdapters.filter(
+          (r) => r.key !== dependency.key,
+        ),
+      },
+      adapters,
+      nested,
+    ),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_NOT_INSTALLED");
+});
+it("captures nested resource pins before installed callbacks execute", () => {
+  const f = fixture();
+  const c = layoutFixtureContext();
+  const groups = c.navigationGroups.map((g) => ({
+    ...g,
+    groupKey: "details",
+    labelId: null,
+    iconKey: null,
+    sectionDisplay: "continuous" as const,
+  }));
+  const source = {
+    ...f.source,
+    referenceMembers: {
+      ...f.source.referenceMembers!,
+      members: {
+        ...f.source.referenceMembers!.members,
+        navigationGroup: groups,
+      },
+    },
+  };
+  const resource = {
+    owner: "synthetic-tests",
+    key: "immutable-nested-resource",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const admitted = structuredClone(resource);
+  const nested = {
+    resource,
+    forward: (s: MetaEntityGraph) => {
+      Reflect.set(resource, "key", "callback_mutation");
+      return s;
+    },
+    reverse: (s: MetaEntityGraph) => s,
+  };
+  const proof = prepareNativeGraphConversion(
+    source,
+    {
+      ...f.context,
+      source: { ...f.context.source, graphHash: sha256(source) },
+      installedAdapters: [...f.context.installedAdapters, admitted],
+    },
+    f.adapters,
+    nested,
+  );
+  expect(proof.nested!.adapter).toEqual(admitted);
+});

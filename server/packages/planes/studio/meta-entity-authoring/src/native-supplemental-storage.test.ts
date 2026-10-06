@@ -4,6 +4,7 @@ import {
   nativeAiMembers,
   emptyReferenceMembers,
   type ExpandedNativeMetaEntityGraph,
+  type NativeAuthoringSnapshot,
   type NativeOperationRow,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { coreFixtureId } from "../../../../contracts/meta-entity-authoring/src/normalized-core.fixtures.js";
@@ -274,7 +275,7 @@ function repositoryFixture() {
   };
   const projection = mock.execute.getMockImplementation()!;
   let guard = true;
-  let saved: ExpandedNativeMetaEntityGraph | null = null;
+  let saved: NativeAuthoringSnapshot | null = null;
   mock.execute.mockImplementation(async (text: string, values: unknown[]) => {
     if (text.includes("to_jsonb(cs) AS source"))
       return { rows: [{ source: root }] };
@@ -325,7 +326,7 @@ function repositoryFixture() {
     disableGuard: () => {
       guard = false;
     },
-    save: (g: ExpandedNativeMetaEntityGraph) => {
+    save: (g: NativeAuthoringSnapshot) => {
       saved = g;
     },
   };
@@ -405,4 +406,64 @@ it("selects bigint export limits as text before JSON decoding", async () => {
       .exportMaxRecords,
   ).toBe("9223372036854775807");
   expect(mock.execute.mock.calls[0]![0]).toContain("export_max_records::text");
+});
+
+it("reads an explicitly admitted prior native snapshot without rewriting it or accepting a changed descriptor", async () => {
+  const f = repositoryFixture(),
+    input = { ...c, actorId: coreFixtureId(102) };
+  const graph = await f.repository.loadNativeGraph(input);
+  const {
+    ai: _ai,
+    operations: _operations,
+    ...retained
+  } = graph as ExpandedNativeMetaEntityGraph;
+  const historical: NativeAuthoringSnapshot = {
+    ...retained,
+    contractSchema: "athyper.meta-entity-contract/2.4",
+    operations: [],
+  };
+  f.save(historical);
+  await expect(
+    f.repository.readNativeDraftSave({ ...input, revision: 3 }),
+  ).rejects.toMatchObject({ code: "NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH" });
+  const configured = new KyselyMetaEntityAuthoringRepository(
+    tx,
+    undefined,
+    undefined,
+    undefined,
+    { ...f.policy, historicalSnapshotVersions: [1, 2] },
+  );
+  expect(
+    await configured.readNativeDraftSave({ ...input, revision: 3 }),
+  ).toEqual(historical);
+  expect(f.policy.admit).toHaveBeenLastCalledWith(
+    tx,
+    { ...input, revision: 3, batch: null },
+    "history",
+  );
+  expect(
+    mock.execute.mock.calls.some(([query]) =>
+      /^(INSERT|UPDATE|DELETE)/.test(query),
+    ),
+  ).toBe(false);
+  f.save({
+    ...historical,
+    authoringSource: {
+      ...historical.authoringSource,
+      authoringSchemaHash: "f".repeat(64),
+    },
+  });
+  await expect(
+    configured.readNativeDraftSave({ ...input, revision: 3 }),
+  ).rejects.toMatchObject({ code: "NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH" });
+  f.save({
+    ...historical,
+    authoringSource: {
+      ...historical.authoringSource,
+      entityId: coreFixtureId(999),
+    },
+  });
+  await expect(
+    configured.readNativeDraftSave({ ...input, revision: 3 }),
+  ).rejects.toMatchObject({ code: "NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH" });
 });

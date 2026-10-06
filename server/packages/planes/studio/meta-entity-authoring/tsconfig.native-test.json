@@ -3,7 +3,10 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "../../../../..",
-    "types": ["node", "vitest/globals"],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
     "composite": false,
     "incremental": false
   },
@@ -31,7 +34,12 @@
     "src/native-supplemental-save.test.ts",
     "src/native-detail-sections.test.ts",
     "src/native-surface-identity.test.ts",
-    "src/legacy-native-navigation-adapter.test.ts"
+    "src/legacy-native-navigation-adapter.test.ts",
+    "src/native-reference-relations.test.ts",
+    "src/native-reference-capability.test.ts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

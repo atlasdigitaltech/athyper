@@ -150,7 +150,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       if (!row) return null;
       if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
       const source = row.graph.authoringSource;
-      if (row.graph.contractSchema !== (root.nativeVersion === 2 ? "athyper.meta-entity-contract/2.5" : "athyper.meta-entity-contract/2.4") || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
+      const savedVersion = row.graph.contractSchema === "athyper.meta-entity-contract/2.5" ? 2 : row.graph.contractSchema === "athyper.meta-entity-contract/2.4" ? 1 : null;
+      const historicalVersions = policy.historicalSnapshotVersions ?? [root.nativeVersion];
+      if (savedVersion === null || !historicalVersions.includes(savedVersion) || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
         throw new AuthoringPolicyError("NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH", "History requires an exact supported source version and scope.");
       if (row.graph.contractSchema === 'athyper.meta-entity-contract/2.5') validateNativeSupplementalReferences(row.graph, policy.commands.maxMembers);
       const state = { core: { field: row.graph.fields, runtime: row.graph.runtimeProfiles, surface: row.graph.surfaces }, layout: { section: row.graph.surfaceSections, binding: row.graph.surfaceFieldBindings } };

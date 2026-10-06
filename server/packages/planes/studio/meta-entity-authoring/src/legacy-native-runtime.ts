@@ -16,6 +16,12 @@ export interface LegacyNativeRuntimeMapping {
   readonly storageCatalogueHash: string | null;
   readonly readHandlerVersion: number | null;
   readonly writeHandlerVersion: number | null;
+  /** Migration-only selected surface marker, independently admitted by the
+   * installed capability adapter. This is not an entity permission grant. */
+  readonly referenceCapability?: {
+    readonly key: string;
+    readonly version: number;
+  };
 }
 const fail = (code: string, path: string): never => {
   throw new FoundationContractError(code, path);
@@ -61,8 +67,39 @@ export function normalizeLegacyRuntime(
     "readHandlerVersion",
     "writeHandlerVersion",
   ];
-  if (Object.keys(mapping).sort().join() !== mappingKeys.sort().join())
+  if (
+    Object.keys(mapping).sort().join() !==
+    [
+      ...mappingKeys,
+      ...(mapping.referenceCapability === undefined
+        ? []
+        : ["referenceCapability"]),
+    ]
+      .sort()
+      .join()
+  )
     fail("NATIVE_RUNTIME_MAPPING_INVALID", "/runtimeMapping");
+  if (mapping.referenceCapability !== undefined) {
+    const ref = mapping.referenceCapability;
+    if (!ref || typeof ref !== "object" || Array.isArray(ref))
+      fail(
+        "NATIVE_RUNTIME_REFERENCE_CAPABILITY_REQUIRED",
+        "/runtimeMapping/referenceCapability",
+      );
+    if (
+      Object.keys(ref).sort().join() !== "key,version" ||
+      context.contracts.filter(
+        (c) =>
+          c.kind === "reference" &&
+          c.key === ref.key &&
+          c.version === ref.version,
+      ).length !== 1
+    )
+      fail(
+        "NATIVE_RUNTIME_REFERENCE_CAPABILITY_REQUIRED",
+        "/runtimeMapping/referenceCapability",
+      );
+  }
   for (const required of [
     "id",
     "profileKey",
@@ -121,8 +158,8 @@ export function normalizeLegacyRuntime(
     readHandlerVersion: mapping.readHandlerVersion,
     writeHandlerKey: input.writeHandlerKey ?? null,
     writeHandlerVersion: mapping.writeHandlerVersion,
-    referenceCapabilityKey: null,
-    referenceCapabilityVersion: null,
+    referenceCapabilityKey: mapping.referenceCapability?.key ?? null,
+    referenceCapabilityVersion: mapping.referenceCapability?.version ?? null,
   };
   validateNormalizedCoreRow("runtime", row);
   return row as NormalizedCoreRow<"runtime">;

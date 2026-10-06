@@ -40,6 +40,10 @@ export interface NativeAuthoringPolicy {
   readonly commands: NativeCoreLayoutCommandPolicy;
   /** Explicit installed host admission; absence supports only the original source. */
   readonly snapshotVersions?: readonly (1 | 2)[];
+  /** Explicit archival decoder admission. Does not enable an older active source,
+   * convert a saved artifact, restore a revision or weaken current access checks.
+   * The descriptor pin must still match; legacy 2.3 needs a separate decoder. */
+  readonly historicalSnapshotVersions?: readonly (1 | 2)[];
   admit(
     tx: Tx,
     input: NativeCommandInput,
