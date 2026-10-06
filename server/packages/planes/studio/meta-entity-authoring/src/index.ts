@@ -97,3 +97,7 @@ export * from "./native-surface-identity.js";
 export * from "./legacy-native-navigation-adapter.js";
 
 export * from "./native-ai.js";
+
+export * from "./native-authorization.js";
+export * from "./native-operation-storage.js";
+export * from "./native-detail-sections.js";

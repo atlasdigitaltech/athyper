@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 241,
+    "configuration:new": 242,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -1262,6 +1262,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:athyper_native_operation_postgres",
+      "category": "configuration",
+      "key": "athyper_native_operation_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/contracts/meta-entity-authoring/src/native-operation.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_neon_database_admin_url",
       "category": "configuration",
       "key": "athyper_neon_database_admin_url",
@@ -1629,6 +1641,7 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/contracts/meta-entity-authoring/src/native-ai.postgres.test.ts",
+        "server/packages/contracts/meta-entity-authoring/src/native-operation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
       ],

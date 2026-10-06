@@ -22,3 +22,5 @@ export * from "./native-core-layout-commands.js";
 export * from "./native-authoring-graph.js";
 
 export * from "./native-ai-contract.js";
+
+export * from "./native-operation-contract.js";

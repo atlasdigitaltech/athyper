@@ -84,3 +84,15 @@ test("AI target inventory distinguishes table, type, NULL and RLS evidence from 
  assert.equal(changed.families[0].forcedRls,false);
  assert.deepEqual(changed.families[0].missing,["enabled"]);
 });
+
+test("operation target presence/type evidence cannot qualify cutover",async()=>{
+ const {assessOperationColumns}=await import("./inspect-entity-studio-foundation.mjs");
+ const {readFileSync}=await import("node:fs");
+ const descriptor=JSON.parse(readFileSync(new URL("../../../server/packages/contracts/meta-entity-authoring/src/native-operation.generated.json",import.meta.url),"utf8"));
+ const columns=Object.values(descriptor.columns).map(c=>({name:c.column,type:c.sqlType}));
+ assert.equal(assessOperationColumns([]).missing.length,21);
+ const complete=assessOperationColumns([{name:"entity_operation",present:true,columns}]);
+ assert.equal(complete.columnsPresent,true);assert.equal(complete.cutoverQualified,false);
+ const drift=assessOperationColumns([{name:"entity_operation",present:true,columns:columns.map(c=>c.name==="handler_version"?{...c,type:"text"}:c)}]);
+ assert.deepEqual(drift.mismatched,["handler_version"]);
+});

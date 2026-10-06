@@ -1,0 +1,1184 @@
+{
+  "contractHash": "9abe4d00abb1d2e3c50be6b07158fcc026090ce12c2f9aee37ee33a1acf228a3",
+  "schema": "entity.authoring-native-operation-descriptor/1",
+  "columns": {
+    "operationKey": {
+      "column": "operation_key",
+      "node": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": "text                           NOT NULL,"
+    },
+    "operationKind": {
+      "column": "operation_kind",
+      "node": {
+        "anyOf": [
+          {
+            "const": "create"
+          },
+          {
+            "const": "read"
+          },
+          {
+            "const": "update"
+          },
+          {
+            "const": "delete"
+          },
+          {
+            "const": "execute"
+          },
+          {
+            "const": "transition"
+          },
+          {
+            "const": "import"
+          },
+          {
+            "const": "export"
+          }
+        ]
+      },
+      "sqlType": "metadata.entity_operation_kind_d",
+      "serviceOwned": false,
+      "baseDeclaration": "metadata.entity_operation_kind_d NOT NULL,"
+    },
+    "description": {
+      "column": "description",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": "text,"
+    },
+    "labelId": {
+      "column": "label_id",
+      "node": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "sqlType": "uuid",
+      "reference": "entity_label",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "auditEventCode": {
+      "column": "audit_event_code",
+      "node": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": "text                           NOT NULL,"
+    },
+    "executionMode": {
+      "column": "execution_mode",
+      "node": {
+        "anyOf": [
+          {
+            "const": "synchronous"
+          },
+          {
+            "const": "asynchronous"
+          }
+        ]
+      },
+      "sqlType": "metadata.entity_operation_execution_d",
+      "serviceOwned": false,
+      "baseDeclaration": "metadata.entity_operation_execution_d NOT NULL DEFAULT 'synchronous',"
+    },
+    "idempotencyMode": {
+      "column": "idempotency_mode",
+      "node": {
+        "anyOf": [
+          {
+            "const": "none"
+          },
+          {
+            "const": "optional"
+          },
+          {
+            "const": "required"
+          }
+        ]
+      },
+      "sqlType": "metadata.entity_operation_idempotency_d",
+      "serviceOwned": false,
+      "baseDeclaration": "metadata.entity_operation_idempotency_d NOT NULL DEFAULT 'none',"
+    },
+    "inputSurfaceId": {
+      "column": "input_surface_id",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "uuid",
+      "reference": "entity_surface",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "resultSurfaceId": {
+      "column": "result_surface_id",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "uuid",
+      "reference": "entity_surface",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "authorizationTarget": {
+      "column": "authorization_target",
+      "node": {
+        "anyOf": [
+          {
+            "const": "collection"
+          },
+          {
+            "const": "existing"
+          },
+          {
+            "const": "new"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "authorizationEffect": {
+      "column": "authorization_effect",
+      "node": {
+        "anyOf": [
+          {
+            "const": "read"
+          },
+          {
+            "const": "write"
+          },
+          {
+            "const": "navigation"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "requiresParentRead": {
+      "column": "requires_parent_read",
+      "node": {
+        "type": "boolean"
+      },
+      "sqlType": "boolean",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "requiresPreflight": {
+      "column": "requires_preflight",
+      "node": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "boolean",
+      "serviceOwned": true,
+      "baseDeclaration": null
+    },
+    "replacementOperationId": {
+      "column": "replacement_operation_id",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "uuid",
+      "reference": "entity_operation",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "handlerKey": {
+      "column": "handler_key",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": "text,"
+    },
+    "handlerVersion": {
+      "column": "handler_version",
+      "node": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "integer",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "preflightKey": {
+      "column": "preflight_key",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "preflightVersion": {
+      "column": "preflight_version",
+      "node": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "integer",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "extensionFieldMode": {
+      "column": "extension_field_mode",
+      "node": {
+        "anyOf": [
+          {
+            "const": "none"
+          },
+          {
+            "const": "allow_owned_fields"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "exportFormats": {
+      "column": "export_formats",
+      "node": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text[]",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    },
+    "exportMaxRecords": {
+      "column": "export_max_records",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "bigint",
+      "serviceOwned": false,
+      "baseDeclaration": null
+    }
+  },
+  "jsonSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "operationKey",
+      "operationKind",
+      "description",
+      "labelId",
+      "auditEventCode",
+      "executionMode",
+      "idempotencyMode",
+      "inputSurfaceId",
+      "resultSurfaceId",
+      "authorizationTarget",
+      "authorizationEffect",
+      "requiresParentRead",
+      "requiresPreflight",
+      "replacementOperationId",
+      "handlerKey",
+      "handlerVersion",
+      "preflightKey",
+      "preflightVersion",
+      "extensionFieldMode",
+      "exportFormats",
+      "exportMaxRecords"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "operationKey": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "operationKind": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "create"
+          },
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "update"
+          },
+          {
+            "type": "string",
+            "const": "delete"
+          },
+          {
+            "type": "string",
+            "const": "execute"
+          },
+          {
+            "type": "string",
+            "const": "transition"
+          },
+          {
+            "type": "string",
+            "const": "import"
+          },
+          {
+            "type": "string",
+            "const": "export"
+          }
+        ]
+      },
+      "description": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "labelId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "auditEventCode": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "executionMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "synchronous"
+          },
+          {
+            "type": "string",
+            "const": "asynchronous"
+          }
+        ]
+      },
+      "idempotencyMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "optional"
+          },
+          {
+            "type": "string",
+            "const": "required"
+          }
+        ]
+      },
+      "inputSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "resultSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "authorizationTarget": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "collection"
+          },
+          {
+            "type": "string",
+            "const": "existing"
+          },
+          {
+            "type": "string",
+            "const": "new"
+          }
+        ]
+      },
+      "authorizationEffect": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "write"
+          },
+          {
+            "type": "string",
+            "const": "navigation"
+          }
+        ]
+      },
+      "requiresParentRead": {
+        "type": "boolean"
+      },
+      "requiresPreflight": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "replacementOperationId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "extensionFieldMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "allow_owned_fields"
+          }
+        ]
+      },
+      "exportFormats": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "exportMaxRecords": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  },
+  "clientSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "operationKey",
+      "operationKind",
+      "description",
+      "labelId",
+      "auditEventCode",
+      "executionMode",
+      "idempotencyMode",
+      "inputSurfaceId",
+      "resultSurfaceId",
+      "authorizationTarget",
+      "authorizationEffect",
+      "requiresParentRead",
+      "replacementOperationId",
+      "handlerKey",
+      "handlerVersion",
+      "preflightKey",
+      "preflightVersion",
+      "extensionFieldMode",
+      "exportFormats",
+      "exportMaxRecords"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "operationKey": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "operationKind": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "create"
+          },
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "update"
+          },
+          {
+            "type": "string",
+            "const": "delete"
+          },
+          {
+            "type": "string",
+            "const": "execute"
+          },
+          {
+            "type": "string",
+            "const": "transition"
+          },
+          {
+            "type": "string",
+            "const": "import"
+          },
+          {
+            "type": "string",
+            "const": "export"
+          }
+        ]
+      },
+      "description": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "labelId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "auditEventCode": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "executionMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "synchronous"
+          },
+          {
+            "type": "string",
+            "const": "asynchronous"
+          }
+        ]
+      },
+      "idempotencyMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "optional"
+          },
+          {
+            "type": "string",
+            "const": "required"
+          }
+        ]
+      },
+      "inputSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "resultSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "authorizationTarget": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "collection"
+          },
+          {
+            "type": "string",
+            "const": "existing"
+          },
+          {
+            "type": "string",
+            "const": "new"
+          }
+        ]
+      },
+      "authorizationEffect": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "write"
+          },
+          {
+            "type": "string",
+            "const": "navigation"
+          }
+        ]
+      },
+      "requiresParentRead": {
+        "type": "boolean"
+      },
+      "replacementOperationId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "extensionFieldMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "allow_owned_fields"
+          }
+        ]
+      },
+      "exportFormats": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "exportMaxRecords": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  },
+  "clientPatchSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [],
+    "properties": {
+      "operationKey": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "operationKind": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "create"
+          },
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "update"
+          },
+          {
+            "type": "string",
+            "const": "delete"
+          },
+          {
+            "type": "string",
+            "const": "execute"
+          },
+          {
+            "type": "string",
+            "const": "transition"
+          },
+          {
+            "type": "string",
+            "const": "import"
+          },
+          {
+            "type": "string",
+            "const": "export"
+          }
+        ]
+      },
+      "description": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "labelId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "auditEventCode": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "executionMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "synchronous"
+          },
+          {
+            "type": "string",
+            "const": "asynchronous"
+          }
+        ]
+      },
+      "idempotencyMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "optional"
+          },
+          {
+            "type": "string",
+            "const": "required"
+          }
+        ]
+      },
+      "inputSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "resultSurfaceId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "authorizationTarget": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "collection"
+          },
+          {
+            "type": "string",
+            "const": "existing"
+          },
+          {
+            "type": "string",
+            "const": "new"
+          }
+        ]
+      },
+      "authorizationEffect": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "read"
+          },
+          {
+            "type": "string",
+            "const": "write"
+          },
+          {
+            "type": "string",
+            "const": "navigation"
+          }
+        ]
+      },
+      "requiresParentRead": {
+        "type": "boolean"
+      },
+      "replacementOperationId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "handlerVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightKey": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "preflightVersion": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "extensionFieldMode": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "none"
+          },
+          {
+            "type": "string",
+            "const": "allow_owned_fields"
+          }
+        ]
+      },
+      "exportFormats": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "exportMaxRecords": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  },
+  "baseConstraints": [
+    "entity_operation_pkey",
+    "entity_operation_tenant_id_uq",
+    "entity_operation_key_uq",
+    "entity_operation_key_chk",
+    "entity_operation_label_chk",
+    "entity_operation_description_chk",
+    "entity_operation_handler_chk",
+    "entity_operation_permission_chk",
+    "entity_operation_surface_key_chk",
+    "entity_operation_audit_event_chk",
+    "entity_operation_handler_required_chk",
+    "entity_operation_replacement_chk",
+    "entity_operation_deprecation_chk",
+    "entity_operation_audit_pair_chk"
+  ],
+  "limitations": [
+    "not native graph enrollment or operation commands",
+    "existing protected-state persistence and initialization policy remain independent",
+    "requiresPreflight derived from installed contract; absent while unresolved",
+    "target/effect V1 compatibility excludes new/navigation/reveal",
+    "no constraint retirement, cutover, product write or publication authority"
+  ]
+}

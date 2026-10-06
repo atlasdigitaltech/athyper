@@ -34,6 +34,15 @@ export function assessAiColumns(tables) {
     cutoverQualified: false };
 }
 
+const operationContract=JSON.parse(readFileSync(new URL("../../../server/packages/contracts/meta-entity-authoring/src/native-operation.generated.json",import.meta.url),"utf8"));
+export function assessOperationColumns(tables){
+ const table=(Array.isArray(tables)?tables:[]).find(t=>t.name==="entity_operation");
+ const columns=new Map((table?.columns??[]).map(c=>[c.name,c]));
+ const missing=Object.values(operationContract.columns).filter(c=>!columns.has(c.column)).map(c=>c.column);
+ const mismatched=Object.values(operationContract.columns).filter(c=>columns.has(c.column)&&columns.get(c.column).type!==c.sqlType).map(c=>c.column);
+ return {contractHash:operationContract.contractHash,present:table?.present===true,missing,mismatched,columnsPresent:table?.present===true&&!missing.length&&!mismatched.length,cutoverQualified:false};
+}
+
 /** Presence inventory only. Installation cannot attest constraint cutover,
  * canonical writer selection, human governance or publication compatibility. */
 export function assessCoreLayoutColumns(tables) {
@@ -110,6 +119,7 @@ export function assessFoundationSchema(evidence) {
     selectedMemberColumns: assessReferenceColumns(evidence.tables),
     coreLayoutColumns: assessCoreLayoutColumns(evidence.tables),
     aiColumns: assessAiColumns(evidence.tables),
+    operationColumns: assessOperationColumns(evidence.tables),
     tablesWithoutForcedRls: unguarded,
     qualification: "not-established",
     outstandingEvidence: [
