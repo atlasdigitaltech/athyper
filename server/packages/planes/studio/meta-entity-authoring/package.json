@@ -30,7 +30,8 @@
     "@athyper/server-contract-publication": "workspace:*",
     "@athyper/contract-platform-collection": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
-    "@athyper/server-contract-events": "workspace:*"
+    "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-platform-metadata": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

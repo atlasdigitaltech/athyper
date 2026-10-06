@@ -39,7 +39,8 @@
     "src/native-presentation-localization.test.ts",
     "src/native-conversion-application.test.ts",
     "src/native-conversion-plans.test.ts",
-    "src/native-operation-compilation.test.ts"
+    "src/native-operation-compilation.test.ts",
+    "src/native-release-compilation.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

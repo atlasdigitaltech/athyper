@@ -126,3 +126,6 @@ export * from "./native-conversion-plans.js";
 export * from "./native-conversion-history.js";
 
 export * from "./native-operation-compilation.js";
+
+export * from "./native-release-compilation.js";
+export * from "./native-conversion-composition.js";

@@ -737,3 +737,62 @@ cases remain skipped. Source/test and focused native-test typechecks, all six
 generated-contract checks and the 13-task bounded build pass. The new protocol,
 planner and operation-compilation tests are enrolled in foundation CI. This is
 local reproducible evidence, not a remote CI or deployed qualification receipt.
+
+
+### Native reference producer and shared reader composition — 7 October 2026
+
+The native release producer composes typed structural, authorization, identity,
+list settings/views, navigation, field sections, choices, badges, localization and
+optional AI outputs. It does not invoke the legacy graph compiler or consume
+captured legacy presentation. The selected variant requires stored read-only
+column fields, one default list and one default detail surface. Unsupported
+families and unrepresentable properties return named diagnostics. Contract
+assertions and class profiles currently reject when nonempty; they are not
+silently dropped or declared tested. Typed field-access projections must agree
+with the independently installed context. Surface/section translations are
+projected from their exact owned-label FKs.
+
+`createNativeConversionApplicationPolicy` connects the existing whole-source
+conversion coordinator and repository transaction protocol to the real native
+producer and existing shared native runtime projection/parser. It rechecks exact
+source coordinates, schema/resource context hashes, registered storage and
+technical identity. Consumer and independently registered storage planes remain
+distinct; mismatched storage evidence rejects. Presentation-default substitution rejects. Installed host
+ports still supply independently qualified adapters, catalogue/security/provider
+resources and authorization; this factory neither installs them nor grants
+product-write authority. Default repository cutover remains blocked.
+
+Eight new tests use a complete synthetic graph for this bounded compiler
+variant. They exercise actual compiler and runtime-reader integration, explicit
+readable identity/navigation, valid undefined permissions, stored protected-state
+preservation, resource changes, reader identity mismatch, unsupported properties
+and translation preservation. They do not prove complete conversion of the
+actual Country/State Region source graphs or canonical SQL application.
+
+Read-only DEV inspection command:
+
+```sh
+node tooling/scripts/verification/inspect-entity-studio-foundation.mjs --output /tmp/athyper-native-release-readiness.json
+```
+
+It reports no missing inventoried reference/core-layout/selected member columns,
+32 AI column mismatches and 14 missing operation columns. Both native schema
+guards remain absent. Qualification is not established; productionEnabled is
+false. These counts are catalogue diagnostics, not evidence of write authority,
+constraint correctness or migration approval. No database migration, conversion
+application, protected-state initialization, grant, publication or activation
+occurred.
+
+Remaining: complete actual whole-source adapter integration, canonical schema/
+constraint qualification and positive SQL conversion/readback/history evidence,
+approved host/product-write authority and deployed F6/F8/F9. Compiler preservation
+uses the existing specific owner approval; no initializer or MFA enforcement
+change is introduced.
+
+Validation: 677 authoring tests pass across 120 files; four existing opt-in SQL
+cases remain skipped. Source/test and focused native-test typechecks, six
+generated-contract checks and the 15-task bounded build pass. The new test is
+enrolled in foundation CI. This is local evidence; remote CI and deployed
+qualification are not attested.
+
+The unchanged shared metadata suite also passes: 194 tests, with two existing opt-in cases skipped.

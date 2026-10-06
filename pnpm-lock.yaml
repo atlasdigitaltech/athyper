@@ -3383,6 +3383,9 @@ importers:
       '@athyper/server-contract-publication':
         specifier: workspace:*
         version: link:../../../contracts/publication
+      '@athyper/server-platform-metadata':
+        specifier: workspace:*
+        version: link:../../../platform/metadata
       express:
         specifier: ^5.2.1
         version: 5.2.1
