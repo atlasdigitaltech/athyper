@@ -1,0 +1,323 @@
+{
+  "contractHash": "5cc5e0712f3ce24b8b411d70135bb134a8b17492fbcc80634694f290a2b14e3a",
+  "schema": "entity.authoring-native-root-descriptor/1",
+  "columns": {
+    "nativeVersion": {
+      "column": "native_core_layout_version",
+      "node": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2
+      },
+      "sqlType": "integer",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "sourceKind": {
+      "column": "source_kind",
+      "node": {
+        "anyOf": [
+          {
+            "const": "product"
+          },
+          {
+            "const": "tenant_entity"
+          },
+          {
+            "const": "tenant_extension"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "schemaVersion": {
+      "column": "schema_version",
+      "node": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2147483647
+      },
+      "sqlType": "integer",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "authoringSchemaHash": {
+      "column": "authoring_schema_hash",
+      "node": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "sqlType": "text",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "entityLabelId": {
+      "column": "entity_label_id",
+      "node": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "sqlType": "uuid",
+      "reference": "entity_label",
+      "serviceOwned": false,
+      "existing": false
+    },
+    "defaultLocale": {
+      "column": "default_locale",
+      "node": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 127
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "existing": true
+    },
+    "requiredLocales": {
+      "column": "required_locales",
+      "node": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        }
+      },
+      "sqlType": "text[]",
+      "serviceOwned": false,
+      "existing": true
+    },
+    "publicationResourceKey": {
+      "column": "publication_resource_key",
+      "node": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "existing": false
+    },
+    "sourceUri": {
+      "column": "source_uri",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": false,
+      "existing": false
+    },
+    "sourceHash": {
+      "column": "source_hash",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "publicationOwner": {
+      "column": "publication_owner",
+      "node": {
+        "anyOf": [
+          {
+            "const": "platform"
+          },
+          {
+            "const": "tenant"
+          }
+        ]
+      },
+      "sqlType": "text",
+      "serviceOwned": true,
+      "existing": false
+    },
+    "sourcePredecessorReleaseId": {
+      "column": "source_predecessor_release_id",
+      "node": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sqlType": "uuid",
+      "reference": "entity_release",
+      "serviceOwned": true,
+      "existing": false
+    }
+  },
+  "jsonSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "tenantId",
+      "baseReleaseId",
+      "nativeVersion",
+      "sourceKind",
+      "schemaVersion",
+      "authoringSchemaHash",
+      "entityLabelId",
+      "defaultLocale",
+      "requiredLocales",
+      "publicationResourceKey",
+      "sourceUri",
+      "sourceHash",
+      "publicationOwner",
+      "sourcePredecessorReleaseId"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "tenantId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "baseReleaseId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "nativeVersion": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2
+      },
+      "sourceKind": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "product"
+          },
+          {
+            "type": "string",
+            "const": "tenant_entity"
+          },
+          {
+            "type": "string",
+            "const": "tenant_extension"
+          }
+        ]
+      },
+      "schemaVersion": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2147483647
+      },
+      "authoringSchemaHash": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "entityLabelId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "defaultLocale": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 127
+      },
+      "requiredLocales": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        }
+      },
+      "publicationResourceKey": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.:-]{0,126}$"
+      },
+      "sourceUri": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "sourceHash": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "publicationOwner": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "platform"
+          },
+          {
+            "type": "string",
+            "const": "tenant"
+          }
+        ]
+      },
+      "sourcePredecessorReleaseId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "typed enrollment shape only; registered descriptor and baseline ownership require independent evidence",
+    "nullable dormant columns; no legacy root enrollment, grants, native guard or cutover",
+    "existing revision, governance and independent-review controls remain authoritative"
+  ]
+}

@@ -24,3 +24,5 @@ export * from "./native-authoring-graph.js";
 export * from "./native-ai-contract.js";
 
 export * from "./native-operation-contract.js";
+
+export * from "./native-root-contract.js";

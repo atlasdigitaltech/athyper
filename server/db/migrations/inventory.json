@@ -3,6 +3,22 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_root_preparation.sql",
+      "path": "migrations/20261007_entity_native_root_preparation.sql",
+      "sha256": "3525ecc3c5c79844eaa07d35b159bb240adc7295d0311776bea88adcbee045f4",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Dormant typed native root columns only; preserve exact existing roots and immutable history, grants, protected state and cutover blockers.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/29_native_root.generated.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_resource_preparation.sql",
       "path": "migrations/20261007_entity_native_resource_preparation.sql",
       "sha256": "9ddaf1fd7edc0749559be10d3de6e64c0df8c2568cf0996e0fcb73afe1d3a474",

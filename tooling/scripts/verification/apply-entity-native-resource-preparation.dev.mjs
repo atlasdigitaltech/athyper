@@ -8,27 +8,37 @@ import { migrationSourcePath } from "./migration-source.mjs";
 
 export const migrationName = "20261007_entity_native_resource_preparation.sql";
 const hash = (value) => createHash("sha256").update(value).digest("hex");
-export function preparationSql(source, digest, apply) {
+export const rootMigrationName = "20261007_entity_native_root_preparation.sql";
+export function preparationSql(
+  source,
+  digest,
+  apply,
+  selectedMigration = migrationName,
+) {
+  assert.ok([migrationName, rootMigrationName].includes(selectedMigration));
   assert.match(digest, /^[a-f0-9]{64}$/);
   assert.equal(hash(source), digest);
   assert.ok(source.startsWith("BEGIN;\n") && source.endsWith("COMMIT;\n"));
   const ledger = `
   INSERT INTO public.athyper_schema_migration_v1(migration_name,sha256,status,runner_id,started_at,completed_at)
-  VALUES('${migrationName}','${digest}','applied','native-resource-preparation',transaction_timestamp(),clock_timestamp());
+  VALUES('${selectedMigration}','${digest}','applied','native-resource-preparation',transaction_timestamp(),clock_timestamp());
   `;
   return source
     .replace(
       "BEGIN;\n",
       () => `BEGIN;
-  SELECT pg_advisory_xact_lock(hashtextextended('${migrationName}',0));
-  DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.athyper_schema_migration_v1 WHERE migration_name='${migrationName}') THEN
+  SELECT pg_advisory_xact_lock(hashtextextended('${selectedMigration}',0));
+  DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.athyper_schema_migration_v1 WHERE migration_name='${selectedMigration}') THEN
   RAISE EXCEPTION 'Native preparation ledger changed; recheck exact applied evidence'; END IF; END $$;
   `,
     )
     .replace(/COMMIT;\n$/, apply ? ledger + "COMMIT;\n" : "ROLLBACK;\n");
 }
 export function runPreparation(args) {
-  const allowed = new Set(["--apply=DEV-NATIVE-RESOURCE-PREPARATION"]);
+  const allowed = new Set([
+    "--apply=DEV-NATIVE-RESOURCE-PREPARATION",
+    "--root",
+  ]);
   let output;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--output") {
@@ -44,8 +54,11 @@ export function runPreparation(args) {
     output,
     "Use --output to retain the exact schema-preparation receipt",
   );
+  const selectedMigration = allowed.has("--root")
+    ? migrationName
+    : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
-  const file = migrationSourcePath(migrationName),
+  const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),
     digest = hash(source);
   const inventory = JSON.parse(
@@ -56,7 +69,7 @@ export function runPreparation(args) {
   );
   assert.equal(
     inventory.entries.find(
-      (entry) => entry.originalPath === "migrations/" + migrationName,
+      (entry) => entry.originalPath === "migrations/" + selectedMigration,
     )?.sha256,
     digest,
   );
@@ -81,7 +94,7 @@ export function runPreparation(args) {
     );
   assert.equal(run("SELECT current_database()").trim(), "athyper_studio");
   const prior = run(
-    `SELECT status||'|'||sha256 FROM public.athyper_schema_migration_v1 WHERE migration_name='${migrationName}'`,
+    `SELECT status||'|'||sha256 FROM public.athyper_schema_migration_v1 WHERE migration_name='${selectedMigration}'`,
   ).trim();
   const fingerprint = () =>
     hash(
@@ -115,7 +128,7 @@ export function runPreparation(args) {
     schema: "entity.native-resource-preparation-evidence/1",
     inspectedAt: new Date().toISOString(),
     database: "athyper_studio",
-    migration: migrationName,
+    migration: selectedMigration,
     sha256: digest,
     rollbackRehearsed: false,
     applied: false,
@@ -134,7 +147,7 @@ export function runPreparation(args) {
     report.replay = true;
   } else {
     assert.ok(
-      run(preparationSql(source, digest, false))
+      run(preparationSql(source, digest, false, selectedMigration))
         .trim()
         .endsWith("ROLLBACK"),
     );
@@ -143,13 +156,13 @@ export function runPreparation(args) {
     assert.equal(hash(readFileSync(file)), digest);
     if (apply) {
       assert.ok(
-        run(preparationSql(source, digest, true))
+        run(preparationSql(source, digest, true, selectedMigration))
           .trim()
           .endsWith("COMMIT"),
       );
       assert.equal(
         run(
-          `SELECT status||'|'||sha256 FROM public.athyper_schema_migration_v1 WHERE migration_name='${migrationName}'`,
+          `SELECT status||'|'||sha256 FROM public.athyper_schema_migration_v1 WHERE migration_name='${selectedMigration}'`,
         ).trim(),
         "applied|" + digest,
       );

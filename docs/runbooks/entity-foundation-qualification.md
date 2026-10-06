@@ -872,3 +872,44 @@ two platform entity-runtime contract tests have no package test script; the
 platform-catalogue and publication-token tests lack root runners. None of the
 new tests appears in that failure list. This checkpoint does not attest aggregate
 workspace/remote CI success or modify those unrelated runner configurations.
+
+
+### Native root preparation checkpoint — 7 October 2026
+
+The typed closed `native-root-contract.ts` covers twelve enrollment properties
+and explicit root/tenant/baseline coordinates. It distinguishes native format
+version from descriptor schema version; rejects missing ownership/schema pins,
+unknown properties, cross-scope ownership, missing extension baseline and
+incomplete/duplicate locales. Shape acceptance does not authorize enrollment or
+prove registered descriptors, same-owner baselines, labels or publication review.
+The generator is enrolled in foundation generation/drift checks.
+
+`20261007_entity_native_root_preparation.sql` adds ten nullable dormant columns
+and a pending check. Existing roots and immutable history are compared on exact
+original columns in the same transaction. DEV rollback rehearsal, application
+and exact-checksum replay passed; authorization/activation heads are unchanged.
+No existing applied migration was edited. Immutable applied SHA-256:
+
+```text
+3525ecc3c5c79844eaa07d35b159bb240adc7295d0311776bea88adcbee045f4
+```
+
+```sh
+ATHYPER_NATIVE_ROOT_POSTGRES=1 pnpm --filter @athyper/server-contract-meta-entity-authoring exec vitest run src/native-root.postgres.test.ts
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --root --output /tmp/athyper-native-root-dry-run.json
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --root --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-native-root-applied.json
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --root --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-native-root-replay.json
+```
+
+The disposable canonical-base PostgreSQL test proves retained root tuples,
+existing revision constraints and rejection of every dormant property write.
+Fifteen root validation tests and four installer tests pass. All 52 contract
+tests and 683 authoring tests pass; opt-in SQL tests remain separate. Contract
+and authoring typechecks, contract build, seven generation checks and migration
+layout verification pass. This supersedes the
+previous missing-root-column observation; the absent guards, 54 unenrolled roots
+and zero owned-label-scoped sources remain unresolved. Actual whole-source
+Country/State Region enrollment/conversion, positive canonical atomic history
+and compiler evidence, host/product-write approvals and deployed F6/F8/F9 still
+require completion. No source graph, control initializer, grant, publication or
+activation was applied.

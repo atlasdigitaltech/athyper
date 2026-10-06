@@ -48,3 +48,4 @@
 20261006_entity_core_layout_columns.sql
 
 20261007_entity_native_resource_preparation.sql
+20261007_entity_native_root_preparation.sql
