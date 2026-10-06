@@ -948,3 +948,62 @@ F6/F8/F9 qualification was applied in this checkpoint. Remaining engineering is
 native whole-source mapping/installation and positive canonical atomic history/
 compiler qualification; independently approved host/product-write and deployed
 storage/security evidence remain necessary for live deployment.
+
+
+### Atomic legacy enrollment and root revision correction — 7 October 2026
+
+`executeLegacyEnrollment` uses the existing repository transaction/savepoint and
+shared readback. Its application requires current installed write admission and
+independent source/schema authority. It adopts already canonical labels and bound
+field identities only; it rejects missing/mismatched records or unrepresented
+reference members. It allocates no records and changes no operation controls.
+Original source history is captured unchanged; one revision advance, marker,
+reference validation, exact loaded target, target snapshot and receipt commit or
+roll back together. Replays recheck authority, receipt/hash identities, both
+immutable snapshots and the enrollment proof without repeating writes.
+
+Testing with real canonical legacy tables/root/member/receipt/history guards
+found the existing root trigger advanced again during marker updates. The shared
+root correction permits narrowly declared format/locale patches within the
+already advanced command. Substantive/status/ownership/attribution changes keep
+the existing advance and review rules. A caller-set GUC alone cannot establish
+that protocol: the helper verifies the visible tuple's in-progress transaction
+(including savepoint subtransactions) and same-transaction audit timestamp.
+Transaction-ID epoch reconstruction accounts for adjacent wraparound IDs.
+Unknown installed guard/helper bodies block correction for manual inspection.
+
+Two immutable forward migrations were rehearsed, applied and replayed in DEV:
+
+```text
+20261007_entity_root_revision_protocol.sql
+cf2b6c9227f37f5137ee44f4ae93facc6e8bcf9e206b451b50987771f5053cf9
+20261007_entity_root_revision_provenance.sql
+0b23a7d212f3de6af550d90b53969d7a877516543f175197bdd6d835a72d7c6e
+```
+
+The second strengthens transaction provenance; it does not rewrite the first.
+Both compare original root/member/history rows within the application transaction
+and preserve authorization/activation-head hashes. No grants, authoring source
+allocation/enrollment, protected-state initialization, publication or activation
+occurred in DEV. The original 20261002 ancestry migration remains unchanged.
+
+```sh
+ATHYPER_LEGACY_ENROLLMENT_POSTGRES=1 pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/legacy-enrollment.postgres.test.ts
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --revision --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-root-revision-applied.json
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --revision-provenance --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-root-provenance-applied.json
+```
+
+The PostgreSQL test verifies exact legacy 2.2-to-2.3 source retention, actual loader
+readback, unchanged members, immutable history, replay, revocation/conflict,
+forged-token rejection and rollback after a late saved-snapshot rejection. It
+uses synthetic UUID bootstrap, compatibility root coordinates and host authority
+under a disposable superuser; it does not qualify native schema cutover, actual
+Country/State Region graph conversion, product-role writes or deployed F6/F8/F9.
+The test is enrolled in the existing CI PostgreSQL job. Ordinary admission and
+savepoint tests also reject absent host authority without member DML.
+
+DEV still has 54 roots without owned-label scope and no native guards. Source
+ownership/descriptor enrollment, native whole-source mappings/application and
+host/product-write/live qualification remain unfinished. The native pending
+constraints remain in place. The complete ordinary authoring suite passes 694
+tests with five opt-in SQL skips; the explicit enrollment PostgreSQL test passes.

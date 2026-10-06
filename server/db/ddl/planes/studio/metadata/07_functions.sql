@@ -186,7 +186,9 @@ BEGIN
         END IF;
     END IF;
 
-    NEW.lock_version := OLD.lock_version + 1;
+    IF NOT metadata.entity_root_patch_keeps_revision(to_jsonb(OLD),to_jsonb(NEW)) THEN
+        NEW.lock_version := OLD.lock_version + 1;
+    END IF;
     RETURN NEW;
 END;
 $$;

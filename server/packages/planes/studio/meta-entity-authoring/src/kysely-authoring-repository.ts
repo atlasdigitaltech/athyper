@@ -1,3 +1,4 @@
+import { applyLegacySourceEnrollment, type LegacyEnrollmentApplicationInput, type LegacyEnrollmentApplicationPolicy } from "./legacy-enrollment-application.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import { prepareLegacySourceEnrollment, type LegacySourceEnrollmentInput } from "./legacy-source-enrollment.js";
 import { readNativeConversionHistory } from "./native-conversion-history.js";
@@ -120,7 +121,25 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly nativePolicy?: NativeAuthoringPolicy,
     private readonly conversionPolicy?: NativeConversionApplicationPolicy,
     private readonly enrollmentPolicy?: LegacySourceEnrollmentPolicy,
+    private readonly enrollmentApplicationPolicy?: LegacyEnrollmentApplicationPolicy,
   ) {}
+  async executeLegacyEnrollment(input: LegacyEnrollmentApplicationInput) {
+    const policy = this.enrollmentApplicationPolicy;
+    if (!policy) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED", "Independent canonical enrollment authority is required.");
+    return atomic(this.database, async tx => {
+      await sql`SAVEPOINT legacy_source_enrollment`.execute(tx);
+      try {
+        const repository = new KyselyMetaEntityAuthoringRepository(tx);
+        const result = await applyLegacySourceEnrollment(tx, input, policy, () => repository.loadGraphParts(input.changeSetId, false));
+        await sql`RELEASE SAVEPOINT legacy_source_enrollment`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT legacy_source_enrollment`.execute(tx);
+        await sql`RELEASE SAVEPOINT legacy_source_enrollment`.execute(tx);
+        throw error;
+      }
+    });
+  }
   async prepareLegacyEnrollment(input: NormalizedSaveCoordinate & { actorId: string; expectedRevision: number; expectedSourceHash: string }) {
     const policy = this.enrollmentPolicy;
     if (!policy) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED", "An installed read-only source enrollment resolver is required.");

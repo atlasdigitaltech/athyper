@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   preparationSql,
   rootMigrationName,
+  revisionMigrationName,
 } from "./apply-entity-native-resource-preparation.dev.mjs";
 const source = readFileSync(
   new URL(
@@ -61,4 +62,23 @@ test("root preparation pins its own ledger identity and rejects unknown migratio
   assert.throws(() =>
     preparationSql(rootSource, rootDigest, true, "unregistered.sql"),
   );
+});
+
+test("revision correction pins known guard bodies and its own immutable receipt", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + revisionMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const sql = preparationSql(source, digest, true, revisionMigrationName);
+  assert.match(sql, /ENTITY_ROOT_REVISION_GUARD_UNKNOWN/);
+  assert.match(sql, /entity_root_patch_keeps_revision/);
+  assert.match(
+    sql,
+    /migration_name='20261007_entity_root_revision_protocol.sql'/,
+  );
+  assert.doesNotMatch(sql, /DROP CONSTRAINT|requires_mfa|GRANT /);
 });

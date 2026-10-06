@@ -41,7 +41,10 @@
     "src/native-conversion-plans.test.ts",
     "src/native-operation-compilation.test.ts",
     "src/native-release-compilation.test.ts",
-    "src/native-field-reference-compilation.test.ts"
+    "src/native-field-reference-compilation.test.ts",
+    "src/legacy-source-enrollment.test.ts",
+    "src/legacy-enrollment-application.test.ts",
+    "src/legacy-enrollment.postgres.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

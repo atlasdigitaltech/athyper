@@ -140,7 +140,7 @@ describe("legacy source enrollment preparation", () => {
     const labelled = {
       ...source,
       ownedLabels: input.labels,
-      contractSchema: "athyper.meta-entity-contract/2.2",
+      contractSchema: "athyper.meta-entity-contract/2.2" as const,
     };
     expect(
       prepareLegacySourceEnrollment(labelled, {
@@ -170,6 +170,10 @@ describe("legacy source enrollment preparation", () => {
         Reflect.set(i, "identities", i.identities.slice(1)),
       (i: LegacySourceEnrollmentInput) =>
         Reflect.set(i.identities[0]!, "identityStatus", "retired"),
+      (i: LegacySourceEnrollmentInput) =>
+        Reflect.set(i.identities[0]!, "firstReleaseId", id(10)),
+      (i: LegacySourceEnrollmentInput) =>
+        Reflect.set(i.identities[0]!, "identityStatus", "active"),
       (i: LegacySourceEnrollmentInput) =>
         Reflect.set(i, "sourceKind", "tenant_entity"),
       (i: LegacySourceEnrollmentInput) => Reflect.set(i, "maximumBytes", 1),

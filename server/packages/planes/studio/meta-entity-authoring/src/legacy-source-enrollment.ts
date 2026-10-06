@@ -180,6 +180,11 @@ export function prepareLegacySourceEnrollment(
         "/identities/introducedChangeSetId",
       );
     if (
+      (identity.identityStatus === "reserved") !==
+      (identity.firstReleaseId === null)
+    )
+      fail("LEGACY_ENROLLMENT_IDENTITY_INVALID", "/identities/firstReleaseId");
+    if (
       identity.retiredAt !== null ||
       identity.retiredBy !== null ||
       identity.retirementReleaseId !== null ||
@@ -191,7 +196,9 @@ export function prepareLegacySourceEnrollment(
     ...source,
     contractSchema: "athyper.meta-entity-contract/2.3",
     ownedLabels: labels,
-    fieldIdentities: input.identities,
+    fieldIdentities: [...input.identities].sort((a, b) =>
+      a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+    ),
     referenceMembers: emptyReferenceMembers(),
   };
   if (

@@ -3,6 +3,38 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_root_revision_provenance.sql",
+      "path": "migrations/20261007_entity_root_revision_provenance.sql",
+      "sha256": "0b23a7d212f3de6af550d90b53969d7a877516543f175197bdd6d835a72d7c6e",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Require same-transaction root tuple/update evidence in addition to the graph token; preserve invoker RLS, authoring/review controls and original roots/history.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/31_entity_root_revision_provenance.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261007_entity_root_revision_protocol.sql",
+      "path": "migrations/20261007_entity_root_revision_protocol.sql",
+      "sha256": "cf2b6c9227f37f5137ee44f4ae93facc6e8bcf9e206b451b50987771f5053cf9",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Correct known canonical root guards so locked metadata patches retain the once-advanced revision; preserve ancestry, review controls and original rows/history.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/30_entity_root_revision.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_root_preparation.sql",
       "path": "migrations/20261007_entity_native_root_preparation.sql",
       "sha256": "3525ecc3c5c79844eaa07d35b159bb240adc7295d0311776bea88adcbee045f4",

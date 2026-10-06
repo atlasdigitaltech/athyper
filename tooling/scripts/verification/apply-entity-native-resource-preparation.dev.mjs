@@ -9,13 +9,24 @@ import { migrationSourcePath } from "./migration-source.mjs";
 export const migrationName = "20261007_entity_native_resource_preparation.sql";
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 export const rootMigrationName = "20261007_entity_native_root_preparation.sql";
+export const revisionMigrationName =
+  "20261007_entity_root_revision_protocol.sql";
+export const revisionProvenanceMigrationName =
+  "20261007_entity_root_revision_provenance.sql";
 export function preparationSql(
   source,
   digest,
   apply,
   selectedMigration = migrationName,
 ) {
-  assert.ok([migrationName, rootMigrationName].includes(selectedMigration));
+  assert.ok(
+    [
+      migrationName,
+      rootMigrationName,
+      revisionMigrationName,
+      revisionProvenanceMigrationName,
+    ].includes(selectedMigration),
+  );
   assert.match(digest, /^[a-f0-9]{64}$/);
   assert.equal(hash(source), digest);
   assert.ok(source.startsWith("BEGIN;\n") && source.endsWith("COMMIT;\n"));
@@ -38,6 +49,8 @@ export function runPreparation(args) {
   const allowed = new Set([
     "--apply=DEV-NATIVE-RESOURCE-PREPARATION",
     "--root",
+    "--revision",
+    "--revision-provenance",
   ]);
   let output;
   for (let i = 0; i < args.length; i++) {
@@ -54,9 +67,19 @@ export function runPreparation(args) {
     output,
     "Use --output to retain the exact schema-preparation receipt",
   );
-  const selectedMigration = allowed.has("--root")
-    ? migrationName
-    : rootMigrationName;
+  assert.ok(
+    ["--root", "--revision", "--revision-provenance"].filter(
+      (option) => !allowed.has(option),
+    ).length <= 1,
+    "Select one preparation kind",
+  );
+  const selectedMigration = !allowed.has("--revision-provenance")
+    ? revisionProvenanceMigrationName
+    : !allowed.has("--revision")
+      ? revisionMigrationName
+      : allowed.has("--root")
+        ? migrationName
+        : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

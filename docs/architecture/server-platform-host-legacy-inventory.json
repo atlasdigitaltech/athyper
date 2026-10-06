@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 244,
+    "configuration:new": 245,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -1142,6 +1142,18 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
+      "identity": "configuration:athyper_legacy_enrollment_postgres",
+      "category": "configuration",
+      "key": "athyper_legacy_enrollment_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_listen_database_url",
       "category": "configuration",
       "key": "athyper_listen_database_url",
@@ -1667,6 +1679,7 @@
         "server/packages/contracts/meta-entity-authoring/src/native-ai.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-operation.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-root.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-ai-reconciliation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"

@@ -133,3 +133,5 @@ export * from "./native-conversion-composition.js";
 export * from "./native-field-reference-compilation.js";
 
 export * from "./legacy-source-enrollment.js";
+
+export * from "./legacy-enrollment-application.js";
