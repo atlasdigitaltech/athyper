@@ -1,4 +1,3 @@
-import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,12 +8,7 @@ import {
 } from "../entity-capabilities.js";
 import { parseCompiledEntityArtifact } from "../artifact.js";
 
-const root = new URL(
-  "../../../../../../metadata/entities/business_partner/",
-  import.meta.url,
-);
-const source = (name: string) =>
-  JSON.parse(readFileSync(resolveSourcePath(new URL(name, root)), "utf8"));
+const source = (name: string) => JSON.parse(readFileSync(new URL("./fixtures/review-package.json", import.meta.url), "utf8"))[name.split("/").at(-1)!];
 const bindings = () => source("operation.json");
 describe("typed entity capabilities", () => {
   it.each(["studio", "neon", "mesh"])("qualifies exact common capability permissions in %s without bypassing registration", (plane) => {
@@ -57,7 +51,7 @@ describe("typed entity capabilities", () => {
     const binding = parseCapabilityBinding(
       bindings().commentBinding,
       "comments",
-      "business_partner",
+      "reference_owner",
     );
     const safe = projectEntityCapability(
       binding,
@@ -184,7 +178,7 @@ describe("typed entity capabilities", () => {
       parseCapabilityBinding(
         v,
         name === "commentBinding" ? "comments" : "attachments",
-        "business_partner",
+        "reference_owner",
       ),
     ).toThrow();
   });
@@ -255,7 +249,7 @@ describe("typed entity capabilities", () => {
       parseCapabilityBinding(b, "attachments", "customer").maxFileBytes,
     ).toBe(1024);
     expect(() =>
-      parseCapabilityBinding(b, "attachments", "business_partner"),
+      parseCapabilityBinding(b, "attachments", "reference_owner"),
     ).toThrow(/ownerEntityCode/);
   });
 });
@@ -263,5 +257,5 @@ describe("typed entity capabilities", () => {
 it.each([0,366,1.5,"30"])("rejects invalid draft retention %s", days=>{
   const binding=bindings().commentBinding;
   binding.draftRetentionDays=days;
-  expect(()=>parseCapabilityBinding(binding,"comments","business_partner")).toThrow();
+  expect(()=>parseCapabilityBinding(binding,"comments","reference_owner")).toThrow();
 });

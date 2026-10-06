@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-import { discoverWorkspace, resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
@@ -80,18 +78,19 @@ describe("compiled entity artifact compiler", () => {
     })).toThrowError(/Missing dependency/);
   });
 
-  it("rebuilds the complete BP review package deterministically from hash-free authoring input", async () => {
-    const root = new URL(
-      "../../../../../../metadata/entities/",
-      import.meta.url,
-    );
-    const documents = discoverWorkspace(fileURLToPath(new URL("../", root))).documents.map(({ref, value}) => ({path: ref, value}));
-    const artifactDocuments = documents.filter(({ value }) =>
-      ["core", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)),
-    );
-    const registryCatalog = JSON.parse(await readFile(resolveSourcePath(new URL("../review/registry-catalog.json", root)), "utf8"));
-    const registryEntries = registryCatalog.entries as readonly { kind: string; key: string }[];
-    const releaseDocument = documents.find(({ path }) => path === "business_partner/release.json")!.value;
+  it("rebuilds the complete shared review package deterministically from hash-free authoring input", async () => {
+    const fixture = JSON.parse(await readFile(new URL("../../../../contracts/publication/src/__tests__/fixtures/review-package.json", import.meta.url), "utf8"));
+    const artifactDocuments = Object.entries(fixture).filter(([name]) => name !== "release.json")
+      .map(([name, value]) => ({ path: `reference_owner/${name}`, value: value as Record<string, unknown> }));
+    const op = fixture["operation.json"];
+    const actions = [...op.commentBinding.actions, ...op.attachmentBinding.actions];
+    const registryEntries = [
+      ...actions.flatMap((action: {permissionCode: string; handlerKey: string}) => [{kind: "permission", key: action.permissionCode}, {kind: "handler", key: action.handlerKey}]),
+      ...["platform.comments.v1", "platform.attachments.v1"].flatMap(key => [{kind: "handler", key}, {kind: "renderer", key}]),
+      {kind: "renderer", key: "platform.record-section.v1"},
+      {kind: "resolver", key: "platform.records.admission.v1"},
+    ];
+    const releaseDocument = fixture["release.json"];
     const result = compileCompiledEntityArtifacts({
       canonicalizer,
       registry: {

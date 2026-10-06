@@ -23,7 +23,7 @@ it("rejects parent-scoped split publication without a signed enforcing runtime m
   );
 });
 
-function pair(parentCode: string, childCode: string) {
+function pair(parentCode: string, childCode: string, relationshipKey = "lines") {
   const field = (key: string, type = "uuid") => ({
     key,
     type,
@@ -41,7 +41,7 @@ function pair(parentCode: string, childCode: string) {
       titleField: "name",
       entityRelationships: [
         {
-          key: "lines",
+          key: relationshipKey,
           targetEntity: childCode,
           fields: [{ source: "id", target: "owner_id" }],
           tenant: { source: "tenant_id", target: "tenant_id" },
@@ -59,7 +59,7 @@ function pair(parentCode: string, childCode: string) {
     directoryScope: {
       schemaVersion: 1,
       mode: "tenant",
-      parent: { entityCode: parentCode, relationshipKey: "lines" },
+      parent: { entityCode: parentCode, relationshipKey },
     },
   };
   return {
@@ -107,24 +107,34 @@ it("rejects absent parents, mismatched tenants, wrong children, absent read oper
   Object.assign(f.parent, { directoryScope: f.child.directoryScope });
   expect(f.validate).toThrow("PARENT_CONTRACT_REQUIRED");
 });
-it("the seven BP authoring removals carry explicit scope and cannot publish without enforcing runtime members", () => {
+it("the seven historical correction scopes reject split fixtures without enforcing runtime members", () => {
   const root = new URL("../../../../../", import.meta.url);
   const load = (path: string) =>
     JSON.parse(readFileSync(new URL(path, root), "utf8"));
   const correction = load(
     "docs/reviews/bp-child-read-cleanup-template-20261003.json",
   );
-  const parent = load("metadata/entities/mdg/bp/business_partner/core.json");
+  const parent = {entityRelationships: correction.permissions.map((row: any) => ({key: row.expectedParent.relationshipKey, targetEntity: row.entityCode}))};
   const registry = load("metadata/review/registry-catalog.json");
   expect(correction.permissions).toHaveLength(7);
   for (const row of correction.permissions) {
-    const core = load(`metadata/entities/mdg/bp/${row.entityCode}/core.json`);
-    const operation = load(
-      `metadata/entities/mdg/bp/${row.entityCode}/operation.json`,
-    );
+    // The historical scope is a test input, not evidence that retired metadata
+    // has been republished. Exercise the current shared runtime validator too.
+    const runtime = pair(row.expectedParent.entityCode, row.entityCode, row.expectedParent.relationshipKey);
+    expect(runtime.validate).not.toThrow();
+    runtime.child.fields[2]!.required = false;
+    expect(runtime.validate).toThrow("PARENT_FIELD_MAPPING_INVALID");
+    const core = {
+      schema: "athyper.compiled-entity-artifact/2.0-draft", schemaVersion: 2,
+      contractStatus: "draft_for_review", artifactType: "core", artifactKey: `${row.entityCode}/core`,
+      entityCode: row.entityCode, plane: correction.plane, dependencies: [],
+      directoryScope: {schemaVersion: 1, mode: "tenant", parent: row.expectedParent},
+      fields: ["tenant_id", "business_partner_id"].map(key => ({key, type: "uuid", nullable: false, writePolicy: "system_managed", uiFacets: {visibility: "hidden"}})),
+    };
+    const operation = {operations: [{key: "read", permissionCode: undefined}]};
     expect(core.directoryScope.parent).toEqual(row.expectedParent);
     expect(
-      operation.operations.find((op: { key: string }) => op.key === "read")
+      operation.operations.find((op: { key: string }) => op.key === "read")!
         .permissionCode,
     ).toBeUndefined();
     expect(JSON.stringify(operation)).not.toContain(`"${row.code}"`);
@@ -139,7 +149,7 @@ it("the seven BP authoring removals carry explicit scope and cannot publish with
     );
     expect(relationship.key).toBe(row.expectedParent.relationshipKey);
     for (const key of ["tenant_id", "business_partner_id"]) {
-      const field = core.fields.find((f: { key: string }) => f.key === key);
+      const field = core.fields.find((f: { key: string }) => f.key === key)!;
       expect(field.nullable).toBe(false);
       expect(field.writePolicy).toBe("system_managed");
       expect(field.uiFacets.visibility).toBe("hidden");

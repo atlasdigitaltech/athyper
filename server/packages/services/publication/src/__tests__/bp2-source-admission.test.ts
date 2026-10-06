@@ -1,4 +1,3 @@
-import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -93,18 +92,16 @@ function compile(
   });
 }
 
-describe("BP2 authoritative source and registration admission", () => {
+describe("shared projection source and registration admission", () => {
   it("captures the canonical registered name without requiring rejected legacy name fields", () => {
-    const form = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../metadata/entities/business_partner_request/presentation.section.form.supplierRequest.json", import.meta.url)), "utf8"));
+    const form = projection().section;
     const fields = form.form.sections.flatMap((section: {fields: {path:string; target:string; required?:boolean}[]}) => section.fields);
     expect(fields).toContainEqual(expect.objectContaining({path:"name",target:"canonical",required:true}));
     expect(fields.filter((field: {path:string;target:string}) => field.target === "canonical").map((field: {path:string}) => field.path)).not.toEqual(expect.arrayContaining(["legalName"]));
     expect(fields.some((field: {path:string}) => field.path === "displayName")).toBe(false);
   });
   it("binds the authored request to case identity and keeps derived values out of generic storage reads", () => {
-    const root = new URL("../../../../../../metadata/entities/", import.meta.url);
-    const core = JSON.parse(readFileSync(resolveSourcePath(new URL("business_partner_request/core.json", root)), "utf8"));
-    const section = JSON.parse(readFileSync(resolveSourcePath(new URL("business_partner/presentation.section.requests.json", root)), "utf8"));
+    const { core, section } = projection();
     expect(core.storage).toMatchObject({kind:"handler_projection",primaryObject:"document.entity_case",genericWriteEnabled:false});
     expect(core.fields.find((field: {key:string}) => field.key === "request_no").binding.column).toBe("case_code");
     for (const key of ["request_kind", "status"])
@@ -139,3 +136,15 @@ describe("BP2 authoritative source and registration admission", () => {
     );
   });
 });
+
+function projection() {
+  const fixture = JSON.parse(readFileSync(new URL("../../../../contracts/publication/src/__tests__/fixtures/projection-package.json", import.meta.url), "utf8"));
+  const result = compileCompiledEntityArtifacts({
+    canonicalizer: {canonicalBytes: value => Buffer.from(JSON.stringify(value)), sha256: value => `sha256:${createHash("sha256").update(value).digest("hex")}`},
+    registry: {sourceObjects: new Set(["document.entity_case", "snapshot.entity_snapshot"]), handlers: new Set(), renderers: new Set(["platform.record-section.v1"]), resolvers: new Set(), evaluators: new Set()},
+    release: {content: {schema: "athyper.compiled-entity-release/2.0-draft", contractStatus: "unsigned_review_only", releaseId: "projection-review", releaseNo: 1, targetPlanes: ["neon"], externalDependencies: []}},
+    artifacts: Object.values(fixture).map((content: any) => ({ref: `${content.artifactKey}.json`, content})),
+  });
+  return {core: result.artifacts.find(a => a.artifact.artifactType === "core")!.artifact.content as any,
+    section: result.artifacts.find(a => a.artifact.artifactType === "presentation_section")!.artifact.content as any};
+}

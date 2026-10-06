@@ -1,0 +1,95 @@
+{
+  "core": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "core",
+    "artifactKey": "request_projection/core",
+    "entityCode": "request_projection",
+    "plane": "neon",
+    "dependencies": [],
+    "storage": {
+      "kind": "handler_projection",
+      "primaryObject": "document.entity_case",
+      "sourceObjects": [
+        "document.entity_case",
+        "snapshot.entity_snapshot"
+      ],
+      "genericWriteEnabled": false
+    },
+    "fields": [
+      {
+        "key": "id",
+        "binding": {
+          "sourceObject": "document.entity_case",
+          "column": "id"
+        }
+      },
+      {
+        "key": "request_no",
+        "binding": {
+          "sourceObject": "document.entity_case",
+          "column": "case_code"
+        }
+      },
+      {
+        "key": "request_kind",
+        "valueOrigin": "derived"
+      },
+      {
+        "key": "status",
+        "valueOrigin": "derived"
+      }
+    ],
+    "serverDependencies": [
+      {
+        "sourceObject": "snapshot.entity_snapshot",
+        "column": "payload_json",
+        "purpose": "identity_context_or_concurrency"
+      }
+    ]
+  },
+  "section": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "entityCode": "request_projection",
+    "plane": "neon",
+    "dependencies": [
+      "request_projection/core"
+    ],
+    "artifactType": "presentation_section",
+    "artifactKey": "request_projection/presentation.section.form",
+    "sectionKey": "form",
+    "rendererKey": "platform.record-section.v1",
+    "coreRef": "request_projection/core.json",
+    "fieldBindings": [
+      {
+        "fieldKey": "id"
+      },
+      {
+        "fieldKey": "request_no"
+      },
+      {
+        "fieldKey": "request_kind"
+      },
+      {
+        "fieldKey": "status"
+      }
+    ],
+    "form": {
+      "sections": [
+        {
+          "key": "identity",
+          "fields": [
+            {
+              "path": "name",
+              "target": "canonical",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,5 +1,4 @@
-import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   assertCompiledEntityRuntimePublication,
@@ -8,21 +7,14 @@ import {
   validateCompiledEntityRelease,
 } from "../index.js";
 
-const fixture = (path: string) =>
-  readFile(
-    resolveSourcePath(new URL(
-      `../../../../../../metadata/entities/${path}`,
-      import.meta.url,
-    )),
-  ).then((bytes) => JSON.parse(bytes.toString("utf8")) as unknown);
-
+const fixture = (name: string) => JSON.parse(readFileSync(new URL("./fixtures/review-package.json", import.meta.url), "utf8"))[name.split("/").at(-1)!];
 describe("compiled entity artifact v2 draft contract", () => {
-  it("parses the Business Partner Core, Operation and presentation fixtures", async () => {
+  it("parses the shared reference Core, Operation and presentation fixtures", async () => {
     const artifacts = await Promise.all([
-      fixture("business_partner/core.json"),
-      fixture("business_partner/operation.json"),
-      fixture("business_partner/presentation.detail.json"),
-      fixture("business_partner/presentation.section.contacts.json"),
+      fixture("reference_owner/core.json"),
+      fixture("reference_owner/operation.json"),
+      fixture("reference_owner/presentation.detail.json"),
+      fixture("reference_owner/presentation.section.contacts.json"),
     ]);
     expect(artifacts.map(parseCompiledEntityArtifact).map((item) => item.artifactType)).toEqual([
       "core",
@@ -31,14 +23,14 @@ describe("compiled entity artifact v2 draft contract", () => {
       "presentation_section",
     ]);
     const release = parseCompiledEntityReleaseEnvelope(
-      await fixture("business_partner/release.json"),
+      await fixture("reference_owner/release.json"),
     );
     expect(release.releaseId).toBeTruthy();
     expect(release.artifacts.length).toBeGreaterThan(4);
   });
 
   it("rejects an unknown normative property", async () => {
-    const core = (await fixture("business_partner/core.json")) as Record<string, unknown>;
+    const core = (await fixture("reference_owner/core.json")) as Record<string, unknown>;
     expect(() => parseCompiledEntityArtifact({ ...core, typoedRequiredBehavior: true }))
       .toThrowError(/Unknown normative property/);
   });
@@ -77,10 +69,10 @@ describe("compiled entity artifact v2 draft contract", () => {
   });
 
   it("does not allow unsigned review artifacts to cross the publication boundary", async () => {
-    const release = parseCompiledEntityReleaseEnvelope(await fixture("business_partner/release.json"));
-    const core = parseCompiledEntityArtifact(await fixture("business_partner/core.json"));
+    const release = parseCompiledEntityReleaseEnvelope(await fixture("reference_owner/release.json"));
+    const core = parseCompiledEntityArtifact(await fixture("reference_owner/core.json"));
     expect(() => assertCompiledEntityRuntimePublication({
-      entityCode: "business_partner",
+      entityCode: "reference_owner",
       release,
       artifacts: [core],
       generatedAt: "2026-09-19T00:00:00.000Z",

@@ -380,3 +380,90 @@ These close the requested DEV masked-policy and enabled-export gates and the DB
 package typecheck blocker. They qualify the published tenant/owner reference and
 writable pilot capabilities; workflow-heavy and other sensitive entity profiles
 still require their own capability qualification. Production rollout is separate.
+
+
+## Studio reference slice: Country and State Region
+
+Scope added 7 October 2026. This execution record concerns the DDL-led Studio
+reference slice in blueprint §7.9.3. It does not extend or supersede the older
+Country/Principal live pilot above. The blueprint remains the design authority.
+
+### Missing-fixture repair checkpoint
+
+The 35 failures reproduced in the audit were missing-source fixture dependencies:
+31 publication-contract, one metadata and three publication-service cases.
+Tests now use maintained synthetic review artifacts in the publication contract
+package's test fixtures, plus the historical seven-record correction scope.
+No removed application or production metadata was restored. Assertions remain,
+and projection/compiler fixtures run through the current artifact compiler.
+The parent-scope cases also exercise the current runtime validator for each
+historical scope. Test fixtures are not signed releases or deployed evidence.
+
+Executed on 7 October 2026:
+
+| Command | Result |
+| --- | --- |
+| `pnpm --filter @athyper/server-contract-publication test` | 233 passed, 15 files |
+| `pnpm --filter @athyper/server-service-publication test` | 458 passed, 45 files |
+| `pnpm --filter @athyper/server-platform-metadata test` | 194 passed; two existing integration skips, 35 files |
+
+Owner inputs requested: approved host release ID/hash, protected-state initializer
+owner/key/version/hash, and named product-write/F6/F8 assignees and target dates.
+The owner confirmed Platform Admin / Platform Owner as the author/proposer and
+independent-review roles. Named people, target dates, host pins and initializer
+provenance remain pending; role confirmation is not a release approval receipt.
+Preservation-only MFA approval does not establish initialization authority.
+
+The broader aggregate run found two further host boundary assertion failures
+(stale explicit import allowlists) and one unloadable historical section suite.
+These tests now admit only the existing recovery-parser / telemetry imports and
+use local historical compatibility fixtures. All 30 targeted host cases pass.
+Production handlers and isolated-entrypoint composition were not changed.
+All three repaired publication/metadata package typechecks pass. Six generated
+contract drift checks pass. Full aggregate qualification must be rerun against
+a stable source revision; the earlier run changed during execution and is not
+a success receipt.
+
+Whole-source conversion, technical-binding disposition, atomic application,
+whole-release compilation and deployed F6/F8/F9 remain open. Cutover remains
+disabled. No migration, conversion application, publication or activation was
+performed at this checkpoint. F5 remains required for production, not for
+bounded synthetic inspection.
+
+### Prior Studio component execution evidence
+
+The following dated execution paragraphs were moved from blueprint §7.9.3
+without changing their historical results. Their counts are historical; they
+are not current whole-source, remote CI or deployed qualification receipts.
+
+Local verification on 6 October 2026: closed-contract tests cover unknown properties/variants, explicit NULL versus absence, ownership, duplicate/orphan members and translation completeness. Codec fixtures preserve all 31 Country localization labels with their declared English/Malay/Arabic values; State Region has no localization sidecar, so its fixture extracts only explicitly declared label pairs into an English-only synthetic resource. No full State Region definition conversion, inferred translation or publication is claimed. Generated source hashes pin both fixture inputs. The existing product-localization consumer validates compiled output; the selected typed-column projection also loads back losslessly with cross-draft rejection. Explicit legacy identity maps are synthetic test inputs until historical identity provenance qualifies.
+
+Commands: `pnpm entity:foundation:generate`, `pnpm entity:foundation:check`, contract-package tests and the authoring package's `owned-label-codec.test.ts`. CI is configured to run the generated-output check and both test suites; this configuration is not a remote CI success receipt. A deliberately modified generated artifact was rejected by the drift check and restored. Navigation negative tests also run through the shared runtime contract. No database migration, host publication, operation permission/MFA change or runtime deployment is performed by this proof.
+
+Early measurement (not an approved budget): Node v24.19.0, local single-process concurrency 1, 20 in-memory encode/decode/compile iterations over 1,365 synthetic owned labels with no translations produced 309,240 UTF-8 bytes, approximately 9.04 ms p50 and 11.71 ms p95. This is a label-codec baseline, **not** the 1,365-binding graph/save benchmark: database/index/snapshot/backup costs, host hardware qualification, cold/warm distributions and approved limits remain F3/F5 work.
+
+Validation: 409 authoring tests passed, with two opt-in database tests skipped in the ordinary suite. The new disposable PostgreSQL 16.15 rehearsal was run separately and passed using actual native tables, indexes, graph guards, revision function and repository snapshot path. It covers attribution, same-identity updates, failed pre-migration ordering, sibling swaps, default switches, competing-default rollback, explicit versus implicit child deletion, concurrent stale-save rejection, no-op saves and unchanged immutable historical snapshots. Its minimal external fixtures and administrative connection do not establish deployed RLS, independent human approval or business live-read authority. CI runs the unit checks and opt-in disposable rehearsal explicitly. Typecheck, generated-contract check and migration-inventory verification also pass. Nineteen existing host product-review/published-reader/evidence tests passed; these are automated host fixtures, not deployed end-to-end evidence.
+
+Verification: 37 typed-contract tests pass, including nine layout semantic cases; 461 authoring tests pass with two opt-in tests excluded, including six layout codec/storage/position cases. Four inspection tests prove missing-column reporting and that complete column presence still cannot qualify cutover. Both affected packages pass production and test typechecks; all four generated-contract drift checks pass. These are component implementation fixtures and read-only schema inspection, not authenticated deployed authoring/live-read evidence.
+
+Verification: 467 authoring tests pass (two opt-in cases excluded); targeted compiler/publication and shared reader/storage tests cover separate hashes, source/tenant mismatches, pin erasure, unknown versions, persisted provenance, compile/sign/dispatch rechecks and correctly signed target rejection without installed qualification. Affected package typechecks and four generation checks pass. Broader suites are not green: publication contracts have 31 failures, platform metadata has one failure and publication services have three failures involving missing Business Partner/Core/Operation/request fixtures or their absent release documents. These failures are not qualification evidence and remain visible; no fixture is fabricated or historical artifact restored to bypass them. Native command/idempotency/snapshot integration, history-preserving whole-graph conversion, full normalized release lowering, governed product writes, approved host/protected-state initialization and deployed F6/F8/F9 remain outstanding. No DEV migration, grant, publication or activation is performed in this continuation.
+
+Verification: 482 authoring tests pass (two opt-in cases excluded), including 15 native command/compiler-rejection/save-protocol tests; 37 contract tests pass. The existing shared-writer PostgreSQL rehearsal passes separately. Package typechecks and four generation drift checks pass; the two native test files are included in foundation CI. The save-protocol tests mock SQL and do not establish native SQL cutover, transaction rollback in a deployed role, host admission or live-read qualification. The PostgreSQL rehearsal proves existing scoped writer behavior and dormant migration preservation/guard rejection; it does not exercise a converted native draft. Whole-graph history-preserving conversion, positive native PostgreSQL save/load/history qualification, coordinated normalized label/reference editing on version 2.4, complete release compilation, governed product writes, approved host/protected-state initialization evidence and deployed F6/F8/F9 remain outstanding. No migration, grant, publication or activation is applied in this continuation; prior applied migrations and historical artifacts remain unchanged.
+
+Verification: 490 authoring tests pass (three opt-in cases excluded); the positive native PostgreSQL rehearsal passes separately. Native test/source typechecks, generated-contract drift checks and whitespace checks pass. The new PostgreSQL and conversion/runtime tests are enrolled in foundation CI. Native test typechecking has a focused configuration because the existing inherited test configuration excludes `*.test.ts`; this does not silently change broader historical test compilation. Fresh read-only DEV inspection at `/tmp/athyper-entity-native-continuation.json` confirms zero missing selected tables/columns and forced RLS, while `cutoverQualified=false`, `qualification=not-established` and `productionEnabled=false`. No applied migration, grant, historical snapshot, host approval record, protected-state initialization, publication or activation is changed. Complete release compilation, canonical native database qualification, governed product writes, approved host/initialization evidence and deployed F6/F8/F9 remain unfinished.
+
+Verification: 495 authoring tests pass, with three opt-in cases excluded. Production and focused native-test typechecks pass, and all four generated-contract drift checks pass. The adapter tests are enrolled in foundation CI. Fresh read-only inspection at `/tmp/athyper-entity-production-adapters.json` reports no missing selected tables, `qualification=not-established` and `productionEnabled=false`; this is schema inspection, not canonical database qualification. Cutover stays disabled. This continuation applies no migration, grant, historical repair, publication or activation, and does not initialize or alter MFA controls. Earlier preservation approval does not supply new-operation initialization authority.
+
+Verification: 564 authoring tests pass with three opt-in cases excluded. The new cases cover Country and State Region authorization/runtime on all three planes, none versus unavailable permission evidence, resource-version/pin mismatches, source hashes, field-policy grouping, SQL operation projections and actual inline section membership/order. All 39 contract tests pass with both isolated PostgreSQL component cases enabled. The operation rehearsal uses the canonical base CREATE TABLE and domains plus generated additive columns: the original tuple hash and legacy handler constraint remain intact, and every one of the 14 target additions rejects non-NULL writes behind the pending check. It uses a disposable UUID-default stub and does not exercise canonical host governance or converted repository writes. Source/focused test typechecks, six generator checks, six inspection tests and the 13-task bounded build pass; the new authoring tests are included in foundation CI.
+
+Verification: 579 authoring tests pass with three opt-in cases excluded, including actual repository read/history tests using explicitly synthetic host/SQL projections, reference/guard/version rejection and expanded save/replay tests. Contract tests pass (37; two opt-in cases excluded); source/focused native-test typechecks pass. The existing disposable PostgreSQL core/layout save rehearsal also passes after the snapshot checks; it exercises the original 2.4 SQL path, not deployed 2.5 storage or independent authority. Seven read-only inspection tests pass. DEV reinspection at /tmp/athyper-native-snapshot-readiness.json confirms both schema guards absent, 14 operation target columns and 32 AI properties missing, qualification=not-established and productionEnabled=false. Atomic whole-source conversion, remaining display/geometry mappings, expanded mutation/compilation and deployed host/F6/F8/F9 qualification remain unfinished. Approved host and protected-state initialization evidence remain unavailable. No DEV migration/application, grant, initialization, release or activation occurs in this continuation.
+
+Verification: 591 authoring tests pass with three opt-in cases excluded; source and focused native-test typechecks pass. Read-only DEV inspection at `/tmp/athyper-native-section-readiness.json` continues to report qualification=not-established, productionEnabled=false, both native schema guards absent, five AI tables and fourteen operation columns missing. Native whole-release lowering and atomic conversion application remain unimplemented; approved host/initialization evidence and deployed F6/F8/F9 evidence remain missing. No database migration/application, grant, protected-state initialization, release or activation occurs in this continuation.
+
+Verification: Country and State Region's actual AI declarations round-trip through this selected component with synthetic admitted rosters. Seven positive/negative mapping tests pass; all 542 authoring tests pass with three opt-in cases excluded. Contract tests pass (37; the new PostgreSQL case is opt-in); that case also passes separately against disposable PostgreSQL 16 using the actual generated AI DDL and explicitly synthetic prerequisite tables/guard/UUID functions. It checks cross-draft FK rejection, NULL/invalid provenance, invalid arrays and forced-RLS default denial. This is not canonical product-writer or host qualification. Five read-only inspection tests pass, and /tmp/athyper-native-ai-readiness.json reports all five AI tables and their 32 target properties absent in DEV, qualification=not-established and productionEnabled=false. Source/focused native-test typechecks and all five generation checks pass. Remaining authorization/runtime, section/binding and complete graph mappings, atomic application, whole-release compilation and deployed F6/F8/F9 are still open; missing host/initialization evidence remains a separate blocker.
+
+Read-only DEV reinspection at /tmp/athyper-native-navigation-readiness.json confirms zero missing selected tables/core-layout columns, cutoverQualified=false, qualification=not-established and productionEnabled=false. No migration or activation was performed. Remaining nested adapters and complete source-path coverage, atomic conversion application in the canonical repository, whole-release compilation, governed product-write authority and deployed host/F6/F8/F9 evidence remain unfinished. Approved host release/hash and protected-state initialization evidence are still missing; preservation approval does not establish either source.
+
+Read-only DEV inspection at /tmp/athyper-native-presentation-readiness.json still reports zero missing selected tables/core-layout columns, cutoverQualified=false, qualification=not-established and productionEnabled=false. Repository inspection confirms reference commands cannot be separately applied to native drafts. A complete conversion therefore still needs one canonical transaction covering normalized additions, retired legacy values, original/new immutable snapshots, revision/idempotency receipt and exact readback; this continuation does not implement that application transaction or relax pending/legacy-required guards. Whole-release compilation and remaining authorization/runtime/AI/section/binding/target mappings remain unfinished. Host release/hash, approved protected-state initialization source and deployed F6/F8/F9 evidence remain missing. No migration, grant, operation initialization, publication or activation occurred.
+
+Verification: 535 authoring tests pass with three opt-in cases excluded, including the production navigation, list-settings, readable-header and resource-dependency cases. Source and focused native-test typechecks, the bounded dependency build and four generation drift checks pass. The nested conversion/compiler test files are included in foundation CI. This evidence establishes component behavior only; complete graph conversion, atomic application, whole-release publication and deployed qualification remain open.

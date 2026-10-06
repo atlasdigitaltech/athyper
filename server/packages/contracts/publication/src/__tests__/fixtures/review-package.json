@@ -1,0 +1,432 @@
+{
+  "core.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "core",
+    "artifactKey": "reference_owner/core",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "fields": [
+      {
+        "key": "name",
+        "type": "string"
+      }
+    ],
+    "capabilities": {
+      "comments": {
+        "enabled": true,
+        "serviceKey": "platform.comments.v1",
+        "ownerEntityCode": "reference_owner",
+        "load": "lazy"
+      },
+      "attachments": {
+        "enabled": true,
+        "serviceKey": "platform.attachments.v1",
+        "ownerEntityCode": "reference_owner",
+        "load": "lazy"
+      }
+    }
+  },
+  "operation.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "operation",
+    "artifactKey": "reference_owner/operation",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "operations": [],
+    "commentBinding": {
+      "schemaVersion": 1,
+      "serviceKey": "platform.comments.v1",
+      "ownerEntityCode": "reference_owner",
+      "admissionResolverKey": "platform.records.admission.v1",
+      "layouts": [
+        "drawer",
+        "content"
+      ],
+      "actions": [
+        {
+          "key": "read",
+          "permissionCode": "neon.collaboration.comment.read",
+          "handlerKey": "platform.comments.read.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "create",
+          "permissionCode": "neon.collaboration.comment.create",
+          "handlerKey": "platform.comments.create.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "update_own",
+          "permissionCode": "neon.collaboration.comment.update_own",
+          "handlerKey": "platform.comments.update_own.v1",
+          "concurrency": "revision",
+          "idempotency": "none"
+        },
+        {
+          "key": "archive_own",
+          "permissionCode": "neon.collaboration.comment.archive_own",
+          "handlerKey": "platform.comments.archive_own.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "reply",
+          "permissionCode": "neon.collaboration.comment.create",
+          "handlerKey": "platform.comments.reply.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "react",
+          "permissionCode": "neon.collaboration.comment.create",
+          "handlerKey": "platform.comments.react.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "draft",
+          "permissionCode": "neon.collaboration.comment.create",
+          "handlerKey": "platform.comments.draft.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "flag",
+          "permissionCode": "neon.collaboration.comment.read",
+          "handlerKey": "platform.comments.flag.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "mention",
+          "permissionCode": "neon.collaboration.comment.read",
+          "handlerKey": "platform.comments.mention.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "history",
+          "permissionCode": "neon.collaboration.comment.read",
+          "handlerKey": "platform.comments.history.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        }
+      ],
+      "richTextSchema": "athyper.rich-text/1.0",
+      "maxTextLength": 50000,
+      "maxDepth": 5,
+      "allowedAudiences": [
+        "public",
+        "private"
+      ],
+      "defaultAudience": "public",
+      "features": {
+        "replies": true,
+        "edits": true,
+        "reactions": true,
+        "mentions": true,
+        "drafts": true,
+        "reporting": true,
+        "history": true
+      },
+      "reactionCodes": [
+        "like"
+      ],
+      "attachments": {
+        "allowed": true,
+        "maxCount": 10,
+        "pinVersion": true,
+        "bindingRef": "reference_owner/operation#attachmentBinding"
+      }
+    },
+    "attachmentBinding": {
+      "schemaVersion": 1,
+      "serviceKey": "platform.attachments.v1",
+      "ownerEntityCode": "reference_owner",
+      "admissionResolverKey": "platform.records.admission.v1",
+      "layouts": [
+        "drawer",
+        "content"
+      ],
+      "actions": [
+        {
+          "key": "read",
+          "permissionCode": "neon.collaboration.attachment.read",
+          "handlerKey": "platform.attachments.read.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "create",
+          "permissionCode": "neon.collaboration.attachment.create",
+          "handlerKey": "platform.attachments.create.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "finalize",
+          "permissionCode": "neon.collaboration.attachment.finalize",
+          "handlerKey": "platform.attachments.finalize.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "status",
+          "permissionCode": "neon.collaboration.attachment.status",
+          "handlerKey": "platform.attachments.status.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "download",
+          "permissionCode": "neon.collaboration.attachment.download",
+          "handlerKey": "platform.attachments.download.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "unlink",
+          "permissionCode": "neon.collaboration.attachment.unlink",
+          "handlerKey": "platform.attachments.unlink.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "archive",
+          "permissionCode": "neon.collaboration.attachment.archive",
+          "handlerKey": "platform.attachments.archive.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "rename",
+          "permissionCode": "neon.collaboration.attachment.rename",
+          "handlerKey": "platform.attachments.rename.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "version",
+          "permissionCode": "neon.collaboration.attachment.version",
+          "handlerKey": "platform.attachments.version.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "folder",
+          "permissionCode": "neon.collaboration.attachment.folder",
+          "handlerKey": "platform.attachments.folder.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "category",
+          "permissionCode": "neon.collaboration.attachment.category",
+          "handlerKey": "platform.attachments.category.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "preview",
+          "permissionCode": "neon.collaboration.attachment.preview",
+          "handlerKey": "platform.attachments.preview.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "extract",
+          "permissionCode": "neon.collaboration.attachment.extract",
+          "handlerKey": "platform.attachments.extract.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "search",
+          "permissionCode": "neon.collaboration.attachment.search",
+          "handlerKey": "platform.attachments.search.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        }
+      ],
+      "maxFileBytes": 26214400,
+      "maxBatchCount": 10,
+      "allowedContentTypes": [
+        "application/pdf"
+      ],
+      "scanRequired": true,
+      "linkKinds": [
+        "context"
+      ],
+      "categories": [
+        "general"
+      ],
+      "folders": true,
+      "versioning": true,
+      "rename": true,
+      "duplicateBehavior": "reject",
+      "unlink": "association_only",
+      "download": "short_lived_authorized_url",
+      "processing": {
+        "preview": true,
+        "extraction": true,
+        "search": true,
+        "renditions": [
+          "thumbnail"
+        ]
+      }
+    }
+  },
+  "presentation.detail.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "presentation_surface",
+    "artifactKey": "reference_owner/presentation.detail",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [
+      "reference_owner/core"
+    ],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "surfaceKey": "detail"
+  },
+  "presentation.section.contacts.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "presentation_section",
+    "artifactKey": "reference_owner/presentation.section.contacts",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [
+      "reference_owner/core",
+      "reference_owner/operation"
+    ],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sectionKey": "contacts",
+    "rendererKey": "platform.record-section.v1",
+    "coreRef": "reference_owner/core.json",
+    "fieldBindings": [
+      {
+        "fieldKey": "name"
+      }
+    ]
+  },
+  "presentation.section.comments.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "presentation_section",
+    "artifactKey": "reference_owner/presentation.section.comments",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [
+      "reference_owner/core",
+      "reference_owner/operation"
+    ],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sectionKey": "comments",
+    "rendererKey": "platform.comments.v1",
+    "coreRef": "reference_owner/core.json",
+    "dataBinding": {
+      "serviceKey": "platform.comments.v1",
+      "ownerEntityCode": "reference_owner"
+    },
+    "availableOperations": [
+      {
+        "key": "read",
+        "permissionCode": "neon.collaboration.comment.read",
+        "execution": {
+          "handlerKey": "platform.comments.read.v1"
+        }
+      }
+    ]
+  },
+  "presentation.section.attachments.json": {
+    "schema": "athyper.compiled-entity-artifact/2.0-draft",
+    "schemaVersion": 2,
+    "contractStatus": "draft_for_review",
+    "artifactType": "presentation_section",
+    "artifactKey": "reference_owner/presentation.section.attachments",
+    "entityCode": "reference_owner",
+    "plane": "neon",
+    "dependencies": [
+      "reference_owner/core",
+      "reference_owner/operation"
+    ],
+    "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sectionKey": "attachments",
+    "rendererKey": "platform.attachments.v1",
+    "coreRef": "reference_owner/core.json",
+    "dataBinding": {
+      "serviceKey": "platform.attachments.v1",
+      "ownerEntityCode": "reference_owner"
+    }
+  },
+  "release.json": {
+    "schema": "athyper.compiled-entity-release/2.0-draft",
+    "contractStatus": "unsigned_review_only",
+    "releaseId": "shared-reference-review",
+    "releaseNo": 1,
+    "targetPlanes": [
+      "neon"
+    ],
+    "externalDependencies": [],
+    "releaseHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "signature": {},
+    "artifacts": [
+      {
+        "artifactKey": "reference_owner/core",
+        "artifactType": "core",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/core.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "artifactKey": "reference_owner/operation",
+        "artifactType": "operation",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/operation.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "artifactKey": "reference_owner/presentation.detail",
+        "artifactType": "presentation_surface",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/presentation.detail.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "artifactKey": "reference_owner/presentation.section.contacts",
+        "artifactType": "presentation_section",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/presentation.section.contacts.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "artifactKey": "reference_owner/presentation.section.comments",
+        "artifactType": "presentation_section",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/presentation.section.comments.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "artifactKey": "reference_owner/presentation.section.attachments",
+        "artifactType": "presentation_section",
+        "entityCode": "reference_owner",
+        "ref": "reference_owner/presentation.section.attachments.json",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  }
+}

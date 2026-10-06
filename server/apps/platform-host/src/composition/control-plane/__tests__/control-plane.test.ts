@@ -71,7 +71,8 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
   const allowed = new Set(["node:http", "node:fs/promises", "kysely", "@athyper/server-adapter-db-core", "@athyper/server-adapter-secretstore-infisical",
     "@athyper/server-adapter-auth-keycloak", "@athyper/server-adapter-publication-signing", "@athyper/server-platform-audit",
     "@athyper/server-platform-iam", "@athyper/server-runtime-http", "../config/control-plane.js",
-    "../composition/control-plane/identity.js", "../composition/control-plane/control-plane.js", "../kernel/launch.js"]);
+    "../composition/control-plane/identity.js", "../composition/control-plane/control-plane.js", "../kernel/launch.js",
+    "../diagnostics/telemetry/error-collector.js"]);
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
     if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || node.expression.getText(source) === "require"))
