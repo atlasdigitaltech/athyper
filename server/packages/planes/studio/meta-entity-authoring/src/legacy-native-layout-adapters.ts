@@ -52,6 +52,12 @@ export interface LegacyNativeLayoutAdapterInput {
     Record<string, NativeSurfaceIdentityContext>
   >;
   readonly listSettings?: Readonly<Record<string, NativeListSettingsContext>>;
+  /** Explicit source-label deduplication against admitted typed field labels.
+   * A NULL override may reconstruct only this independently resolved field label. */
+  readonly fieldLabels?: {
+    readonly resource: NativeConversionResource;
+    readonly fields: readonly NormalizedCoreRow<"field">[];
+  };
   readonly positionConvention: "zero-based" | "one-based";
   /** Explicit migration of sparse sibling positions to dense native ordinals.
    * The source convention remains mandatory; duplicate source slots reject.
@@ -109,6 +115,19 @@ export function createLegacyNativeLayoutAdapters(
   )
     fail("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED", "/positionMapping");
   const dense = input.positionMapping === "dense-siblings";
+  const fieldLabels = input.fieldLabels && {
+    resource: structuredClone(input.fieldLabels.resource),
+    fields: structuredClone(input.fieldLabels.fields),
+  };
+  if (fieldLabels) {
+    if (
+      new Set(fieldLabels.fields.map((f) => f.id)).size !==
+      fieldLabels.fields.length
+    )
+      fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/fieldLabels");
+    for (const field of fieldLabels.fields)
+      validateNormalizedCoreRow("field", field);
+  }
   const surfaceIdentities = structuredClone(input.surfaceIdentities ?? {});
   const identitySourceIds = input.surfaces
     .filter(
@@ -298,7 +317,13 @@ export function createLegacyNativeLayoutAdapters(
       column: string,
       path: string,
     ) => {
-      const id = row[column];
+      let id = row[column];
+      if (column === "labelOverrideId" && id === null && fieldLabels) {
+        const field = fieldLabels.fields.find(
+          (f) => f.id === row.entityFieldId,
+        );
+        id = field?.labelId;
+      }
       if (typeof id !== "string")
         return fail("NATIVE_LAYOUT_LABEL_EVIDENCE_REQUIRED", path);
       const text = input.labelText(id);
@@ -416,12 +441,21 @@ export function createLegacyNativeLayoutAdapters(
                     "titleField",
                     "codeField",
                     "iconKey",
+                    "actions",
                   ].includes(k),
               )
             )
               return fail(
                 "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
                 "/surfaces/layoutConfig/recordPresentation",
+              );
+            if (
+              Object.hasOwn(record, "actions") &&
+              (!Array.isArray(record.actions) || record.actions.length !== 0)
+            )
+              fail(
+                "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
+                "/surfaces/layoutConfig/recordPresentation/actions",
               );
             for (const key of ["titleField", "codeField", "iconKey"])
               if (Object.hasOwn(record, key)) {
@@ -490,14 +524,22 @@ export function createLegacyNativeLayoutAdapters(
     }
     return {
       resource: structuredClone(input.resources[family]),
-      ...(family === "surfaces" &&
-      (input.listSettings || input.surfaceIdentities)
+      ...((family === "surfaces" &&
+        (input.listSettings || input.surfaceIdentities)) ||
+      (family === "surfaceFieldBindings" && fieldLabels)
         ? {
             dependencies: [
               ...new Map(
                 [
-                  ...Object.values(listSettings).map((c) => c.provider),
-                  ...Object.values(surfaceIdentities).map((c) => c.resource),
+                  ...(family === "surfaces"
+                    ? Object.values(listSettings).map((c) => c.provider)
+                    : []),
+                  ...(family === "surfaces"
+                    ? Object.values(surfaceIdentities).map((c) => c.resource)
+                    : []),
+                  ...(family === "surfaceFieldBindings" && fieldLabels
+                    ? [fieldLabels.resource]
+                    : []),
                 ].map((r) => [canonicalJson(r), structuredClone(r)]),
               ).values(),
             ],
@@ -548,7 +590,9 @@ export function createLegacyNativeLayoutAdapters(
               const properties = [
                 ...new Set([
                   ...shape.root,
-                  ...(shape.record ?? []).filter((k) => k !== "schemaVersion"),
+                  ...(shape.record ?? []).filter(
+                    (k) => !["schemaVersion", "actions"].includes(k),
+                  ),
                 ]),
               ] as (keyof LegacySurfaceIdentity)[];
               const presentation = compileNativeSurfaceIdentity(
@@ -564,7 +608,9 @@ export function createLegacyNativeLayoutAdapters(
                     k,
                     k === "schemaVersion"
                       ? 1
-                      : presentation[k as keyof LegacySurfaceIdentity],
+                      : k === "actions"
+                        ? []
+                        : presentation[k as keyof LegacySurfaceIdentity],
                   ]),
                 );
             }

@@ -249,7 +249,12 @@ export function prepareExpandedNativeGraphConversion(
   );
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
-  let inverse = structuredClone(stage.prepared);
+  // Begin at the same normalized nested boundary used by the core proof. The
+  // supplemental boundary lacks derived labels/relations/views and cannot be
+  // supplied directly to a nested inverse after scalar reconstruction.
+  let inverse = nested
+    ? nested.forward(structuredClone(stage.prepared))
+    : structuredClone(stage.prepared);
   for (const kind of nativeConversionFamilies)
     Reflect.set(
       inverse,

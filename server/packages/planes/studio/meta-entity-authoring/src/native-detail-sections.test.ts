@@ -577,3 +577,35 @@ it("requires explicitly hidden list UUID membership and rejects UUID summary ref
     validateNativeBindingRetirements(f.source, [detail, detail]),
   ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
 });
+
+it("keeps field-roster identity checks when later badge membership exists on the surface", async () => {
+  const f = await graphFixture();
+  const badge = {
+    ...f.target.surfaceFieldBindings[0]!,
+    id: id(9900),
+    bindingKind: "badge" as const,
+    entitySurfaceSectionId: null,
+  };
+  expect(
+    f.adapter.reverse(f.prepared, {
+      ...f.target,
+      surfaceFieldBindings: [...f.target.surfaceFieldBindings, badge],
+    }),
+  ).toEqual(f.source);
+  const changed = {
+    ...f.target,
+    surfaceFieldBindings: f.target.surfaceFieldBindings.map((binding, i) =>
+      i ? binding : { ...binding, bindingKind: "badge" as const },
+    ),
+  };
+  expect(() => f.adapter.reverse(f.prepared, changed)).toThrow(
+    "NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID",
+  );
+  const extra = { ...badge, id: id(9901), bindingKind: "field" as const };
+  expect(() =>
+    f.adapter.reverse(f.prepared, {
+      ...f.target,
+      surfaceFieldBindings: [...f.target.surfaceFieldBindings, extra],
+    }),
+  ).toThrow("NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID");
+});

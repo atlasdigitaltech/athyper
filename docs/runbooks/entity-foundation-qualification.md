@@ -381,7 +381,6 @@ package typecheck blocker. They qualify the published tenant/owner reference and
 writable pilot capabilities; workflow-heavy and other sensitive entity profiles
 still require their own capability qualification. Production rollout is separate.
 
-
 ## Studio reference slice: Country and State Region
 
 Scope added 7 October 2026. This execution record concerns the DDL-led Studio
@@ -401,11 +400,11 @@ historical scope. Test fixtures are not signed releases or deployed evidence.
 
 Executed on 7 October 2026:
 
-| Command | Result |
-| --- | --- |
-| `pnpm --filter @athyper/server-contract-publication test` | 233 passed, 15 files |
-| `pnpm --filter @athyper/server-service-publication test` | 458 passed, 45 files |
-| `pnpm --filter @athyper/server-platform-metadata test` | 194 passed; two existing integration skips, 35 files |
+| Command                                                   | Result                                               |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| `pnpm --filter @athyper/server-contract-publication test` | 233 passed, 15 files                                 |
+| `pnpm --filter @athyper/server-service-publication test`  | 458 passed, 45 files                                 |
+| `pnpm --filter @athyper/server-platform-metadata test`    | 194 passed; two existing integration skips, 35 files |
 
 Owner inputs requested: approved host release ID/hash, protected-state initializer
 owner/key/version/hash, and named product-write/F6/F8 assignees and target dates.
@@ -425,11 +424,11 @@ and is not a success receipt. The subsequent clean/stable run at commit
 `943d10d585bc4a4b7299315a55ef221fc879b143` passed on 7 October 2026:
 
 | Aggregate suite | Passed | Existing optional/integration skips |
-| --- | --- | --- |
-| Authoring | 591 | 3 |
-| Records | 534 | 4 |
-| Publication | 458 | 0 |
-| Host | 994 | 31 |
+| --------------- | ------ | ----------------------------------- |
+| Authoring       | 591    | 3                                   |
+| Records         | 534    | 4                                   |
+| Publication     | 458    | 0                                   |
+| Host            | 994    | 31                                  |
 
 Evidence: instance artifact
 `entity-foundation/2026-10-06T18-55-28.971Z-632081/summary.json` records
@@ -484,7 +483,6 @@ Read-only DEV inspection at /tmp/athyper-native-presentation-readiness.json stil
 
 Verification: 535 authoring tests pass with three opt-in cases excluded, including the production navigation, list-settings, readable-header and resource-dependency cases. Source and focused native-test typechecks, the bounded dependency build and four generation drift checks pass. The nested conversion/compiler test files are included in foundation CI. This evidence establishes component behavior only; complete graph conversion, atomic application, whole-release publication and deployed qualification remain open.
 
-
 ### Explicit UUID membership disposition checkpoint — 7 October 2026
 
 The existing section adapter and whole-graph preservation coordinator now account
@@ -514,7 +512,6 @@ Validation for this checkpoint: 596 authoring tests pass across 106 executed fil
 with three existing opt-in PostgreSQL cases excluded from the ordinary run.
 Source/test and focused native-test typechecks pass; all six generated-contract
 checks pass. No new skip or disabled assertion was introduced.
-
 
 ### Sparse ordering and native AI reconciliation checkpoint — 7 October 2026
 
@@ -646,7 +643,6 @@ No canonical conversion transaction or release compiler is claimed by these
 component proofs. Cutover/publication guards remain enforced; no DEV migration,
 grant, protected-state initialization, publication or activation occurred.
 
-
 ### Localization/badge source accounting — 7 October 2026
 
 Selected localization conversion resolves explicit entity/surface/field/choice
@@ -687,7 +683,6 @@ cases are skipped by the ordinary run. Source/test and focused native-test
 typechecks, all six existing generated-contract checks and the 13-task bounded
 build pass. New tests are enrolled in foundation CI. No canonical conversion SQL
 qualification or native whole-release compiler test is claimed by this result.
-
 
 ### Canonical application/history protocol and compiler control preservation — 7 October 2026
 
@@ -737,7 +732,6 @@ cases remain skipped. Source/test and focused native-test typechecks, all six
 generated-contract checks and the 13-task bounded build pass. The new protocol,
 planner and operation-compilation tests are enrolled in foundation CI. This is
 local reproducible evidence, not a remote CI or deployed qualification receipt.
-
 
 ### Native reference producer and shared reader composition — 7 October 2026
 
@@ -796,7 +790,6 @@ enrolled in foundation CI. This is local evidence; remote CI and deployed
 qualification are not attested.
 
 The unchanged shared metadata suite also passes: 194 tests, with two existing opt-in cases skipped.
-
 
 ### Reference-binding integration and deployed schema preparation — 7 October 2026
 
@@ -873,7 +866,6 @@ platform-catalogue and publication-token tests lack root runners. None of the
 new tests appears in that failure list. This checkpoint does not attest aggregate
 workspace/remote CI success or modify those unrelated runner configurations.
 
-
 ### Native root preparation checkpoint — 7 October 2026
 
 The typed closed `native-root-contract.ts` covers twelve enrollment properties
@@ -914,7 +906,6 @@ and compiler evidence, host/product-write approvals and deployed F6/F8/F9 still
 require completion. No source graph, control initializer, grant, publication or
 activation was applied.
 
-
 ### Whole-source enrollment preparation — 7 October 2026
 
 Implemented the shared 2.1/2.2-to-2.3 legacy-source enrollment adapter and connected
@@ -948,7 +939,6 @@ F6/F8/F9 qualification was applied in this checkpoint. Remaining engineering is
 native whole-source mapping/installation and positive canonical atomic history/
 compiler qualification; independently approved host/product-write and deployed
 storage/security evidence remain necessary for live deployment.
-
 
 ### Atomic legacy enrollment and root revision correction — 7 October 2026
 
@@ -1007,3 +997,57 @@ ownership/descriptor enrollment, native whole-source mappings/application and
 host/product-write/live qualification remain unfinished. The native pending
 constraints remain in place. The complete ordinary authoring suite passes 694
 tests with five opt-in SQL skips; the explicit enrollment PostgreSQL test passes.
+
+### Whole product-definition conversion and native reader integration — 7 October 2026
+
+The shared whole-source resolver now constructs the existing production adapters
+against an exact 2.3 saved-source shape, with closed typed stage selection and
+independent host-supplied resource/identity projections. It rejects stale source,
+unknown/duplicate stages, byte-budget overflow, missing pins and unsupported
+source declarations. Its result is returned only after the expanded coordinator
+proves every original path reconstructs from the final native 2.5 graph. The
+application-policy factory connects this resolver to the existing repository
+conversion, native compiler and runtime reader; it installs no host or authority.
+
+Actual Country and State Region product definitions pass this same implementation
+for each declared Studio, Neon and Mesh target. Fixture saved-member IDs, labels,
+stable identities, catalogue, components, provider and security/resource records
+are synthetic. Missing product-compiler member IDs and empty root sections are
+represented as explicit synthetic repository-save enrollment; no source property
+is removed to obtain a passing conversion. The proof preserves every enrolled
+member ID except the separately source-bound redundant UUID presentation
+memberships; UUID fields and immutable original-source reconstruction survive.
+
+Integration fixes:
+
+- Expanded inverse reconstruction begins at the normalized nested boundary.
+- Inline sections validate their exact field roster independently of later
+  accounted badge membership; changing a field binding to a badge still rejects.
+- Repeated binding labels may map to NULL overrides only through independently
+  admitted equal field-label metadata; source presence/absence reconstructs.
+- Explicit empty actions round-trip; nonempty actions remain unsupported.
+- The common-reference check recognizes the pinned native runtime representation,
+  retaining legacy enrollment by default and every existing public/read-only,
+  exact-permission and tenant-scope restriction. Mixed enrollment/version drift
+  reject; no permission or protected-state requirement is added or initialized.
+
+Tests include all six entity/plane compiler-reader cases, negative source/pin/
+stage/action cases, shared-adapter regressions and the existing application-policy
+composition with an independently failing authority port. The production converter
+contains no entity names, grants or publication/activation path.
+
+DEV inspection at `/tmp/athyper-whole-source-dev-inspection.json` remains
+`qualification=not-established`, `productionEnabled=false`: 54 roots, zero
+owned-label-enrolled scopes, both native guards absent. This continuation changes
+no deployed data or schema. Actual governed source enrollment, canonical native
+constraint/application/history proof, approved product-write/host resources and
+deployed F6/F8/F9 evidence remain outstanding. Local fixture proof does not attest
+those gates or lock the full blueprint.
+
+Verification: 705 authoring tests pass (five opt-in SQL cases excluded); 129
+metadata-contract tests pass; 194 shared metadata-reader tests pass (two existing
+opt-in cases excluded). Production/test and focused native-test typechecks pass,
+as do generated contract drift checks. The six source/plane fixtures and shared
+adapter regressions are enrolled in foundation CI. These are local conversion,
+compiler and reader evidence; no new canonical PostgreSQL-native or deployed
+qualification receipt is asserted.

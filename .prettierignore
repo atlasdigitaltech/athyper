@@ -77,3 +77,7 @@ docs/architecture/server-route-manifest.json
 docs/architecture/server-route-manifest.md
 docs/architecture/business-partner/development-url-catalogue.md
 artifacts/
+
+# Blueprint includes byte-exact generated contract blocks verified by entity:foundation:check.
+# Preserve the authored layout and generator output.
+docs/blueprints/entity-studio/blueprint.md

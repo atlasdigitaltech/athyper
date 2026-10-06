@@ -557,3 +557,151 @@ it("keeps independent sibling slots, accepts the sparse source ceiling and still
     }),
   ).toThrow("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED");
 });
+
+it("reconstructs explicitly empty actions and rejects nonempty declarations", async () => {
+  const { coreFixture, coreFixtureContext } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-core.fixtures.js");
+  const { layoutFixtureContext } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
+  const f = fixture(),
+    row = f.surfaces[0]!;
+  const source = {
+    ...row,
+    layoutConfig: {
+      recordPresentation: {
+        schemaVersion: 1,
+        titleField: "name",
+        codeField: "code",
+        actions: [],
+      },
+    },
+  };
+  const input = {
+    ...f,
+    surfaces: [source],
+    surfaceIdentities: {
+      [row.id!]: {
+        entityId: coreFixtureContext().entityId,
+        tenantId: null,
+        resource: {
+          owner: "synthetic-tests",
+          key: "identity",
+          version: 1,
+          hash: "b".repeat(64),
+        },
+        fields: coreFixture().field,
+        identities: coreFixtureContext().identities,
+        presentation: layoutFixtureContext().fieldPresentation,
+        maximumFields: 10,
+      },
+    },
+    mappings: {
+      ...f.mappings,
+      surfaces: {
+        [row.id!]: {
+          ...f.mappings.surfaces[row.id!]!,
+          sourceHash: sha256(source),
+        },
+      },
+    },
+  };
+  const adapter = createLegacyNativeLayoutAdapters(input).surfaces;
+  expect(adapter.reverse(adapter.forward([source]))).toEqual([source]);
+  const invalid = {
+    ...source,
+    layoutConfig: {
+      recordPresentation: {
+        ...source.layoutConfig.recordPresentation,
+        actions: [{ key: "unrepresented" }],
+      },
+    },
+  };
+  expect(() =>
+    createLegacyNativeLayoutAdapters({
+      ...input,
+      surfaces: [invalid],
+      mappings: {
+        ...input.mappings,
+        surfaces: {
+          [row.id!]: {
+            ...input.mappings.surfaces[row.id!]!,
+            sourceHash: sha256(invalid),
+          },
+        },
+      },
+    }),
+  ).toThrow("NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED");
+});
+it("deduplicates only explicitly admitted equal field labels and preserves source presence", async () => {
+  const { coreFixture } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-core.fixtures.js");
+  const f = fixture(),
+    source = { ...f.surfaceFieldBindings[0]!, labelOverride: "Code" };
+  const field = { ...coreFixture().field[1]!, labelId: coreFixtureId(90) };
+  const input = {
+    ...f,
+    fieldLabels: {
+      resource: {
+        owner: "synthetic-tests",
+        key: "field-labels",
+        version: 1,
+        hash: "c".repeat(64),
+      },
+      fields: [field],
+    },
+    labelText: (id: string) => (id === field.labelId ? "Code" : "Details"),
+    surfaceFieldBindings: [source],
+    mappings: {
+      ...f.mappings,
+      surfaceFieldBindings: {
+        [source.id!]: {
+          ...f.mappings.surfaceFieldBindings[source.id!]!,
+          sourceHash: sha256(source),
+        },
+      },
+    },
+  };
+  const adapter = createLegacyNativeLayoutAdapters(input).surfaceFieldBindings;
+  const rows = adapter.forward([source]);
+  expect(rows[0]!.labelOverrideId).toBeNull();
+  expect(adapter.reverse(rows)).toEqual([source]);
+  expect(adapter.dependencies).toEqual([input.fieldLabels.resource]);
+  expect(() =>
+    createLegacyNativeLayoutAdapters({ ...input, fieldLabels: undefined }),
+  ).toThrow("NATIVE_LAYOUT_LABEL_EVIDENCE_REQUIRED");
+  expect(() =>
+    createLegacyNativeLayoutAdapters({ ...input, labelText: () => "Other" }),
+  ).toThrow("NATIVE_LAYOUT_LABEL_SOURCE_MISMATCH");
+  const unknown = { ...source, layoutConfig: { unrepresented: true } };
+  expect(() =>
+    createLegacyNativeLayoutAdapters({
+      ...input,
+      surfaceFieldBindings: [unknown],
+      mappings: {
+        ...input.mappings,
+        surfaceFieldBindings: {
+          [source.id!]: {
+            ...input.mappings.surfaceFieldBindings[source.id!]!,
+            sourceHash: sha256(unknown),
+          },
+        },
+      },
+    }),
+  ).toThrow("NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED");
+  const absent = { ...source };
+  delete (absent as { labelOverride?: string }).labelOverride;
+  const a = createLegacyNativeLayoutAdapters({
+    ...input,
+    surfaceFieldBindings: [absent],
+    mappings: {
+      ...input.mappings,
+      surfaceFieldBindings: {
+        [source.id!]: {
+          ...input.mappings.surfaceFieldBindings[source.id!]!,
+          sourceHash: sha256(absent),
+        },
+      },
+    },
+  }).surfaceFieldBindings;
+  expect(a.reverse(a.forward([absent]))).toEqual([absent]);
+});

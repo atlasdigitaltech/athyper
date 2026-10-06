@@ -551,8 +551,10 @@ export function createLegacyNativeDetailSectionsAdapter(input: {
         const sections = target.surfaceSections.filter(
           (s) => s.entitySurfaceId === surfaceId,
         );
+        // A later badge adapter may add independently accounted memberships on
+        // the same surface. Inline sections own only the exact field roster.
         const bindings = target.surfaceFieldBindings.filter(
-          (b) => b.entitySurfaceId === surfaceId,
+          (b) => b.entitySurfaceId === surfaceId && b.bindingKind === "field",
         );
         if (
           sections.length !== sectionIds.length ||
