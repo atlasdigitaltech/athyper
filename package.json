@@ -35,6 +35,7 @@
     "env:staging": "pnpm athyper up stg --confirm stg",
     "env:test": "pnpm athyper up qa --confirm qa",
     "build": "turbo build --concurrency 1",
+    "build:entity-foundation": "turbo build --filter=@athyper/server-contract-meta-entity-authoring --filter=@athyper/server-plane-studio-meta-entity-authoring --concurrency=2",
     "lint": "pnpm policy:i18n && pnpm lint:eslint && turbo lint",
     "lint:errors": "turbo run lint",
     "lint:eslint": "eslint packages/contracts/platform packages/platform --max-warnings=231 && pnpm lint:entity-server",

@@ -266,3 +266,154 @@ it("binds retained and core/layout evidence separately from candidate content", 
     ),
   ).toThrow("NATIVE_CONVERSION_RETAINED_EVIDENCE_REQUIRED");
 });
+
+it("runs all five implemented scalar adapters through the complete preservation coordinator", async () => {
+  const { createLegacyNativeCoreAdapters } =
+    await import("./legacy-native-core-adapters.js");
+  const { createLegacyNativeLayoutAdapters } =
+    await import("./legacy-native-layout-adapters.js");
+  const f = fixture(),
+    c = layoutFixtureContext(),
+    l = layoutFixture();
+  const fields = c.core.field.map((row) => ({
+    id: row.id,
+    fieldKey: c.coreContext.identities.find(
+      (i) => i.id === row.fieldIdentityId,
+    )!.fieldKey,
+    dataType: row.dataType,
+    typeConfig: { kind: row.dataType },
+    cardinality: row.nullable ? "zero_or_one" : "one",
+    valueOrigin: "stored",
+    writeMode: "read_only",
+    storagePath: row.storagePath!,
+    dataClassification: row.dataClassification!,
+  }));
+  const runtimeProfiles = c.core.runtime.map((row) => ({
+    id: row.id,
+    profileKey: row.profileKey,
+    backingKind: row.backingKind,
+    storagePlane: row.storagePlane!,
+    storageSchema: row.storageSchema!,
+    storageObject: row.storageObject!,
+    apiExposure: row.apiExposure,
+    readMode: row.readMode,
+    writeMode: row.writeMode,
+    createMode: row.createMode,
+    concurrencyMode: row.concurrencyMode,
+  }));
+  const surfaces = c.core.surface.map((row) => ({
+    id: row.id,
+    surfaceKey: row.surfaceKey,
+    surfaceKind: row.surfaceKind,
+    title: "Fixture label",
+    layoutKind: row.layoutKind,
+    isDefault: row.isDefault,
+  }));
+  const surfaceSections = l.section.map((row) => ({
+    id: row.id,
+    entitySurfaceId: row.entitySurfaceId,
+    sectionKey: row.sectionKey,
+    sectionKind: row.sectionKind,
+    title: "Fixture label",
+    position: row.position,
+    columnCount: row.columnCount,
+    collapsible: row.collapsible,
+    collapsedByDefault: row.collapsedByDefault,
+  }));
+  const surfaceFieldBindings = l.binding.map((row) => ({
+    id: row.id,
+    entitySurfaceId: row.entitySurfaceId!,
+    entitySurfaceSectionId: row.entitySurfaceSectionId!,
+    entityFieldId: row.entityFieldId,
+    bindingKey: row.bindingKey,
+    position: row.position,
+    columnSpan: row.columnSpan,
+  }));
+  const source: MetaEntityGraph = {
+    ...f.source,
+    fields,
+    runtimeProfiles,
+    surfaces,
+    surfaceSections,
+    surfaceFieldBindings,
+  };
+  const core = createLegacyNativeCoreAdapters({
+    fields,
+    runtimeProfiles,
+    context: c.coreContext,
+    resources: {
+      fields: f.adapters.fields.resource,
+      runtimeProfiles: f.adapters.runtimeProfiles.resource,
+    },
+    fieldMappings: Object.fromEntries(
+      c.core.field.map((r, i) => [
+        r.id,
+        {
+          sourceHash: sha256(fields[i]),
+          fieldIdentityId: r.fieldIdentityId,
+          labelId: r.labelId,
+          storageType: r.storageType!,
+          requiredInput: r.required,
+          keyGeneration: r.keyGeneration,
+        },
+      ]),
+    ),
+    runtimeMappings: Object.fromEntries(
+      c.core.runtime.map((r, i) => [
+        r.id,
+        {
+          sourceHash: sha256(runtimeProfiles[i]),
+          idFieldKey: "id",
+          storageCatalogueHash: r.storageCatalogueHash!,
+          readHandlerVersion: r.readHandlerVersion,
+          writeHandlerVersion: r.writeHandlerVersion,
+        },
+      ]),
+    ),
+  });
+  const layout = createLegacyNativeLayoutAdapters({
+    surfaces,
+    surfaceSections,
+    surfaceFieldBindings,
+    positionConvention: "one-based",
+    labelText: () => "Fixture label",
+    resources: {
+      surfaces: f.adapters.surfaces.resource,
+      surfaceSections: f.adapters.surfaceSections.resource,
+      surfaceFieldBindings: f.adapters.surfaceFieldBindings.resource,
+    },
+    mappings: {
+      surfaces: Object.fromEntries(
+        c.core.surface.map((r, i) => [
+          r.id,
+          { sourceHash: sha256(surfaces[i]), initialization: r },
+        ]),
+      ),
+      surfaceSections: Object.fromEntries(
+        l.section.map((r, i) => [
+          r.id,
+          { sourceHash: sha256(surfaceSections[i]), initialization: r },
+        ]),
+      ),
+      surfaceFieldBindings: Object.fromEntries(
+        l.binding.map((r, i) => [
+          r.id,
+          { sourceHash: sha256(surfaceFieldBindings[i]), initialization: r },
+        ]),
+      ),
+    },
+  });
+  const proof = prepareNativeGraphConversion(
+    source,
+    {
+      ...f.context,
+      source: { ...f.context.source, graphHash: sha256(source) },
+    },
+    { ...core, ...layout },
+  );
+  expect(proof.candidate.fields).toEqual(c.core.field);
+  expect(proof.candidate.surfaces).toEqual(c.core.surface);
+  expect(proof.candidate.surfaceSections).toEqual(l.section);
+  expect(proof.candidate.surfaceFieldBindings).toEqual(l.binding);
+  expect(proof.candidate.ownedLabels).toEqual(source.ownedLabels);
+});
