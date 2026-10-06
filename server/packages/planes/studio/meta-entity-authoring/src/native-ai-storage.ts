@@ -20,12 +20,15 @@ import type { NormalizedSaveCoordinate } from "./normalized-core-layout-storage.
  * This is not a command endpoint: the caller owns authorization, revision,
  * idempotency, whole-graph snapshots, application and exact readback. Missing
  * native schema qualification rejects before even reading member tables. */
-export async function prepareNativeAiSave(
+export async function prepareNativeAiSaveState(
   tx: Transaction<Record<string, never>>,
   c: NormalizedSaveCoordinate,
   proposed: ExpandedNativeMetaEntityGraph,
   maximumMembers: number,
-): Promise<readonly BranchPlan[]> {
+): Promise<{
+  readonly plans: readonly BranchPlan[];
+  readonly storedMembers: number;
+}> {
   if (
     !Number.isSafeInteger(maximumMembers) ||
     maximumMembers < 1 ||
@@ -84,5 +87,22 @@ export async function prepareNativeAiSave(
       "NATIVE_SNAPSHOT_LIMIT",
       "Stored AI graph exceeds the admitted budget.",
     );
-  return planNativeAiGraph(proposed.ai, stored, maximumMembers);
+  return {
+    plans: planNativeAiGraph(proposed.ai, stored, maximumMembers),
+    storedMembers: Object.values(stored).reduce(
+      (n, rows) => n + rows.length,
+      0,
+    ),
+  };
+}
+
+/** Compatibility entry for existing native AI preparation callers. */
+export async function prepareNativeAiSave(
+  tx: Transaction<Record<string, never>>,
+  c: NormalizedSaveCoordinate,
+  proposed: ExpandedNativeMetaEntityGraph,
+  maximumMembers: number,
+): Promise<readonly BranchPlan[]> {
+  return (await prepareNativeAiSaveState(tx, c, proposed, maximumMembers))
+    .plans;
 }

@@ -25,7 +25,10 @@
     "src/native-ai-reconciliation.test.ts",
     "src/native-ai-reconciliation.postgres.test.ts",
     "src/native-authorization.test.ts",
+    "src/legacy-native-resources-adapter.test.ts",
     "src/native-operation-storage.test.ts",
+    "src/native-operation-reconciliation.test.ts",
+    "src/native-supplemental-save.test.ts",
     "src/native-detail-sections.test.ts",
     "src/native-surface-identity.test.ts",
     "src/legacy-native-navigation-adapter.test.ts"

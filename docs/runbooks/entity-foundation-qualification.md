@@ -550,3 +550,50 @@ rehearsal are enrolled in foundation CI. Whole-source mappings, canonical atomic
 application, whole-release lowering, approved host/product-write authority and
 deployed F6/F8/F9 qualification remain incomplete. No DEV migration, grant,
 initialization, publication or activation occurred.
+
+### Expanded native resources and joint reconciliation checkpoint — 7 October 2026
+
+The shared native 2.5 coordinator now binds the original graph, installed
+supplemental resource/dependency inventory and context hashes to an exact final
+inverse. The production combined adapter consumes selected existing read
+operations, authorization/runtime declarations and AI declarations. Both actual
+Country and State Region declarations pass selected resource round trips;
+current typed AI edits affect the inverse. Undefined permission remains explicit
+none/null, while contradictory defined permission enrollment rejects. Source
+mutation, missing identities/resources, unsupported properties, unrelated member
+injection, malformed output and dangling target references reject.
+
+These component fixtures independently supply synthetic resource, label,
+operation, field and relationship rosters. They do not prove a whole actual
+reference graph. In particular State Region's structural relation enrollment is
+still missing; synthetic AI relation IDs cannot attest it. The 2.5 orchestration
+fixture is synthetic and exercises the preservation coordinator over the existing
+core/layout proof. Neither fixture establishes deployed authority.
+
+Native operation plans update only descriptor-selected columns of existing
+identities. New identities and service-owned preflight changes reject. The joint
+operation/AI preparation path shares the exact native draft lock/schema guard,
+finite combined stored-row budget and bigint decimal-string encoding. The actual
+disposable PostgreSQL 16 rehearsal uses generated AI DDL and the existing shared
+writer: operation and AI edits commit together, preserve creation attribution and
+unmapped controls, and both roll back after a later AI foreign-key failure.
+Prerequisite operation domains, guard and tables remain synthetic. This rehearsal
+does not prove the canonical schema, format transition, revision/idempotency,
+historical conversion or application-role product-write authority.
+
+Validation: ordinary authoring suite 622 passed across 111 files; four existing
+opt-in PostgreSQL cases remain outside the ordinary run. The expanded joint SQL
+rehearsal passed separately with
+`ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES=1 pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-ai-reconciliation.postgres.test.ts`.
+Source/test and focused native-test typechecks, all six generation drift checks
+and the 13-task bounded foundation build pass. New tests are enrolled in foundation
+CI; no failing assertion was disabled.
+
+Remaining engineering: localization/badges/reference-capability/structural
+relations and complete Country/State source coverage, canonical whole-format
+atomic application and cross-format history, native whole-release compilation.
+The existing publication rejection and cutover guards remain enforced. Approved
+host/initializer/product-write evidence and deployed F6/F8/F9 remain unavailable.
+No DEV migration, grant, protected-state initialization, publication or activation
+occurred. This checkpoint is partial implementation evidence, not full request
+completion or a gate-pass receipt.

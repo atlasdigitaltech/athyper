@@ -1247,3 +1247,216 @@ it.each([false, true])(
     ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
   },
 );
+
+// This exercises the 2.4-to-2.5 coordinator using the same deliberately synthetic
+// core adapters above. Production supplemental resource semantics are tested
+// separately against actual Country/State Region declarations.
+function expandedFixture() {
+  const f = fixture();
+  Reflect.set(f.source, "ownedLabels", {
+    ...f.source.ownedLabels,
+    labels: [],
+    translations: [],
+    defaultLocale: "en",
+    requiredLocales: ["en"],
+  });
+  const resource = {
+    owner: "synthetic-tests",
+    key: "supplemental",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const supplemental = {
+    resource,
+    contextHash: "f".repeat(64),
+    dependencies: [],
+    forward: (source: MetaEntityGraph) => ({
+      prepared: structuredClone(source),
+      operations: [],
+      ai: { profile: [], field: [], binding: [], reference: [], term: [] },
+    }),
+    reverse: (prepared: MetaEntityGraph) => structuredClone(prepared),
+  };
+  return {
+    ...f,
+    supplemental,
+    context: {
+      ...f.context,
+      maximumSupplementalMembers: 100,
+      source: { ...f.context.source, graphHash: sha256(f.source) },
+      installedAdapters: [...f.context.installedAdapters, resource],
+    },
+  };
+}
+it("connects the existing whole-core inverse to an installed native 2.5 stage and binds both target and context evidence", async () => {
+  const { prepareExpandedNativeGraphConversion } =
+    await import("./native-expanded-conversion.js");
+  const f = expandedFixture(),
+    before = structuredClone(f.source);
+  const proof = prepareExpandedNativeGraphConversion(
+    f.source,
+    f.context,
+    f.adapters,
+    undefined,
+    f.supplemental,
+  );
+  expect(proof.schema).toBe("entity.native-expanded-conversion-proof/1");
+  expect(proof.candidate.contractSchema).toBe(
+    "athyper.meta-entity-contract/2.5",
+  );
+  expect(proof.coreProof.candidate.contractSchema).toBe(
+    "athyper.meta-entity-contract/2.4",
+  );
+  expect(proof.source).toEqual(f.context.source);
+  expect(proof.targetHash).toBe(sha256(proof.candidate));
+  expect(proof.supplemental.contextHash).toBe(f.supplemental.contextHash);
+  expect(f.source).toEqual(before);
+  expect(proof).not.toHaveProperty("qualified");
+  const different = prepareExpandedNativeGraphConversion(
+    f.source,
+    f.context,
+    f.adapters,
+    undefined,
+    { ...f.supplemental, contextHash: "a".repeat(64) },
+  );
+  expect(different.targetHash).toBe(proof.targetHash);
+  expect(different.contextHash).not.toBe(proof.contextHash);
+});
+it("rejects uninstalled supplemental resources, changed retained branches and a lossy final inverse", async () => {
+  const { prepareExpandedNativeGraphConversion } =
+    await import("./native-expanded-conversion.js");
+  const f = expandedFixture();
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      {
+        ...f.context,
+        installedAdapters: f.context.installedAdapters.slice(0, -1),
+      },
+      f.adapters,
+      undefined,
+      f.supplemental,
+    ),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_NOT_INSTALLED");
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      f.context,
+      f.adapters,
+      undefined,
+      {
+        ...f.supplemental,
+        forward: (s) => ({
+          ...f.supplemental.forward(s),
+          prepared: { ...s, entity: { ...s.entity, entityCode: "changed" } },
+        }),
+      },
+    ),
+  ).toThrow("NATIVE_EXPANDED_RETAINED_CHANGED");
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      f.context,
+      f.adapters,
+      undefined,
+      {
+        ...f.supplemental,
+        reverse: (s) => ({ ...s, entity: { ...s.entity, entityCode: "lost" } }),
+      },
+    ),
+  ).toThrow("NATIVE_CONVERSION_NOT_LOSSLESS");
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      { ...f.context, maximumSupplementalMembers: 0 },
+      f.adapters,
+      undefined,
+      f.supplemental,
+    ),
+  ).toThrow("NATIVE_SNAPSHOT_LIMIT");
+});
+it("rejects supplemental identity injection and native AI references outside the final candidate", async () => {
+  const { prepareExpandedNativeGraphConversion } =
+    await import("./native-expanded-conversion.js");
+  const f = expandedFixture();
+  const ai = {
+    profile: [
+      {
+        id: coreFixtureId(700),
+        enabled: true,
+        description: null,
+        aliases: [],
+        contextKinds: ["record" as const],
+        searchProfileId: null,
+        vocabularyLocale: null,
+      },
+    ],
+    field: [
+      {
+        id: coreFixtureId(701),
+        aiProfileId: coreFixtureId(700),
+        entityFieldId: coreFixtureId(999),
+        position: 1,
+      },
+    ],
+    binding: [],
+    reference: [],
+    term: [],
+  };
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      f.context,
+      f.adapters,
+      undefined,
+      {
+        ...f.supplemental,
+        forward: (s) => ({ ...f.supplemental.forward(s), ai }),
+      },
+    ),
+  ).toThrow("NATIVE_SNAPSHOT_REFERENCE_INVALID");
+  expect(() =>
+    prepareExpandedNativeGraphConversion(
+      f.source,
+      f.context,
+      f.adapters,
+      undefined,
+      {
+        ...f.supplemental,
+        forward: (s) => ({
+          ...f.supplemental.forward(s),
+          prepared: {
+            ...s,
+            referenceMembers: {
+              ...s.referenceMembers!,
+              members: {
+                ...s.referenceMembers!.members,
+                fieldChoice: [{} as never],
+              },
+            },
+          },
+        }),
+      },
+    ),
+  ).toThrow("NATIVE_EXPANDED_RETAINED_CHANGED");
+});
+it("rejects malformed supplemental output with a named diagnostic", async () => {
+  const { prepareExpandedNativeGraphConversion } =
+    await import("./native-expanded-conversion.js");
+  const f = expandedFixture();
+  for (const invalid of [{ prepared: null }, { operations: null }]) {
+    expect(() =>
+      prepareExpandedNativeGraphConversion(
+        f.source,
+        f.context,
+        f.adapters,
+        undefined,
+        {
+          ...f.supplemental,
+          forward: (s) =>
+            ({ ...f.supplemental.forward(s), ...invalid }) as never,
+        },
+      ),
+    ).toThrow("NATIVE_EXPANDED_SOURCE_INVALID");
+  }
+});

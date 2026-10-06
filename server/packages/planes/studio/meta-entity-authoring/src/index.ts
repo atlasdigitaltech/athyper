@@ -54,9 +54,13 @@ export { amendSuccessorCollaboration } from "./publication/amend-successor-colla
 export { amendSuccessorLocalization } from "./publication/amend-successor-localization.js";
 export { adoptCapabilityProfiles } from "./authoring/adopt-capability-profiles.js";
 export {
-  parseTenantLearningAncestry, tenantLearningAncestry, readProductLearningSource,
-  compileTenantLearningDescriptor, prepareTenantLearningExtensionDraft,
-  type TenantLearningAncestry, type ProductLearningSource,
+  parseTenantLearningAncestry,
+  tenantLearningAncestry,
+  readProductLearningSource,
+  compileTenantLearningDescriptor,
+  prepareTenantLearningExtensionDraft,
+  type TenantLearningAncestry,
+  type ProductLearningSource,
 } from "./tenant-learning-extension.js";
 export {
   importOwnedLabelLocalization,
@@ -104,3 +108,8 @@ export * from "./native-operation-storage.js";
 export * from "./native-detail-sections.js";
 
 export * from "./native-supplemental-storage.js";
+
+export * from "./native-expanded-conversion.js";
+export * from "./legacy-native-resources-adapter.js";
+
+export * from "./native-supplemental-save.js";

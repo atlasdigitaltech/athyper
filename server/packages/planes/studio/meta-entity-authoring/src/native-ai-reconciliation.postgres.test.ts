@@ -6,10 +6,17 @@ import { expect, it } from "vitest";
 import { nativeAiDdl } from "../../../../contracts/meta-entity-authoring/src/native-ai-ddl.js";
 import {
   nativeAiMembers,
+  nativeOperationMember,
+  type NativeOperationRow,
   type NativeAiGraph,
   type NativeAiKind,
 } from "@athyper/server-contract-meta-entity-authoring";
-import { planNativeAiGraph, type StoredRow } from "./graph-reconciliation.js";
+import {
+  planNativeAiGraph,
+  planNativeOperationBranch,
+  type StoredRow,
+} from "./graph-reconciliation.js";
+import { nativeOperationToStorage } from "./native-operation-storage.js";
 import { writeReconciliationPlans } from "./scoped-graph-writer.js";
 const enabled = process.env.ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES === "1";
 const docker = (...args: string[]) =>
@@ -94,6 +101,31 @@ it.skipIf(!enabled)(
             `CREATE TABLE metadata.${table}(id uuid PRIMARY KEY,change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id),UNIQUE(change_set_id,id));`,
           )
           .execute(db);
+      // Operation prerequisite columns are a descriptor-projected test schema,
+      // not the canonical operation migration or its qualification guard.
+      const operationColumns = Object.values(nativeOperationMember.columns).map(
+        (col) =>
+          "ADD COLUMN " +
+          col.column +
+          " " +
+          (col.sqlType.startsWith("metadata.") ? "text" : col.sqlType),
+      );
+      await sql
+        .raw(
+          "ALTER TABLE metadata.entity_operation " +
+            operationColumns
+              .concat([
+                "ADD COLUMN entity_id uuid",
+                "ADD COLUMN tenant_id uuid",
+                "ADD COLUMN created_by uuid",
+                "ADD COLUMN created_at timestamptz DEFAULT clock_timestamp()",
+                "ADD COLUMN updated_by uuid",
+                "ADD COLUMN updated_at timestamptz",
+                "ADD COLUMN protected_control boolean DEFAULT true",
+              ])
+              .join(","),
+        )
+        .execute(db);
       await sql.raw(nativeAiDdl()).execute(db);
       const draft = randomUUID(),
         other = randomUUID(),
@@ -116,6 +148,43 @@ it.skipIf(!enabled)(
         tenant_id: null,
         created_by: actor,
       };
+      const operation: NativeOperationRow = {
+        id: randomUUID(),
+        operationKey: "read",
+        operationKind: "read",
+        description: null,
+        labelId: profile,
+        auditEventCode: "fixture.read",
+        executionMode: "synchronous",
+        idempotencyMode: "none",
+        inputSurfaceId: null,
+        resultSurfaceId: null,
+        authorizationTarget: "existing",
+        authorizationEffect: "read",
+        requiresParentRead: false,
+        requiresPreflight: false,
+        replacementOperationId: null,
+        handlerKey: "registered.read",
+        handlerVersion: 1,
+        preflightKey: null,
+        preflightVersion: null,
+        extensionFieldMode: "none",
+        exportFormats: null,
+        exportMaxRecords: null,
+      };
+      const operationValues = { ...nativeOperationToStorage(operation), ...c };
+      await sql`INSERT INTO metadata.entity_operation (${sql.join(Object.keys(operationValues).map((k) => sql.ref(k)))}) VALUES(${sql.join(Object.values(operationValues).map((v) => sql`${v}`))})`.execute(
+        db,
+      );
+      const readOperation = async () =>
+        (
+          await sql<{
+            value: StoredRow;
+          }>`SELECT to_jsonb(t) || jsonb_build_object('export_max_records',t.export_max_records::text) AS value FROM metadata.entity_operation t WHERE id=${operation.id}::uuid`.execute(
+            db!,
+          )
+        ).rows[0]!.value;
+      const operationBefore = await readOperation();
       const graph: NativeAiGraph = {
         profile: [
           {
@@ -182,11 +251,24 @@ it.skipIf(!enabled)(
         .execute(async (tx) =>
           writeReconciliationPlans(
             tx,
-            planNativeAiGraph(edited, before, 100),
+            [
+              planNativeOperationBranch(
+                [{ ...operation, description: "Edited operation" }],
+                [operationBefore],
+              ),
+              ...planNativeAiGraph(edited, before, 100),
+            ],
             c,
           ),
         );
       const after = await read();
+      const operationAfter = await readOperation();
+      expect(operationAfter.description).toBe("Edited operation");
+      expect(operationAfter.created_at).toBe(operationBefore.created_at);
+      expect(operationAfter.created_by).toBe(operationBefore.created_by);
+      expect(operationAfter.protected_control).toBe(
+        operationBefore.protected_control,
+      );
       for (const kind of ["profile", "field"] as const)
         for (const row of after[kind]) {
           const prior = before[kind].find((r) => r.id === row.id)!;
@@ -221,41 +303,44 @@ it.skipIf(!enabled)(
           .execute(async (tx) =>
             writeReconciliationPlans(
               tx,
-              planNativeAiGraph(invalid, after, 100),
+              [
+                planNativeOperationBranch(
+                  [{ ...operation, description: "Must rollback operation" }],
+                  [operationAfter],
+                ),
+                ...planNativeAiGraph(invalid, after, 100),
+              ],
               c,
             ),
           ),
       ).rejects.toThrow(/foreign key/);
       expect(await read()).toEqual(after);
+      expect(await readOperation()).toEqual(operationAfter);
       await expect(
-        db
-          .transaction()
-          .execute(async (tx) =>
-            writeReconciliationPlans(tx, planNativeAiGraph(graph, after, 100), {
-              ...c,
-              change_set_id: other,
-            }),
-          ),
+        db.transaction().execute(async (tx) =>
+          writeReconciliationPlans(tx, planNativeAiGraph(graph, after, 100), {
+            ...c,
+            change_set_id: other,
+          }),
+        ),
       ).rejects.toMatchObject({ code: "AUTHORING_MEMBER_WRITE_DENIED" });
       expect(await read()).toEqual(after);
       // Real incoming FKs are inspected before removing an unselected dependent.
       await expect(
-        db
-          .transaction()
-          .execute(async (tx) =>
-            writeReconciliationPlans(
-              tx,
-              [
-                {
-                  table: "entity_ai_profile",
-                  insert: [],
-                  update: [],
-                  remove: after.profile,
-                },
-              ],
-              c,
-            ),
+        db.transaction().execute(async (tx) =>
+          writeReconciliationPlans(
+            tx,
+            [
+              {
+                table: "entity_ai_profile",
+                insert: [],
+                update: [],
+                remove: after.profile,
+              },
+            ],
+            c,
           ),
+        ),
       ).rejects.toMatchObject({ code: "AUTHORING_MEMBER_DEPENDENCY" });
       expect(await read()).toEqual(after);
     } finally {
