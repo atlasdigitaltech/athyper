@@ -321,6 +321,7 @@ function repositoryFixture() {
     policy,
   );
   return {
+    root,
     repository,
     policy,
     disableGuard: () => {
@@ -466,4 +467,58 @@ it("reads an explicitly admitted prior native snapshot without rewriting it or a
   await expect(
     configured.readNativeDraftSave({ ...input, revision: 3 }),
   ).rejects.toMatchObject({ code: "NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH" });
+});
+
+it("loads the native root label owner and rejects an unresolved FK without issuing writes", async () => {
+  const f = repositoryFixture();
+  Reflect.set(f.root, "entity_label_id", coreFixtureId(32));
+  const { loadNormalizedLabels } =
+    await import("./normalized-label-storage.js");
+  vi.mocked(loadNormalizedLabels).mockResolvedValueOnce({
+    contract: "entity.authoring-owned-labels/1",
+    entityId: c.entityId,
+    changeSetId: c.changeSetId,
+    tenantId: null,
+    defaultLocale: "en",
+    requiredLocales: ["en"],
+    labels: [
+      {
+        id: coreFixtureId(32),
+        labelKey: "reference.entity",
+        defaultText: "Reference",
+        sourceKind: "owned",
+        sharedLabelKey: null,
+        sharedResourceKey: null,
+        sharedResourceVersion: null,
+        sharedResourceHash: null,
+      },
+    ],
+    translations: [],
+  });
+  const graph = await f.repository.loadNativeGraph({
+    ...c,
+    actorId: coreFixtureId(10),
+  });
+  expect(graph.entity.entityLabelId).toBe(coreFixtureId(32));
+  f.save(graph);
+  expect(
+    await f.repository.readNativeDraftSave({
+      ...c,
+      actorId: coreFixtureId(10),
+      revision: 4,
+    }),
+  ).toEqual(graph);
+  Reflect.set(f.root, "entity_label_id", coreFixtureId(999));
+  vi.mocked(loadNormalizedLabels).mockResolvedValueOnce(graph.ownedLabels!);
+  await expect(
+    f.repository.loadNativeGraph({ ...c, actorId: coreFixtureId(10) }),
+  ).rejects.toMatchObject({ code: "NATIVE_LOCALIZATION_OWNER_REQUIRED" });
+  expect(
+    mock.execute.mock.calls.every(
+      ([text]) =>
+        !/\b(INSERT|UPDATE|DELETE)\b/.test(
+          String(text).replace(/FOR UPDATE/g, ""),
+        ),
+    ),
+  ).toBe(true);
 });

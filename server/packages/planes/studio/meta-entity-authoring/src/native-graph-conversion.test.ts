@@ -1657,3 +1657,166 @@ it("captures nested resource pins before installed callbacks execute", () => {
   );
   expect(proof.nested!.adapter).toEqual(admitted);
 });
+
+it("enrolls source-bound badge membership and root-label ownership in the conversion proof", async () => {
+  const { source, context, adapters } = fixture();
+  const layout = context.resolveLayout({
+    field: adapters.fields.forward(source.fields!),
+    runtime: adapters.runtimeProfiles.forward(source.runtimeProfiles!),
+    surface: adapters.surfaces.forward(source.surfaces!),
+  });
+  const surface = layout.core.surface.find((s) => s.surfaceKind === "detail")!;
+  const field = layout.core.field.find((f) => f.storagePath === "code")!;
+  Reflect.set(
+    source.fields!.find((f) => f.id === field.id)!,
+    "fieldKey",
+    "code",
+  );
+  const legacySurface = source.surfaces!.find((s) => s.id === surface.id)!;
+  Reflect.set(legacySurface, "surfaceKind", "detail");
+  const text = { labelKey: "reference.entity", defaultText: "Reference" };
+  const badge = { field: "code", tones: {} };
+  Reflect.set(legacySurface, "layoutConfig", {
+    recordPresentation: { badges: [badge], localizedLabels: { entity: text } },
+  });
+  Reflect.set(source, "ownedLabels", {
+    ...source.ownedLabels,
+    contract: "entity.authoring-owned-labels/1",
+    defaultLocale: "en",
+    requiredLocales: ["en"],
+    labels: [],
+    translations: [],
+  });
+  Reflect.set(
+    source.referenceMembers!.members,
+    "navigationGroup",
+    layout.navigationGroups.map((g) => ({
+      ...g,
+      groupKey: "details",
+      labelId: null,
+      iconKey: null,
+      sectionDisplay: "continuous",
+    })),
+  );
+  const original = structuredClone(source);
+  const id = coreFixtureId(850);
+  const labelId = coreFixtureId(851);
+  const resource = {
+    owner: "synthetic-tests",
+    key: "badge-and-root-proof",
+    version: 1,
+    hash: "e".repeat(64),
+  };
+  const mapping = {
+    id,
+    surfaceId: surface.id,
+    fieldId: field.id,
+    bindingKey: "code_badge",
+    sourceIndex: 0,
+    sourceHash: sha256(badge),
+  };
+  const root = {
+    labelId,
+    sources: [{ surfaceId: surface.id, sourceHash: sha256(text) }],
+  };
+  const prepared = structuredClone(source);
+  Reflect.set(prepared, "entity", { ...source.entity, entityLabelId: labelId });
+  Reflect.set(prepared.ownedLabels!, "labels", [
+    ...(prepared.ownedLabels!.labels ?? []),
+    {
+      id: labelId,
+      ...text,
+      sourceKind: "owned",
+      sharedLabelKey: null,
+      sharedResourceKey: null,
+      sharedResourceVersion: null,
+      sharedResourceHash: null,
+    },
+  ]);
+  Reflect.set(
+    prepared.surfaces!.find((s) => s.id === surface.id)!,
+    "layoutConfig",
+    { recordPresentation: {} },
+  );
+  Reflect.set(prepared, "surfaceFieldBindings", [
+    ...source.surfaceFieldBindings!,
+    {
+      id,
+      entitySurfaceId: surface.id,
+      entityFieldId: field.id,
+      bindingKey: "code_badge",
+      position: 1,
+      columnSpan: 1,
+    },
+  ]);
+  const { layoutFixtureRow } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
+  const targetBinding = layoutFixtureRow("binding", id, {
+    entitySurfaceId: surface.id,
+    entityFieldId: field.id,
+    bindingKey: "code_badge",
+    bindingKind: "badge",
+    position: 1,
+    columnSpan: 1,
+    meaningfulForForm: false,
+    componentDisplayId: coreFixtureId(80),
+  });
+  const originalBindings = adapters.surfaceFieldBindings.forward(
+    source.surfaceFieldBindings!,
+  );
+  const scalar = {
+    ...adapters,
+    fields: {
+      ...adapters.fields,
+      reverse: () => structuredClone(prepared.fields!),
+    },
+    surfaces: {
+      ...adapters.surfaces,
+      reverse: () => structuredClone(prepared.surfaces!),
+    },
+    surfaceFieldBindings: {
+      ...adapters.surfaceFieldBindings,
+      forward: () => [...originalBindings, targetBinding],
+      reverse: () => structuredClone(prepared.surfaceFieldBindings!),
+    },
+  } as NativeConversionAdapters;
+  const bound = {
+    ...context,
+    source: { ...context.source, graphHash: sha256(source) },
+    installedAdapters: [...context.installedAdapters, resource],
+    resolveLayout: (core: typeof layout.core) => ({ ...layout, core }),
+  };
+  const nested = {
+    resource,
+    badgeDerivations: [mapping],
+    entityLabelDerivation: root,
+    forward: () => structuredClone(prepared),
+    reverse: () => structuredClone(original),
+  };
+  const proof = prepareNativeGraphConversion(source, bound, scalar, nested);
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/7");
+  expect(proof.nested!.entityLabelDerivation).toEqual(root);
+  expect(proof.nested!.badgeDerivations).toEqual([mapping]);
+  expect(proof.candidate.entity.entityLabelId).toBe(labelId);
+  expect(() =>
+    prepareNativeGraphConversion(source, bound, scalar, {
+      ...nested,
+      badgeDerivations: [{ ...mapping, sourceHash: "a".repeat(64) }],
+    }),
+  ).toThrow("NATIVE_DETAIL_BADGES_INVALID");
+  expect(() =>
+    prepareNativeGraphConversion(source, bound, scalar, {
+      ...nested,
+      entityLabelDerivation: { ...root, labelId: coreFixtureId(999) },
+    }),
+  ).toThrow("NATIVE_PRESENTATION_LOCALIZATION_INVALID");
+  expect(() =>
+    prepareNativeGraphConversion(source, bound, scalar, {
+      ...nested,
+      forward: () => ({
+        ...prepared,
+        entity: { ...prepared.entity, ownershipModel: "rewritten" },
+      }),
+    }),
+  ).toThrow("NATIVE_PRESENTATION_LOCALIZATION_INVALID");
+});

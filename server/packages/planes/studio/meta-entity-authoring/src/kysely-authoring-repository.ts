@@ -1,3 +1,4 @@
+import { validateNativeEntityLabelOwner } from "./native-localized-labels.js";
 import { saveNativeCoreLayoutCommands, lockNativeDraft, assertNativeAuthoringContract, type NativeAuthoringPolicy, type NativeCommandInput, type NativeDraftRoot } from "./native-core-layout-persistence.js";
 import { loadNativeSupplementalMembers, validateNativeSupplementalReferences } from "./native-supplemental-storage.js";
 import { loadNormalizedCoreLayout, type NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
@@ -43,7 +44,7 @@ interface EntityHeaderRow {
   readonly entity_code: unknown;
   readonly entity_class: unknown;
   readonly ownership_model: unknown;
-  readonly label_root?: {default_locale?: string;reference_contract_version?:number;native_core_layout_version?:number};
+  readonly label_root?: {entity_label_id?:string|null;default_locale?: string;reference_contract_version?:number;native_core_layout_version?:number};
 }
 interface ChangeSetRow {
   readonly reference_contract_version?:unknown;
@@ -149,6 +150,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       const row = (await sql<{graph: NativeAuthoringSnapshot; graph_hash: string}>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(tx)).rows[0];
       if (!row) return null;
       if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
+      validateNativeEntityLabelOwner(row.graph, input);
       const source = row.graph.authoringSource;
       const savedVersion = row.graph.contractSchema === "athyper.meta-entity-contract/2.5" ? 2 : row.graph.contractSchema === "athyper.meta-entity-contract/2.4" ? 1 : null;
       const historicalVersions = policy.historicalSnapshotVersions ?? [root.nativeVersion];
@@ -166,6 +168,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   private async nativeSnapshot(tx: Transaction<Database>, input: NormalizedSaveCoordinate, root: NativeDraftRoot): Promise<NativeAuthoringSnapshot> {
     const expanded = root.nativeVersion === 2;
     const parts = await this.loadGraphParts(input.changeSetId, true, expanded);
+    validateNativeEntityLabelOwner(parts, input);
     const state = await loadNormalizedCoreLayout(tx, input);
     const core = {...parts,
       authoringSource: {entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash},
@@ -487,6 +490,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       contractSchema: referenceMembers ? "athyper.meta-entity-contract/2.3" : ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1",
       entity: {
         entityCode: string(header, "entity_code"),
+        ...(native && header.label_root?.entity_label_id !== undefined && header.label_root?.entity_label_id !== null ? {entityLabelId: header.label_root.entity_label_id} : {}),
         entityClass: string(header, "entity_class"),
         ownershipModel: string(header, "ownership_model"),
       },

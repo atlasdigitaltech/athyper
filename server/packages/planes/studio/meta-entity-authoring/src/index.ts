@@ -116,3 +116,7 @@ export * from "./native-supplemental-save.js";
 
 export * from "./native-reference-relations.js";
 export * from "./native-reference-capability.js";
+
+export * from "./native-detail-badges.js";
+export * from "./native-localized-labels.js";
+export * from "./native-presentation-localization.js";

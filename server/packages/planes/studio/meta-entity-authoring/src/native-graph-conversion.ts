@@ -1,3 +1,12 @@
+import { validateNativeEntityLabelOwner } from "./native-localized-labels.js";
+import {
+  validateNativeEntityLabelDerivation,
+  type NativeEntityLabelDerivation,
+} from "./native-presentation-localization.js";
+import {
+  validateNativeBadgeDerivations,
+  type NativeBadgeDerivation,
+} from "./native-detail-badges.js";
 import {
   validateNativeRelationDerivations,
   type NativeRelationDerivation,
@@ -196,6 +205,8 @@ export interface NativeNestedConversionAdapter {
   /** Only explicit inline field sections may introduce new section identities.
    * Existing members remain exact except explicit validated unplaced UUID binding dispositions. */
   readonly relationDerivations?: readonly NativeRelationDerivation[];
+  readonly badgeDerivations?: readonly NativeBadgeDerivation[];
+  readonly entityLabelDerivation?: NativeEntityLabelDerivation;
   readonly sectionDerivations?: readonly NativeSectionDerivation[];
   readonly bindingRetirements?: readonly NativeBindingRetirement[];
   readonly resource: NativeConversionResource;
@@ -376,6 +387,8 @@ export function prepareNativeGraphConversion(
         preparedHash: string;
         dependencies?: readonly NativeConversionResource[];
         relationDerivations?: readonly NativeRelationDerivation[];
+        badgeDerivations?: readonly NativeBadgeDerivation[];
+        entityLabelDerivation?: NativeEntityLabelDerivation;
         sectionDerivations?: readonly NativeSectionDerivation[];
         bindingRetirements?: readonly NativeBindingRetirement[];
       }
@@ -387,6 +400,8 @@ export function prepareNativeGraphConversion(
       sectionDerivations: nested.sectionDerivations,
       bindingRetirements: nested.bindingRetirements,
       relationDerivations: nested.relationDerivations,
+      badgeDerivations: nested.badgeDerivations,
+      entityLabelDerivation: nested.entityLabelDerivation,
     });
     installed(metadata.resource, "/nested/resource");
     if (metadata.dependencies) {
@@ -427,7 +442,14 @@ export function prepareNativeGraphConversion(
       fail("NATIVE_CONVERSION_LIMIT", "/prepared");
     // Nested presentation conversion cannot rewrite operations, protected
     // controls, scopes, permissions, policies or other retained declarations.
+    if (metadata.entityLabelDerivation)
+      validateNativeEntityLabelDerivation(
+        source,
+        prepared,
+        metadata.entityLabelDerivation,
+      );
     const extensible = new Set([
+      ...(metadata.entityLabelDerivation ? ["entity"] : []),
       "referenceMembers",
       "ownedLabels",
       "fieldIdentities",
@@ -548,6 +570,9 @@ export function prepareNativeGraphConversion(
           "/nested/sectionDerivations",
         );
     }
+    const badgeDerivations = metadata.badgeDerivations ?? [];
+    if (badgeDerivations.length)
+      validateNativeBadgeDerivations(source, prepared, badgeDerivations);
     const retirements = metadata.bindingRetirements ?? [];
     validateNativeBindingRetirements(source, retirements);
     for (const kind of nativeConversionFamilies) {
@@ -566,6 +591,9 @@ export function prepareNativeGraphConversion(
               )
               .map((row) => row.id),
             ...(kind === "surfaceSections" ? derivations.map((d) => d.id) : []),
+            ...(kind === "surfaceFieldBindings"
+              ? badgeDerivations.map((d) => d.id)
+              : []),
           ].sort(),
         ) !== canonicalJson(after.map((row) => row.id).sort())
       )
@@ -597,9 +625,15 @@ export function prepareNativeGraphConversion(
     context.validateRetained(structuredClone(prepared));
     nestedProof = {
       adapter: structuredClone(metadata.resource),
+      ...(metadata.entityLabelDerivation
+        ? { entityLabelDerivation: metadata.entityLabelDerivation }
+        : {}),
       sourceHash: sha256(source),
       preparedHash: sha256(prepared),
       ...(relationDerivations.length ? { relationDerivations } : {}),
+      ...(badgeDerivations.length
+        ? { badgeDerivations: structuredClone(badgeDerivations) }
+        : {}),
       ...(retirements.length
         ? { bindingRetirements: structuredClone(retirements) }
         : {}),
@@ -737,6 +771,7 @@ export function prepareNativeGraphConversion(
       authoringSchemaHash: context.authoringSchemaHash,
     },
   } as unknown as NativeMetaEntityGraph;
+  validateNativeEntityLabelOwner(candidate, context.source);
   if (nested) {
     // Reconstruct every scalar family from the final target, then invert nested
     // normalization. Exact equality binds all source paths, including absence.
@@ -753,16 +788,20 @@ export function prepareNativeGraphConversion(
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema: nestedProof?.relationDerivations?.length
-      ? ("entity.native-graph-conversion-proof/5" as const)
-      : nestedProof?.bindingRetirements?.length
-        ? ("entity.native-graph-conversion-proof/4" as const)
-        : nestedProof?.sectionDerivations?.length
-          ? ("entity.native-graph-conversion-proof/3" as const)
-          : nestedProof ||
-              Object.values(proof).some((p) => p.dependencies?.length)
-            ? ("entity.native-graph-conversion-proof/2" as const)
-            : ("entity.native-graph-conversion-proof/1" as const),
+    schema: nestedProof?.entityLabelDerivation
+      ? ("entity.native-graph-conversion-proof/7" as const)
+      : nestedProof?.badgeDerivations?.length
+        ? ("entity.native-graph-conversion-proof/6" as const)
+        : nestedProof?.relationDerivations?.length
+          ? ("entity.native-graph-conversion-proof/5" as const)
+          : nestedProof?.bindingRetirements?.length
+            ? ("entity.native-graph-conversion-proof/4" as const)
+            : nestedProof?.sectionDerivations?.length
+              ? ("entity.native-graph-conversion-proof/3" as const)
+              : nestedProof ||
+                  Object.values(proof).some((p) => p.dependencies?.length)
+                ? ("entity.native-graph-conversion-proof/2" as const)
+                : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
     contextHash: sha256({
       coreLayoutEvidenceHash,
@@ -818,8 +857,28 @@ export function composeNativeNestedConversionAdapters(
       "/adapters",
     );
   const steps = [...adapters];
+  const entityOwners = steps.filter((a) => a.entityLabelDerivation);
+  if (entityOwners.length > 1)
+    throw new FoundationContractError(
+      "NATIVE_CONVERSION_ROOT_OWNER_CONFLICT",
+      "/adapters",
+    );
   return {
+    ...(entityOwners.length
+      ? {
+          entityLabelDerivation: structuredClone(
+            entityOwners[0]!.entityLabelDerivation!,
+          ),
+        }
+      : {}),
     resource: structuredClone(resource),
+    ...(steps.some((a) => a.badgeDerivations?.length)
+      ? {
+          badgeDerivations: steps.flatMap((a) =>
+            structuredClone(a.badgeDerivations ?? []),
+          ),
+        }
+      : {}),
     ...(steps.some((a) => a.relationDerivations?.length)
       ? {
           relationDerivations: steps.flatMap((a) =>

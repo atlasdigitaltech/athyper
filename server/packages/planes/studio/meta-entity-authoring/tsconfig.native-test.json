@@ -36,7 +36,10 @@
     "src/native-surface-identity.test.ts",
     "src/legacy-native-navigation-adapter.test.ts",
     "src/native-reference-relations.test.ts",
-    "src/native-reference-capability.test.ts"
+    "src/native-reference-capability.test.ts",
+    "src/native-detail-badges.test.ts",
+    "src/native-localized-labels.test.ts",
+    "src/native-presentation-localization.test.ts"
   ],
   "exclude": [
     "node_modules",

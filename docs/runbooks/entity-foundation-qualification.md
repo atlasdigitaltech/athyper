@@ -645,3 +645,45 @@ revision/idempotency/readback evidence, and native whole-release compilation.
 No canonical conversion transaction or release compiler is claimed by these
 component proofs. Cutover/publication guards remain enforced; no DEV migration,
 grant, protected-state initialization, publication or activation occurred.
+
+
+### Localization/badge source accounting — 7 October 2026
+
+Selected localization conversion resolves explicit entity/surface/field/choice
+owner IDs into scoped owned labels and translations. Minimal declarations and
+full translation projections round-trip without dropping text or changing
+locales. The root label owner is read from the proposed change-set FK only for
+native snapshots; a present unresolved or cross-scope owner rejects in current
+and historical reads. There is no root-owner write command or installed-schema
+claim in this checkpoint.
+
+Selected badges become explicit typed badge bindings plus field-choice tones.
+Plain enum representation is mandatory; masked/omitted fields, unrepresented
+options, changed target rows and stale declaration hashes reject. Field bindings
+remain separate. Scalar position conversion now respects the independently
+admitted binding kind, matching the native sibling-order contract.
+
+The existing graph coordinator/composition records badge derivations in proof
+version 6 and root-label derivation in version 7. These are source-bound
+append-only admissions, not arbitrary member additions or entity descriptor
+rewrites. Resource metadata is captured before conversion callbacks run.
+
+Country and State Region selected localization/choices/badge paths compose and
+reconstruct their original source through the same implementation. Supplied
+fixture binding IDs and all host/storage/security/resource contexts are
+synthetic; this does not attest historical contributor reconstruction or full
+reference-source conversion. The coordinator regression also uses synthetic
+family adapters and is evidence of orchestration checks only.
+
+Remaining engineering: complete whole-source integration, canonical 2.3-to-native
+atomic application with original/new immutable history, revision/replay/rollback
+and exact readback, and native whole-release compiler/reader evidence. Root-owner
+DDL and native guards must be included in the reviewed conversion manifest.
+No database migration/application, product-write grant, protected-state
+initialization, publication or activation occurred.
+
+Validation: 650 authoring tests pass across 116 files; four existing opt-in SQL
+cases are skipped by the ordinary run. Source/test and focused native-test
+typechecks, all six existing generated-contract checks and the 13-task bounded
+build pass. New tests are enrolled in foundation CI. No canonical conversion SQL
+qualification or native whole-release compiler test is claimed by this result.

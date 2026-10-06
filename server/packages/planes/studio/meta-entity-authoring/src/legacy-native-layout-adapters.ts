@@ -156,13 +156,23 @@ export function createLegacyNativeLayoutAdapters(
           .join()
     )
       fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/" + family);
-    // Scope slots by exact surface and parent. Array order is not presentation order.
+    // Scope slots by exact surface, parent and independently admitted binding kind. Array order is not presentation order.
     const sibling = (row: Readonly<Record<string, unknown>>) =>
       canonicalJson([
         row.entitySurfaceId,
         family === "surfaceSections"
           ? (row.parentSectionId ?? null)
           : (row.entitySurfaceSectionId ?? null),
+        ...(family === "surfaceFieldBindings"
+          ? [
+              row.bindingKind ??
+                (
+                  mappings[String(row.id)]?.initialization as {
+                    bindingKind?: string;
+                  }
+                )?.bindingKind,
+            ]
+          : []),
       ]);
     const slots = new Map<string, number[]>();
     const sourceGroups = new Map<string, string>();
