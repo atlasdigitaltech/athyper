@@ -420,9 +420,25 @@ These tests now admit only the existing recovery-parser / telemetry imports and
 use local historical compatibility fixtures. All 30 targeted host cases pass.
 Production handlers and isolated-entrypoint composition were not changed.
 All three repaired publication/metadata package typechecks pass. Six generated
-contract drift checks pass. Full aggregate qualification must be rerun against
-a stable source revision; the earlier run changed during execution and is not
-a success receipt.
+contract drift checks pass. The initial aggregate run changed during execution
+and is not a success receipt. The subsequent clean/stable run at commit
+`943d10d585bc4a4b7299315a55ef221fc879b143` passed on 7 October 2026:
+
+| Aggregate suite | Passed | Existing optional/integration skips |
+| --- | --- | --- |
+| Authoring | 591 | 3 |
+| Records | 534 | 4 |
+| Publication | 458 | 0 |
+| Host | 994 | 31 |
+
+Evidence: instance artifact
+`entity-foundation/2026-10-06T18-55-28.971Z-632081/summary.json` records
+`stable=true`, `frozenCommit=true`, `passed=true`, identical clean-tree
+fingerprints, and `qualification=source-tests-only`. No required qualification
+file was missing or skipped. This existing aggregate's declared entity scope is
+Country/Principal; these totals are regression evidence, not a whole-source
+Country/State Region conversion receipt. Remote CI, deployment and live reads
+remain independently unqualified.
 
 Whole-source conversion, technical-binding disposition, atomic application,
 whole-release compilation and deployed F6/F8/F9 remain open. Cutover remains
