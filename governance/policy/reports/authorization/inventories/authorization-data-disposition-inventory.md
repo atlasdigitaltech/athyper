@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 774
+- Cataloged database tables: 779
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 56 |
+| metadata_authority | 61 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -676,6 +676,11 @@ or multiply classified runtime objects.
 | `mesh.registration_exchange` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `metadata.entity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_access_permission` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_ai_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_ai_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_ai_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_ai_reference` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_ai_term` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_authoring_command_receipt` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_authorization_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_baseline_import` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |

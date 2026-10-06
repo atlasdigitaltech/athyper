@@ -4,9 +4,16 @@ import {
   referencePredicateOwners,
 } from "./reference-member-contract.js";
 const literal = (v: string) => `'${v.replaceAll("'", "''")}'`;
-function check(node: ContractNode, column: string): string {
+export function contractColumnCheck(
+  node: ContractNode,
+  column: string,
+): string {
   if ("anyOf" in node)
-    return "(" + node.anyOf.map((n) => check(n, column)).join(" OR ") + ")";
+    return (
+      "(" +
+      node.anyOf.map((n) => contractColumnCheck(n, column)).join(" OR ") +
+      ")"
+    );
   if ("const" in node) return `${column}=${literal(node.const)}`;
   if (node.type === "null") return `${column} IS NULL`;
   if (node.type === "integer")
@@ -61,7 +68,7 @@ export function referenceMemberDdl(): string {
   for (const descriptor of members) {
     const columns = Object.values(descriptor.columns).map(
       (c) =>
-        `${c.column} ${c.sqlType}${c.nullable ? "" : " NOT NULL"} CHECK(${check(c.sqlType === "text" || c.sqlType === "integer" || c.sqlType.endsWith("[]") ? c.node : c.nullable ? { anyOf: [{ type: "null" }, { type: "boolean" }] } : { type: "boolean" }, c.column)})`,
+        `${c.column} ${c.sqlType}${c.nullable ? "" : " NOT NULL"} CHECK(${contractColumnCheck(c.sqlType === "text" || c.sqlType === "integer" || c.sqlType.endsWith("[]") ? c.node : c.nullable ? { anyOf: [{ type: "null" }, { type: "boolean" }] } : { type: "boolean" }, c.column)})`,
     );
     const uniques = descriptor.unique.map(
       (keys, i) =>

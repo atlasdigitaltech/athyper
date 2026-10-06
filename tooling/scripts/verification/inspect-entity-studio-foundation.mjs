@@ -16,6 +16,24 @@ const referenceContract = JSON.parse(
 );
 const coreLayoutContract = JSON.parse(readFileSync(new URL(
   "../../../server/packages/contracts/meta-entity-authoring/src/normalized-core.generated.json", import.meta.url), "utf8"));
+const aiContract = JSON.parse(readFileSync(new URL("../../../server/packages/contracts/meta-entity-authoring/src/native-ai.generated.json", import.meta.url), "utf8"));
+export function assessAiColumns(tables) {
+  const actual = new Map((Array.isArray(tables) ? tables : []).map(t => [t.name, t]));
+  const families = Object.entries(aiContract.members).map(([family, d]) => {
+    const table = actual.get(d.table);
+    const columns = new Map((table?.columns ?? []).map(c => [c.name, c]));
+    const missing = Object.values(d.columns).filter(c => {
+      const a = columns.get(c.column);
+      return !a || a.type !== c.sqlType || a.nullable !== c.nullable;
+    }).map(c => c.column);
+    return { family, table: d.table, present: table?.present === true, forcedRls: table?.rls === true && table?.forced === true, missing };
+  });
+  return { contractHash: aiContract.contractHash, families,
+    columnsPresent: families.every(f => f.present && f.missing.length === 0),
+    missingColumnCount: families.reduce((n,f) => n+f.missing.length,0),
+    cutoverQualified: false };
+}
+
 /** Presence inventory only. Installation cannot attest constraint cutover,
  * canonical writer selection, human governance or publication compatibility. */
 export function assessCoreLayoutColumns(tables) {
@@ -91,6 +109,7 @@ export function assessFoundationSchema(evidence) {
     missingTables: missing,
     selectedMemberColumns: assessReferenceColumns(evidence.tables),
     coreLayoutColumns: assessCoreLayoutColumns(evidence.tables),
+    aiColumns: assessAiColumns(evidence.tables),
     tablesWithoutForcedRls: unguarded,
     qualification: "not-established",
     outstandingEvidence: [
@@ -109,7 +128,7 @@ export function inspectFoundation({ container, database, runtimeRole }) {
   for (const value of [container, database, runtimeRole])
     if (!/^[a-zA-Z0-9_-]+$/.test(value))
       throw Error("FOUNDATION_INSPECTION_COORDINATE_INVALID");
-  const names = requiredReferenceTables.map((name) => `('${name}')`).join(",");
+  const names = [...new Set([...requiredReferenceTables, ...Object.values(aiContract.members).map(d => d.table)])].map((name) => `('${name}')`).join(",");
   const query = `BEGIN READ ONLY;
     SELECT jsonb_build_object(
       'database',current_database(),'inspectionRole',current_user,'runtimeRole','${runtimeRole}',

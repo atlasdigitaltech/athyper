@@ -1,0 +1,991 @@
+{
+  "contractHash": "512c9ea3fc15e6d6a9396a79a196144d745329a53c20c4f9af7df0c450adb2b7",
+  "schema": "entity.authoring-native-ai-descriptor/1",
+  "members": {
+    "profile": {
+      "table": "entity_ai_profile",
+      "columns": {
+        "enabled": {
+          "column": "enabled",
+          "node": {
+            "type": "boolean"
+          },
+          "sqlType": "boolean",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "description": {
+          "column": "description",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": false
+        },
+        "aliases": {
+          "column": "aliases",
+          "node": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "sqlType": "text[]",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "contextKinds": {
+          "column": "context_kinds",
+          "node": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "manage"
+                },
+                {
+                  "const": "record"
+                }
+              ]
+            }
+          },
+          "sqlType": "text[]",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "searchProfileId": {
+          "column": "search_profile_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "reference": "entity_search_profile",
+          "serviceOwned": false
+        },
+        "vocabularyLocale": {
+          "column": "vocabulary_locale",
+          "node": {
+            "anyOf": [
+              {
+                "const": "en"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": false
+        }
+      },
+      "unique": [
+        []
+      ],
+      "checks": [
+        "cardinality(aliases)<=20 AND metadata.fn_native_ai_text_array_valid(aliases,80)",
+        "cardinality(context_kinds)<=2 AND metadata.fn_native_ai_text_array_valid(context_kinds,80) AND (NOT enabled OR cardinality(context_kinds)>0)"
+      ]
+    },
+    "field": {
+      "table": "entity_ai_field",
+      "columns": {
+        "aiProfileId": {
+          "column": "ai_profile_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_ai_profile",
+          "serviceOwned": false
+        },
+        "entityFieldId": {
+          "column": "entity_field_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_field",
+          "serviceOwned": false
+        },
+        "position": {
+          "column": "position",
+          "node": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "sqlType": "integer",
+          "nullable": false,
+          "serviceOwned": false
+        }
+      },
+      "unique": [
+        [
+          "ai_profile_id",
+          "entity_field_id"
+        ],
+        [
+          "ai_profile_id",
+          "position"
+        ]
+      ],
+      "checks": []
+    },
+    "binding": {
+      "table": "entity_ai_binding",
+      "columns": {
+        "aiProfileId": {
+          "column": "ai_profile_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_ai_profile",
+          "serviceOwned": false
+        },
+        "bindingKind": {
+          "column": "binding_kind",
+          "node": {
+            "anyOf": [
+              {
+                "const": "insight_provider"
+              },
+              {
+                "const": "action"
+              },
+              {
+                "const": "presentation_profile"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "contractKey": {
+          "column": "contract_key",
+          "node": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 127
+          },
+          "sqlType": "text",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "contractVersion": {
+          "column": "contract_version",
+          "node": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "sqlType": "integer",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "required": {
+          "column": "required",
+          "node": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "boolean",
+          "nullable": true,
+          "serviceOwned": false
+        },
+        "operationId": {
+          "column": "operation_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "reference": "entity_operation",
+          "serviceOwned": false
+        },
+        "position": {
+          "column": "position",
+          "node": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "sqlType": "integer",
+          "nullable": false,
+          "serviceOwned": false
+        }
+      },
+      "unique": [
+        [
+          "ai_profile_id",
+          "binding_kind",
+          "contract_key"
+        ],
+        [
+          "ai_profile_id",
+          "binding_kind",
+          "position"
+        ]
+      ],
+      "checks": [
+        "(binding_kind='action')=(operation_id IS NOT NULL)",
+        "binding_kind='insight_provider' OR required IS NULL"
+      ]
+    },
+    "reference": {
+      "table": "entity_ai_reference",
+      "columns": {
+        "aiProfileId": {
+          "column": "ai_profile_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_ai_profile",
+          "serviceOwned": false
+        },
+        "referenceKind": {
+          "column": "reference_kind",
+          "node": {
+            "anyOf": [
+              {
+                "const": "entity_relation"
+              },
+              {
+                "const": "registered_collection"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "relationId": {
+          "column": "relation_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "reference": "entity_relation",
+          "serviceOwned": false
+        },
+        "sourceFieldId": {
+          "column": "source_field_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "reference": "entity_field",
+          "serviceOwned": false
+        },
+        "collectionContractKey": {
+          "column": "collection_contract_key",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": false
+        },
+        "collectionContractVersion": {
+          "column": "collection_contract_version",
+          "node": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "integer",
+          "nullable": true,
+          "serviceOwned": false
+        },
+        "position": {
+          "column": "position",
+          "node": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "sqlType": "integer",
+          "nullable": false,
+          "serviceOwned": false
+        }
+      },
+      "unique": [
+        [
+          "ai_profile_id",
+          "position"
+        ]
+      ],
+      "checks": [
+        "(reference_kind='entity_relation' AND relation_id IS NOT NULL AND source_field_id IS NOT NULL AND collection_contract_key IS NULL AND collection_contract_version IS NULL) OR (reference_kind='registered_collection' AND relation_id IS NULL AND source_field_id IS NULL AND collection_contract_key IS NOT NULL AND collection_contract_version IS NOT NULL)"
+      ]
+    },
+    "term": {
+      "table": "entity_ai_term",
+      "columns": {
+        "aiProfileId": {
+          "column": "ai_profile_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_ai_profile",
+          "serviceOwned": false
+        },
+        "providerBindingId": {
+          "column": "provider_binding_id",
+          "node": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sqlType": "uuid",
+          "nullable": false,
+          "reference": "entity_ai_binding",
+          "serviceOwned": false
+        },
+        "phrase": {
+          "column": "phrase",
+          "node": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "sqlType": "text",
+          "nullable": false,
+          "serviceOwned": false
+        },
+        "originKind": {
+          "column": "origin_kind",
+          "node": {
+            "anyOf": [
+              {
+                "const": "authored"
+              },
+              {
+                "const": "learning_candidate"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": false,
+          "serviceOwned": true
+        },
+        "originPlane": {
+          "column": "origin_plane",
+          "node": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "studio"
+                  },
+                  {
+                    "const": "neon"
+                  },
+                  {
+                    "const": "mesh"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": true
+        },
+        "originSourceKind": {
+          "column": "origin_source_kind",
+          "node": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "platform"
+                  },
+                  {
+                    "const": "tenant"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": true
+        },
+        "originTenantId": {
+          "column": "origin_tenant_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "serviceOwned": true
+        },
+        "originCandidateId": {
+          "column": "origin_candidate_id",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "uuid",
+          "nullable": true,
+          "serviceOwned": true
+        },
+        "originProposalHash": {
+          "column": "origin_proposal_hash",
+          "node": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sqlType": "text",
+          "nullable": true,
+          "serviceOwned": true
+        }
+      },
+      "unique": [
+        [
+          "ai_profile_id",
+          "phrase",
+          "provider_binding_id"
+        ]
+      ],
+      "checks": [
+        "(origin_kind='authored' AND num_nonnulls(origin_plane,origin_source_kind,origin_tenant_id,origin_candidate_id,origin_proposal_hash)=0) OR (origin_kind='learning_candidate' AND origin_plane IS NOT NULL AND origin_candidate_id IS NOT NULL AND origin_proposal_hash IS NOT NULL AND ((origin_source_kind='platform' AND origin_tenant_id IS NULL) OR (origin_source_kind='tenant' AND origin_tenant_id IS NOT NULL)))"
+      ]
+    }
+  },
+  "jsonSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "profile",
+      "field",
+      "binding",
+      "reference",
+      "term"
+    ],
+    "properties": {
+      "profile": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "enabled",
+            "description",
+            "aliases",
+            "contextKinds",
+            "searchProfileId",
+            "vocabularyLocale"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "aliases": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            },
+            "contextKinds": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "manage"
+                  },
+                  {
+                    "type": "string",
+                    "const": "record"
+                  }
+                ]
+              }
+            },
+            "searchProfileId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "vocabularyLocale": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "en"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "field": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "aiProfileId",
+            "entityFieldId",
+            "position"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "aiProfileId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "entityFieldId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "position": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      },
+      "binding": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "aiProfileId",
+            "bindingKind",
+            "contractKey",
+            "contractVersion",
+            "required",
+            "operationId",
+            "position"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "aiProfileId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "bindingKind": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "insight_provider"
+                },
+                {
+                  "type": "string",
+                  "const": "action"
+                },
+                {
+                  "type": "string",
+                  "const": "presentation_profile"
+                }
+              ]
+            },
+            "contractKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 127
+            },
+            "contractVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "required": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "operationId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "position": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      },
+      "reference": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "aiProfileId",
+            "referenceKind",
+            "relationId",
+            "sourceFieldId",
+            "collectionContractKey",
+            "collectionContractVersion",
+            "position"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "aiProfileId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "referenceKind": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "entity_relation"
+                },
+                {
+                  "type": "string",
+                  "const": "registered_collection"
+                }
+              ]
+            },
+            "relationId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sourceFieldId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "collectionContractKey": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 127
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "collectionContractVersion": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "position": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      },
+      "term": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "aiProfileId",
+            "providerBindingId",
+            "phrase",
+            "originKind",
+            "originPlane",
+            "originSourceKind",
+            "originTenantId",
+            "originCandidateId",
+            "originProposalHash"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "aiProfileId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "providerBindingId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "phrase": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "originKind": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "authored"
+                },
+                {
+                  "type": "string",
+                  "const": "learning_candidate"
+                }
+              ]
+            },
+            "originPlane": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "studio"
+                    },
+                    {
+                      "type": "string",
+                      "const": "neon"
+                    },
+                    {
+                      "type": "string",
+                      "const": "mesh"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "originSourceKind": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "platform"
+                    },
+                    {
+                      "type": "string",
+                      "const": "tenant"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "originTenantId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "originCandidateId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "originProposalHash": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "limitations": [
+    "component only; native graph enrollment and atomic persistence pending",
+    "vocabulary and registered-collection adapters unavailable",
+    "no provider installation, record-read authorization, product-write or deployed qualification"
+  ]
+}

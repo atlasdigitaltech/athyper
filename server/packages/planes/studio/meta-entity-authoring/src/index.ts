@@ -95,3 +95,5 @@ export * from "./native-list-settings.js";
 export * from "./native-surface-identity.js";
 
 export * from "./legacy-native-navigation-adapter.js";
+
+export * from "./native-ai.js";

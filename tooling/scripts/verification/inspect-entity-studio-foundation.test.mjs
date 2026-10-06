@@ -68,3 +68,19 @@ test("core/layout target columns are inventoried without claiming cutover", asyn
   assert.equal(complete.cutoverQualified, false);
   assert.ok(complete.requiredEvidence.includes("sealed-history and source-provenance preservation"));
 });
+
+test("AI target inventory distinguishes table, type, NULL and RLS evidence from cutover", async () => {
+ const {assessAiColumns} = await import("./inspect-entity-studio-foundation.mjs");
+ const {readFileSync} = await import("node:fs");
+ const contract=JSON.parse(readFileSync(new URL("../../../server/packages/contracts/meta-entity-authoring/src/native-ai.generated.json",import.meta.url),"utf8"));
+ const tables=Object.values(contract.members).map(d=>({name:d.table,present:true,rls:true,forced:true,columns:Object.values(d.columns).map(c=>({name:c.column,type:c.sqlType,nullable:c.nullable}))}));
+ assert.equal(assessAiColumns([]).missingColumnCount,32);
+ assert.equal(assessAiColumns(tables).columnsPresent,true);
+ assert.equal(assessAiColumns(tables).cutoverQualified,false);
+ tables[0].columns[0].nullable=true;
+ tables[0].forced=false;
+ const changed=assessAiColumns(tables);
+ assert.equal(changed.columnsPresent,false);
+ assert.equal(changed.families[0].forcedRls,false);
+ assert.deepEqual(changed.families[0].missing,["enabled"]);
+});
