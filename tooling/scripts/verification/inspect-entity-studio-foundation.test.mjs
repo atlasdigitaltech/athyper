@@ -96,3 +96,11 @@ test("operation target presence/type evidence cannot qualify cutover",async()=>{
  const drift=assessOperationColumns([{name:"entity_operation",present:true,columns:columns.map(c=>c.name==="handler_version"?{...c,type:"text"}:c)}]);
  assert.deepEqual(drift.mismatched,["handler_version"]);
 });
+
+test('installed snapshot guard signatures remain presence evidence only', () => {
+  const absent = assessFoundationSchema({database: 'fixture',tables: []});
+  assert.deepEqual(absent.nativeSnapshotGuards,{coreLayout: false,expanded: false,qualified: false});
+  const present = assessFoundationSchema({database: 'fixture',tables: [],nativeSnapshotGuards: {coreLayout: true,expanded: true}});
+  assert.deepEqual(present.nativeSnapshotGuards,{coreLayout: true,expanded: true,qualified: false});
+  assert.equal(present.productionEnabled,false);
+});

@@ -101,3 +101,5 @@ export * from "./native-ai.js";
 export * from "./native-authorization.js";
 export * from "./native-operation-storage.js";
 export * from "./native-detail-sections.js";
+
+export * from "./native-supplemental-storage.js";

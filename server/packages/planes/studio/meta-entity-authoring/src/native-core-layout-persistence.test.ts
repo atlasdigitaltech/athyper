@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Transaction } from "kysely";
-import type { NativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+import type {
+  NativeMetaEntityGraph,
+  NativeAuthoringSnapshot,
+} from "@athyper/server-contract-meta-entity-authoring";
 import {
   layoutFixture,
   layoutFixtureContext,
@@ -59,7 +62,7 @@ let current = state(),
   receipt: Record<string, unknown> | undefined;
 let snapshots: Map<
   number,
-  { graph: NativeMetaEntityGraph; graph_hash: string }
+  { graph: NativeAuthoringSnapshot; graph_hash: string }
 >;
 let installed: boolean;
 const graph = (): NativeMetaEntityGraph =>
@@ -121,7 +124,10 @@ beforeEach(() => {
     if (text.includes("to_jsonb(cs)")) return { rows: [{ source: root }] };
     if (text.includes("to_regprocedure"))
       return { rows: [{ available: installed }] };
-    if (text.includes("SELECT metadata.fn_assert_native_authoring_contract"))
+    if (
+      text.includes("SELECT metadata.fn_assert_native_authoring_contract") ||
+      text.includes("SELECT metadata.fn_assert_native_authoring_snapshot")
+    )
       return { rows: [] };
     if (text.includes("SELECT request_hash"))
       return { rows: receipt ? [receipt] : [] };
@@ -282,4 +288,58 @@ describe("native save protocol (mocked SQL; not database qualification)", () => 
     ).rejects.toThrow("writer failure");
     expect(receipt).toBeUndefined(); // Repository savepoint is responsible for SQL rollback, not this mock.
   });
+});
+
+it("retains expanded operation/AI branches in previous and saved native revisions", async () => {
+  root.native_core_layout_version = 2;
+  const p = { ...policy(), snapshotVersions: [2 as const] };
+  const expanded = (): NativeAuthoringSnapshot => ({
+    ...graph(),
+    contractSchema: "athyper.meta-entity-contract/2.5",
+    operations: [],
+    ai: { profile: [], field: [], binding: [], reference: [], term: [] },
+  });
+  const result = await saveNativeCoreLayoutCommands(tx, input(), p, async () =>
+    expanded(),
+  );
+  expect(result.revision).toBe(5);
+  expect(snapshots.get(4)!.graph.contractSchema).toBe(
+    "athyper.meta-entity-contract/2.5",
+  );
+  expect(snapshots.get(5)!.graph).toHaveProperty("ai", {
+    profile: [],
+    field: [],
+    binding: [],
+    reference: [],
+    term: [],
+  });
+  expect(
+    mock.execute.mock.calls.some(
+      ([text, values]) =>
+        text.includes("SELECT metadata.fn_assert_native_authoring_snapshot") &&
+        values[2] === 2,
+    ),
+  ).toBe(true);
+  expect(
+    await saveNativeCoreLayoutCommands(tx, input(), p, async () => expanded()),
+  ).toEqual(result);
+  expect(p.admit).toHaveBeenCalledTimes(2);
+});
+it("requires explicit expanded host admission and refuses a downgraded snapshot callback", async () => {
+  root.native_core_layout_version = 2;
+  await expect(
+    saveNativeCoreLayoutCommands(tx, input(), policy(), async () => graph()),
+  ).rejects.toMatchObject({ code: "NATIVE_AUTHORING_SOURCE_NOT_INITIALIZED" });
+  await expect(
+    saveNativeCoreLayoutCommands(
+      tx,
+      input(),
+      { ...policy(), snapshotVersions: [2] },
+      async () => graph(),
+    ),
+  ).rejects.toMatchObject({
+    code: "NATIVE_AUTHORING_SNAPSHOT_SOURCE_MISMATCH",
+  });
+  expect(mock.write).not.toHaveBeenCalled();
+  expect(receipt).toBeUndefined();
 });

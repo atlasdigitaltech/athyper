@@ -10,6 +10,7 @@
   "include": [
     "src/native-core-layout-command-reducer.test.ts",
     "src/native-core-layout-persistence.test.ts",
+    "src/native-supplemental-storage.test.ts",
     "src/native-core-layout.postgres.test.ts",
     "src/native-graph-conversion.test.ts",
     "src/legacy-native-runtime.test.ts",

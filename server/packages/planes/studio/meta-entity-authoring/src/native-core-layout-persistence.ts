@@ -7,7 +7,7 @@ import {
   validateFoundationNode,
   referenceUuid,
   type NativeCoreLayoutCommandPolicy,
-  type NativeMetaEntityGraph,
+  type NativeAuthoringSnapshot,
   type NormalizedLayoutContext,
   type LabelCommandResult,
 } from "@athyper/server-contract-meta-entity-authoring";
@@ -38,6 +38,8 @@ export interface NativeCommandInput extends NormalizedSaveCoordinate {
  * This contract does not itself qualify a host or grant product database writes. */
 export interface NativeAuthoringPolicy {
   readonly commands: NativeCoreLayoutCommandPolicy;
+  /** Explicit installed host admission; absence supports only the original source. */
+  readonly snapshotVersions?: readonly (1 | 2)[];
   admit(
     tx: Tx,
     input: NativeCommandInput,
@@ -54,6 +56,7 @@ export interface NativeAuthoringPolicy {
   ): Promise<NativeMemberInitializer>;
 }
 export interface NativeDraftRoot {
+  readonly nativeVersion?: 1 | 2;
   readonly status: string;
   readonly lockVersion: number;
   readonly sourceKind: "product" | "tenant_entity";
@@ -66,6 +69,7 @@ export async function lockNativeDraft(
   tx: Tx,
   c: NormalizedSaveCoordinate,
   schemaHash: string,
+  versions: readonly (1 | 2)[] = [1],
 ): Promise<NativeDraftRoot> {
   if (!tx.isTransaction)
     fail(
@@ -91,7 +95,8 @@ export async function lockNativeDraft(
       "The scoped draft is unavailable.",
     );
   if (
-    row.native_core_layout_version !== 1 ||
+    !versions.includes(row.native_core_layout_version as 1 | 2) ||
+    ![1, 2].includes(row.native_core_layout_version as number) ||
     row.authoring_schema_hash !== schemaHash
   )
     fail(
@@ -120,6 +125,7 @@ export async function lockNativeDraft(
   if (!Number.isSafeInteger(revision) || revision < 0)
     fail("AUTHORING_REVISION_INVALID", "Invalid source revision.");
   return {
+    nativeVersion: row.native_core_layout_version as 1 | 2,
     status: String(row.status),
     lockVersion: revision,
     sourceKind: sourceKind as NativeDraftRoot["sourceKind"],
@@ -132,7 +138,26 @@ export async function assertNativeAuthoringContract(
   tx: Tx,
   c: NormalizedSaveCoordinate,
   hash: string,
+  version: 1 | 2 = 1,
 ): Promise<void> {
+  if (version === 2) {
+    const available = (
+      await sql<{
+        available: boolean;
+      }>`SELECT to_regprocedure('metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)') IS NOT NULL AS available`.execute(
+        tx,
+      )
+    ).rows[0]?.available;
+    if (!available)
+      fail(
+        "ENTITY_NATIVE_SNAPSHOT_CUTOVER_REQUIRED",
+        "The expanded snapshot schema conformance guard is not installed.",
+      );
+    await sql`SELECT metadata.fn_assert_native_authoring_snapshot(${c.changeSetId}::uuid,${hash},${version})`.execute(
+      tx,
+    );
+    return;
+  }
   const available = (
     await sql<{
       available: boolean;
@@ -154,14 +179,14 @@ async function capture(
   input: NativeCommandInput,
   revision: number,
   kind: "previous" | "saved",
-  graph: NativeMetaEntityGraph,
+  graph: NativeAuthoringSnapshot,
 ) {
   await sql`INSERT INTO snapshot.entity_draft_save(change_set_id,lock_version,tenant_id,graph,graph_hash,captured_by,capture_kind) VALUES(${input.changeSetId}::uuid,${revision},${input.tenantId}::uuid,${canonicalJson(graph)}::jsonb,${sha256(graph)},${input.actorId}::uuid,${kind}) ON CONFLICT(change_set_id,lock_version) DO NOTHING`.execute(
     tx,
   );
   const stored = (
     await sql<{
-      graph: NativeMetaEntityGraph;
+      graph: NativeAuthoringSnapshot;
       graph_hash: string;
     }>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(
       tx,
@@ -182,7 +207,7 @@ export async function saveNativeCoreLayoutCommands(
   tx: Tx,
   input: NativeCommandInput,
   policy: NativeAuthoringPolicy,
-  snapshot: (root: NativeDraftRoot) => Promise<NativeMetaEntityGraph>,
+  snapshot: (root: NativeDraftRoot) => Promise<NativeAuthoringSnapshot>,
 ): Promise<LabelCommandResult> {
   const batch = parseNativeCoreLayoutCommands(input.batch, policy.commands);
   if (!parseIdempotencyKey(batch.idempotencyKey).ok)
@@ -196,8 +221,14 @@ export async function saveNativeCoreLayoutCommands(
     tx,
     input,
     policy.commands.authoringSchemaHash,
+    policy.snapshotVersions,
   );
-  await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash);
+  await assertNativeAuthoringContract(
+    tx,
+    input,
+    root.authoringSchemaHash,
+    root.nativeVersion,
+  );
   const hash = fingerprintCommand({ ...input, batch });
   const receipt = (
     await sql<{
@@ -285,6 +316,7 @@ export async function saveNativeCoreLayoutCommands(
     );
   if (change) {
     const previous = await snapshot(root);
+    assertSnapshotSource(previous, input, root);
     const advanced = (
       await sql<{
         revision: string;
@@ -314,7 +346,9 @@ export async function saveNativeCoreLayoutCommands(
         "NATIVE_AUTHORING_PERSISTENCE_MISMATCH",
         "The stored final graph differs from the accepted commands.",
       );
-    await capture(tx, input, revision, "saved", await snapshot(root));
+    const saved = await snapshot(root);
+    assertSnapshotSource(saved, input, root);
+    await capture(tx, input, revision, "saved", saved);
   }
   await sql`INSERT INTO metadata.entity_authoring_command_receipt(change_set_id,tenant_id,actor_id,idempotency_key,request_hash,expected_revision,revision,changed,identities) VALUES(${input.changeSetId}::uuid,${input.tenantId}::uuid,${input.actorId}::uuid,${batch.idempotencyKey},${hash},${batch.expectedRevision},${revision},${change},${JSON.stringify(next.identities)}::jsonb)`.execute(
     tx,
@@ -325,4 +359,28 @@ export async function saveNativeCoreLayoutCommands(
     changed: change,
     identities: next.identities,
   };
+}
+
+function assertSnapshotSource(
+  graph: NativeAuthoringSnapshot,
+  input: NativeCommandInput,
+  root: NativeDraftRoot,
+): void {
+  const schema =
+    root.nativeVersion === 2
+      ? "athyper.meta-entity-contract/2.5"
+      : "athyper.meta-entity-contract/2.4";
+  const source = graph.authoringSource;
+  if (
+    graph.contractSchema !== schema ||
+    !source ||
+    source.entityId !== input.entityId ||
+    source.tenantId !== input.tenantId ||
+    source.sourceKind !== root.sourceKind ||
+    source.authoringSchemaHash !== root.authoringSchemaHash
+  )
+    fail(
+      "NATIVE_AUTHORING_SNAPSHOT_SOURCE_MISMATCH",
+      "Snapshot version, coordinates and descriptor must match the locked source.",
+    );
 }

@@ -26,3 +26,16 @@ export type NativeMetaEntityGraph = Omit<
   readonly surfaceSections: NormalizedLayoutGraph["section"];
   readonly surfaceFieldBindings: NormalizedLayoutGraph["binding"];
 };
+
+/** Expanded source version: operation and AI rows cannot be decoded by the 2.4
+ * repository. Protected controls remain stored/service-owned, outside commands. */
+export type ExpandedNativeMetaEntityGraph = Omit<
+  NativeMetaEntityGraph,
+  "contractSchema" | "operations"
+> & {
+  readonly contractSchema: "athyper.meta-entity-contract/2.5";
+  readonly operations: readonly import("./native-operation-contract.js").NativeOperationRow[];
+  readonly ai: import("./native-ai-contract.js").NativeAiGraph;
+};
+export type NativeAuthoringSnapshot =
+  NativeMetaEntityGraph | ExpandedNativeMetaEntityGraph;

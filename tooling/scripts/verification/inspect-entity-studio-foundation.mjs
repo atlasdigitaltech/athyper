@@ -120,6 +120,11 @@ export function assessFoundationSchema(evidence) {
     coreLayoutColumns: assessCoreLayoutColumns(evidence.tables),
     aiColumns: assessAiColumns(evidence.tables),
     operationColumns: assessOperationColumns(evidence.tables),
+    nativeSnapshotGuards: {
+      coreLayout: evidence.nativeSnapshotGuards?.coreLayout === true,
+      expanded: evidence.nativeSnapshotGuards?.expanded === true,
+      qualified: false,
+    },
     tablesWithoutForcedRls: unguarded,
     qualification: "not-established",
     outstandingEvidence: [
@@ -147,6 +152,7 @@ export function inspectFoundation({ container, database, runtimeRole }) {
       'publishedSourceInventory',(SELECT jsonb_agg(jsonb_build_object('entityCode',e.entity_code,'releaseId',r.id,'contractHash',r.contract_hash,'schema',r.contract_schema_code,'version',r.contract_schema_version,'hasSignature',r.contract_signature IS NOT NULL,'targets',r.target_planes,'normalized',to_jsonb(cs)->>'reference_contract_version') ORDER BY e.entity_code) FROM (SELECT DISTINCT ON(entity_id,tenant_id) * FROM metadata.entity_release ORDER BY entity_id,tenant_id,release_no DESC) r JOIN metadata.entity e ON e.id=r.entity_id JOIN metadata.entity_change_set cs ON cs.id=r.change_set_id),
       'authoringCorpus',(SELECT jsonb_build_object('mutableDrafts',(SELECT count(*) FROM metadata.entity_change_set WHERE status='draft'),'sealedChangeSets',(SELECT count(*) FROM metadata.entity_change_set WHERE status IN ('approved','published')),'fields',(SELECT count(*) FROM metadata.entity_field),'surfaces',(SELECT count(*) FROM metadata.entity_surface),'sections',(SELECT count(*) FROM metadata.entity_surface_section),'bindings',(SELECT count(*) FROM metadata.entity_surface_field_binding))),
       'snapshotCost',(SELECT jsonb_build_object('revisions',count(*),'totalStoredDatumBytes',coalesce(sum(pg_column_size(contract_json)),0),'maximumStoredDatumBytes',max(pg_column_size(contract_json)),'maximumPostgresJsonTextBytes',max(octet_length(contract_json::text)),'maximumDirectSurfaceBindings',max(jsonb_array_length(coalesce(contract_json->'surfaceFieldBindings','[]'::jsonb)))) FROM snapshot.entity_contract_revision),
+      'nativeSnapshotGuards',jsonb_build_object('coreLayout',to_regprocedure('metadata.fn_assert_native_authoring_contract(uuid,text)') IS NOT NULL,'expanded',to_regprocedure('metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)') IS NOT NULL),
       'advanceSecurityDefiner',(SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='metadata' AND p.proname='fn_advance_entity_change_set' AND pg_get_function_identity_arguments(p.oid)='p_change_set_id uuid, p_expected_lock_version bigint, p_actor_id uuid'),
       'tables',(SELECT jsonb_agg(jsonb_build_object('name',expected.name,'present',c.oid IS NOT NULL,'rls',c.relrowsecurity,'forced',c.relforcerowsecurity,'constraints',(SELECT jsonb_agg(jsonb_build_object('name',con.conname,'definition',pg_get_constraintdef(con.oid),'validated',con.convalidated,'deferrable',con.condeferrable) ORDER BY con.conname) FROM pg_constraint con WHERE con.conrelid=c.oid),'columns',(SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'nullable',NOT a.attnotnull) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped)) ORDER BY expected.name)
         FROM (VALUES ${names}) expected(name) LEFT JOIN pg_namespace n ON n.nspname='metadata' LEFT JOIN pg_class c ON c.relnamespace=n.oid AND c.relname=expected.name AND c.relkind='r'),

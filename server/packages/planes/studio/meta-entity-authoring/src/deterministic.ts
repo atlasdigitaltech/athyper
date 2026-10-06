@@ -62,7 +62,7 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
         },
       ],
     };
-  if (String(graph.contractSchema) === "athyper.meta-entity-contract/2.4")
+  if (["athyper.meta-entity-contract/2.4", "athyper.meta-entity-contract/2.5"].includes(String(graph.contractSchema)))
     return { deterministic: true, contractHash, issues: [{ code: "NATIVE_GRAPH_RELEASE_COMPILATION_NOT_QUALIFIED", path: "contractSchema", message: "Native whole-graph release lowering is required; legacy decoding cannot publish this source." }] };
   if (graph.contractSchema !== (graph.referenceMembers ? "athyper.meta-entity-contract/2.3" : graph.ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1")) {
     issues.push({

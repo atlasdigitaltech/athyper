@@ -1,6 +1,7 @@
 import { saveNativeCoreLayoutCommands, lockNativeDraft, assertNativeAuthoringContract, type NativeAuthoringPolicy, type NativeCommandInput, type NativeDraftRoot } from "./native-core-layout-persistence.js";
+import { loadNativeSupplementalMembers, validateNativeSupplementalReferences } from "./native-supplemental-storage.js";
 import { loadNormalizedCoreLayout, type NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
-import type { NativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+import type { NativeAuthoringSnapshot, ExpandedNativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import {loadReferenceMembers,saveReferenceCommands,loadFieldIdentities} from "./normalized-reference-storage.js";
 import { loadNormalizedLabels, saveLabelCommands } from "./normalized-label-storage.js";
 import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
@@ -110,7 +111,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return atomic(this.database, async tx => {
       await sql`SAVEPOINT native_core_layout_batch`.execute(tx);
       try {
-        const repository = new KyselyMetaEntityAuthoringRepository(tx);
+        const repository = new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy);
         const result = await saveNativeCoreLayoutCommands(tx, input, policy, root => repository.nativeSnapshot(tx, input, root));
         await sql`RELEASE SAVEPOINT native_core_layout_batch`.execute(tx);
         return result;
@@ -121,14 +122,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async loadNativeGraph(input: NormalizedSaveCoordinate & { actorId: string }): Promise<NativeMetaEntityGraph> {
+  async loadNativeGraph(input: NormalizedSaveCoordinate & { actorId: string }): Promise<NativeAuthoringSnapshot> {
     const policy = this.nativePolicy;
     if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission is required.");
     return atomic(this.database, async tx => {
       await policy.admit(tx, { ...input, batch: null }, "read");
-      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash);
-      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash);
-      const graph = await new KyselyMetaEntityAuthoringRepository(tx).nativeSnapshot(tx, input, root);
+      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash, policy.snapshotVersions);
+      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash, root.nativeVersion);
+      const graph = await new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy).nativeSnapshot(tx, input, root);
       const state = await loadNormalizedCoreLayout(tx, input);
       const context = await policy.resolveContext(tx, input, state);
       if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
@@ -137,20 +138,21 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       return graph;
     });
   }
-  async readNativeDraftSave(input: NormalizedSaveCoordinate & { actorId: string; revision: number }): Promise<NativeMetaEntityGraph | null> {
+  async readNativeDraftSave(input: NormalizedSaveCoordinate & { actorId: string; revision: number }): Promise<NativeAuthoringSnapshot | null> {
     const policy = this.nativePolicy;
     if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent history admission is required.");
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new AuthoringPolicyError("AUTHORING_REVISION_INVALID", "Valid saved revision required.");
     return atomic(this.database, async tx => {
       await policy.admit(tx, { ...input, batch: null }, "history");
-      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash);
-      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash);
-      const row = (await sql<{graph: NativeMetaEntityGraph; graph_hash: string}>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(tx)).rows[0];
+      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash, policy.snapshotVersions);
+      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash, root.nativeVersion);
+      const row = (await sql<{graph: NativeAuthoringSnapshot; graph_hash: string}>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(tx)).rows[0];
       if (!row) return null;
       if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
       const source = row.graph.authoringSource;
-      if (row.graph.contractSchema !== "athyper.meta-entity-contract/2.4" || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
+      if (row.graph.contractSchema !== (root.nativeVersion === 2 ? "athyper.meta-entity-contract/2.5" : "athyper.meta-entity-contract/2.4") || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
         throw new AuthoringPolicyError("NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH", "History requires an exact supported source version and scope.");
+      if (row.graph.contractSchema === 'athyper.meta-entity-contract/2.5') validateNativeSupplementalReferences(row.graph, policy.commands.maxMembers);
       const state = { core: { field: row.graph.fields, runtime: row.graph.runtimeProfiles, surface: row.graph.surfaces }, layout: { section: row.graph.surfaceSections, binding: row.graph.surfaceFieldBindings } };
       const context = await policy.resolveContext(tx, input, state);
       if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
@@ -159,13 +161,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       return row.graph;
     });
   }
-  private async nativeSnapshot(tx: Transaction<Database>, input: NormalizedSaveCoordinate, root: NativeDraftRoot): Promise<NativeMetaEntityGraph> {
-    const parts = await this.loadGraphParts(input.changeSetId, true);
+  private async nativeSnapshot(tx: Transaction<Database>, input: NormalizedSaveCoordinate, root: NativeDraftRoot): Promise<NativeAuthoringSnapshot> {
+    const expanded = root.nativeVersion === 2;
+    const parts = await this.loadGraphParts(input.changeSetId, true, expanded);
     const state = await loadNormalizedCoreLayout(tx, input);
-    return { ...parts, contractSchema: "athyper.meta-entity-contract/2.4",
-      authoringSource: { entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash },
+    const core = {...parts,
+      authoringSource: {entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash},
       fields: state.core.field, runtimeProfiles: state.core.runtime, surfaces: state.core.surface,
-      surfaceSections: state.layout.section, surfaceFieldBindings: state.layout.binding };
+      surfaceSections: state.layout.section, surfaceFieldBindings: state.layout.binding};
+    if (!expanded) return {...core, contractSchema: 'athyper.meta-entity-contract/2.4'};
+    const policy = this.nativePolicy;
+    if (!policy?.snapshotVersions?.includes(2)) throw new AuthoringPolicyError('NATIVE_AUTHORING_HOST_NOT_CONFIGURED', 'Expanded source admission and a finite snapshot budget are required.');
+    const graph: ExpandedNativeMetaEntityGraph = {...core, contractSchema: 'athyper.meta-entity-contract/2.5', ...await loadNativeSupplementalMembers(tx, input, policy.commands.maxMembers)};
+    validateNativeSupplementalReferences(graph, policy.commands.maxMembers);
+    return graph;
   }
   async executeReferenceCommands(input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
     if(!this.referencePolicy)throw new AuthoringPolicyError("REFERENCE_AUTHORING_NOT_CONFIGURED","Host budget evidence required");
@@ -427,7 +436,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async loadGraph(id: string): Promise<MetaEntityGraph> {
     return this.loadGraphParts(id, false);
   }
-  private async loadGraphParts(id: string, native: boolean): Promise<MetaEntityGraph> {
+  private async loadGraphParts(id: string, native: boolean, expanded = false): Promise<MetaEntityGraph> {
     const header = required(
       (
         await sql<EntityHeaderRow>`SELECT e.entity_code,e.entity_class,e.ownership_model,to_jsonb(cs) AS label_root FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${id}::uuid`.execute(
@@ -435,10 +444,12 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         )
       ).rows[0],
     );
-    if (header.label_root?.native_core_layout_version != null && header.label_root.native_core_layout_version !== 1)
+    if (header.label_root?.native_core_layout_version != null && ![1, 2].includes(header.label_root.native_core_layout_version))
       throw new AuthoringPolicyError("NATIVE_AUTHORING_VERSION_UNSUPPORTED", "Unknown source versions cannot use a legacy decoder.");
-    if ((header.label_root?.native_core_layout_version === 1) !== native)
+    if (([1, 2].includes(header.label_root?.native_core_layout_version ?? 0)) !== native)
       throw new AuthoringPolicyError(native ? "NATIVE_AUTHORING_SOURCE_NOT_INITIALIZED" : "NATIVE_AUTHORING_READER_REQUIRED", "The reader must match the declared source version.");
+    if (native && (header.label_root?.native_core_layout_version === 2) !== expanded)
+      throw new AuthoringPolicyError('NATIVE_AUTHORING_VERSION_UNSUPPORTED', 'The native reader must match the declared branch inventory.');
     const rows = async (table: GraphTable) => {
       const result =
         table === "entity_class_profile"
@@ -461,6 +472,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       return result.rows.map((row) => object(row.value));
     };
     const branch = async <T extends object>(table: GraphTable): Promise<T[]> => {
+      if (expanded && table === 'entity_operation') return [];
       if (native && ["entity_field", "entity_runtime_profile", "entity_surface", "entity_surface_section", "entity_surface_field_binding"].includes(table)) return [];
       return (await rows(table)).map(row => decodeRow<T>(row, BRANCH_COLUMNS[table]));
     };
