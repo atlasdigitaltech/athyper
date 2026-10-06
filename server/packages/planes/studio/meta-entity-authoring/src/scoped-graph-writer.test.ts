@@ -264,3 +264,44 @@ it("rejects native AI order edits before DML when the installed constraint canno
     await f.db.destroy();
   }
 });
+
+it("writes registered SQL arrays as arrays while preserving JSONB declarations", async () => {
+  const f = fixture();
+  await writeReconciliationPlans(
+    f.db,
+    [
+      {
+        table: "entity_ai_profile",
+        insert: [
+          { id: "p", values: { context_kinds: ["record"], aliases: [] } },
+        ],
+        update: [],
+        remove: [],
+      },
+      {
+        table: "entity_surface",
+        insert: [],
+        update: [
+          {
+            id: "s",
+            before: {},
+            values: {
+              allowed_page_sizes: [10, 25],
+              layout_config: { supportedModes: ["table"] },
+            },
+          },
+        ],
+        remove: [],
+      },
+    ],
+    c,
+  );
+  const writes = f.query.mock.calls.filter(([text]) =>
+    /^(INSERT|UPDATE)/.test(text),
+  );
+  expect(writes[0]![0]).toContain("ARRAY[$1]::text[]");
+  expect(writes[0]![0]).toContain("ARRAY[]::text[]");
+  expect(writes[1]![0]).toContain("::integer[]");
+  expect(writes[1]![0]).toContain("::jsonb");
+  await f.db.destroy();
+});

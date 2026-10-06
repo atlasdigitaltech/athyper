@@ -1,5 +1,12 @@
 import { sql, type Kysely, type RawBuilder } from "kysely";
-import { AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
+import {
+  normalizedCoreMembers,
+  normalizedLayoutMembers,
+  nativeAiMembers,
+  nativeOperationMember,
+  referenceMembers,
+  AuthoringPolicyError,
+} from "@athyper/server-contract-meta-entity-authoring";
 import {
   changed,
   planBranch,
@@ -58,7 +65,27 @@ function scope(
       (SELECT id FROM metadata.entity_materialization_binding WHERE change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid)`
     : sql`change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid`;
 }
-function value(item: unknown) {
+const arrayColumns = new Map<string, string>();
+for (const d of [
+  ...Object.values(normalizedCoreMembers),
+  ...Object.values(normalizedLayoutMembers),
+  ...Object.values(nativeAiMembers),
+  nativeOperationMember,
+  ...Object.values(referenceMembers),
+])
+  for (const c of Object.values(d.columns))
+    if (c.sqlType.endsWith("[]"))
+      arrayColumns.set(`${d.table}.${c.column}`, c.sqlType);
+function value(item: unknown, table?: GraphWriteTable, column?: string) {
+  const type = arrayColumns.get(`${table}.${column}`);
+  if (Array.isArray(item) && type) {
+    if (!["text[]", "integer[]", "uuid[]"].includes(type))
+      throw new AuthoringPolicyError(
+        "AUTHORING_ARRAY_TYPE_UNSUPPORTED",
+        "The registered array SQL type has no writer.",
+      );
+    return sql`ARRAY[${sql.join(item.map((v) => sql`${v}`))}]::${sql.raw(type)}`;
+  }
   return item && typeof item === "object" && !Array.isArray(item)
     ? sql`${JSON.stringify(item)}::jsonb`
     : sql`${item}`;
@@ -71,7 +98,7 @@ async function update(
   c: GraphCoordinate,
 ) {
   const assignments = Object.entries(values).map(
-    ([key, item]) => sql`${sql.ref(key)}=${value(item)}`,
+    ([key, item]) => sql`${sql.ref(key)}=${value(item, table, key)}`,
   );
   const result =
     await sql`UPDATE ${sql.table(`metadata.${table}`)} SET ${sql.join(assignments)},updated_by=${c.created_by}::uuid,updated_at=clock_timestamp()
@@ -241,7 +268,7 @@ export async function writeReconciliationPlans(
         id: row.id,
       });
       await sql`INSERT INTO ${sql.table(`metadata.${plan.table}`)} (${sql.join(entries.map(([key]) => sql.ref(key)))})
-        VALUES (${sql.join(entries.map(([, item]) => value(item)))})`.execute(
+        VALUES (${sql.join(entries.map(([key, item]) => value(item, plan.table, key)))})`.execute(
         db,
       );
     }

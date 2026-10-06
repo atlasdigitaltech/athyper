@@ -30,7 +30,21 @@ export type NativeAiTable =
   | "entity_ai_binding"
   | "entity_ai_reference"
   | "entity_ai_term";
-export type GraphWriteTable = GraphTable | NativeAiTable;
+export type NativeReferenceWriteTable =
+  | "entity_label"
+  | "entity_label_translation"
+  | "entity_target"
+  | "entity_field_choice"
+  | "entity_surface_navigation_group"
+  | "entity_surface_view"
+  | "entity_surface_view_field"
+  | "entity_access_permission"
+  | "entity_operation_field"
+  | "entity_authorization_profile"
+  | "entity_field_access"
+  | "entity_predicate";
+export type GraphWriteTable =
+  GraphTable | NativeAiTable | NativeReferenceWriteTable;
 export type StoredRow = Readonly<Record<string, unknown>>;
 export interface RowChange {
   readonly id: string;
@@ -347,4 +361,40 @@ function planMappedBranch(
 }
 export function changed(plan: BranchPlan) {
   return !!(plan.insert.length || plan.update.length || plan.remove.length);
+}
+
+/** Conversion-only mapped reconciliation. Caller has admitted the whole source
+ * proof and canonical schema. Every identity is explicit; unselected columns
+ * (including attribution and platform controls) remain untouched. */
+export function planCanonicalConversionRows(
+  table: GraphWriteTable,
+  incoming: readonly StoredRow[],
+  stored: readonly StoredRow[],
+): BranchPlan {
+  const ids = new Set<string>();
+  for (const row of incoming) {
+    validateFoundationNode(
+      {
+        type: "string",
+        pattern:
+          "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      },
+      row.id,
+      "/conversion/id",
+    );
+    if (ids.has(String(row.id)))
+      fail("AUTHORING_MEMBER_IDENTITY_CONFLICT", table);
+    ids.add(String(row.id));
+  }
+  if (new Set(stored.map((r) => r.id)).size !== stored.length)
+    fail("AUTHORING_MEMBER_IDENTITY_CONFLICT", table);
+  const columns = [...new Set(incoming.flatMap((r) => Object.keys(r)))];
+  return planMappedBranch(
+    table,
+    columns,
+    ["id"],
+    incoming,
+    stored,
+    Object.fromEntries(columns.map((c) => [c, c])),
+  );
 }

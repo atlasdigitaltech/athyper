@@ -1,3 +1,5 @@
+import { readNativeConversionHistory } from "./native-conversion-history.js";
+import { applyNativeGraphConversion, type NativeConversionApplicationPolicy, type NativeConversionApplicationInput } from "./native-conversion-application.js";
 import { validateNativeEntityLabelOwner } from "./native-localized-labels.js";
 import { saveNativeCoreLayoutCommands, lockNativeDraft, assertNativeAuthoringContract, type NativeAuthoringPolicy, type NativeCommandInput, type NativeDraftRoot } from "./native-core-layout-persistence.js";
 import { loadNativeSupplementalMembers, validateNativeSupplementalReferences } from "./native-supplemental-storage.js";
@@ -105,7 +107,37 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly normalizedPolicy?: import("@athyper/server-contract-meta-entity-authoring").NormalizedAuthoringPolicy,
     private readonly referencePolicy?: import("@athyper/server-contract-meta-entity-authoring").ReferenceCommandPolicy,
     private readonly nativePolicy?: NativeAuthoringPolicy,
+    private readonly conversionPolicy?: NativeConversionApplicationPolicy,
   ) {}
+  async readNativeConversionHistory(input: NormalizedSaveCoordinate & {actorId: string; revision: number}) {
+    if (!this.conversionPolicy) throw new AuthoringPolicyError("NATIVE_CONVERSION_HOST_NOT_CONFIGURED", "An installed archival conversion decoder is required.");
+    const policy = this.conversionPolicy;
+    return atomic(this.database, tx => readNativeConversionHistory(tx, input, policy));
+  }
+  async executeNativeConversion(input: NativeConversionApplicationInput) {
+    const policy = this.conversionPolicy;
+    if (!policy) throw new AuthoringPolicyError("NATIVE_CONVERSION_HOST_NOT_CONFIGURED", "Installed conversion/schema/compiler/reader evidence is required.");
+    return atomic(this.database, async tx => {
+      await sql`SAVEPOINT native_format_conversion`.execute(tx);
+      try {
+        const repository = new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy.host);
+        const result = await applyNativeGraphConversion(tx, input, policy, {
+          source: () => repository.loadGraphParts(input.changeSetId, false),
+          native: async root => {
+            const graph = await repository.nativeSnapshot(tx, input, root);
+            if (graph.contractSchema !== "athyper.meta-entity-contract/2.5") throw new AuthoringPolicyError("NATIVE_CONVERSION_READBACK_VERSION_INVALID", "Expanded native readback required.");
+            return graph;
+          },
+        });
+        await sql`RELEASE SAVEPOINT native_format_conversion`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT native_format_conversion`.execute(tx);
+        await sql`RELEASE SAVEPOINT native_format_conversion`.execute(tx);
+        throw error;
+      }
+    });
+  }
   async executeNativeCoreLayoutCommands(input: NativeCommandInput) {
     const policy = this.nativePolicy;
     if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission, budgets and initialization sources are required.");

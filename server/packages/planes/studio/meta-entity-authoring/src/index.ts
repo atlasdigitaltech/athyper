@@ -120,3 +120,9 @@ export * from "./native-reference-capability.js";
 export * from "./native-detail-badges.js";
 export * from "./native-localized-labels.js";
 export * from "./native-presentation-localization.js";
+
+export * from "./native-conversion-application.js";
+export * from "./native-conversion-plans.js";
+export * from "./native-conversion-history.js";
+
+export * from "./native-operation-compilation.js";

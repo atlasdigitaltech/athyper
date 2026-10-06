@@ -687,3 +687,53 @@ cases are skipped by the ordinary run. Source/test and focused native-test
 typechecks, all six existing generated-contract checks and the 13-task bounded
 build pass. New tests are enrolled in foundation CI. No canonical conversion SQL
 qualification or native whole-release compiler test is claimed by this result.
+
+
+### Canonical application/history protocol and compiler control preservation — 7 October 2026
+
+The existing authoring repository now owns the gated conversion transaction and
+original-2.3-checkpoint reader. Installed policy supplies schema/authority
+qualification, actual whole-source adapters and compiler/reader implementations;
+requests cannot replace those ports. Absent installed policy rejects. Canonical
+plans validate typed core/layout/reference rows, exact source member inventories,
+retained structural branches and enrolled field identities. They preserve member
+IDs and creation attribution, prohibit catalogue initialization/remapping, and
+allow only explicitly proven binding retirements. Physically present legacy
+columns can become NULL only after the qualifier attests retired constraints and
+nullable schema; discovery alone cannot qualify that constraint cluster.
+
+The existing revision function advances once before member writes, establishing
+its transaction-local write token. Original history, typed DML, marker/root label,
+exact repository readback, compiler/reader checks, new immutable history and
+receipt share one transaction/savepoint. The receipt records both graph hashes,
+compiled/descriptor hashes and compiler identity/version. Replay rechecks current
+admission and immutable history without DML. Original history reads use current
+reader admission and the exact conversion receipt/proof, and never restore
+platform controls or grant live-read authority.
+
+The owner explicitly approved compiler preservation only in this session. The
+new compiler operation reader requires exact native coordinates, revision,
+descriptor and whole-operation membership, reads stored protected values and
+checks the artifact retains them. Both true and false values are preserved;
+missing evidence, changed values and client inputs reject. No initialization,
+new MFA requirement, enforcement change or historical repair is authorized.
+
+Protocol tests use the actual repository savepoint, canonical planner and shared
+writer, with synthetic SQL transport, source/native loaders, qualification,
+adapters, compiler and reader. They cover rollback of member writes/root/history/
+receipts, compiler/reader failure, readback mismatch, stale source/revision,
+replay after later edits, revoked admission and historical tampering. Planner
+fixtures cover attribution, inventories, retained branches, legacy NOT NULL
+coupling, budgets and typed-row rejection. These fixtures do not qualify actual
+Country/State Region whole-source conversion or canonical PostgreSQL deployment.
+
+Remaining: whole-source adapter installation/integration, canonical schema and
+constraint qualification, complete native release lowering and reader evidence,
+approved host/product-write authority and deployed F6/F8/F9. No DEV migration,
+conversion application, grant, publication or activation occurred.
+
+Validation: 669 authoring tests pass across 119 files; four existing opt-in SQL
+cases remain skipped. Source/test and focused native-test typechecks, all six
+generated-contract checks and the 13-task bounded build pass. The new protocol,
+planner and operation-compilation tests are enrolled in foundation CI. This is
+local reproducible evidence, not a remote CI or deployed qualification receipt.
