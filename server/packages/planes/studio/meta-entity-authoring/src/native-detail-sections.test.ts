@@ -105,7 +105,7 @@ function fixture(name = "country") {
     ]),
   );
   const mapping = { sourceHash: sha256(source), sections, bindings };
-  return { source, c, mapping };
+  return { source, c, mapping, legacyGraph: g };
 }
 it.each(["country", "state_region"])(
   "normalizes %s's actual nested field sections and memberships",
@@ -249,4 +249,187 @@ it("keeps group order explicit and rejects gapped or duplicated member order", (
       f.c,
     ),
   ).toThrow("NATIVE_DETAIL_SECTION_KIND_UNSUPPORTED");
+});
+
+async function graphFixture(name = "country", fullRoster = false) {
+  const { createLegacyNativeDetailSectionsAdapter } =
+    await import("./native-detail-sections.js");
+  const { emptyReferenceMembers } =
+    await import("@athyper/server-contract-meta-entity-authoring");
+  const f = fixture(name);
+  const members = Object.values(f.mapping.bindings).flatMap((m) =>
+    Object.values(m),
+  );
+  const source = {
+    ...f.legacyGraph,
+    contractSchema: "athyper.meta-entity-contract/2.3" as const,
+    referenceMembers: emptyReferenceMembers(),
+    surfaceSections: [],
+    surfaceFieldBindings: f.legacyGraph
+      .surfaceFieldBindings!.filter(
+        (b) =>
+          fullRoster ||
+          b.entitySurfaceId !== f.c.surface.id ||
+          members.some((n) => n.entityFieldId === b.entityFieldId),
+      )
+      .map((b, i) => ({
+        ...b,
+        id:
+          b.entitySurfaceId === f.c.surface.id
+            ? (members.find((n) => n.entityFieldId === b.entityFieldId)?.id ??
+              id(900 + i))
+            : id(700 + i),
+      })),
+  };
+  const input = {
+    source,
+    sourceHash: sha256(source),
+    resource: {
+      owner: "test",
+      key: "inline-sections",
+      version: 1,
+      hash: "a".repeat(64),
+    },
+    dependencies: [],
+    positionConvention: "zero-based" as const,
+    mappings: {
+      [f.c.surface.id]: {
+        context: f.c,
+        sections: f.mapping.sections,
+        bindings: f.mapping.bindings,
+      },
+    },
+  };
+  const adapter = createLegacyNativeDetailSectionsAdapter(input);
+  const prepared = adapter.forward(source);
+  const converted = convertLegacyDetailFieldSections(f.source, f.c, f.mapping);
+  const target = {
+    ...prepared,
+    contractSchema: "athyper.meta-entity-contract/2.4" as const,
+    fields: [],
+    runtimeProfiles: [],
+    surfaces: [f.c.surface],
+    surfaceSections: converted.sections,
+    surfaceFieldBindings: converted.bindings,
+    authoringSource: {
+      entityId: id(1),
+      tenantId: null,
+      sourceKind: "product" as const,
+      authoringSchemaHash: "b".repeat(64),
+    },
+  };
+  return { ...f, source, input, adapter, prepared, target };
+}
+it.each(["country", "state_region"])(
+  "enrolls %s's selected inline sections while preserving existing binding identities and source coordinates",
+  async (name) => {
+    const f = await graphFixture(name);
+    expect(f.adapter.reverse(f.prepared, f.target)).toEqual(f.source);
+    expect(f.adapter.sectionDerivations).toHaveLength(
+      f.target.surfaceSections.length,
+    );
+    expect(f.prepared.surfaceFieldBindings!.map((b) => b.id)).toEqual(
+      f.source.surfaceFieldBindings!.map((b) => b.id),
+    );
+    expect(
+      f.prepared.surfaces!.find((s) => s.id === f.c.surface.id)!.layoutConfig!
+        .recordPresentation,
+    ).not.toHaveProperty("sections");
+    const first = f.target.surfaceSections[0]!;
+    const rows = f.target.surfaceFieldBindings.filter(
+      (b) => b.entitySurfaceSectionId === first.id,
+    );
+    const changed = {
+      ...f.target,
+      surfaceFieldBindings: f.target.surfaceFieldBindings.map((b) =>
+        b.entitySurfaceSectionId === first.id
+          ? { ...b, position: rows.length + 1 - b.position }
+          : b,
+      ),
+    };
+    const reverse = f.adapter.reverse(f.prepared, changed);
+    const originalRecord = f.source.surfaces!.find(
+      (s) => s.id === f.c.surface.id,
+    )!.layoutConfig!.recordPresentation as { sections: { fields: string[] }[] };
+    expect(
+      (
+        reverse.surfaces!.find((s) => s.id === f.c.surface.id)!.layoutConfig!
+          .recordPresentation as { sections: { fields: string[] }[] }
+      ).sections[0]!.fields,
+    ).toEqual([...originalRecord.sections[0]!.fields].reverse());
+  },
+);
+it("blocks actual unassigned technical rosters instead of deleting or inventing presentation", async () => {
+  await expect(graphFixture("country", true)).rejects.toThrow(
+    "NATIVE_DETAIL_SECTION_UNASSIGNED_BINDING",
+  );
+  await expect(graphFixture("state_region", true)).rejects.toThrow(
+    "NATIVE_DETAIL_SECTION_UNASSIGNED_BINDING",
+  );
+});
+it("rejects absent root inventory, conflicting visibility, lost target members and stale sources", async () => {
+  const { createLegacyNativeDetailSectionsAdapter } =
+    await import("./native-detail-sections.js");
+  const f = await graphFixture();
+  const wrongFields = {
+    ...f.input,
+    mappings: {
+      [f.c.surface.id]: {
+        ...f.input.mappings[f.c.surface.id]!,
+        context: {
+          ...f.c,
+          fields: f.c.fields.map((field) => ({ ...field, uuid: false })),
+        },
+      },
+    },
+  };
+  expect(() => createLegacyNativeDetailSectionsAdapter(wrongFields)).toThrow(
+    "NATIVE_DETAIL_SECTION_FIELD_CONTEXT_MISMATCH",
+  );
+  const noRows = { ...f.source, surfaceSections: undefined };
+  delete noRows.surfaceSections;
+  expect(() =>
+    createLegacyNativeDetailSectionsAdapter({
+      ...f.input,
+      source: noRows,
+      sourceHash: sha256(noRows),
+    }),
+  ).toThrow("NATIVE_DETAIL_SECTION_ROW_INVENTORY_REQUIRED");
+  const source = structuredClone(f.source);
+  const binding = source.surfaceFieldBindings!.find(
+    (b) => b.entitySurfaceId === f.c.surface.id,
+  )!;
+  (binding as { displayConfig: object }).displayConfig = {
+    ...binding.displayConfig,
+    defaultVisible: false,
+  };
+  expect(() =>
+    createLegacyNativeDetailSectionsAdapter({
+      ...f.input,
+      source,
+      sourceHash: sha256(source),
+    }),
+  ).toThrow("NATIVE_DETAIL_SECTION_CORRELATED_SOURCE_CONFLICT");
+  expect(() =>
+    f.adapter.reverse(f.prepared, {
+      ...f.target,
+      surfaceFieldBindings: f.target.surfaceFieldBindings.slice(1),
+    }),
+  ).toThrow("NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID");
+  expect(() => f.adapter.forward({ ...f.source, operations: [] })).toThrow(
+    "NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH",
+  );
+});
+
+it("rejects unrepresentable geometry changes instead of discarding them during inverse enrollment", async () => {
+  const f = await graphFixture();
+  expect(() =>
+    f.adapter.reverse(f.prepared, {
+      ...f.target,
+      surfaceSections: f.target.surfaceSections.map((s) => ({
+        ...s,
+        columnCount: 3,
+      })),
+    }),
+  ).toThrow("NATIVE_DETAIL_SECTION_REVERSE_NOT_REPRESENTABLE");
 });

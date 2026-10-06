@@ -189,6 +189,9 @@ export function normalizeLegacyReadField(
     readonly labelId: string | null;
     readonly storageType: string;
     readonly requiredInput: boolean;
+    /** Independently admitted presentation initialization. A graph conversion
+     * must separately account for and correlate its legacy binding declarations. */
+    readonly semanticRole?: string;
     readonly keyGeneration: "none" | "provided" | "database_uuidv7";
     readonly relation?: {
       readonly id: string;
@@ -299,6 +302,7 @@ export function normalizeLegacyReadField(
     keyGeneration: mapping.keyGeneration,
     relationId: mapping.relation?.id ?? null,
     domainCode: config.domain_code ?? null,
+    semanticRole: mapping.semanticRole ?? null,
     minLength: config.min_length ?? null,
     maxLength: config.max_length ?? null,
     pattern: config.pattern ?? null,

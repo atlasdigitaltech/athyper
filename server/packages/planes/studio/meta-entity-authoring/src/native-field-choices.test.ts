@@ -348,3 +348,96 @@ it("rejects conflicting declarations, overwritten members, unsupported lookups a
     }),
   ).toThrow("NATIVE_CHOICES_SOURCE_HASH_MISMATCH");
 });
+
+it("composes actual choice and semantic-role declarations from current typed values", async () => {
+  const { createLegacyNativeFieldSemanticsAdapter } =
+    await import("./native-field-semantics.js");
+  const { composeNativeNestedConversionAdapters } =
+    await import("./native-graph-conversion.js");
+  for (const name of ["country", "state_region"]) {
+    const f = await graphFixture(name);
+    const field = { ...f.context.field, semanticRole: "status" };
+    const semantics = createLegacyNativeFieldSemanticsAdapter({
+      source: f.prepared,
+      sourceHash: sha256(f.prepared),
+      resource: { ...f.input.resource, key: "semantics" },
+      dependencies: [],
+      fields: [field],
+    });
+    const composition = composeNativeNestedConversionAdapters(
+      { ...f.input.resource, key: "composition" },
+      [f.adapter, semantics],
+    );
+    const prepared = composition.forward(f.source);
+    expect(
+      prepared
+        .surfaceFieldBindings!.filter((b) => b.entityFieldId === field.id)
+        .every((b) => !Object.hasOwn(b.displayConfig ?? {}, "semanticRole")),
+    ).toBe(true);
+    const target = {
+      ...f.target,
+      fields: [field],
+      referenceMembers: prepared.referenceMembers,
+    };
+    expect(composition.reverse(prepared, target)).toEqual(f.source);
+    const changed = {
+      ...target,
+      fields: [{ ...field, semanticRole: "lifecycle" }],
+    };
+    expect(
+      semantics
+        .reverse(prepared, changed)
+        .surfaceFieldBindings!.filter((b) => b.entityFieldId === field.id)
+        .every((b) => b.displayConfig!.semanticRole === "lifecycle"),
+    ).toBe(true);
+  }
+});
+it("rejects unmatched semantic initialization, contradictory declarations, stale input and lost binding scope", async () => {
+  const { createLegacyNativeFieldSemanticsAdapter } =
+    await import("./native-field-semantics.js");
+  const f = await graphFixture();
+  const input = {
+    source: f.prepared,
+    sourceHash: sha256(f.prepared),
+    resource: f.input.resource,
+    dependencies: [],
+    fields: [{ ...f.context.field, semanticRole: "status" }],
+  };
+  expect(() =>
+    createLegacyNativeFieldSemanticsAdapter({
+      ...input,
+      fields: [f.context.field],
+    }),
+  ).toThrow("NATIVE_SEMANTICS_CORRELATED_SOURCE_CONFLICT");
+  const source = structuredClone(f.prepared);
+  const bindings = source.surfaceFieldBindings!.filter(
+    (b) => b.displayConfig?.semanticRole,
+  );
+  (bindings[1]!.displayConfig as { semanticRole: string }).semanticRole =
+    "other";
+  expect(() =>
+    createLegacyNativeFieldSemanticsAdapter({
+      ...input,
+      source,
+      sourceHash: sha256(source),
+    }),
+  ).toThrow("NATIVE_SEMANTICS_CORRELATED_SOURCE_CONFLICT");
+  const adapter = createLegacyNativeFieldSemanticsAdapter(input),
+    prepared = adapter.forward(input.source);
+  expect(() => adapter.forward({ ...input.source, operations: [] })).toThrow(
+    "NATIVE_SEMANTICS_SOURCE_HASH_MISMATCH",
+  );
+  expect(() =>
+    adapter.reverse(prepared, {
+      ...f.target,
+      fields: input.fields,
+      surfaceFieldBindings: [],
+    }),
+  ).toThrow("NATIVE_SEMANTICS_BINDING_SCOPE_INVALID");
+  expect(() =>
+    adapter.reverse(prepared, {
+      ...f.target,
+      fields: [{ ...input.fields[0]!, semanticRole: null }],
+    }),
+  ).toThrow("NATIVE_SEMANTICS_REVERSE_NOT_REPRESENTABLE");
+});

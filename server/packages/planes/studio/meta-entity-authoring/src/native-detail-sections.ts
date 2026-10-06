@@ -4,9 +4,15 @@ import {
   validateFoundationNode,
   validateNormalizedCoreRow,
   validateNormalizedLayoutRow,
+  type MetaEntityGraph,
   type NormalizedCoreRow,
   type NormalizedLayoutRow,
 } from "@athyper/server-contract-meta-entity-authoring";
+import type {
+  NativeConversionResource,
+  NativeNestedConversionAdapter,
+  NativeSectionDerivation,
+} from "./native-graph-conversion.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 export interface LegacyDetailFieldSection {
@@ -282,4 +288,323 @@ export function convertLegacyDetailFieldSections(
   if (canonicalJson(compiled) !== canonicalJson(value))
     fail("NATIVE_DETAIL_SECTION_NOT_LOSSLESS", "/sections");
   return graph;
+}
+
+/** Graph enrollment for explicit inline field sections. Every existing detail
+ * binding must have one declared membership: inert/technical legacy bindings
+ * require a separate explicit retirement conversion, never implicit deletion. */
+export function createLegacyNativeDetailSectionsAdapter(input: {
+  readonly source: MetaEntityGraph;
+  readonly sourceHash: string;
+  readonly resource: NativeConversionResource;
+  readonly dependencies: readonly NativeConversionResource[];
+  readonly positionConvention: "zero-based" | "one-based";
+  readonly mappings: Readonly<
+    Record<
+      string,
+      {
+        readonly context: NativeDetailSectionsContext;
+        readonly sections: Readonly<
+          Record<string, NormalizedLayoutRow<"section">>
+        >;
+        readonly bindings: Readonly<
+          Record<
+            string,
+            Readonly<Record<string, NormalizedLayoutRow<"binding">>>
+          >
+        >;
+      }
+    >
+  >;
+}): NativeNestedConversionAdapter {
+  validateConversionJsonData(input.source, "/source");
+  const sourceHash = input.sourceHash;
+  if (sha256(input.source) !== sourceHash)
+    fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/source");
+  if (!["zero-based", "one-based"].includes(input.positionConvention))
+    fail(
+      "NATIVE_DETAIL_SECTION_POSITION_SOURCE_REQUIRED",
+      "/positionConvention",
+    );
+  const shift = input.positionConvention === "zero-based" ? 1 : 0;
+  const enrolled = (input.source.surfaces ?? []).filter(
+    (s) =>
+      s.layoutConfig?.recordPresentation &&
+      Object.hasOwn(s.layoutConfig.recordPresentation as object, "sections"),
+  );
+  if (
+    !enrolled.length ||
+    new Set(enrolled.map((s) => s.id)).size !== enrolled.length ||
+    Object.keys(input.mappings).sort().join() !==
+      enrolled
+        .map((s) => s.id)
+        .sort()
+        .join()
+  )
+    fail("NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID", "/mappings");
+  if (!Array.isArray(input.source.surfaceSections))
+    fail("NATIVE_DETAIL_SECTION_ROW_INVENTORY_REQUIRED", "/surfaceSections");
+  const mappings = Object.fromEntries(
+    Object.entries(input.mappings).map(([id, m]) => [
+      id,
+      {
+        context: {
+          ...m.context,
+          surface: structuredClone(m.context.surface),
+          fields: structuredClone(m.context.fields),
+        },
+        sections: structuredClone(m.sections),
+        bindings: structuredClone(m.bindings),
+      },
+    ]),
+  );
+  const sectionDerivations: NativeSectionDerivation[] = [];
+  const positions = new Map<
+    string,
+    {
+      position: number;
+      sectionPresent: boolean;
+      sectionId: string | null | undefined;
+      visible: boolean;
+    }
+  >();
+  const selectedSections = new Map<string, string[]>();
+  const selectedBindings = new Map<string, string[]>();
+  const forward = (graph: MetaEntityGraph): MetaEntityGraph => {
+    validateConversionJsonData(graph, "/source");
+    if (sha256(graph) !== sourceHash)
+      fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/source");
+    const result = structuredClone(graph);
+    sectionDerivations.length = 0;
+    const additions: NonNullable<MetaEntityGraph["surfaceSections"]>[number][] =
+      [];
+    for (const surface of result.surfaces ?? []) {
+      const m = mappings[surface.id ?? ""];
+      if (!m) continue;
+      if (
+        surface.surfaceKind !== "detail" ||
+        m.context.surface.id !== surface.id ||
+        result.surfaceSections!.some((s) => s.entitySurfaceId === surface.id)
+      )
+        fail(
+          "NATIVE_DETAIL_SECTION_CORRELATED_SOURCE_CONFLICT",
+          "/surfaceSections",
+        );
+      const record = surface.layoutConfig!.recordPresentation as Record<
+        string,
+        unknown
+      >;
+      const sections = record.sections;
+      for (const field of m.context.fields) {
+        const matches = graph.fields.filter((f) => f.id === field.id);
+        if (
+          matches.length !== 1 ||
+          matches[0]!.fieldKey !== field.key ||
+          (matches[0]!.dataType === "uuid") !== field.uuid
+        )
+          fail(
+            "NATIVE_DETAIL_SECTION_FIELD_CONTEXT_MISMATCH",
+            "/context/fields",
+          );
+      }
+      const converted = convertLegacyDetailFieldSections(sections, m.context, {
+        sourceHash: sha256(sections),
+        sections: m.sections,
+        bindings: m.bindings,
+      });
+      const bindings = (result.surfaceFieldBindings ?? []).filter(
+        (b) => b.entitySurfaceId === surface.id,
+      );
+      if (
+        bindings.length !== converted.bindings.length ||
+        new Set(bindings.map((b) => b.id)).size !== bindings.length ||
+        converted.bindings.some(
+          (n) =>
+            bindings.filter(
+              (b) => b.id === n.id && b.entityFieldId === n.entityFieldId,
+            ).length !== 1,
+        )
+      )
+        fail(
+          "NATIVE_DETAIL_SECTION_UNASSIGNED_BINDING",
+          "/surfaceFieldBindings",
+        );
+      selectedBindings.set(
+        surface.id!,
+        bindings.map((b) => b.id!),
+      );
+      selectedSections.set(
+        surface.id!,
+        converted.sections.map((s) => s.id),
+      );
+      for (const [i, s] of converted.sections.entries()) {
+        sectionDerivations.push({
+          id: s.id,
+          surfaceId: surface.id!,
+          sourceIndex: i,
+          sourceHash: sha256((sections as readonly unknown[])[i]),
+        });
+        additions.push({
+          id: s.id,
+          entitySurfaceId: s.entitySurfaceId,
+          sectionKey: s.sectionKey,
+          title: m.context.label(s.labelId!).label,
+          sectionKind: "section",
+          position: s.position - shift,
+          columnCount: s.columnCount,
+          collapsible: s.collapsible,
+          collapsedByDefault: s.collapsedByDefault,
+        });
+      }
+      for (const b of bindings) {
+        const n = converted.bindings.find((n) => n.id === b.id)!;
+        if (
+          !Number.isSafeInteger(b.position) ||
+          b.position < (shift ? 0 : 1) ||
+          b.entitySurfaceSectionId != null
+        )
+          fail(
+            "NATIVE_DETAIL_SECTION_CORRELATED_SOURCE_CONFLICT",
+            "/surfaceFieldBindings",
+          );
+        const visible = Object.hasOwn(b.displayConfig ?? {}, "defaultVisible");
+        if (visible && b.displayConfig!.defaultVisible !== true)
+          fail(
+            "NATIVE_DETAIL_SECTION_CORRELATED_SOURCE_CONFLICT",
+            "/surfaceFieldBindings/displayConfig/defaultVisible",
+          );
+        positions.set(b.id!, {
+          position: b.position,
+          sectionPresent: Object.hasOwn(b, "entitySurfaceSectionId"),
+          sectionId: b.entitySurfaceSectionId,
+          visible,
+        });
+        Object.assign(b, {
+          entitySurfaceSectionId: n.entitySurfaceSectionId,
+          position: n.position - shift,
+        });
+        if (visible) {
+          const rest = { ...b.displayConfig };
+          delete rest.defaultVisible;
+          (b as { displayConfig?: object }).displayConfig = rest;
+          if (!Object.keys(rest).length)
+            delete (b as { displayConfig?: object }).displayConfig;
+        }
+      }
+      const rest = { ...record };
+      delete rest.sections;
+      const config = { ...surface.layoutConfig, recordPresentation: rest };
+      if (!Object.keys(rest).length)
+        delete (config as { recordPresentation?: object }).recordPresentation;
+      (surface as { layoutConfig?: object }).layoutConfig = config;
+      if (!Object.keys(config).length)
+        delete (surface as { layoutConfig?: object }).layoutConfig;
+    }
+    (result as { surfaceSections: unknown }).surfaceSections = [
+      ...result.surfaceSections!,
+      ...additions,
+    ];
+    if (
+      new Set(additions.map((s) => s.id)).size !== additions.length ||
+      additions.some((s) => graph.surfaceSections!.some((n) => n.id === s.id))
+    )
+      fail("NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID", "/mappings");
+    return result;
+  };
+  const preparedHash = sha256(forward(input.source));
+  const derivations = structuredClone(sectionDerivations);
+  return {
+    resource: structuredClone(input.resource),
+    dependencies: structuredClone(input.dependencies),
+    sectionDerivations: derivations,
+    forward,
+    reverse(prepared, target) {
+      if (sha256(prepared) !== preparedHash)
+        fail("NATIVE_DETAIL_SECTION_SOURCE_HASH_MISMATCH", "/prepared");
+      const result = structuredClone(prepared);
+      for (const [surfaceId, m] of Object.entries(mappings)) {
+        const sectionIds = selectedSections.get(surfaceId)!;
+        const sections = target.surfaceSections.filter(
+          (s) => s.entitySurfaceId === surfaceId,
+        );
+        const bindings = target.surfaceFieldBindings.filter(
+          (b) => b.entitySurfaceId === surfaceId,
+        );
+        if (
+          sections.length !== sectionIds.length ||
+          sections.some((s) => !sectionIds.includes(s.id)) ||
+          canonicalJson(bindings.map((b) => b.id).sort()) !==
+            canonicalJson([...selectedBindings.get(surfaceId)!].sort())
+        )
+          fail("NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID", "/target");
+        // The legacy inline shape cannot carry new geometry/control properties.
+        // Preserve independently admitted initialization rather than lose edits.
+        const represented = new Set([
+          "id",
+          "sectionKey",
+          "labelId",
+          "position",
+          "navigationGroupId",
+        ]);
+        for (const section of sections) {
+          const initialized = Object.values(m.sections).find(
+            (s) => s.id === section.id,
+          )!;
+          for (const key of Object.keys(initialized))
+            if (
+              !represented.has(key) &&
+              canonicalJson(Reflect.get(section, key)) !==
+                canonicalJson(Reflect.get(initialized, key))
+            )
+              fail(
+                "NATIVE_DETAIL_SECTION_REVERSE_NOT_REPRESENTABLE",
+                "/target/sections/" + key,
+              );
+        }
+        const compiled = compileNativeDetailFieldSections(
+          { sections, bindings },
+          m.context,
+          sectionIds,
+        );
+        const surface = result.surfaces!.find((s) => s.id === surfaceId)!;
+        (surface as { layoutConfig?: object }).layoutConfig = {
+          ...surface.layoutConfig,
+          recordPresentation: {
+            ...(surface.layoutConfig?.recordPresentation as object),
+            sections: compiled,
+          },
+        };
+        for (const b of result.surfaceFieldBindings ?? []) {
+          if (b.entitySurfaceId !== surfaceId) continue;
+          const shape = positions.get(b.id ?? "");
+          if (
+            !shape ||
+            bindings.filter(
+              (n) => n.id === b.id && n.entityFieldId === b.entityFieldId,
+            ).length !== 1
+          )
+            fail(
+              "NATIVE_DETAIL_SECTION_MAPPING_INVENTORY_INVALID",
+              "/target/bindings",
+            );
+          Object.assign(b, { position: shape!.position });
+          if (shape!.sectionPresent)
+            Object.assign(b, { entitySurfaceSectionId: shape!.sectionId });
+          else
+            delete (b as { entitySurfaceSectionId?: string | null })
+              .entitySurfaceSectionId;
+          if (shape!.visible)
+            (b as { displayConfig?: object }).displayConfig = {
+              ...b.displayConfig,
+              defaultVisible: true,
+            };
+        }
+      }
+      (result as { surfaceSections: unknown }).surfaceSections =
+        result.surfaceSections!.filter(
+          (s) => !derivations.some((d) => d.id === s.id),
+        );
+      return result;
+    },
+  };
 }

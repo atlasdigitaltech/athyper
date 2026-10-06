@@ -38,7 +38,16 @@ export type NativeConversionAdapters = {
 /** Graph-level normalization of nested source paths into typed reference/label
  * members before scalar adapters run. Installed owner code only. The inverse
  * consumes the converted graph, not a captured source-value backup. */
+export interface NativeSectionDerivation {
+  readonly id: string;
+  readonly surfaceId: string;
+  readonly sourceIndex: number;
+  readonly sourceHash: string;
+}
 export interface NativeNestedConversionAdapter {
+  /** Only explicit inline field sections may introduce new section identities.
+   * No existing family member may be removed or replaced by this enrollment. */
+  readonly sectionDerivations?: readonly NativeSectionDerivation[];
   readonly resource: NativeConversionResource;
   readonly dependencies?: readonly NativeConversionResource[];
   forward(source: MetaEntityGraph): MetaEntityGraph;
@@ -216,6 +225,7 @@ export function prepareNativeGraphConversion(
         sourceHash: string;
         preparedHash: string;
         dependencies?: readonly NativeConversionResource[];
+        sectionDerivations?: readonly NativeSectionDerivation[];
       }
     | undefined;
   if (nested) {
@@ -308,14 +318,75 @@ export function prepareNativeGraphConversion(
         "/prepared/referenceMembers/members/" + kind,
       );
     }
+    for (const kind of nativeConversionFamilies)
+      if (!Array.isArray(source[kind]) || !Array.isArray(prepared[kind]))
+        fail("NATIVE_CONVERSION_FAMILY_REQUIRED", "/source/" + kind);
+    const derivations = nested.sectionDerivations ?? [];
+    validateConversionJsonData(derivations, "/nested/sectionDerivations");
+    if (
+      !Array.isArray(derivations) ||
+      derivations.some(
+        (d) => !d || typeof d !== "object" || Array.isArray(d),
+      ) ||
+      new Set(derivations.map((d) => d.id)).size !== derivations.length
+    )
+      fail(
+        "NATIVE_CONVERSION_DERIVATION_INVALID",
+        "/nested/sectionDerivations",
+      );
+    for (const d of derivations) {
+      validateFoundationNode(
+        {
+          type: "object",
+          properties: {
+            id: referenceUuid,
+            surfaceId: referenceUuid,
+            sourceIndex: { type: "integer", minimum: 0, maximum: 32766 },
+            sourceHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          },
+        },
+        d,
+        "/nested/sectionDerivations",
+      );
+      const surfaces = source.surfaces!.filter(
+        (s) => s.id === d.surfaceId && s.surfaceKind === "detail",
+      );
+      const record = surfaces[0]?.layoutConfig?.recordPresentation as
+        { sections?: readonly { key?: string }[] } | undefined;
+      const declaration = Array.isArray(record?.sections)
+        ? record.sections[d.sourceIndex]
+        : undefined;
+      const rows = prepared.surfaceSections!.filter(
+        (s) => s.id === d.id && s.entitySurfaceId === d.surfaceId,
+      );
+      if (
+        surfaces.length !== 1 ||
+        !declaration ||
+        sha256(declaration) !== d.sourceHash ||
+        rows.length !== 1 ||
+        rows[0]!.sectionKey !== declaration.key ||
+        rows[0]!.sectionKind !== "section" ||
+        nativeConversionFamilies.some((k) =>
+          source[k]?.some((r) => r.id === d.id),
+        )
+      )
+        fail(
+          "NATIVE_CONVERSION_DERIVATION_INVALID",
+          "/nested/sectionDerivations",
+        );
+    }
     for (const kind of nativeConversionFamilies) {
       const before = source[kind],
         after = prepared[kind];
       if (
         !Array.isArray(before) ||
         !Array.isArray(after) ||
-        canonicalJson(before.map((row) => row.id).sort()) !==
-          canonicalJson(after.map((row) => row.id).sort())
+        canonicalJson(
+          [
+            ...before.map((row) => row.id),
+            ...(kind === "surfaceSections" ? derivations.map((d) => d.id) : []),
+          ].sort(),
+        ) !== canonicalJson(after.map((row) => row.id).sort())
       )
         fail("NATIVE_CONVERSION_IDENTITY_CHANGED", "/prepared/" + kind);
     }
@@ -347,6 +418,9 @@ export function prepareNativeGraphConversion(
       adapter: structuredClone(nested.resource),
       sourceHash: sha256(source),
       preparedHash: sha256(prepared),
+      ...(derivations.length
+        ? { sectionDerivations: structuredClone(derivations) }
+        : {}),
       ...(nested.dependencies?.length
         ? { dependencies: structuredClone(nested.dependencies) }
         : {}),
@@ -494,8 +568,9 @@ export function prepareNativeGraphConversion(
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema:
-      nestedProof || Object.values(proof).some((p) => p.dependencies?.length)
+    schema: nestedProof?.sectionDerivations?.length
+      ? ("entity.native-graph-conversion-proof/3" as const)
+      : nestedProof || Object.values(proof).some((p) => p.dependencies?.length)
         ? ("entity.native-graph-conversion-proof/2" as const)
         : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
@@ -555,6 +630,13 @@ export function composeNativeNestedConversionAdapters(
   const steps = [...adapters];
   return {
     resource: structuredClone(resource),
+    ...(steps.some((a) => a.sectionDerivations?.length)
+      ? {
+          sectionDerivations: steps.flatMap((a) =>
+            structuredClone(a.sectionDerivations ?? []),
+          ),
+        }
+      : {}),
     dependencies: [
       ...new Map(
         steps
