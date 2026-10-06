@@ -530,7 +530,7 @@ CREATE TABLE metadata.entity_key_field (
     CONSTRAINT entity_key_field_member_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_key_id, entity_field_id),
     CONSTRAINT entity_key_field_position_uq
-        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_key_id, position),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_key_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_key_field_position_chk CHECK (position BETWEEN 1 AND 64),
     CONSTRAINT entity_key_field_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
@@ -610,7 +610,7 @@ CREATE TABLE metadata.entity_search_field (
     CONSTRAINT entity_search_field_member_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_search_profile_id, entity_field_id),
     CONSTRAINT entity_search_field_position_uq
-        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_search_profile_id, position),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_search_profile_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_search_field_position_chk CHECK (position BETWEEN 1 AND 256),
     CONSTRAINT entity_search_field_weight_chk CHECK (weight > 0 AND weight <= 100),
     CONSTRAINT entity_search_field_audit_pair_chk
@@ -737,7 +737,7 @@ CREATE TABLE metadata.entity_relation_field (
     CONSTRAINT entity_relation_field_target_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_relation_target_id, target_field_key),
     CONSTRAINT entity_relation_field_position_uq
-        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_relation_target_id, position),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_relation_target_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_relation_field_target_key_chk
         CHECK (target_field_key ~ '^[a-z][a-z0-9_]{0,62}$'),
     CONSTRAINT entity_relation_field_position_chk CHECK (position BETWEEN 1 AND 64),
@@ -811,7 +811,7 @@ CREATE TABLE metadata.entity_surface_section (
     CONSTRAINT entity_surface_section_pkey PRIMARY KEY (id),
     CONSTRAINT entity_surface_section_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT entity_surface_section_key_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, section_key),
-    CONSTRAINT entity_surface_section_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, parent_section_id, position),
+    CONSTRAINT entity_surface_section_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, parent_section_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_surface_section_key_chk CHECK (section_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT entity_surface_section_title_chk CHECK (title IS NULL OR (btrim(title) <> '' AND length(title) <= 256)),
     CONSTRAINT entity_surface_section_description_chk CHECK (description IS NULL OR length(description) <= 4000),
@@ -850,7 +850,7 @@ CREATE TABLE metadata.entity_surface_field_binding (
     CONSTRAINT entity_surface_field_binding_pkey PRIMARY KEY (id),
     CONSTRAINT entity_surface_field_binding_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT entity_surface_field_binding_key_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, binding_key),
-    CONSTRAINT entity_surface_field_binding_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, entity_surface_section_id, position),
+    CONSTRAINT entity_surface_field_binding_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, entity_surface_section_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_surface_field_binding_key_chk CHECK (binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT entity_surface_field_binding_position_chk CHECK (position >= 0),
     CONSTRAINT entity_surface_field_binding_label_chk CHECK (label_override IS NULL OR (btrim(label_override) <> '' AND length(label_override) <= 256)),
@@ -987,7 +987,7 @@ CREATE TABLE metadata.entity_surface_operation (
     CONSTRAINT entity_surface_operation_pkey PRIMARY KEY (id),
     CONSTRAINT entity_surface_operation_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT entity_surface_operation_key_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, placement_key),
-    CONSTRAINT entity_surface_operation_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, entity_surface_section_id, interaction_target, position),
+    CONSTRAINT entity_surface_operation_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_surface_id, entity_surface_section_id, interaction_target, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_surface_operation_key_chk CHECK (placement_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT entity_surface_operation_position_chk CHECK (position >= 0),
     CONSTRAINT entity_surface_operation_label_chk CHECK (label_override IS NULL OR (btrim(label_override) <> '' AND length(label_override) <= 256)),
@@ -1050,7 +1050,7 @@ CREATE TABLE metadata.entity_flow_step (
     CONSTRAINT entity_flow_step_pkey PRIMARY KEY (id),
     CONSTRAINT entity_flow_step_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT entity_flow_step_key_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_flow_id, step_key),
-    CONSTRAINT entity_flow_step_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_flow_id, position),
+    CONSTRAINT entity_flow_step_position_uq UNIQUE NULLS NOT DISTINCT (tenant_id, entity_flow_id, position) DEFERRABLE INITIALLY IMMEDIATE,
     CONSTRAINT entity_flow_step_key_chk CHECK (step_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT entity_flow_step_position_chk CHECK (position >= 0),
     CONSTRAINT entity_flow_step_title_chk CHECK (title_override IS NULL OR (btrim(title_override) <> '' AND length(title_override) <= 256)),

@@ -92,7 +92,6 @@ import {
 import { createMetaEntityActivationInspector } from "./shared/entity-governance/meta-entity-activation-inspection.js";
 import { HttpError } from "@athyper/server-runtime-http";
 import {
-  addressFormChoices,
   createSharedReferenceDirectory,
 } from "@athyper/server-service-records";
 import { createEntityPresentationChoiceResolvers } from "./shared/entity-runtime/presentation-choice-resolvers.js";
@@ -5778,18 +5777,6 @@ function registerStudioAuthoring(
               context.tenantId,
               entityCode,
             ),
-        ),
-      addressPreviewChoices: (context) =>
-        transactions.run(
-          "studio",
-          { tenantId: context.tenantId, principalId: context.principalId },
-          async (tx) => ({
-            "iso.country": await addressFormChoices(tx, "iso.country"),
-            "shared.state_region": await addressFormChoices(
-              tx,
-              "shared.state_region",
-            ),
-          }),
         ),
       inspectActivation: createMetaEntityActivationInspector(
         (plane, context, work) =>

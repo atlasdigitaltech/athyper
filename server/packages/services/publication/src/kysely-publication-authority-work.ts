@@ -510,7 +510,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       const unsignedHash = this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(unsigned));
       const id = stableUuid(`publication-compilation:${releaseId}:${plane}:compiled_entity_runtime`);
       await sql`INSERT INTO publication.artifact_compilation(id,publication_release_id,plane_code,artifact_kind,unsigned_document,unsigned_hash,compiler_name,compiler_version,created_by)
-        VALUES(${id}::uuid,${releaseId}::uuid,${plane},'compiled_entity_runtime',${JSON.stringify(unsigned)}::jsonb,${unsignedHash},'athyper.compiled-entity-artifact','1.1.0',${string(row, "published_by")}::uuid)
+        VALUES(${id}::uuid,${releaseId}::uuid,${plane},'compiled_entity_runtime',${JSON.stringify(unsigned)}::jsonb,${unsignedHash},${unsigned.manifest.compiler.name},${unsigned.manifest.compiler.version},${string(row, "published_by")}::uuid)
         ON CONFLICT(publication_release_id,plane_code,artifact_kind) DO NOTHING`.execute(this.options.database);
       const saved = required((await sql<Row>`SELECT id,unsigned_hash FROM publication.artifact_compilation WHERE publication_release_id=${releaseId}::uuid AND plane_code=${plane} AND artifact_kind='compiled_entity_runtime'`.execute(this.options.database)).rows[0], "PUBLICATION_COMPILATION_NOT_FOUND");
       if (string(saved, "unsigned_hash") !== unsignedHash) throw permanent("PUBLICATION_COMPILATION_CONFLICT");

@@ -6,6 +6,7 @@ import { EntityRelatedSection } from "./related-entity-section";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   resolveRecordHeader,
+  requireEntityDetailNavigation,
   type EntityDetailDescriptorV1,
   type EntityRecordV1,
 } from "@athyper/contract-platform-entity-runtime";
@@ -51,14 +52,14 @@ export function MetadataDetailWorkspace({
   const descriptor = useMemo(() => localizeEntityLabels(sourceDescriptor, intl), [sourceDescriptor, intl]);
   const presentation = useMemo(() => {
     const published = descriptor.presentation!;
-    if (published.navigation) return published;
-    // Section-only metadata uses the same navigation and section menu as a
-    // configured record. The full-width selector fallback is retired.
-    return {...published,
-      sections: published.sections.map(section => section.key === "overview" && section.label === descriptor.entity.pluralLabel ? {...section,label:descriptor.entity.label} : section),
-      navigation: {mode: published.sections.some(section => section.key === "overview") ? "scroll" as const : "switch" as const, tabs: [{key:"overview",label:intl.message("detail.overview"),sectionKeys:published.sections.map(section=>section.key)}]},
+    return {
+      ...published,
+      navigation: requireEntityDetailNavigation(
+        published.navigation,
+        published.sections.map(section => section.key),
+      ),
     };
-  }, [descriptor, intl]);
+  }, [descriptor]);
   useRecordFooterInformation({recordId: record.id, metadataRelease: descriptor.revision.release,
     ...(record.version === undefined ? {} : {recordRevision: record.version})});
   const sections = presentation.sections;

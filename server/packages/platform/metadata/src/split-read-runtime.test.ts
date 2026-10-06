@@ -89,7 +89,7 @@ it("preserves exact defined permissions and exposes unresolved operations withou
   f.operations.operations[0].permissionCode = "sample.directory.view";
   f.operations.operations.push({ key: "approve" });
   const result = prepareSplitReadRuntime(f.core, f.operations);
-  expect(result.descriptor.operations.list.permissionCode).toBe(
+  expect(result.descriptor.operations.list!.permissionCode).toBe(
     "sample.directory.view",
   );
   expect(result.remainingOperations).toEqual(["approve"]);
@@ -144,8 +144,8 @@ it("enforces masked-only declarations without opening query access", () => {
   );
   f.core.fields[2].protection = { normalProjection: { mode: "masked" } };
   expect(
-    prepareSplitReadRuntime(f.core, f.operations).descriptor.authorization
-      .fieldPolicies[2].representation,
+    prepareSplitReadRuntime(f.core, f.operations).descriptor.authorization!
+      .fieldPolicies[2]!.representation,
   ).toBe("masked");
   f.core.query = { search: [{ fieldKey: "name" }] };
   expect(() => prepareSplitReadRuntime(f.core, f.operations)).toThrow(

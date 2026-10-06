@@ -1,3 +1,4 @@
+import { definedFixturePermission } from "../test-support/defined-permission.js";
 import { readFileSync } from "node:fs";
 import { it, expect, vi } from "vitest";
 import type {
@@ -52,7 +53,7 @@ const context: VerifiedRequestContext = {
     operationBindings: profile.operations.map((o) => ({
       entityCode: profile.entityCode,
       operationKey: o.key,
-      permissionCode: o.permissionCode,
+      permissionCode: definedFixturePermission(o.permissionCode),
       decisionMode: "authorize",
       requiredScopeKinds: entityScopeResolvers[o.scope].map(
         (key) =>
@@ -649,7 +650,7 @@ it("authorizes collection export fields through directory independently of expor
       fieldUses: [{ field, use: "export" }],
     }),
   });
-  const input = { ...request, permissionCode: exportOperation.permissionCode };
+  const input = { ...request, permissionCode: definedFixturePermission(exportOperation.permissionCode) };
   expect((await s.wrapped.authorize(input)).allowed).toBe(true);
   expect(seen).toContain(profile.directory.operation);
   directoryAllowed = false;

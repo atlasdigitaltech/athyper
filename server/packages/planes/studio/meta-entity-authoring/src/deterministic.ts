@@ -58,15 +58,17 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
         {
           code: "CONTRACT_SCHEMA_INVALID",
           path: "contractSchema",
-          message: "Contract schema 2.1 is required",
+          message: "A supported graph schema matching its normalized members is required",
         },
       ],
     };
-  if (graph.contractSchema !== "athyper.meta-entity-contract/2.1") {
+  if (String(graph.contractSchema) === "athyper.meta-entity-contract/2.4")
+    return { deterministic: true, contractHash, issues: [{ code: "NATIVE_GRAPH_RELEASE_COMPILATION_NOT_QUALIFIED", path: "contractSchema", message: "Native whole-graph release lowering is required; legacy decoding cannot publish this source." }] };
+  if (graph.contractSchema !== (graph.referenceMembers ? "athyper.meta-entity-contract/2.3" : graph.ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1")) {
     issues.push({
       code: "CONTRACT_SCHEMA_INVALID",
       path: "contractSchema",
-      message: "Contract schema 2.1 is required",
+      message: "A supported graph schema matching its normalized members is required",
     });
   }
   if (!isObject(graph.entity))
@@ -530,6 +532,8 @@ export function runContractTests(graph: MetaEntityGraph): ContractTestReport {
 export function compileGraph(
   graph: MetaEntityGraph,
 ): CompiledMetaEntityArtifact {
+  if (graph.referenceMembers) throw new Error("NORMALIZED_REFERENCE_PUBLICATION_NOT_QUALIFIED");
+  if (graph.ownedLabels) throw new Error("NORMALIZED_LABEL_PUBLICATION_NOT_QUALIFIED");
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
   graph = deriveCanonicalRelations(graph);

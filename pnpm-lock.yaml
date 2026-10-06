@@ -3088,6 +3088,9 @@ importers:
       '@athyper/server-contract-master-data':
         specifier: workspace:*
         version: link:../master-data
+      '@athyper/server-contract-metadata':
+        specifier: workspace:*
+        version: link:../metadata
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -3365,6 +3368,9 @@ importers:
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../../contracts/auth
+      '@athyper/server-contract-events':
+        specifier: workspace:*
+        version: link:../../../contracts/events
       '@athyper/server-contract-jobs':
         specifier: workspace:*
         version: link:../../../contracts/jobs

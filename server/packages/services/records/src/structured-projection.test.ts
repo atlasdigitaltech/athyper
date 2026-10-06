@@ -15,6 +15,7 @@ const declaration = parseStructuredProjection({
 });
 function fixture(entityCode: string, value: unknown, declared = true) {
   const descriptor = {
+    schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode,
     planeKey: "neon",
     storage: {

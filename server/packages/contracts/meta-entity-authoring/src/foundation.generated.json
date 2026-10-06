@@ -1,0 +1,737 @@
+{
+  "contractHash": "3d6be96dba919ac2cc3c7d20c899dfbf5be85ee97b5e3fbad112eb889c6607a0",
+  "manifest": {
+    "key": "entity.foundation-owned-labels/1",
+    "scope": "owned-label-contract-and-scoped-persistence",
+    "authoringPackage": "@athyper/server-contract-meta-entity-authoring",
+    "planes": [],
+    "supported": [
+      "owned-labels",
+      "non-default-translations",
+      "localization-codec",
+      "typed-label-commands",
+      "atomic-replay-receipts"
+    ],
+    "deferred": [
+      "shared-labels",
+      "fields",
+      "navigation",
+      "operations",
+      "permissions",
+      "governed-host-writes",
+      "host-bootstrap",
+      "live-preview",
+      "publication"
+    ],
+    "dependencies": [
+      "verified-draft-coordinate",
+      "host-supplied-supported-locales",
+      "explicit-legacy-label-identity-map"
+    ],
+    "accountableRole": "shared-authoring-contract-maintainer",
+    "namedOwner": null,
+    "approvedBudgets": null,
+    "inventoryComplete": false,
+    "referenceMilestonePassed": false
+  },
+  "referenceInventory": {
+    "tables": [
+      "entity",
+      "entity_change_set",
+      "entity_release",
+      "entity_target",
+      "entity_label",
+      "entity_label_translation",
+      "entity_field_identity",
+      "entity_field",
+      "entity_runtime_profile",
+      "entity_field_choice",
+      "entity_key",
+      "entity_key_field",
+      "entity_search_profile",
+      "entity_search_field",
+      "entity_relation",
+      "entity_relation_target",
+      "entity_relation_field",
+      "entity_field_reference_binding",
+      "entity_surface",
+      "entity_surface_navigation_group",
+      "entity_surface_section",
+      "entity_surface_field_binding",
+      "entity_surface_view",
+      "entity_surface_view_field",
+      "entity_surface_operation",
+      "entity_predicate",
+      "entity_operation",
+      "entity_operation_permission",
+      "entity_access_permission",
+      "entity_operation_scope_binding",
+      "entity_operation_field",
+      "entity_authorization_profile",
+      "entity_field_access",
+      "entity_contract_test_case"
+    ],
+    "gates": {
+      "contractCoverage": "partial-labels-and-reference-members",
+      "scopedSaves": "not-qualified",
+      "productDatabaseAuthority": "not-qualified",
+      "governedHost": "not-qualified",
+      "referenceReader": "existing-published-runtime-contract",
+      "liveStorageAuthority": "not-qualified",
+      "liveEffectiveSecurity": "not-qualified"
+    }
+  },
+  "fixtureSources": [
+    {
+      "path": "metadata/entities/common/reference/country/localization.json",
+      "sha256": "fd976a5f1d6a33f5a410f34b6162532ef6ce78df66d9fbaef12cbc0b5e5b07cd",
+      "scope": "whole-localization-resource"
+    },
+    {
+      "path": "metadata/entities/common/reference/state_region/definition.json",
+      "sha256": "2077a079ac67ac6307e311fda34d9bb03c059ebb5355de06816163ea79fe11fb",
+      "scope": "explicit-labels-only-synthetic-fixture"
+    }
+  ],
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "contract",
+      "entityId",
+      "changeSetId",
+      "tenantId",
+      "defaultLocale",
+      "requiredLocales",
+      "labels",
+      "translations"
+    ],
+    "properties": {
+      "contract": {
+        "type": "string",
+        "const": "entity.authoring-owned-labels/1"
+      },
+      "entityId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "changeSetId": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "tenantId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "defaultLocale": {
+        "type": "string",
+        "minLength": 1
+      },
+      "requiredLocales": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 1
+      },
+      "labels": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "labelKey",
+            "defaultText",
+            "sourceKind",
+            "sharedLabelKey",
+            "sharedResourceKey",
+            "sharedResourceVersion",
+            "sharedResourceHash"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "labelKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]{0,126}$"
+            },
+            "defaultText": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "pattern": "\\S"
+            },
+            "sourceKind": {
+              "type": "string",
+              "const": "owned"
+            },
+            "sharedLabelKey": {
+              "type": "null"
+            },
+            "sharedResourceKey": {
+              "type": "null"
+            },
+            "sharedResourceVersion": {
+              "type": "null"
+            },
+            "sharedResourceHash": {
+              "type": "null"
+            }
+          }
+        }
+      },
+      "translations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "labelId",
+            "localeCode",
+            "text"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "labelId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "localeCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "pattern": "\\S"
+            }
+          }
+        }
+      }
+    }
+  },
+  "commandSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "contract",
+      "expectedRevision",
+      "idempotencyKey",
+      "commands"
+    ],
+    "properties": {
+      "contract": {
+        "type": "string",
+        "const": "entity.authoring-label-commands/1"
+      },
+      "expectedRevision": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "idempotencyKey": {
+        "type": "string",
+        "minLength": 16,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._~:/+-]{15,127}$"
+      },
+      "commands": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "set"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "updateMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "labelSettings"
+                },
+                "set": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "defaultLocale",
+                    "requiredLocales"
+                  ],
+                  "properties": {
+                    "defaultLocale": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "requiredLocales": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "minItems": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "tempRef",
+                "value"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "addMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "label"
+                },
+                "tempRef": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "labelKey",
+                    "defaultText"
+                  ],
+                  "properties": {
+                    "labelKey": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_.-]{0,126}$"
+                    },
+                    "defaultText": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "tempRef",
+                "value"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "addMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "labelTranslation"
+                },
+                "tempRef": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                },
+                "value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "label",
+                    "localeCode",
+                    "text"
+                  ],
+                  "properties": {
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "$tempRef"
+                          ],
+                          "properties": {
+                            "$tempRef": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "localeCode": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "member",
+                "set"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "updateMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "label"
+                },
+                "member": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "$tempRef"
+                      ],
+                      "properties": {
+                        "$tempRef": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "set": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "defaultText"
+                  ],
+                  "properties": {
+                    "defaultText": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "member",
+                "set"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "updateMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "labelTranslation"
+                },
+                "member": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "$tempRef"
+                      ],
+                      "properties": {
+                        "$tempRef": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "set": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "member"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "removeMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "label"
+                },
+                "member": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "$tempRef"
+                      ],
+                      "properties": {
+                        "$tempRef": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "member"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "removeMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "labelTranslation"
+                },
+                "member": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "$tempRef"
+                      ],
+                      "properties": {
+                        "$tempRef": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "memberKind",
+                "member",
+                "labelKey"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "renameDraftMember"
+                },
+                "memberKind": {
+                  "type": "string",
+                  "const": "label"
+                },
+                "member": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "$tempRef"
+                      ],
+                      "properties": {
+                        "$tempRef": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "labelKey": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_.-]{0,126}$"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "labels": {
+      "table": "metadata.entity_label",
+      "columns": {
+        "id": "id",
+        "labelKey": "label_key",
+        "defaultText": "default_text",
+        "sourceKind": "source_kind",
+        "sharedLabelKey": "shared_label_key",
+        "sharedResourceKey": "shared_resource_key",
+        "sharedResourceVersion": "shared_resource_version",
+        "sharedResourceHash": "shared_resource_hash"
+      }
+    },
+    "translations": {
+      "table": "metadata.entity_label_translation",
+      "columns": {
+        "id": "id",
+        "labelId": "label_id",
+        "localeCode": "locale_code",
+        "text": "text"
+      }
+    }
+  },
+  "rootMappings": {
+    "defaultLocale": "metadata.entity_change_set.default_locale",
+    "requiredLocales": "metadata.entity_change_set.required_locales"
+  }
+}

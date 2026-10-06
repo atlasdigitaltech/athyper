@@ -26,7 +26,7 @@ const binding = {
 const candidate: MetaEntityGraph = { ...historicalCandidate, surfaces: historicalCandidate.surfaces!.map(surface => ({
   ...surface, layoutConfig: { ...surface.layoutConfig, collectionCompilation: binding },
 })) };
-it("serializes and reloads the binding through the repository JSONB column", async () => {
+it("rejects an unsupported historical field property before any graph write", async () => {
   // SQL-adapter test, not live PostgreSQL/RLS qualification.
   const tables = new Map<string, Record<string, unknown>[]>();
   const saves = new Map<number, { graph: unknown; graph_hash: unknown }>();
@@ -34,13 +34,16 @@ it("serializes and reloads the binding through the repository JSONB column", asy
   const query = async (statement: string, parameters: unknown[] = []) => {
     let result: unknown[] = [];
     if (statement.includes("fn_advance_entity_change_set")) result = [{ revision: 2 }];
+    // This test edits an existing draft. Stored protection is explicit fixture
+    // evidence, not a default inferred from the incoming legacy graph.
+    else if (statement.includes("SELECT o.id,o.requires_mfa")) result = candidate.operations.map(operation => ({ id: operation.id, requires_mfa: true }));
     else if (statement.includes("SELECT e.entity_code,e.entity_class")) result = [{
       entity_code: candidate.entity.entityCode, entity_class: candidate.entity.entityClass ?? "document",
       ownership_model: candidate.entity.ownershipModel ?? "tenant",
     }];
     else if (statement.includes("SELECT cs.*")) result = [{
       id: "change", tenant_id: "tenant", entity_id: "entity", entity_code: candidate.entity.entityCode,
-      branch_code: "main", status: "draft", lock_version: 2, created_by: "actor",
+      branch_code: "main", status: "draft", lock_version: statement.includes("FOR UPDATE") ? 1 : 2, created_by: "actor",
     }];
     else if (statement.includes("SELECT tenant_id,entity_id")) result = [{ tenant_id: "tenant", entity_id: "entity" }];
     else if (statement.includes("INSERT INTO snapshot.entity_draft_save"))
@@ -50,7 +53,7 @@ it("serializes and reloads the binding through the repository JSONB column", asy
       const insert = statement.match(/INSERT INTO "metadata"\."([^"]+)" \(([^)]+)\)/);
       const select = statement.match(/FROM "metadata"\."([^"]+)"/);
       if (insert) {
-        const columns = insert[2]!.split(",").map(column => column.trim());
+        const columns = insert[2]!.split(",").map(column => column.trim().replaceAll('"', ''));
         const row = Object.fromEntries(columns.map((column, i) => {
           const value = parameters[i];
           return [column, typeof value === "string" && value.startsWith("{") ? JSON.parse(value) : value];
@@ -71,12 +74,11 @@ it("serializes and reloads the binding through the repository JSONB column", asy
   }) });
   const repository = new KyselyMetaEntityAuthoringRepository(db);
   try {
-    await repository.replaceGraph({ changeSetId: "change", expectedRevision: 1, actorId: "actor",
-      graph: { ...candidate, classProfiles: [] } });
-    expect(serializedBinding).toBe(true);
-    const loaded = await repository.loadGraph("change");
-    expect(loaded.surfaces![0]!.layoutConfig?.collectionCompilation).toEqual(binding);
-    expect(compileGraph(loaded).descriptor.collectionCompilation).toEqual(binding);
+    await expect(repository.replaceGraph({ changeSetId: "change", expectedRevision: 1, actorId: "actor",
+      graph: { ...candidate, classProfiles: [] } })).rejects.toThrow("entity_field.nullSemantics");
+    expect(serializedBinding).toBe(false);
+    expect(tables.size).toBe(0);
+    expect(saves.size).toBe(0);
   } finally { await db.destroy(); }
 });
 it("compiles the BP review collection with independent read policy and complete field coverage", () => {

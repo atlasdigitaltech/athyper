@@ -23,6 +23,7 @@ const id = "11111111-1111-4111-8111-111111111111";
 function fixture(exportEnabled = false) {
   const keys = exportEnabled ? ["list", "read", "export"] : ["list", "read"];
   const descriptor = {
+    schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: "sample",
     planeKey: "neon",
     releaseId: "release",

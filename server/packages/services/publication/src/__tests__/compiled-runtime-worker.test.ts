@@ -170,3 +170,29 @@ it("binds coordinated activation to the same manifest digest at compile, sign an
   Object.assign(document.manifest.evidence!, { coordinationHash: "invalid" });
   await expect(qualifyRuntimePublication(document, f.dependencies, canonical, "sign")).rejects.toThrow();
 });
+
+
+it("compiles native live-read pins and binds them to the signed source at compile/sign/dispatch", async () => {
+  const f = fixture(), input = await f.lower();
+  const source = { entityId: f.source.sourceEntityId, releaseId: f.source.releaseId,
+    contractHash: f.source.sourceContractHash, tenantId: f.source.tenantId };
+  const resource = { owner: "platform", namespace: "entity", key: "security", version: 1, hash: "d".repeat(64) };
+  const old = Object.values(input.runtimeContracts)[0]!;
+  Object.assign(old, { schema: "athyper.entity-runtime-descriptor/1.1",
+    liveReadContract: { schema: "entity.live-read/1", source, security: resource,
+      storageAuthority: { ...resource, key: "storage" } } });
+  f.lower.mockResolvedValue(input);
+  const document = await compileRuntimePublication(f.source, f.dependencies, canonical, "test-key");
+  await qualifyRuntimePublication(document, f.dependencies, canonical, "sign");
+  await qualifyRuntimePublication(document, f.dependencies, canonical, "dispatch");
+  expect(f.qualify).toHaveBeenCalledTimes(3);
+  for (const evidence of [
+    { ...document.manifest.evidence, sourceContractHash: "e".repeat(64) },
+    { ...document.manifest.evidence, sourceEntityId: id(99) },
+    { ...document.manifest.evidence, sourceContractHash: undefined },
+  ]) {
+    const changed = { ...document, manifest: { ...document.manifest, evidence } };
+    await expect(qualifyRuntimePublication(changed as typeof document, f.dependencies, canonical, "sign")).rejects.toThrow("SOURCE_PIN");
+  }
+  expect(f.qualify).toHaveBeenCalledTimes(3); // Mismatched source never reaches the authority.
+});

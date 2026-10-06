@@ -1,4 +1,4 @@
-import { parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
+import { validateEntityLiveReadContractV1, parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
   parseRecordMutationPolicy,
@@ -54,8 +54,18 @@ export function parseEntityRuntimeDescriptor(
   row: RuntimeDescriptorRow,
 ): EntityRuntimeDescriptor {
   const value = object(row.compiled_json, "compiled_json");
-  if (value["schema"] !== "athyper.entity-runtime-descriptor/1.0")
+  const schema = value["schema"];
+  if (schema !== "athyper.entity-runtime-descriptor/1.0" && schema !== "athyper.entity-runtime-descriptor/1.1")
     throw new Error("Unsupported entity descriptor schema");
+  const liveReadContract = value["liveReadContract"];
+  if (schema === "athyper.entity-runtime-descriptor/1.1") {
+    validateEntityLiveReadContractV1(liveReadContract);
+    if (liveReadContract.source.releaseId !== row.release_id ||
+        liveReadContract.source.contractHash !== row.entity_contract_hash)
+      throw new TypeError("ENTITY_LIVE_READ_SOURCE_MISMATCH");
+  } else if (liveReadContract !== undefined) {
+    throw new TypeError("ENTITY_LIVE_READ_SCHEMA_TRANSITION_REQUIRED");
+  }
   if (
     row.plane_code !== "studio" &&
     row.plane_code !== "neon" &&
@@ -279,7 +289,8 @@ export function parseEntityRuntimeDescriptor(
   if (!Number.isSafeInteger(releaseNo) || releaseNo < 1)
     throw new Error("Invalid descriptor release number");
   return Object.freeze({
-    schema: "athyper.entity-runtime-descriptor/1.0",
+    schema,
+    ...(schema === "athyper.entity-runtime-descriptor/1.1" ? { liveReadContract: liveReadContract as import("@athyper/server-contract-metadata").EntityLiveReadContractV1 } : {}),
     ...(value["referenceCapability"] === COMMON_REFERENCE_VIEW_PERMISSION
       ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION }
       : {}),

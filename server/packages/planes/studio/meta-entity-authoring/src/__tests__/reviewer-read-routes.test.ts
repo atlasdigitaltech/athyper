@@ -35,7 +35,6 @@ it("allows tenant-scoped reviewer reads while preserving author-only writes and 
   const app = express();
   app.use(express.json());
   registerMetaEntityAuthoringRoutes(app, {
-    addressPreviewChoices: async () => ({"iso.country": [], "shared.state_region": []}),
     authenticate: (_q, _s, n) => n(),
     readContext: () => ({ planeKey, tenantId, principalId: "owner" }) as never,
     authorizer: { authorize } as never,
@@ -53,7 +52,6 @@ it("allows tenant-scoped reviewer reads while preserving author-only writes and 
   await new Promise<void>((r) => server.once("listening", r));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}/api/meta-entity-authoring`;
   const reads = [
-    "/inspection/address-preview-choices",
     "/inspection/releases",
     `/inspection/releases/${id}`,
     "/change-sets",
@@ -62,6 +60,7 @@ it("allows tenant-scoped reviewer reads while preserving author-only writes and 
     `/change-sets/${id}/graph`,
   ];
   try {
+    expect((await fetch(base + "/inspection/address-preview-choices")).status).toBe(404);
     for (const path of reads) {
       const res = await fetch(base + path);
       expect(res.status).toBe(200);

@@ -163,9 +163,16 @@ it("compiles executable server and UI contracts into one deterministic release",
 
 async function load(qualify?: (profile: unknown, bindings: unknown) => void, mode?: string, current = "2.0.0", minimum?: string) {
   const source = { entity_id: "source-entity", release_hash: "source-release-hash" };
+  const nativeSource = { entityId: "00000000-0000-4000-8000-000000000002",
+    releaseId: "00000000-0000-4000-8000-000000000001", contractHash: "c".repeat(64), tenantId: null };
+  const resource = { owner: "platform", namespace: "entity", key: "security", version: 1, hash: "d".repeat(64) };
   const compilation = compileCompiledEntityArtifacts(mode?.startsWith("provenance") ? {
     ...input, runtimeContracts: { [entityCode]: { ...descriptor, source } },
-  } : mode === "unsafe-pattern" ? { ...input, runtimeContracts: { [entityCode]: {
+  } : mode?.startsWith("native") ? { ...input, runtimeContracts: { [entityCode]: {
+    ...descriptor, schema: "athyper.entity-runtime-descriptor/1.1",
+    liveReadContract: { schema: "entity.live-read/1", source: nativeSource,
+      security: resource, storageAuthority: { ...resource, key: "storage" } },
+  } } } : mode === "unsafe-pattern" ? { ...input, runtimeContracts: { [entityCode]: {
     ...descriptor, fields: descriptor.fields.map((field: Record<string, unknown>) => ({ ...field, validation: { pattern: "^(a+)+$" } })),
   } } } : mode === "incomplete-operation" ? { ...input, artifacts: input.artifacts.map(artifact =>
     artifact.content.artifactType === "operation" ? { ...artifact, content: { ...artifact.content,
@@ -204,6 +211,10 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void, mod
     signatureAlgorithm: "Ed25519",
     signingKeyId: "test",
     createdAt: at,
+    ...(mode?.startsWith("native") ? { evidence: {
+      sourceEntityId: mode === "native-wrong-entity" ? "00000000-0000-4000-8000-000000000003" : nativeSource.entityId,
+      ...(mode !== "native-missing-hash" ? { sourceContractHash: mode === "native-wrong-hash" ? "e".repeat(64) : nativeSource.contractHash } : {}),
+    } } : {}),
     ...(mode?.startsWith("provenance") ? { evidence: { sourceEntityId: source.entity_id,
       sourceReleaseHash: mode === "provenance-invalid" ? "different-source" : source.release_hash } } : {}),
   };
@@ -319,3 +330,20 @@ it.each(["2", "2.0", "02.0.0", "2.0.0garbage", "2.0.0-01", "2.0.0-", "2.0.0+", "
   await expect(load(() => {}, undefined, "2.0.0", value)).rejects.toThrow();
   await expect(load(() => {}, undefined, value, "2.0.0")).rejects.toThrow();
 });
+
+
+it("does not let a real outer signature or legacy authorization qualification attest F6/F8/F9", async () => {
+  const qualify = vi.fn();
+  await expect(load(qualify, "native-valid")).rejects.toMatchObject({
+    code: "RUNTIME_INCOMPATIBLE", cause: { message: "ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE" },
+  });
+  expect(qualify).not.toHaveBeenCalled();
+});
+it.each(["native-wrong-entity", "native-wrong-hash", "native-missing-hash"])(
+  "rejects independently signed %s before target runtime qualification", async mode => {
+    const qualify = vi.fn();
+    await expect(load(qualify, mode)).rejects.toMatchObject({ code: "RUNTIME_INCOMPATIBLE",
+      cause: { message: expect.stringContaining("SOURCE_PIN") } });
+    expect(qualify).not.toHaveBeenCalled();
+  },
+);

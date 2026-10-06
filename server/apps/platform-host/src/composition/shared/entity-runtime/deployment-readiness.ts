@@ -72,7 +72,14 @@ export function createHostEntityReadiness(options: {
     const deploymentId = config?.entityServingDeploymentId;
     const adapterVersions: Record<string, string> = {};
     if (build) adapterVersions["entity-host"] = build;
-    const unavailableManifests: string[] = [];
+    // The bounded Records adapter has not yet acquired installed F6/F8/F9
+    // deployment evidence. Existing AI support receipts cannot attest it.
+    const liveReadUnqualified =
+      descriptor.liveReadContract !== undefined ||
+      descriptor.schema === "athyper.entity-runtime-descriptor/1.1";
+    const unavailableManifests: string[] = liveReadUnqualified
+      ? ["entity.live-read/1"]
+      : [];
     for (const binding of descriptor.aiManifestBindings?.tools ?? []) {
       try {
         const manifest = resolveAtlasEntityToolManifest(
@@ -95,7 +102,7 @@ export function createHostEntityReadiness(options: {
       }
     }
     return {
-      valid: Boolean(deploymentId && build && receipts),
+      valid: Boolean(deploymentId && build && receipts && !liveReadUnqualified),
       unavailableManifests,
       adapterVersions,
       target: {
@@ -128,6 +135,14 @@ export function createHostEntityReadiness(options: {
     });
     const result = await evaluate({ target: before.target, requirements });
     const unavailable = [...result.unavailable];
+    if (before.unavailableManifests.includes("entity.live-read/1"))
+      unavailable.push(
+        Object.freeze({
+          id: "entity.live-read/1",
+          required: true,
+          reason: "support_unavailable" as const,
+        }),
+      );
     for (const requirement of requirements) {
       if (
         before.unavailableManifests.includes(requirement.id) &&
@@ -158,6 +173,11 @@ export function createHostEntityReadiness(options: {
       descriptors: readonly EntityRuntimeDescriptor[],
     ) {
       for (const descriptor of descriptors) {
+        if (
+          descriptor.liveReadContract !== undefined ||
+          descriptor.schema === "athyper.entity-runtime-descriptor/1.1"
+        )
+          throw Error("ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE");
         const requirements = entityCapabilityRequirements(descriptor);
         if (!requirements.some((item) => item.required)) continue;
         const configuration = digest(options.configuration());

@@ -3,6 +3,7 @@ import { createRecordQueryService } from "../query-service.js";
 import type { RecordQueryServiceOptions } from "../query-service.js";
 
 const descriptor = {
+    schema: "athyper.entity-runtime-descriptor/1.0",
   entityCode: "business_partner_request",
   collectionRelationship: {
     schemaVersion: 1,

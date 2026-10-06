@@ -400,3 +400,43 @@ it("activation refuses configuration rotation during target evidence reads", asy
     f.runtime.assertActivationDescriptors([f.descriptor]),
   ).rejects.toThrow("ENTITY_ACTIVATION_TARGETS_CHANGED");
 });
+
+// These are admission regression fixtures, not deployed F6/F8/F9 proof.
+it.each([
+  "athyper.entity-runtime-descriptor/1.0",
+  "athyper.entity-runtime-descriptor/1.1",
+] as const)(
+  "does not reinterpret existing AI support as live-read qualification for %s",
+  async (schema) => {
+    const f = fixture(true);
+    await f.qualify();
+    const descriptor = {
+      ...f.descriptor,
+      schema,
+      liveReadContract: { schema: "entity.live-read/1" },
+    } as EntityRuntimeDescriptor;
+    expect(f.runtime.describeDescriptor(descriptor).valid).toBe(false);
+    const result = await f.runtime.evaluateDescriptor(descriptor);
+    expect(result.ready).toBe(false);
+    expect(result.unavailable).toContainEqual({
+      id: "entity.live-read/1",
+      required: true,
+      reason: "support_unavailable",
+    });
+    await expect(
+      f.runtime.assertActivationDescriptors([descriptor]),
+    ).rejects.toThrow("ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE");
+  },
+);
+it("requires live-read qualification for schema 1.1 even without AI requirements", async () => {
+  const f = fixture();
+  const descriptor = {
+    ...f.descriptor,
+    schema: "athyper.entity-runtime-descriptor/1.1",
+    aiManifestBindings: undefined,
+  } as EntityRuntimeDescriptor;
+  expect((await f.runtime.evaluateDescriptor(descriptor)).ready).toBe(false);
+  await expect(
+    f.runtime.assertActivationDescriptors([descriptor]),
+  ).rejects.toThrow("ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE");
+});

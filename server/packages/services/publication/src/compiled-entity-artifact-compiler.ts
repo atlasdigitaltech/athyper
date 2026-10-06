@@ -13,7 +13,7 @@ import {
 import { assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { compileEntityAiManifestBindings } from "./entity-ai-manifest-compiler.js";
 
-export const COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION = "1.0.0";
+export const COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION = "1.2.0";
 
 export interface CompiledEntityArtifactAuthoringInputV2 {
   readonly ref: string;

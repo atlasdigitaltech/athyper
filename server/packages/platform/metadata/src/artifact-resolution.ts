@@ -7,6 +7,16 @@ import {
 } from "@athyper/server-contract-publication";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
+/** Independently persisted signed publication provenance. Native descriptor 1.1
+ * requires all source coordinates; historical 1.0 reads may omit these pins. */
+export interface CompiledRuntimePublicationCoordinate {
+  readonly releaseId: string;
+  readonly releaseNo: number;
+  readonly contractHash?: string;
+  readonly entityId?: string;
+  readonly tenantId?: string | null;
+}
+
 /**
  * Verified, plane-local source for a compiled release. Implementations may use a
  * database projection and immutable object storage, but must never compile on a
@@ -16,7 +26,7 @@ export interface CompiledEntityReleaseSource {
   findAdmittedRelease(input: CompiledEntityReleaseCoordinate): Promise<CompiledEntityReleaseEnvelopeV2 | null>;
   findArtifact(input: CompiledEntityArtifactReadCoordinate): Promise<CompiledEntityArtifactV2 | null>;
   /** Persisted publication identity for a pinned IR; never infer it from its logical releaseId. */
-  findPublicationCoordinate?(input: CompiledEntityResolvedRelease): Promise<Readonly<{ releaseId: string; releaseNo: number }> | null>;
+  findPublicationCoordinate?(input: CompiledEntityResolvedRelease): Promise<CompiledRuntimePublicationCoordinate | null>;
 }
 
 export interface CompiledEntityReleaseCoordinate {

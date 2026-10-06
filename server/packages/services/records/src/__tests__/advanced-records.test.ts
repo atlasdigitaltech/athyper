@@ -84,7 +84,7 @@ describe("advanced Records modules", () => {
     expect(authorize).toHaveBeenCalled();
     for (const [request] of authorize.mock.calls) {
       expect(request.resource).toMatchObject({ tenantId: context.tenantId });
-      expect(request.resource).not.toHaveProperty("entityCode");
+      if (request.resource?.entityCode !== undefined) expect(request.resource.entityCode).toBe("business_partner");
     }
   });
 

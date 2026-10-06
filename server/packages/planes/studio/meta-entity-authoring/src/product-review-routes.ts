@@ -70,7 +70,11 @@ export function registerProductReviewRoutes(
         next(error);
       }
     };
-  const base = `${options.basePath}/change-sets/:id`;
+  // This host has one registered route prefix (also constrained by the options
+  // type). Keep it statically discoverable by route/OpenAPI inventory tools.
+  if (options.basePath !== "/api/platform-control/meta-entity-authoring")
+    throw new Error("PRODUCT_REVIEW_ROUTE_PREFIX_INVALID");
+  const base = "/api/platform-control/meta-entity-authoring/change-sets/:id";
   app.get(`${base}/graph`, options.authenticate, route());
   for (const action of ["adopt", "submit", "approve"] as const)
     app.post(`${base}/${action}`, options.authenticate, route(action));

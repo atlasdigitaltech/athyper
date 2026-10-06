@@ -75,3 +75,5 @@ export * from "./record-mutation-policy.js";
 
 
 export * from "./governed-amendment-target.js";
+
+export * from "./entity-effective-security.js";

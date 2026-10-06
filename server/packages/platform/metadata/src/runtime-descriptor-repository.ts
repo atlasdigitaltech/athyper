@@ -132,8 +132,11 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
           `No runtime metadata database registered for ${coordinate.planeKey}`,
         );
       const execute = async (executor: Database) =>
-        sql<{ release_id: string; release_no: number }>`
-        SELECT applied.source_release_id::text AS release_id, applied.source_release_no::int AS release_no
+        sql<{ release_id: string; release_no: number; contract_hash: string | null; entity_id: string | null; tenant_id: string | null }>`
+        SELECT applied.source_release_id::text AS release_id, applied.source_release_no::int AS release_no,
+               applied.manifest->'evidence'->>'sourceContractHash' AS contract_hash,
+               applied.manifest->'evidence'->>'sourceEntityId' AS entity_id,
+               payload.tenant_id::text AS tenant_id
           FROM runtime_meta.release_activation_head head
           JOIN runtime_meta.applied_release applied ON applied.id=head.applied_release_id AND applied.status='active'
           JOIN runtime_meta.applied_release_payload payload ON payload.applied_release_id=applied.id
@@ -155,6 +158,9 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
         ? Object.freeze({
             releaseId: row.release_id,
             releaseNo: row.release_no,
+            ...(row.contract_hash ? { contractHash: row.contract_hash.replace(/^sha256:/, "") } : {}),
+            ...(row.entity_id ? { entityId: row.entity_id } : {}),
+            tenantId: row.tenant_id,
           })
         : null;
     },

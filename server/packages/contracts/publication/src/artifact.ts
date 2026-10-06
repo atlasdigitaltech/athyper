@@ -1,3 +1,4 @@
+import { validateEntityLiveReadContractV1 } from "@athyper/server-contract-metadata";
 import { parseChangeRequestBinding } from "./change-request-binding.js";
 import { validateReferencePresentation } from "./reference-presentation.js";
 import { PublicationContractError } from "./errors.js";
@@ -204,11 +205,19 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
   if (type === "runtime_contract" && (
     value.artifactKey !== `${String(value.entityCode)}/runtime` ||
     !isRecord(value.descriptor) ||
-    value.descriptor.schema !== "athyper.entity-runtime-descriptor/1.0" ||
+    !["athyper.entity-runtime-descriptor/1.0", "athyper.entity-runtime-descriptor/1.1"].includes(String(value.descriptor.schema)) ||
     value.descriptor.entityCode !== value.entityCode || value.descriptor.planeKey !== value.plane ||
     !Array.isArray(value.dependencies) || !value.dependencies.includes(`${String(value.entityCode)}/core`) ||
     !value.dependencies.includes(`${String(value.entityCode)}/operation`)
   )) throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_INVALID", "Invalid compiled server-runtime contract");
+  if (type === "runtime_contract") {
+    const descriptor = value.descriptor as Record<string, unknown>;
+    if (descriptor.schema === "athyper.entity-runtime-descriptor/1.1") {
+      validateEntityLiveReadContractV1(descriptor.liveReadContract);
+    } else if (descriptor.liveReadContract !== undefined) {
+      throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_SCHEMA_UNSUPPORTED", "Live-read pins require descriptor schema 1.1");
+    }
+  }
   if (type === "core") validateReferencePresentation(value.fields);
   if(type === "core" && value.capabilities !== undefined) {
     if(!isRecord(value.capabilities)) throw new PublicationContractError("ENTITY_CAPABILITY_INVALID", `${String(value.artifactKey)}.capabilities must be an object`);

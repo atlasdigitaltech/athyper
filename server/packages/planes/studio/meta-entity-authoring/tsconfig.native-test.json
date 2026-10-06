@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../../../../..",
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "composite": false,
+    "incremental": false
+  },
+  "include": [
+    "src/native-core-layout-command-reducer.test.ts",
+    "src/native-core-layout-persistence.test.ts",
+    "src/native-core-layout.postgres.test.ts",
+    "src/native-graph-conversion.test.ts",
+    "src/legacy-native-runtime.test.ts",
+    "src/legacy-native-core-adapters.test.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

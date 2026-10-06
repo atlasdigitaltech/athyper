@@ -1,4 +1,4 @@
-import { parseStructuredProjection, parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
+import { validateEntityLiveReadContractV1, parseStructuredProjection, parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import type {
   EntityRuntimeDescriptor,
@@ -6,7 +6,7 @@ import type {
 } from "@athyper/server-contract-metadata";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
 import type { PinnedCompiledEntityReader } from "./compiled-entity-reader.js";
-import type { CompiledEntityResolvedRelease } from "./artifact-resolution.js";
+import type { CompiledRuntimePublicationCoordinate, CompiledEntityResolvedRelease } from "./artifact-resolution.js";
 import { validateRequiredParentContracts } from "./required-parent-contract.js";
 import { parseEntityRelationships } from "@athyper/contract-platform-entity-runtime";
 
@@ -15,20 +15,32 @@ import { parseEntityRelationships } from "@athyper/contract-platform-entity-runt
  * activation head, preview fallback or publication lifecycle. */
 export function parseCompiledRuntimeContract(
   artifact: CompiledEntityArtifactV2,
-  publication: { readonly releaseId: string; readonly releaseNo: number },
+  publication: CompiledRuntimePublicationCoordinate,
 ): EntityRuntimeDescriptor {
   if (
     artifact.artifactType !== "runtime_contract" ||
     artifact.artifactKey !== `${artifact.entityCode}/runtime`
   )
     throw new Error("COMPILED_ENTITY_RUNTIME_CONTRACT_INVALID");
+  const content = artifact.content.descriptor as Record<string, unknown>;
+  const compiledHash = artifact.artifactHash.replace(/^sha256:/, "");
+  if (content.schema === "athyper.entity-runtime-descriptor/1.1") {
+    validateEntityLiveReadContractV1(content.liveReadContract);
+    const source = content.liveReadContract.source;
+    if (!publication.contractHash || !publication.entityId || publication.tenantId === undefined)
+      throw new Error("COMPILED_ENTITY_RUNTIME_SOURCE_PIN_REQUIRED");
+    if (source.releaseId !== publication.releaseId || source.contractHash !== publication.contractHash ||
+        source.entityId !== publication.entityId || source.tenantId !== publication.tenantId)
+      throw new Error("COMPILED_ENTITY_RUNTIME_SOURCE_PIN_MISMATCH");
+  }
   const descriptor = parseEntityRuntimeDescriptor({
     entity_code: artifact.entityCode,
     plane_code: artifact.plane,
     release_id: publication.releaseId,
     release_no: publication.releaseNo,
-    entity_contract_hash: artifact.artifactHash.replace(/^sha256:/, ""),
-    compiled_hash: artifact.artifactHash.replace(/^sha256:/, ""),
+    // Preserve historical 1.0 hash semantics; only 1.1 admits source pins.
+    entity_contract_hash: content.schema === "athyper.entity-runtime-descriptor/1.1" ? publication.contractHash! : compiledHash,
+    compiled_hash: compiledHash,
     compiled_json: artifact.content.descriptor,
   });
   // Document collections own their read authorization through immutable
@@ -46,6 +58,7 @@ export function parseCompiledRuntimeContract(
 /** Check overlaps instead of letting a server contract silently reinterpret UI IR. */
 export function validateCompiledRuntimeContracts(
   artifacts: readonly CompiledEntityArtifactV2[],
+  publication?: CompiledRuntimePublicationCoordinate,
 ): void {
   const byKey = new Map(
     artifacts.map((artifact) => [artifact.artifactKey, artifact]),
@@ -73,10 +86,16 @@ export function validateCompiledRuntimeContracts(
   for (const artifact of artifacts.filter(
     (artifact) => artifact.artifactType === "runtime_contract",
   )) {
-    const descriptor = parseCompiledRuntimeContract(artifact, {
-      releaseId: "00000000-0000-4000-8000-000000000001",
-      releaseNo: 1,
-    });
+    const content = artifact.content.descriptor as Record<string, unknown>;
+    // Pre-publication shape/overlap checks are not provenance admission. For 1.1,
+    // use its declared source only here; serving/signing independently binds it
+    // to the persisted signed publication coordinate passed below.
+    let structural: CompiledRuntimePublicationCoordinate = { releaseId: "structural-validation", releaseNo: 1 };
+    if (content.schema === "athyper.entity-runtime-descriptor/1.1") {
+      validateEntityLiveReadContractV1(content.liveReadContract);
+      structural = { ...content.liveReadContract.source, releaseNo: 1 };
+    }
+    const descriptor = parseCompiledRuntimeContract(artifact, publication ?? structural);
     descriptors.push(descriptor);
     const core = byKey.get(`${artifact.entityCode}/core`);
     const operation = byKey.get(`${artifact.entityCode}/operation`);

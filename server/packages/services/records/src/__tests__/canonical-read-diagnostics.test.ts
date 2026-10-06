@@ -1,3 +1,4 @@
+import { definedFixturePermission } from "../test-support/defined-permission.js";
 import { expect, it, vi } from "vitest";
 import {
   parseEntityAuthorizationProfile,
@@ -96,7 +97,7 @@ const context: VerifiedRequestContext = {
     operationBindings: profile.operations.map((o) => ({
       entityCode: "entity",
       operationKey: o.key,
-      permissionCode: o.permissionCode,
+      permissionCode: definedFixturePermission(o.permissionCode),
       decisionMode: "authorize" as const,
       requiredScopeKinds: [],
     })),

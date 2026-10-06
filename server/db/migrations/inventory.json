@@ -3,6 +3,105 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261006_entity_core_layout_columns.sql",
+      "path": "migrations/20261006_entity_core_layout_columns.sql",
+      "sha256": "0daac5956ddb4c209c54253f694a59c24c580d2d3ba7951db34da99267ae3110",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Install 113 dormant typed core/layout columns with fail-closed pending-cutover checks; preserve all existing rows, legacy constraints, grants, snapshots and historical artifacts. This does not enable native authoring.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/26_native_column_preparation.generated.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_reference_anchor_guards.sql",
+      "path": "migrations/20261006_entity_reference_anchor_guards.sql",
+      "sha256": "bbc815130544e059a90f5983bd946c011b768379652616ac36dd4bda91f2d452",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Reject native anchor changes that invalidate retained normalized reference members, including writers outside the command API.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/25_reference_member_guards.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_reference_predicate_roots.sql",
+      "path": "migrations/20261006_entity_reference_predicate_roots.sql",
+      "sha256": "b4f0eaabb3da4ceabdd85304cb07c2e1a5d4d26a9a0450f550261199e37cf751",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Enforce one predicate root per exact owner and purpose; groups express conjunction explicitly. No data repair or authority grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/24_reference_members.generated.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_reference_predicate_validation.sql",
+      "path": "migrations/20261006_entity_reference_predicate_validation.sql",
+      "sha256": "8c5c7de01c5f40db8685407eb7df3a81ed16fed2cd23e835941a92568a1358fd",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Align reference predicate field/operator/value checks and authorization-profile read references with the typed command validator; no data repair or authority grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/25_reference_member_guards.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_reference_members.sql",
+      "path": "migrations/20261006_entity_reference_members.sql",
+      "sha256": "63bbeee81f8ee86ab1157c59b493e88aa3237531ad6a8eb192ad49aef3e7ab55",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Add closed typed reference member storage, scoped references and deferred graph guards; no legacy conversion, product authority or release activation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/24_reference_members.generated.sql",
+        "ddl/planes/studio/metadata/25_reference_member_guards.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_owned_label_commands.sql",
+      "path": "migrations/20261006_entity_owned_label_commands.sql",
+      "sha256": "e2675637b754700359c2ee675c374bab8c9b6b7a45141743f1b5c87f2214f784",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Add typed owned-label storage and immutable command receipts with existing tenant isolation; no product-write authority or data backfill.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/23_owned_label_authoring.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261006_entity_scoped_order_constraints.sql",
+      "path": "migrations/20261006_entity_scoped_order_constraints.sql",
+      "sha256": "6861aa6f008d04d313c07ff5d48074c19a752a5df49413e470082f1bfffc36a1",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Enable identity-preserving atomic sibling reorders under the draft revision lock; retain existing position bounds and NULL-safe uniqueness.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/03_tables.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261003_partner_identity_read_models.sql",
       "path": "migrations/20261003_partner_identity_read_models.sql",
       "sha256": "cfd9163c537da5e85981c429cae753f8e75a46c2765dff84385c420da08aa7bc",

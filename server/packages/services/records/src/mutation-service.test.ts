@@ -156,6 +156,7 @@ describe("record mutation boundaries", () => {
         entityCode: "sample",
         operationKey: "patch",
         field: "amount",
+        entityFieldPermission: "write",
       },
     });
   });

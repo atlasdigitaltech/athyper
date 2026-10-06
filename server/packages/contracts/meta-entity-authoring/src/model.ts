@@ -62,8 +62,11 @@ export interface MetaEntityCapability extends CapabilityProfileSource {
 }
 
 export interface MetaEntityGraph {
+ readonly referenceMembers?: import("./reference-member-contract.js").ReferenceMemberGraph;
+ readonly fieldIdentities?: readonly import("./reference-member-contract.js").ReferenceFieldIdentity[];
+ readonly ownedLabels?: import("./foundation-contract.js").OwnedLabelGraph;
  readonly capabilities?: readonly MetaEntityCapability[];
-  readonly contractSchema: "athyper.meta-entity-contract/2.1";
+  readonly contractSchema: "athyper.meta-entity-contract/2.1" | "athyper.meta-entity-contract/2.2" | "athyper.meta-entity-contract/2.3";
   readonly entity: MetaEntityDescriptor;
   readonly classProfiles?:readonly MetaEntityClassProfile[];readonly runtimeProfiles?:readonly MetaEntityRuntimeProfile[];
   readonly fields: readonly MetaEntityField[];readonly keys?:readonly MetaEntityKey[];readonly keyFields?:readonly MetaEntityKeyField[];

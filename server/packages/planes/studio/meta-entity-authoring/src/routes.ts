@@ -17,7 +17,6 @@ export interface MetaEntityAuthoringRouteOptions {
   /** Read-only policy gate; never used by mutation routes. */
   inspectionAuthorizer?: Authorizer;
   service: MetaEntityAuthoringService;
-  addressPreviewChoices?: (context: VerifiedRequestContext) => Promise<unknown>;
   inspectNotificationConfiguration?: (context: VerifiedRequestContext, entityCode: string) => Promise<unknown | null>;
   inspectActivation?: (context: VerifiedRequestContext, release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease) => Promise<unknown>;
 }
@@ -52,13 +51,6 @@ export function registerMetaEntityAuthoringRoutes(
     const graph=await o.service.readDraftSave(id,revision);
     if(!graph){s.status(404).json({error:"SAVED_REVISION_NOT_AVAILABLE"});return;}
     s.json({revision,graph});
-  }));
-  app.get("/api/meta-entity-authoring/inspection/address-preview-choices", o.authenticate, handler(async (_q, s) => {
-    const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
-    if (!c) return;
-    s.setHeader("Cache-Control", "private, no-store");
-    if (!o.addressPreviewChoices) { s.status(503).json({error:"ADDRESS_PREVIEW_CHOICES_UNAVAILABLE"}); return; }
-    s.json(await o.addressPreviewChoices(c));
   }));
   app.get("/api/meta-entity-authoring/inspection/releases/:id/activation", o.authenticate, handler(async (q,s)=>{
     const c=await allowed(o,s,"publication.deployment.view",{releaseId:uuid(q.params.id)});

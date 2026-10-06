@@ -73,6 +73,32 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify Entity foundation generated contract
+        run: pnpm entity:foundation:check
+      - name: Test reference dictionary DDL evidence generation
+        run: pnpm exec tsx --test tooling/scripts/metadata/reference-ddl-status.test.ts
+      - name: Test Entity foundation contract
+        run: |
+          pnpm --filter @athyper/server-contract-meta-entity-authoring test
+          pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/owned-label-codec.test.ts src/label-command-reducer.test.ts src/native-structural-codec.test.ts src/normalized-core-codec.test.ts src/normalized-layout-codec.test.ts src/native-core-layout-command-reducer.test.ts src/native-core-layout-persistence.test.ts src/legacy-native-runtime.test.ts src/native-graph-conversion.test.ts src/legacy-native-core-adapters.test.ts
+          pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
+      - name: Typecheck native Entity tests
+        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring typecheck:native-tests
+      - name: Test Entity release source pin compatibility
+        run: |
+          pnpm --filter @athyper/server-platform-metadata exec vitest run src/__tests__/compiled-runtime-contract.test.ts src/live-read-descriptor.test.ts src/compiled-runtime-provenance-storage.test.ts
+          pnpm --filter @athyper/server-service-publication exec vitest run src/__tests__/compiled-runtime-worker.test.ts src/__tests__/compiled-runtime-publication.test.ts
+      - name: Test scoped Entity persistence
+        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/graph-reconciliation.test.ts src/normalized-reconciliation.test.ts src/scoped-graph-writer.test.ts src/operation-protected-state.test.ts src/operation-protected-save.test.ts
+      - name: Rehearse scoped Entity persistence on PostgreSQL
+        env:
+          ATHYPER_SCOPED_GRAPH_POSTGRES: "1"
+        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/scoped-graph-writer.postgres.test.ts
+
+      - name: Rehearse native Entity persistence on PostgreSQL
+        env:
+          ATHYPER_NATIVE_GRAPH_POSTGRES: "1"
+        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts
 
       # Independent checks aggregate failures and retain every diagnostic log.
       - name: Static policies (all results)

@@ -5,6 +5,7 @@ import { createRecordQueryService } from "../query-service.js";
 import { projectAuthorizedRecordFields } from "../record-read-access.js";
 
 const descriptor = {
+    schema: "athyper.entity-runtime-descriptor/1.0",
   entityCode: "protected_record", planeKey: "neon",
   storage: { schema: "master", object: "protected_record", idField: "id", tenantField: "tenant_id" },
   fields: [

@@ -1,7 +1,15 @@
+import { saveNativeCoreLayoutCommands, lockNativeDraft, assertNativeAuthoringContract, type NativeAuthoringPolicy, type NativeCommandInput, type NativeDraftRoot } from "./native-core-layout-persistence.js";
+import { loadNormalizedCoreLayout, type NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
+import type { NativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+import {loadReferenceMembers,saveReferenceCommands,loadFieldIdentities} from "./normalized-reference-storage.js";
+import { loadNormalizedLabels, saveLabelCommands } from "./normalized-label-storage.js";
+import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
+import { preserveOperationProtectedState } from "./operation-protected-state.js";
 import { bindCanonicalRelationTargets } from "./canonical-relation-targets.js";
 import { assertCanonicalRelationAuthoring } from "./canonical-relations.js";
 import { normalizeGraphStorageOrder } from "./graph-storage-order.js";
-import { clearExecutionBindings } from "./execution-binding-replacement.js";
+import { changed, snakeKey } from "./graph-reconciliation.js";
+import { readReconciliationPlans, writeReconciliationPlans } from "./scoped-graph-writer.js";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type {
@@ -13,6 +21,7 @@ import type {
   ValidationReport,
 } from "@athyper/server-contract-meta-entity-authoring";
 import {
+  parseNormalizedLayoutGraph,
   AuthoringConflictError,
   AuthoringPolicyError,
 } from "@athyper/server-contract-meta-entity-authoring";
@@ -33,8 +42,11 @@ interface EntityHeaderRow {
   readonly entity_code: unknown;
   readonly entity_class: unknown;
   readonly ownership_model: unknown;
+  readonly label_root?: {default_locale?: string;reference_contract_version?:number;native_core_layout_version?:number};
 }
 interface ChangeSetRow {
+  readonly reference_contract_version?:unknown;
+  readonly native_core_layout_version?:unknown;
   readonly id: unknown;
   readonly tenant_id: unknown;
   readonly entity_id: unknown;
@@ -46,10 +58,6 @@ interface ChangeSetRow {
   readonly submitted_by?: unknown;
   readonly reviewed_by?: unknown;
   readonly approved_by?: unknown;
-}
-interface CoordinateRow {
-  readonly tenant_id: unknown;
-  readonly entity_id: unknown;
 }
 interface AdvanceRow {
   readonly revision: unknown;
@@ -92,7 +100,99 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         targetPlanes: readonly string[];
       },
     ) => Promise<void>,
+    private readonly normalizedPolicy?: import("@athyper/server-contract-meta-entity-authoring").NormalizedAuthoringPolicy,
+    private readonly referencePolicy?: import("@athyper/server-contract-meta-entity-authoring").ReferenceCommandPolicy,
+    private readonly nativePolicy?: NativeAuthoringPolicy,
   ) {}
+  async executeNativeCoreLayoutCommands(input: NativeCommandInput) {
+    const policy = this.nativePolicy;
+    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission, budgets and initialization sources are required.");
+    return atomic(this.database, async tx => {
+      await sql`SAVEPOINT native_core_layout_batch`.execute(tx);
+      try {
+        const repository = new KyselyMetaEntityAuthoringRepository(tx);
+        const result = await saveNativeCoreLayoutCommands(tx, input, policy, root => repository.nativeSnapshot(tx, input, root));
+        await sql`RELEASE SAVEPOINT native_core_layout_batch`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT native_core_layout_batch`.execute(tx);
+        await sql`RELEASE SAVEPOINT native_core_layout_batch`.execute(tx);
+        throw error;
+      }
+    });
+  }
+  async loadNativeGraph(input: NormalizedSaveCoordinate & { actorId: string }): Promise<NativeMetaEntityGraph> {
+    const policy = this.nativePolicy;
+    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission is required.");
+    return atomic(this.database, async tx => {
+      await policy.admit(tx, { ...input, batch: null }, "read");
+      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash);
+      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash);
+      const graph = await new KyselyMetaEntityAuthoringRepository(tx).nativeSnapshot(tx, input, root);
+      const state = await loadNormalizedCoreLayout(tx, input);
+      const context = await policy.resolveContext(tx, input, state);
+      if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
+        throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "Read context must match the exact source scope.");
+      parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
+      return graph;
+    });
+  }
+  async readNativeDraftSave(input: NormalizedSaveCoordinate & { actorId: string; revision: number }): Promise<NativeMetaEntityGraph | null> {
+    const policy = this.nativePolicy;
+    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent history admission is required.");
+    if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new AuthoringPolicyError("AUTHORING_REVISION_INVALID", "Valid saved revision required.");
+    return atomic(this.database, async tx => {
+      await policy.admit(tx, { ...input, batch: null }, "history");
+      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash);
+      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash);
+      const row = (await sql<{graph: NativeMetaEntityGraph; graph_hash: string}>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(tx)).rows[0];
+      if (!row) return null;
+      if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
+      const source = row.graph.authoringSource;
+      if (row.graph.contractSchema !== "athyper.meta-entity-contract/2.4" || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
+        throw new AuthoringPolicyError("NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH", "History requires an exact supported source version and scope.");
+      const state = { core: { field: row.graph.fields, runtime: row.graph.runtimeProfiles, surface: row.graph.surfaces }, layout: { section: row.graph.surfaceSections, binding: row.graph.surfaceFieldBindings } };
+      const context = await policy.resolveContext(tx, input, state);
+      if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
+        throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "History context must match its source.");
+      parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
+      return row.graph;
+    });
+  }
+  private async nativeSnapshot(tx: Transaction<Database>, input: NormalizedSaveCoordinate, root: NativeDraftRoot): Promise<NativeMetaEntityGraph> {
+    const parts = await this.loadGraphParts(input.changeSetId, true);
+    const state = await loadNormalizedCoreLayout(tx, input);
+    return { ...parts, contractSchema: "athyper.meta-entity-contract/2.4",
+      authoringSource: { entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash },
+      fields: state.core.field, runtimeProfiles: state.core.runtime, surfaces: state.core.surface,
+      surfaceSections: state.layout.section, surfaceFieldBindings: state.layout.binding };
+  }
+  async executeReferenceCommands(input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
+    if(!this.referencePolicy)throw new AuthoringPolicyError("REFERENCE_AUTHORING_NOT_CONFIGURED","Host budget evidence required");
+    const policy=this.referencePolicy;
+    return atomic(this.database,async tx=>{
+      await sql`SAVEPOINT normalized_reference_batch`.execute(tx);
+      try{await assertLegacyCommandSource(tx,input.changeSetId,input.tenantId);const result=await saveReferenceCommands(tx,input,policy,(revision,kind)=>captureDraftSave(tx,input.changeSetId,revision,input.actorId,kind));await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);return result;}
+      catch(error){await sql`ROLLBACK TO SAVEPOINT normalized_reference_batch`.execute(tx);await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);throw error;}
+    });
+  }
+  async executeLabelCommands(input: {changeSetId: string; actorId: string; tenantId: string | null; batch: unknown}) {
+    if (!this.normalizedPolicy) throw new AuthoringPolicyError("NORMALIZED_AUTHORING_NOT_CONFIGURED", "Host locale and budget evidence is required");
+    const policy = this.normalizedPolicy;
+    return atomic(this.database, async tx => {
+      await sql`SAVEPOINT normalized_label_batch`.execute(tx);
+      try {
+        await assertLegacyCommandSource(tx, input.changeSetId, input.tenantId);
+        const result = await saveLabelCommands(tx, input, policy, (revision, kind) => captureDraftSave(tx, input.changeSetId, revision, input.actorId, kind));
+        await sql`RELEASE SAVEPOINT normalized_label_batch`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT normalized_label_batch`.execute(tx);
+        await sql`RELEASE SAVEPOINT normalized_label_batch`.execute(tx);
+        throw error;
+      }
+    });
+  }
   async listInspectionReleases(tenantId: string) {
     const result = await sql<
       import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease
@@ -182,6 +282,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     if (!row) return null;
     if (sha256(row.graph) !== row.graph_hash)
       throw new AuthoringConflictError("Saved history integrity check failed");
+    if ((row.graph as {contractSchema: string}).contractSchema === "athyper.meta-entity-contract/2.4")
+      throw new AuthoringPolicyError("NATIVE_AUTHORING_READER_REQUIRED", "Use the versioned native reader; history cannot be decoded as legacy metadata.");
     return row.graph;
   }
   async forkDraft(input: { sourceChangeSetId: string; actorId: string }) {
@@ -323,13 +425,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return result.rows[0] ? this.map(result.rows[0]) : null;
   }
   async loadGraph(id: string): Promise<MetaEntityGraph> {
+    return this.loadGraphParts(id, false);
+  }
+  private async loadGraphParts(id: string, native: boolean): Promise<MetaEntityGraph> {
     const header = required(
       (
-        await sql<EntityHeaderRow>`SELECT e.entity_code,e.entity_class,e.ownership_model FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${id}::uuid`.execute(
+        await sql<EntityHeaderRow>`SELECT e.entity_code,e.entity_class,e.ownership_model,to_jsonb(cs) AS label_root FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${id}::uuid`.execute(
           this.database,
         )
       ).rows[0],
     );
+    if (header.label_root?.native_core_layout_version != null && header.label_root.native_core_layout_version !== 1)
+      throw new AuthoringPolicyError("NATIVE_AUTHORING_VERSION_UNSUPPORTED", "Unknown source versions cannot use a legacy decoder.");
+    if ((header.label_root?.native_core_layout_version === 1) !== native)
+      throw new AuthoringPolicyError(native ? "NATIVE_AUTHORING_SOURCE_NOT_INITIALIZED" : "NATIVE_AUTHORING_READER_REQUIRED", "The reader must match the declared source version.");
     const rows = async (table: GraphTable) => {
       const result =
         table === "entity_class_profile"
@@ -351,12 +460,17 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
               );
       return result.rows.map((row) => object(row.value));
     };
-    const branch = async <T extends object>(table: GraphTable): Promise<T[]> =>
-      (await rows(table)).map((row) =>
-        decodeRow<T>(row, BRANCH_COLUMNS[table]),
-      );
+    const branch = async <T extends object>(table: GraphTable): Promise<T[]> => {
+      if (native && ["entity_field", "entity_runtime_profile", "entity_surface", "entity_surface_section", "entity_surface_field_binding"].includes(table)) return [];
+      return (await rows(table)).map(row => decodeRow<T>(row, BRANCH_COLUMNS[table]));
+    };
+    const ownedLabels = header.label_root?.default_locale ? await loadNormalizedLabels(this.database, id) : null;
+    const referenceMembers = header.label_root?.reference_contract_version ? await loadReferenceMembers(this.database,id) : null;
+    const fieldIdentities = referenceMembers ? await loadFieldIdentities(this.database,id) : undefined;
     return {
-      contractSchema: "athyper.meta-entity-contract/2.1",
+      ...(referenceMembers ? {referenceMembers,fieldIdentities} : {}),
+      ...(ownedLabels ? { ownedLabels } : {}),
+      contractSchema: referenceMembers ? "athyper.meta-entity-contract/2.3" : ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1",
       entity: {
         entityCode: string(header, "entity_code"),
         entityClass: string(header, "entity_class"),
@@ -417,8 +531,10 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async replaceGraph(
     input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
   ) {
-    await atomic(this.database, (tx) => replaceGraphInTransaction(tx, input));
-    return required(await this.get(input.changeSetId));
+    return atomic(this.database, async tx => {
+      await replaceGraphInTransaction(tx, input);
+      return required(await new KyselyMetaEntityAuthoringRepository(tx).get(input.changeSetId));
+    });
   }
   /** Keeps imported draft creation and graph replacement inside the transfer transaction. */
   async replaceGraphInTransaction(
@@ -728,12 +844,6 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     };
   }
 }
-interface InsertCoordinate {
-  readonly tenant_id: unknown;
-  readonly entity_id: unknown;
-  readonly change_set_id: string;
-  readonly created_by: string;
-}
 type JsonObject = { readonly [key: string]: unknown };
 type GraphTable = keyof typeof BRANCH_COLUMNS;
 async function replaceGraphInTransaction(
@@ -743,6 +853,11 @@ async function replaceGraphInTransaction(
   input = { ...input, graph: normalizeGraphStorageOrder(await bindCanonicalRelationTargets(db, input.changeSetId, input.graph)) };
   try { assertCanonicalRelationAuthoring(input.graph); } catch (error) {
     throw new AuthoringPolicyError("ENTITY_RELATION_AUTHORING_INVALID", (error as Error).message);
+  }
+  if(input.graph.referenceMembers!==undefined){if(canonicalJson(await loadReferenceMembers(db,input.changeSetId))!==canonicalJson(input.graph.referenceMembers)||canonicalJson(await loadFieldIdentities(db,input.changeSetId))!==canonicalJson(input.graph.fieldIdentities))throw new AuthoringPolicyError("NORMALIZED_COMMAND_REQUIRED","Use typed commands to change normalized reference members");}
+  if (input.graph.ownedLabels !== undefined) {
+    const stored = await loadNormalizedLabels(db, input.changeSetId);
+    if (canonicalJson(stored) !== canonicalJson(input.graph.ownedLabels)) throw new AuthoringPolicyError("NORMALIZED_COMMAND_REQUIRED", "Use typed commands to change normalized labels");
   }
   const validation = validateGraph(input.graph);
   if (validation.issues.length) {
@@ -766,6 +881,85 @@ async function replaceGraphInTransaction(
         "Entity class profiles are immutable platform-owned defaults",
       );
   }
+  const locked = required((await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${input.changeSetId}::uuid FOR UPDATE OF cs`.execute(db)).rows[0]);
+  if (locked.native_core_layout_version != null)
+    throw new AuthoringPolicyError("NATIVE_AUTHORING_COMMAND_REQUIRED", "Legacy graph replacement cannot mutate a native source.");
+  if (locked.entity_code !== input.graph.entity.entityCode)
+    throw new AuthoringPolicyError("AUTHORING_ENTITY_IDENTITY_MISMATCH", "The graph must belong to the locked draft entity.");
+  if (Number(locked.lock_version) !== input.expectedRevision)
+    throw new AuthoringConflictError("Stale authoring revision; reload before retrying");
+  if (locked.status !== "draft" && locked.status !== "rejected")
+    throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_EDITABLE", "Only draft or rejected graphs can be edited.");
+  input = {
+    ...input,
+    graph: {
+      ...input.graph,
+      operations: await preserveOperationProtectedState(db, input.changeSetId, input.graph.operations),
+    },
+  };
+  const coordinate = {
+    tenant_id: locked.tenant_id ?? null,
+    entity_id: locked.entity_id,
+    change_set_id: input.changeSetId,
+    created_by: input.actorId,
+  };
+  const branches: [Exclude<GraphTable, "entity_class_profile">, readonly object[] | undefined][] = [
+    ["entity_runtime_profile", input.graph.runtimeProfiles],
+    ["entity_field", input.graph.fields],
+    ["entity_key", input.graph.keys],
+    ["entity_key_field", input.graph.keyFields],
+    ["entity_search_profile", input.graph.searchProfiles],
+    ["entity_search_field", input.graph.searchFields],
+    ["entity_relation", input.graph.relations],
+    ["entity_relation_target", input.graph.relationTargets],
+    ["entity_relation_field", input.graph.relationFields],
+    // Operation reference guards require their target surfaces to exist first.
+    ["entity_surface", input.graph.surfaces],
+    ["entity_operation", input.graph.operations],
+    ["entity_operation_permission", input.graph.operationPermissions],
+    ["entity_operation_rule", input.graph.operationRules],
+    [
+      "entity_operation_scope_binding",
+      input.graph.operationScopeBindings,
+    ],
+    ["entity_change_case_binding", input.graph.changeCaseBindings],
+    [
+      "entity_operation_context_requirement",
+      input.graph.operationContextRequirements,
+    ],
+    [
+      "entity_field_reference_binding",
+      input.graph.fieldReferenceBindings,
+    ],
+    [
+      "entity_materialization_binding",
+      input.graph.materializationBindings,
+    ],
+    [
+      "entity_materialization_field_mapping",
+      input.graph.materializationFieldMappings,
+    ],
+    ["entity_surface_section", input.graph.surfaceSections],
+    ["entity_surface_field_binding", input.graph.surfaceFieldBindings],
+    ["entity_surface_operation", input.graph.surfaceOperations],
+    ["entity_flow", input.graph.flows],
+    ["entity_flow_step", input.graph.flowSteps],
+    ["entity_policy_binding", input.graph.policyBindings],
+    ["entity_capability", input.graph.capabilities],
+    ["entity_field_policy_binding", input.graph.fieldPolicyBindings],
+    ["entity_lifecycle_binding", input.graph.lifecycleBindings],
+    [
+      "entity_lifecycle_operation_binding",
+      input.graph.lifecycleOperationBindings,
+    ],
+    ["entity_numbering_binding", input.graph.numberingBindings],
+    ["entity_contract_test_case", input.graph.tests?.map(test => ({
+      testKey: test.key, testKind: "compilation", title: test.key,
+      inputContext: { assertion: test.assertion, path: test.path, ...(test.expected !== undefined ? { expected: test.expected } : {}) },
+    }))],
+  ];
+  const plans = await readReconciliationPlans(db, input.changeSetId, branches);
+  if (!plans.some(changed)) return;
   const advanced =
     await sql<AdvanceRow>`SELECT metadata.fn_advance_entity_change_set(${input.changeSetId}::uuid,${input.expectedRevision},${input.actorId}::uuid) AS revision`
       .execute(db)
@@ -782,133 +976,12 @@ async function replaceGraphInTransaction(
       });
   if (Number(advanced.rows[0]?.["revision"]) !== input.expectedRevision + 1)
     throw new AuthoringConflictError("Stale authoring revision");
-  // The successful revision advance holds the row lock. Capture before replacing rows.
-  await captureDraftSave(
-    db,
-    input.changeSetId,
-    input.expectedRevision,
-    input.actorId,
-    "previous",
-  );
-  await clearExecutionBindings(db, input.changeSetId);
-  for (const table of [
-    "entity_contract_test_case",
-    "entity_operation_scope_binding",
-    "entity_numbering_binding",
-    "entity_lifecycle_operation_binding",
-    "entity_lifecycle_binding",
-    "entity_field_policy_binding",
-    "entity_policy_binding",
-    "entity_capability",
-    "entity_flow_step",
-    "entity_flow",
-    "entity_operation_rule",
-    "entity_surface_operation",
-    "entity_operation_permission",
-    "entity_surface_field_binding",
-    "entity_surface_section",
-    "entity_surface",
-    "entity_relation_field",
-    "entity_relation_target",
-    "entity_relation",
-    "entity_search_field",
-    "entity_search_profile",
-    "entity_key_field",
-    "entity_key",
-    "entity_operation",
-    "entity_field",
-    "entity_runtime_profile",
-  ] as const)
-    await sql`DELETE FROM ${sql.table(`metadata.${table}`)} WHERE change_set_id=${input.changeSetId}::uuid`.execute(
-      db,
-    );
-  const current = required(
-    (
-      await sql<CoordinateRow>`SELECT tenant_id,entity_id FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid`.execute(
-        db,
-      )
-    ).rows[0],
-  );
-  const coordinate = {
-    tenant_id: current["tenant_id"] ?? null,
-    entity_id: current["entity_id"],
-    change_set_id: input.changeSetId,
-    created_by: input.actorId,
-  };
-  const branches: [GraphTable, readonly object[]][] = [
-    ["entity_runtime_profile", input.graph.runtimeProfiles ?? []],
-    ["entity_field", input.graph.fields],
-    ["entity_key", input.graph.keys ?? []],
-    ["entity_key_field", input.graph.keyFields ?? []],
-    ["entity_search_profile", input.graph.searchProfiles ?? []],
-    ["entity_search_field", input.graph.searchFields ?? []],
-    ["entity_relation", input.graph.relations ?? []],
-    ["entity_relation_target", input.graph.relationTargets ?? []],
-    ["entity_relation_field", input.graph.relationFields ?? []],
-    // Operation reference guards require their target surfaces to exist first.
-    ["entity_surface", input.graph.surfaces ?? []],
-    ["entity_operation", input.graph.operations],
-    ["entity_operation_permission", input.graph.operationPermissions ?? []],
-    ["entity_operation_rule", input.graph.operationRules ?? []],
-    [
-      "entity_operation_scope_binding",
-      input.graph.operationScopeBindings ?? [],
-    ],
-    ["entity_change_case_binding", input.graph.changeCaseBindings ?? []],
-    [
-      "entity_operation_context_requirement",
-      input.graph.operationContextRequirements ?? [],
-    ],
-    [
-      "entity_field_reference_binding",
-      input.graph.fieldReferenceBindings ?? [],
-    ],
-    [
-      "entity_materialization_binding",
-      input.graph.materializationBindings ?? [],
-    ],
-    [
-      "entity_materialization_field_mapping",
-      input.graph.materializationFieldMappings ?? [],
-    ],
-    ["entity_surface_section", input.graph.surfaceSections ?? []],
-    ["entity_surface_field_binding", input.graph.surfaceFieldBindings ?? []],
-    ["entity_surface_operation", input.graph.surfaceOperations ?? []],
-    ["entity_flow", input.graph.flows ?? []],
-    ["entity_flow_step", input.graph.flowSteps ?? []],
-    ["entity_policy_binding", input.graph.policyBindings ?? []],
-    ["entity_capability", input.graph.capabilities ?? []],
-    ["entity_field_policy_binding", input.graph.fieldPolicyBindings ?? []],
-    ["entity_lifecycle_binding", input.graph.lifecycleBindings ?? []],
-    [
-      "entity_lifecycle_operation_binding",
-      input.graph.lifecycleOperationBindings ?? [],
-    ],
-    ["entity_numbering_binding", input.graph.numberingBindings ?? []],
-  ];
-  for (const [table, values] of branches)
-    await insertRows(db, table, values, coordinate);
-  for (const test of input.graph.tests ?? [])
-    await insertRows(
-      db,
-      "entity_contract_test_case",
-      [
-        {
-          testKey: test.key,
-          testKind: "compilation",
-          title: test.key,
-          inputContext: {
-            assertion: test.assertion,
-            path: test.path,
-            ...(test.expected !== undefined ? { expected: test.expected } : {}),
-          },
-        },
-      ],
-      coordinate,
-    );
+  await captureDraftSave(db, input.changeSetId, input.expectedRevision, input.actorId, "previous");
+  await writeReconciliationPlans(db, plans, coordinate);
   await sql`SELECT metadata.fn_validate_entity_graph(${input.changeSetId}::uuid)`.execute(
     db,
   );
+  if(locked.reference_contract_version===1)await sql`SELECT metadata.validate_reference_members(${input.changeSetId}::uuid)`.execute(db);
   await captureDraftSave(
     db,
     input.changeSetId,
@@ -916,6 +989,12 @@ async function replaceGraphInTransaction(
     input.actorId,
     "saved",
   );
+}
+async function assertLegacyCommandSource(db: Kysely<Database>, id: string, tenant: string | null) {
+  const row = (await sql<{source: Record<string, unknown>}>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${id}::uuid AND tenant_id IS NOT DISTINCT FROM ${tenant}::uuid FOR UPDATE`.execute(db)).rows[0];
+  if (!row) throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND", "Scoped source unavailable.");
+  if (row.source.native_core_layout_version != null)
+    throw new AuthoringPolicyError("NATIVE_AUTHORING_COMMAND_REQUIRED", "Native labels/reference editing requires a version-aware complete snapshot protocol.");
 }
 async function captureDraftSave(
   db: Kysely<Database>,
@@ -936,44 +1015,6 @@ async function captureDraftSave(
     throw new AuthoringConflictError(
       "Saved revision already contains different content",
     );
-}
-async function insertRows(
-  db: Kysely<Database>,
-  table: GraphTable,
-  rows: readonly object[],
-  coordinate: InsertCoordinate,
-) {
-  for (const row of rows) {
-    const id = Reflect.get(row, "id");
-    const allowed = new Set<string>(BRANCH_COLUMNS[table]);
-    const authored = Object.entries(row).filter(
-      ([key, value]) => value !== undefined && allowed.has(key) && !(table === "entity_relation_target" && key === "targetEntityCode"),
-    );
-    const value: JsonObject = {
-      ...Object.fromEntries(
-        authored.map(([key, item]) => [snakeKey(key), item]),
-      ),
-      ...(table === "entity_materialization_field_mapping"
-        ? { tenant_id: coordinate.tenant_id, created_by: coordinate.created_by }
-        : coordinate),
-      id: typeof id === "string" ? id : randomUUID(),
-    };
-    const entries = Object.entries(value);
-    const columns = sql.join(entries.map(([key]) => sql.raw(key)));
-    const values = sql.join(
-      entries.map(([, item]) =>
-        item && typeof item === "object" && !Array.isArray(item)
-          ? sql`${JSON.stringify(item)}::jsonb`
-          : sql`${item}`,
-      ),
-    );
-    await sql`INSERT INTO ${sql.table(`metadata.${table}`)} (${columns}) VALUES (${values})`.execute(
-      db,
-    );
-  }
-}
-function snakeKey(key: string) {
-  return key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
 }
 function decodeRow<T extends object>(
   row: JsonObject,
@@ -1017,391 +1058,6 @@ const NUMERIC_PROPERTIES = new Set([
   "deprecatedSinceReleaseNo",
   "plannedRemovalReleaseNo",
 ]);
-const BRANCH_COLUMNS = {
-  entity_capability: [
-    "id",
-    "capabilityKey",
-    "declaration",
-    "binding",
-    "profile",
-    "profileDefinition",
-    "overrides",
-  ],
-  entity_class_profile: [
-    "entityClass",
-    "profileVersion",
-    "fallbackName",
-    "description",
-    "defaultBackingKind",
-    "defaultApiExposure",
-    "defaultReadMode",
-    "defaultWriteMode",
-    "defaultConcurrencyMode",
-    "defaultChangePolicy",
-  ],
-  entity_runtime_profile: [
-    "id",
-    "profileKey",
-    "backingKind",
-    "storagePlane",
-    "storageSchema",
-    "storageObject",
-    "apiExposure",
-    "readMode",
-    "writeMode",
-    "readHandlerKey",
-    "writeHandlerKey",
-    "createMode",
-    "concurrencyMode",
-    "recordVersionFieldKey",
-    "tenantFieldKey",
-    "softDeleteFieldKey",
-    "draftTtlHours",
-  ],
-  entity_field: [
-    "id",
-    "fieldKey",
-    "description",
-    "dataType",
-    "typeConfig",
-    "cardinality",
-    "valueOrigin",
-    "writeMode",
-    "storagePath",
-    "defaultSpec",
-    "computationSpec",
-    "validationSpec",
-    "dataClassification",
-    "retentionPolicyCode",
-    "status",
-    "replacementFieldKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_key: [
-    "id",
-    "keyKey",
-    "keyKind",
-    "uniquenessScope",
-    "nullSemantics",
-    "status",
-    "replacementKeyKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_key_field: ["id", "entityKeyId", "entityFieldId", "position"],
-  entity_search_profile: [
-    "id",
-    "searchKey",
-    "searchKind",
-    "queryOperator",
-    "minimumQueryLength",
-    "languageCode",
-    "normalizationMode",
-    "isDefault",
-    "status",
-    "replacementSearchKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_search_field: [
-    "id",
-    "entitySearchProfileId",
-    "entityFieldId",
-    "position",
-    "matchMode",
-    "weight",
-  ],
-  entity_relation: [
-    "id",
-    "relationKey",
-    "relationKind",
-    "resolutionKind",
-    "ownershipMode",
-    "mutationMode",
-    "onDelete",
-    "onUpdate",
-    "inverseRelationKey",
-    "status",
-    "replacementRelationKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_relation_target: [
-    "id",
-    "entityRelationId",
-    "relationTargetKey",
-    "targetEntityId",
-    "targetEntityCode",
-    "targetKeyKey",
-    "discriminatorValue",
-    "isDefault",
-  ],
-  entity_relation_field: [
-    "id",
-    "entityRelationTargetId",
-    "sourceFieldId",
-    "targetFieldKey",
-    "position",
-  ],
-  entity_surface: [
-    "id",
-    "surfaceKey",
-    "surfaceKind",
-    "title",
-    "description",
-    "layoutKind",
-    "layoutConfig",
-    "isDefault",
-    "status",
-    "replacementSurfaceKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_surface_section: [
-    "id",
-    "entitySurfaceId",
-    "sectionKey",
-    "parentSectionId",
-    "sectionKind",
-    "title",
-    "description",
-    "position",
-    "columnCount",
-    "collapsible",
-    "collapsedByDefault",
-    "layoutConfig",
-  ],
-  entity_surface_field_binding: [
-    "id",
-    "entitySurfaceId",
-    "entitySurfaceSectionId",
-    "entityFieldId",
-    "bindingKey",
-    "position",
-    "labelOverride",
-    "helpText",
-    "placeholder",
-    "widgetKey",
-    "columnSpan",
-    "showRequiredIndicator",
-    "displayConfig",
-    "visibilityRule",
-    "editabilityRule",
-    "status",
-  ],
-  entity_operation: [
-    "id",
-    "operationKey",
-    "operationKind",
-    "label",
-    "description",
-    "handlerKey",
-    "permissionCode",
-    "executionMode",
-    "idempotencyMode",
-    "inputSurfaceKey",
-    "confirmationSurfaceKey",
-    "resultSurfaceKey",
-    "requiresMfa",
-    "auditEventCode",
-    "status",
-    "replacementOperationKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_operation_permission: [
-    "id",
-    "entityOperationId",
-    "targetPlane",
-    "permissionCode",
-    "permissionKind",
-    "status",
-  ],
-  entity_surface_operation: [
-    "id",
-    "entitySurfaceId",
-    "entityOperationId",
-    "entitySurfaceSectionId",
-    "placementKey",
-    "interactionTarget",
-    "selectionMode",
-    "position",
-    "labelOverride",
-    "iconKey",
-    "presentationVariant",
-    "confirmationSurfaceId",
-    "visibilityRule",
-    "status",
-  ],
-  entity_operation_rule: [
-    "id",
-    "entityOperationId",
-    "ruleKey",
-    "priority",
-    "decision",
-    "planeCode",
-    "lifecycleStateCode",
-    "lifecycleTransitionCode",
-    "requiredCapabilityCode",
-    "reasonCode",
-    "status",
-  ],
-  entity_flow: [
-    "id",
-    "flowKey",
-    "flowKind",
-    "title",
-    "description",
-    "navigationMode",
-    "entryOperationId",
-    "completionOperationId",
-    "allowDraftResume",
-    "status",
-    "replacementFlowKey",
-    "deprecatedSinceReleaseNo",
-    "plannedRemovalReleaseNo",
-  ],
-  entity_flow_step: [
-    "id",
-    "entityFlowId",
-    "entitySurfaceId",
-    "stepKey",
-    "position",
-    "titleOverride",
-    "description",
-    "entryCondition",
-    "completionCondition",
-    "isOptional",
-  ],
-  entity_policy_binding: [
-    "id",
-    "entityOperationId",
-    "policyDefinitionId",
-    "bindingKey",
-    "bindingStage",
-    "enforcement",
-    "priority",
-    "inputMapping",
-    "status",
-  ],
-  entity_field_policy_binding: [
-    "id",
-    "entityFieldId",
-    "entityOperationId",
-    "policyDefinitionId",
-    "bindingKey",
-    "bindingStage",
-    "enforcement",
-    "priority",
-    "inputMapping",
-    "status",
-  ],
-  entity_contract_test_case: [
-    "id",
-    "testKey",
-    "testKind",
-    "title",
-    "description",
-    "targetPlane",
-    "entityOperationId",
-    "entityFlowId",
-    "inputContext",
-    "expectedOutcome",
-    "expectedDiagnosticCodes",
-    "status",
-  ],
-  entity_lifecycle_binding: [
-    "id",
-    "entityFieldId",
-    "bindingKey",
-    "targetPlane",
-    "lifecycleCode",
-    "lifecycleRevision",
-    "required",
-    "status",
-  ],
-  entity_lifecycle_operation_binding: [
-    "id",
-    "entityLifecycleBindingId",
-    "entityOperationId",
-    "mappingKey",
-    "transitionCode",
-    "status",
-  ],
-  entity_numbering_binding: [
-    "id",
-    "entityFieldId",
-    "entityOperationId",
-    "bindingKey",
-    "targetPlane",
-    "policyCode",
-    "policyRevision",
-    "assignmentMode",
-    "required",
-    "status",
-  ],
-  entity_operation_scope_binding: [
-    "id",
-    "entityOperationId",
-    "bindingKey",
-    "targetPlane",
-    "decisionMode",
-    "scopeKind",
-    "coordinateSource",
-    "coordinateKey",
-    "resolverKey",
-    "missingValueBehavior",
-    "status",
-  ],
-  entity_change_case_binding: [
-    "id",
-    "entityOperationId",
-    "bindingKey",
-    "caseKind",
-    "caseEntityCode",
-    "workflowKey",
-    "materializationBindingKey",
-    "status",
-  ],
-  entity_operation_context_requirement: [
-    "id",
-    "entityOperationId",
-    "coordinateKey",
-    "sourceKind",
-    "sourceFieldKey",
-    "required",
-    "status",
-  ],
-  entity_field_reference_binding: [
-    "id",
-    "entityFieldId",
-    "bindingKey",
-    "referenceKind",
-    "targetEntityCode",
-    "lookupDomain",
-    "resolverKey",
-    "requireActive",
-    "status",
-  ],
-  entity_materialization_binding: [
-    "id",
-    "bindingKey",
-    "targetEntityCode",
-    "materializerKey",
-    "targetCollectionKey",
-    "status",
-  ],
-  entity_materialization_field_mapping: [
-    "id",
-    "entityMaterializationBindingId",
-    "sourceFieldKey",
-    "targetFieldKey",
-    "transformKey",
-    "required",
-    "position",
-  ],
-} as const;
 
 function atomic<T>(
   database: Kysely<Database>,

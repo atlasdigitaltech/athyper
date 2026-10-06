@@ -141,7 +141,11 @@ function fixture(): EntityAuthorizationPublicationInput {
     catalog: [
       {
         id: id(7),
-        code: profile.operations[0]!.permissionCode,
+        code: (() => {
+          const code = profile.operations[0]!.permissionCode;
+          if (typeof code !== "string") throw new Error("Defined-permission fixture required");
+          return code;
+        })(),
         kind: "entity_operation",
         scopeKinds: ["tenant"],
       },

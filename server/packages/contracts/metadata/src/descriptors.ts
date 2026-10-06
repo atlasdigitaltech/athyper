@@ -312,6 +312,8 @@ export interface EntityPolicyBindingDescriptor {
 }
 
 export interface EntityRuntimeDescriptor {
+  /** New live contracts require independently installed F6/F8 evidence. */
+  readonly liveReadContract?: import("./entity-live-read.js").EntityLiveReadContractV1;
   readonly recordPredicates?: readonly import("./record-predicates.js").RecordPredicate[];
   readonly mutationPolicy?: import("./record-mutation-policy.js").RecordMutationPolicyV1;
   readonly ownerAccess?: import("./record-owner-access.js").RecordOwnerAccessV1;
@@ -329,7 +331,7 @@ export interface EntityRuntimeDescriptor {
   readonly authorizationRuntime?: EntityAuthorizationRuntime;
   readonly authorization?: import("./entity-authorization.js").EntityAuthorizationProfileV1;
   readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;
-  readonly schema: "athyper.entity-runtime-descriptor/1.0";
+  readonly schema: "athyper.entity-runtime-descriptor/1.0" | "athyper.entity-runtime-descriptor/1.1";
   readonly entityCode: string;
   readonly detailRouteTemplate?: string;
   readonly planeKey: PlaneKey;

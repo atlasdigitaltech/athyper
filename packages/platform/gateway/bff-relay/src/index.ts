@@ -236,10 +236,6 @@ export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperat
     })),
     ...(
       [
-        [
-          "addressPreviewChoices",
-          "/api/meta-entity-authoring/inspection/address-preview-choices",
-        ],
         ["draftHistory", "/api/meta-entity-authoring/change-sets/:id/history"],
         [
           "draftHistoryRevision",

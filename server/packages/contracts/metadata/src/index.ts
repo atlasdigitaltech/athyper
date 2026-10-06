@@ -36,3 +36,5 @@ export * from "./key-reference.js";
 export * from "./entity-readiness.js";
 
 export * from "./structured-projection.js";
+
+export * from "./entity-live-read.js";

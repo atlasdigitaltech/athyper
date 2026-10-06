@@ -261,7 +261,9 @@
     "test:dev-workspace": "node tooling/scripts/local-dev/workspace-lifecycle.mjs",
     "qa:session": "node tooling/scripts/local-dev/qa-session.mjs",
     "qa:migrations:preflight": "node tooling/scripts/local-dev/qa-migration-preflight.mjs",
-    "routes:server-parity:check": "node tooling/scripts/policy/verify-server-route-parity.mjs"
+    "routes:server-parity:check": "node tooling/scripts/policy/verify-server-route-parity.mjs",
+    "entity:foundation:generate": "tsx tooling/scripts/metadata/generate-entity-foundation.ts --write && tsx tooling/scripts/metadata/generate-reference-members.ts --write && tsx tooling/scripts/metadata/generate-native-structural.ts --write && tsx tooling/scripts/metadata/generate-normalized-core.ts --write",
+    "entity:foundation:check": "tsx tooling/scripts/metadata/generate-entity-foundation.ts && tsx tooling/scripts/metadata/generate-reference-members.ts && tsx tooling/scripts/metadata/generate-native-structural.ts && tsx tooling/scripts/metadata/generate-normalized-core.ts"
   },
   "pnpm": {
     "overrides": {

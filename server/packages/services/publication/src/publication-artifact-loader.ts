@@ -131,7 +131,10 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         throw failure("ARTIFACT_PAYLOAD_INVALID");
       }
       try {
-        validateCompiledRuntimeContracts(envelope.payload.artifacts);
+        const publication = { releaseId: envelope.releaseId, releaseNo: envelope.releaseNo,
+          contractHash: typeof manifest.evidence?.sourceContractHash === "string" ? manifest.evidence.sourceContractHash.replace(/^sha256:/, "") : undefined,
+          entityId: typeof manifest.evidence?.sourceEntityId === "string" ? manifest.evidence.sourceEntityId : undefined, tenantId: envelope.payload.tenantId ?? null };
+        validateCompiledRuntimeContracts(envelope.payload.artifacts, publication);
         assertCompleteRuntimeOperations(envelope.payload.artifacts);
         for (const artifact of envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")) {
           // Source release identity is not the compiled package hash. Recheck
@@ -143,7 +146,12 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
             (source as Record<string, unknown>).entity_id !== manifest.evidence?.sourceEntityId ||
             (source as Record<string, unknown>).release_hash !== manifest.evidence?.sourceReleaseHash))
             throw failure("ARTIFACT_MANIFEST_INVALID");
-          const descriptor = parseCompiledRuntimeContract(artifact, { releaseId: envelope.releaseId, releaseNo: envelope.releaseNo });
+          const descriptor = parseCompiledRuntimeContract(artifact, publication);
+          // Wire/source validation is not installed F6/F8/F9 qualification. The
+          // current loader has no governed live-read registry adapter; do not
+          // let its legacy authorization qualifier attest this new capability.
+          if (descriptor.liveReadContract)
+            throw new Error("ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE");
           if (descriptor.authorizationRuntime) {
             if (!this.options.authorizationRuntime) throw failure("RUNTIME_INCOMPATIBLE");
             this.options.authorizationRuntime.qualify(descriptor.authorization!, descriptor.authorizationRuntime);

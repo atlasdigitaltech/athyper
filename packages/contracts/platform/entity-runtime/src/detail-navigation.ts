@@ -1,5 +1,8 @@
 /** Published navigation is declarative; viewport size never selects task semantics. */
-import { parseEntityRuntimeLocalizedText, type EntityRuntimeLocalizedTextV1 } from "./runtime-resource";
+import {
+  parseEntityRuntimeLocalizedText,
+  type EntityRuntimeLocalizedTextV1,
+} from "./runtime-resource";
 export interface EntityDetailNavigationV1 {
   readonly mode: "scroll" | "switch";
   readonly tabs?: readonly {
@@ -36,7 +39,14 @@ export function parseEntityDetailNavigation(
     const tab = value as Record<string, unknown>;
     if (
       Object.keys(tab).some(
-        (key) => !["key", "label", "localizedLabel", "iconKey", "sectionKeys"].includes(key),
+        (key) =>
+          ![
+            "key",
+            "label",
+            "localizedLabel",
+            "iconKey",
+            "sectionKeys",
+          ].includes(key),
       ) ||
       typeof tab.key !== "string" ||
       !/^[a-z][a-z0-9_.-]{0,126}$/.test(tab.key) ||
@@ -52,7 +62,11 @@ export function parseEntityDetailNavigation(
       !tab.sectionKeys.length
     )
       throw new TypeError("Invalid detail navigation tab label or sections");
-    if (tab.iconKey !== undefined && (typeof tab.iconKey !== "string" || !/^[a-z][a-z0-9-]{0,62}$/.test(tab.iconKey)))
+    if (
+      tab.iconKey !== undefined &&
+      (typeof tab.iconKey !== "string" ||
+        !/^[a-z][a-z0-9-]{0,62}$/.test(tab.iconKey))
+    )
       throw new TypeError("Invalid detail navigation tab icon");
     const references = tab.sectionKeys.map((key) => {
       if (
@@ -64,9 +78,39 @@ export function parseEntityDetailNavigation(
       assigned.add(key);
       return key;
     });
-    return { key: tab.key, label: tab.label.trim(), ...(tab.localizedLabel === undefined ? {} : { localizedLabel: parseEntityRuntimeLocalizedText(tab.localizedLabel) }), ...(typeof tab.iconKey === "string" ? { iconKey: tab.iconKey } : {}), sectionKeys: references };
+    return {
+      key: tab.key,
+      label: tab.label.trim(),
+      ...(tab.localizedLabel === undefined
+        ? {}
+        : {
+            localizedLabel: parseEntityRuntimeLocalizedText(tab.localizedLabel),
+          }),
+      ...(typeof tab.iconKey === "string" ? { iconKey: tab.iconKey } : {}),
+      sectionKeys: references,
+    };
   });
   if (assigned.size !== sectionKeys.length)
     throw new TypeError("Detail navigation must cover every section");
   return { mode: raw.mode as EntityDetailNavigationV1["mode"], tabs };
+}
+
+/** Shared detail workspaces require an explicit published navigation declaration.
+ * Legacy parsers may read section-only artifacts for migration, but rendering
+ * cannot invent navigation on their behalf.
+ */
+export function requireEntityDetailNavigation(
+  value: unknown,
+  sectionKeys: readonly string[],
+): EntityDetailNavigationV1 {
+  if (value === undefined || value === null)
+    throw new TypeError(
+      "ENTITY_DETAIL_NAVIGATION_REQUIRED: publish explicit navigation groups and section assignments before opening this detail workspace",
+    );
+  const navigation = parseEntityDetailNavigation(value, sectionKeys);
+  if (!navigation.tabs?.length)
+    throw new TypeError(
+      "ENTITY_DETAIL_NAVIGATION_GROUPS_REQUIRED: publish navigation tabs covering every detail section",
+    );
+  return navigation;
 }

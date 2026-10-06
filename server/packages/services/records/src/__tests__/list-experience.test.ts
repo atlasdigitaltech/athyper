@@ -52,6 +52,7 @@ const descriptor: EntityRuntimeDescriptor = {
       required: true,
       writableOn: [],
     },
+    { key: "code", storagePath: "code", type: "string", required: true, writableOn: [] },
   ],
   operations: {
     request_create: {
@@ -59,7 +60,7 @@ const descriptor: EntityRuntimeDescriptor = {
       permissionCode: "request.create",
     },
   },
-  listPresentation: { experience },
+  listPresentation: { experience, identityField: "code" },
 };
 const context = {
   tenantId: "tenant",

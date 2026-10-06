@@ -58,3 +58,29 @@ export {
   compileTenantLearningDescriptor, prepareTenantLearningExtensionDraft,
   type TenantLearningAncestry, type ProductLearningSource,
 } from "./tenant-learning-extension.js";
+export {
+  importOwnedLabelLocalization,
+  compileOwnedLabelLocalization,
+  encodeOwnedLabels,
+  decodeOwnedLabels,
+  ownedLabelRows,
+  loadOwnedLabelRows,
+  type LegacyLabelIdentity,
+} from "./owned-label-codec.js";
+
+export * from "./reference-member-codec.js";
+
+export * from "./native-structural-codec.js";
+
+export * from "./normalized-core-codec.js";
+export * from "./normalized-layout-codec.js";
+export * from "./normalized-core-layout-storage.js";
+
+export * from "./native-core-layout-command-reducer.js";
+export * from "./native-core-layout-persistence.js";
+
+export * from "./legacy-native-runtime.js";
+
+export * from "./native-graph-conversion.js";
+
+export * from "./legacy-native-core-adapters.js";

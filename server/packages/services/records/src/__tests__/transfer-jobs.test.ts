@@ -32,7 +32,7 @@ describe("record transfer workers",()=>{
     expect(metricNames.length).toBeGreaterThan(0);
     expect(metricNames.every(name=>name.startsWith("athyper_record_transfer_"))).toBe(true);
     expect(authorize).toHaveBeenCalled();
-    for(const [request] of authorize.mock.calls){expect(request.resource).toMatchObject({tenantId:context.tenantId});expect(request.resource).not.toHaveProperty("entityCode");}
+    for(const [request] of authorize.mock.calls){expect(request.resource).toMatchObject({tenantId:context.tenantId});if(request.resource?.entityCode!==undefined)expect(request.resource.entityCode).toBe("party");}
   });
   it.each([{operatingOrganizationId:"org-1"},{operatingOrganizationIds:["org-1","org-2"],companyCodeIds:["company-1","company-2"]}])("re-authorizes exports and preserves export query scope",async(scopeCoordinate)=>{
     const exportDescriptor={...descriptor,fields:[{key:"code",classification:"public"as const,storagePath:"code",type:"string"as const,required:true,writableOn:[],list:{label:"Code"}},{key:"name",classification:"internal"as const,storagePath:"name",type:"string"as const,required:false,writableOn:[],list:{label:"Name"}}],operations:{export:{code:"export",permissionCode:"records.export"}}};

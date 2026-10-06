@@ -1,3 +1,4 @@
+import { definedFixturePermission } from "../test-support/defined-permission.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditEvent, AuditRecordInput } from "@athyper/server-contract-audit";
@@ -37,7 +38,7 @@ const descriptor: EntityRuntimeDescriptor = {
   lifecycle: { transitions: [{ code: "activate", from: ["draft"], to: "active", permissionCode: "master.business_partner.activate" }] },
 };
 
-const permissions = Object.values(descriptor.operations).map((operation) => operation.permissionCode).concat("master.business_partner.activate");
+const permissions = Object.values(descriptor.operations).map((operation) => definedFixturePermission(operation.permissionCode)).concat("master.business_partner.activate");
 const context: VerifiedRequestContext = {
   planeKey: "neon", realmKey: "athyper", tenantId: "tenant-1", principalId: "principal-1", authEpoch: 1,
   profileHash: "profile", requestId: "request-1",

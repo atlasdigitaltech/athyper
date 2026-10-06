@@ -6,7 +6,7 @@ import {
   type PublicationArtifactDocumentV1, type PublicationCanonicalizer, type PublicationPlane,
 } from "@athyper/server-contract-publication";
 import { parseCompiledRuntimeContract, assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
-import { compileCompiledEntityArtifacts, compiledEntityRuntimeProjection, type CompiledEntityArtifactCompilationInputV2 } from "../compiled-entity-artifact-compiler.js";
+import { COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION, compileCompiledEntityArtifacts, compiledEntityRuntimeProjection, type CompiledEntityArtifactCompilationInputV2 } from "../compiled-entity-artifact-compiler.js";
 import { assertOperationProjection } from "../shared/authorization/operation-projection.js";
 import { assertEntityAiManifestBindings } from "../entity-ai-manifest-compiler.js";
 
@@ -69,7 +69,7 @@ export async function compileRuntimePublication(source: CompiledRuntimeSource, d
       releaseKind: "publish", targetPlane: pinned.plane, artifactKind: "compiled_entity_runtime", generatedAt: pinned.generatedAt, compatibilityLevel: "backward_compatible", payload },
     manifest: { artifactSchema: PUBLICATION_ARTIFACT_SCHEMA_V1, mediaType: PUBLICATION_ARTIFACT_MEDIA_TYPE_V1, publicationKey: pinned.publicationKey,
       releaseId: pinned.releaseId, releaseNo: pinned.releaseNo, targetPlane: pinned.plane, artifactKind: "compiled_entity_runtime",
-      payloadSha256: canonical.sha256(canonical.canonicalBytes(payload)), compiler: { name: "athyper.compiled-entity-artifact", version: "1.1.0" },
+      payloadSha256: canonical.sha256(canonical.canonicalBytes(payload)), compiler: { name: "athyper.compiled-entity-artifact", version: COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION },
       contractSchemaVersion: "2.0.0", descriptorSchemaVersion: "2.0.0", signatureAlgorithm: "Ed25519", signingKeyId, createdAt: pinned.generatedAt,
       evidence: { sourceRevisionId: pinned.revisionId, sourceEntityId: pinned.sourceEntityId, sourceReleaseHash: pinned.sourceReleaseHash, sourceContractHash: pinned.sourceContractHash, sourceDescriptorHash: pinned.sourceDescriptorHash,
         ...(predecessor ? { expectedPredecessor: JSON.stringify(predecessor) } : {}),
@@ -96,13 +96,16 @@ export async function qualifyRuntimePublication(document: UnsignedPublication, d
   compiledPublicationTenant(e.publicationKey, e.payload);
   const registry = await dependencies.registry(e.targetPlane);
   validateCompiledEntityRelease(e.payload.release, e.payload.artifacts, registry);
-  validateCompiledRuntimeContracts(e.payload.artifacts);
+  const publication = { releaseId: e.releaseId, releaseNo: e.releaseNo,
+    contractHash: typeof m.evidence?.sourceContractHash === "string" ? m.evidence.sourceContractHash.replace(/^sha256:/, "") : undefined,
+    entityId: typeof m.evidence?.sourceEntityId === "string" ? m.evidence.sourceEntityId : undefined, tenantId: e.payload.tenantId ?? null };
+  validateCompiledRuntimeContracts(e.payload.artifacts, publication);
   assertCompleteRuntimeOperations(e.payload.artifacts);
   const runtimes = e.payload.artifacts.filter(a => a.artifactType === "runtime_contract");
   if (!runtimes.length) throw Error("COMPILED_PUBLICATION_RUNTIME_REQUIRED");
   for (const artifact of runtimes) {
     assertEntityAiManifestBindings(artifact.content.descriptor as Record<string, unknown>, e.targetPlane, registry);
-    parseCompiledRuntimeContract(artifact, { releaseId: e.releaseId, releaseNo: e.releaseNo });
+    parseCompiledRuntimeContract(artifact, publication);
     assertOperationProjection(artifact.content.descriptor as Record<string, unknown>);
     const source = (artifact.content.descriptor as Record<string, unknown>).source as Record<string, unknown> | undefined;
     if (source && (source.entity_id !== m.evidence?.sourceEntityId || source.release_hash !== m.evidence?.sourceReleaseHash))

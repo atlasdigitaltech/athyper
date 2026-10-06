@@ -1,3 +1,8 @@
+import {
+  withEntityEffectiveRead,
+  type EntityLiveReadEvidencePort,
+} from "./entity-effective-security.js";
+import { projectEffectiveReadRow } from "./entity-effective-read-projection.js";
 import { validateStructuredProjectionValue } from "@athyper/server-contract-metadata";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
@@ -42,6 +47,7 @@ import {
 
 export interface RecordQueryServiceOptions<Transaction = unknown> {
   readonly ownerAccess?: RecordOwnerAccessAdapter<Transaction>;
+  readonly liveReadEvidence?: EntityLiveReadEvidencePort<Transaction>;
   readonly metadata: MetadataReader;
   readonly authorizer: Authorizer;
   readonly repository: RecordRepository<Transaction>;
@@ -245,86 +251,145 @@ export function createRecordListExecutor<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
-          const ownerValues = await prepareRecordOwnerAccess(
-            options.ownerAccess,
-            { context: query.context, descriptor, operation: "list" },
-            transaction,
-          );
-          const input = {
-            descriptor: {
-              ...scopeRecordOwnerRead(descriptor, ownerValues),
-              // Both SQL and in-memory repositories derive search predicates from this
-              // descriptor. Hidden fields must not influence matches or exact counts.
-              fields: descriptor.fields.map((field) =>
-                field.searchable && !readableKeys.has(field.key)
-                  ? { ...field, searchable: false }
-                  : field,
-              ),
+          return withEntityEffectiveRead({
+            request: {
+              context: query.context,
+              descriptor,
+              operationKey:
+                descriptor.authorization?.directory.operation ?? "read",
+              fields: [
+                ...[
+                  ...new Set(
+                    [
+                      ...projection,
+                      descriptor.storage.idField,
+                      descriptor.storage.versionField,
+                      descriptor.storage.statusField,
+                    ].filter((key): key is string => Boolean(key)),
+                  ),
+                ].map((key) => ({ key, use: "read" as const })),
+                ...(query.filters ?? []).map((filter) => ({
+                  key: filter.field,
+                  use: "filter" as const,
+                })),
+                ...(query.sort ?? []).map((sort) => ({
+                  key: sort.field,
+                  use: "sort" as const,
+                })),
+                ...(query.group
+                  ? [{ key: query.group, use: "group" as const }]
+                  : []),
+                ...(query.search
+                  ? descriptor.fields
+                      .filter(
+                        (field) =>
+                          field.searchable && readableKeys.has(field.key),
+                      )
+                      .map((field) => ({
+                        key: field.key,
+                        use: "search" as const,
+                      }))
+                  : []),
+              ],
             },
-            tenantId: query.context.tenantId,
-            limit,
-            filters: query.filters ?? [],
-            sort: query.sort ?? [],
-            countMode: query.countMode ?? "none",
-            projection,
-            cursorScope: cursorScope(query.context, collectionScope),
-            collectionScope: collectionScope.constraints,
-            ...(query.viewRelationships
-              ? { viewRelationships: query.viewRelationships }
-              : {}),
-            ...(query.recordIds !== undefined
-              ? { recordIds: Object.freeze([...new Set(query.recordIds)]) }
-              : {}),
-            ...(query.group ? { group: query.group } : {}),
-            ...(query.cursor ? { cursor: query.cursor } : {}),
-            ...(query.search ? { search: query.search } : {}),
-          };
-          if (
-            enforced &&
-            (query.group || (query.countMode && query.countMode !== "none"))
-          )
-            return executeAuthorizedAggregate({
-              repository: options.repository,
-              query: input,
-              transaction,
-              authorize: aggregateAuthorizationCovered
-                ? async () => true
-                : async (recordId) => {
-                    const decision = await authorizeEntityOperation(options.authorizer, {
-                      context: query.context,
-                      permissionCode:
-                        descriptor.operations["read"]!.permissionCode,
-                      resource: {
-                        ...collectionScope.authorizationResource,
-                        tenantId: query.context.tenantId,
-                        entityCode: descriptor.entityCode,
-                        resourceCode: descriptor.entityCode,
-                        operationKey: "read",
-                        authorizationProfileHash:
-                          entityAuthorizationProfileHash(
-                            descriptor.authorization!,
-                          ),
-                        authorizationDescriptorHash: descriptor.compiledHash,
-                        recordId,
+            transaction,
+            authorizer: options.authorizer,
+            evidence: options.liveReadEvidence,
+            read: async () => {
+              const ownerValues = await prepareRecordOwnerAccess(
+                options.ownerAccess,
+                { context: query.context, descriptor, operation: "list" },
+                transaction,
+              );
+              const input = {
+                descriptor: {
+                  ...scopeRecordOwnerRead(descriptor, ownerValues),
+                  // Both SQL and in-memory repositories derive search predicates from this
+                  // descriptor. Hidden fields must not influence matches or exact counts.
+                  fields: descriptor.fields.map((field) =>
+                    field.searchable && !readableKeys.has(field.key)
+                      ? { ...field, searchable: false }
+                      : field,
+                  ),
+                },
+                tenantId: query.context.tenantId,
+                limit,
+                filters: query.filters ?? [],
+                sort: query.sort ?? [],
+                countMode: query.countMode ?? "none",
+                projection,
+                cursorScope: cursorScope(query.context, collectionScope),
+                collectionScope: collectionScope.constraints,
+                ...(query.viewRelationships
+                  ? { viewRelationships: query.viewRelationships }
+                  : {}),
+                ...(query.recordIds !== undefined
+                  ? { recordIds: Object.freeze([...new Set(query.recordIds)]) }
+                  : {}),
+                ...(query.group ? { group: query.group } : {}),
+                ...(query.cursor ? { cursor: query.cursor } : {}),
+                ...(query.search ? { search: query.search } : {}),
+              };
+              if (
+                enforced &&
+                (query.group || (query.countMode && query.countMode !== "none"))
+              )
+                return executeAuthorizedAggregate({
+                  repository: options.repository,
+                  query: input,
+                  transaction,
+                  authorize: aggregateAuthorizationCovered
+                    ? async () => true
+                    : async (recordId) => {
+                        const decision = await authorizeEntityOperation(
+                          options.authorizer,
+                          {
+                            context: query.context,
+                            permissionCode:
+                              descriptor.operations["read"]!.permissionCode,
+                            resource: {
+                              ...collectionScope.authorizationResource,
+                              tenantId: query.context.tenantId,
+                              entityCode: descriptor.entityCode,
+                              resourceCode: descriptor.entityCode,
+                              operationKey: "read",
+                              authorizationProfileHash:
+                                entityAuthorizationProfileHash(
+                                  descriptor.authorization!,
+                                ),
+                              authorizationDescriptorHash:
+                                descriptor.compiledHash,
+                              recordId,
+                            },
+                          },
+                        );
+                        if (
+                          !decision.allowed &&
+                          [
+                            "entity_authorization_unavailable",
+                            "entity_authorization_unmapped",
+                          ].includes(decision.reason ?? "")
+                        )
+                          throw new RecordServiceError(
+                            503,
+                            "ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE",
+                            "Aggregate authorization is unavailable",
+                          );
+                        return decision.allowed;
                       },
-                    });
-                    if (
-                      !decision.allowed &&
-                      [
-                        "entity_authorization_unavailable",
-                        "entity_authorization_unmapped",
-                      ].includes(decision.reason ?? "")
-                    )
-                      throw new RecordServiceError(
-                        503,
-                        "ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE",
-                        "Aggregate authorization is unavailable",
-                      );
-                    return decision.allowed;
-                  },
-            });
-          const result = await options.repository.list(input, transaction);
-          return result;
+                });
+              const result = await options.repository.list(input, transaction);
+              return result;
+            },
+            project: async (result, fields, mask) => ({
+              ...result,
+              data: await Promise.all(
+                result.data.map((row) =>
+                  projectEffectiveReadRow(row, fields, mask, descriptor),
+                ),
+              ),
+            }),
+          });
         },
       );
       if (enforced && !aggregateAuthorizationCovered) {
@@ -361,8 +426,6 @@ export function createRecordListExecutor<Transaction = unknown>(
     },
   });
 }
-
-
 
 function restrictResponseProjection(
   result: RecordListResult,
@@ -404,91 +467,141 @@ export function createRecordQueryService<Transaction = unknown>(
   options: RecordQueryServiceOptions<Transaction>,
   listExecutor: RecordListExecutor = createRecordListExecutor(options),
 ): RecordQueryService {
-  const getWithProjection = async (query: GetRecordQuery): Promise<AuthorizedRecordDetailResult> => {
-      const descriptor = await descriptorFor(
-        options.metadata,
-        query.context,
-        query.entityCode,
+  const getWithProjection = async (
+    query: GetRecordQuery,
+  ): Promise<AuthorizedRecordDetailResult> => {
+    const descriptor = await descriptorFor(
+      options.metadata,
+      query.context,
+      query.entityCode,
+    );
+    const enforced = usesEntityBackendAuthorization(
+      options.authorizer,
+      query.context,
+      descriptor,
+    );
+    if (
+      query.scopeCoordinate &&
+      !descriptor.directoryScope &&
+      !descriptor.collectionRelationship
+    )
+      throw new RecordServiceError(
+        409,
+        "ENTITY_PARENT_DETAIL_SCOPE_REQUIRED",
+        "Publish a directory scope before using parent-scoped detail reads",
       );
-      const enforced = usesEntityBackendAuthorization(
+    if (descriptor.directoryScope || descriptor.collectionRelationship) {
+      await authorizeRecordListRead(
         options.authorizer,
         query.context,
         descriptor,
+        { recordId: query.recordId },
       );
-      if (query.scopeCoordinate && !descriptor.directoryScope && !descriptor.collectionRelationship)
-        throw new RecordServiceError(409, "ENTITY_PARENT_DETAIL_SCOPE_REQUIRED", "Publish a directory scope before using parent-scoped detail reads");
-      if (descriptor.directoryScope || descriptor.collectionRelationship) {
-        await authorizeRecordListRead(
-          options.authorizer,
-          query.context,
-          descriptor,
-          { recordId: query.recordId },
-        );
-        const result = await listExecutor.execute({
-          context: query.context,
-          entityCode: query.entityCode,
-          recordIds: [query.recordId],
-          scopeCoordinate: query.scopeCoordinate,
-          limit: 1,
-        });
-        return { data: result.result.data[0] ?? null, descriptor: result.descriptor, readableFields: result.readableFields };
-      }
-      await authorize(
-        options.authorizer,
-        query.context,
-        descriptor.operations["read"]?.permissionCode,
-        {
-          tenantId: query.context.tenantId,
-          entityCode: query.entityCode,
-          operationKey: "read",
-          resourceCode: query.entityCode,
-          recordId: query.recordId,
-          ...(descriptor.authorization
-            ? {
-                authorizationProfileHash: entityAuthorizationProfileHash(
-                  descriptor.authorization,
-                ),
-                authorizationDescriptorHash: descriptor.compiledHash,
-              }
-            : {}),
-        },
-      );
-      const readableFields = await readableRecordFields(options.authorizer, query.context, descriptor);
-      const projection = readableFields.map(field => field.key);
-      const data = await options.transactions.run(
-        query.context.planeKey,
-        {
-          tenantId: query.context.tenantId,
-          principalId: query.context.principalId,
-        },
-        async (transaction) => {
-          const ownerValues = await prepareRecordOwnerAccess(
-            options.ownerAccess,
-            { context: query.context, descriptor, operation: "read" },
-            transaction,
-          );
-          const record = await options.repository.get(
-            scopeRecordOwnerRead(descriptor, ownerValues),
-            query.context.tenantId,
-            query.recordId,
-            projection,
-            transaction,
-          );
-          return record;
-        },
-      );
-      if (data && enforced) assertProfiledScalarProjection(data, projection, descriptor);
+      const result = await listExecutor.execute({
+        context: query.context,
+        entityCode: query.entityCode,
+        recordIds: [query.recordId],
+        scopeCoordinate: query.scopeCoordinate,
+        limit: 1,
+      });
       return {
-        descriptor,
-        readableFields,
-        data: data
-          ? projectAuthorizedRecordFields(descriptor, data, enforced)
-          : null,
+        data: result.result.data[0] ?? null,
+        descriptor: result.descriptor,
+        readableFields: result.readableFields,
       };
+    }
+    await authorize(
+      options.authorizer,
+      query.context,
+      descriptor.operations["read"]?.permissionCode,
+      {
+        tenantId: query.context.tenantId,
+        entityCode: query.entityCode,
+        operationKey: "read",
+        resourceCode: query.entityCode,
+        recordId: query.recordId,
+        ...(descriptor.authorization
+          ? {
+              authorizationProfileHash: entityAuthorizationProfileHash(
+                descriptor.authorization,
+              ),
+              authorizationDescriptorHash: descriptor.compiledHash,
+            }
+          : {}),
+      },
+    );
+    const readableFields = await readableRecordFields(
+      options.authorizer,
+      query.context,
+      descriptor,
+    );
+    const projection = readableFields.map((field) => field.key);
+    const data = await options.transactions.run(
+      query.context.planeKey,
+      {
+        tenantId: query.context.tenantId,
+        principalId: query.context.principalId,
+      },
+      async (transaction) => {
+        return withEntityEffectiveRead({
+          request: {
+            context: query.context,
+            descriptor,
+            operationKey: "read",
+            recordId: query.recordId,
+            fields: [
+              ...new Set(
+                [
+                  ...projection,
+                  descriptor.storage.idField,
+                  descriptor.storage.versionField,
+                  descriptor.storage.statusField,
+                ].filter((key): key is string => Boolean(key)),
+              ),
+            ].map((key) => ({ key, use: "read" as const })),
+          },
+          transaction,
+          authorizer: options.authorizer,
+          evidence: options.liveReadEvidence,
+          read: async () => {
+            const ownerValues = await prepareRecordOwnerAccess(
+              options.ownerAccess,
+              { context: query.context, descriptor, operation: "read" },
+              transaction,
+            );
+            const record = await options.repository.get(
+              scopeRecordOwnerRead(descriptor, ownerValues),
+              query.context.tenantId,
+              query.recordId,
+              projection,
+              transaction,
+            );
+            return record;
+          },
+          project: async (record, fields, mask) =>
+            record
+              ? projectEffectiveReadRow(record, fields, mask, descriptor)
+              : null,
+        });
+      },
+    );
+    if (data && enforced)
+      assertProfiledScalarProjection(data, projection, descriptor);
+    return {
+      descriptor,
+      readableFields,
+      data: data
+        ? projectAuthorizedRecordFields(descriptor, data, enforced)
+        : null,
+    };
   };
   return {
-    async list(query) { return (await listExecutor.execute(query)).result; },
-    async get(query) { return { data: (await getWithProjection(query)).data }; },
+    async list(query) {
+      return (await listExecutor.execute(query)).result;
+    },
+    async get(query) {
+      return { data: (await getWithProjection(query)).data };
+    },
     getWithProjection,
   };
 }
@@ -519,9 +632,11 @@ async function resolveCollectionScope(
 ): Promise<RecordCollectionScopeResolution> {
   if (
     !resolver &&
-    (descriptor.directoryScope?.parent || query.scopeCoordinate?.parentEntityCode ||
+    (descriptor.directoryScope?.parent ||
+      query.scopeCoordinate?.parentEntityCode ||
       query.scopeCoordinate?.parentRecordId ||
-      query.scopeCoordinate?.relationshipKey || query.scopeCoordinate?.parentDescriptorHash)
+      query.scopeCoordinate?.relationshipKey ||
+      query.scopeCoordinate?.parentDescriptorHash)
   )
     throw new RecordServiceError(
       403,
@@ -690,20 +805,24 @@ function assertProfiledScalarProjection(
 ): void {
   const structured = new Set<string>();
   for (const key of fields) {
-    const field = descriptor.fields.find(field => field.key === key);
+    const field = descriptor.fields.find((field) => field.key === key);
     if (!field?.structuredProjection || row[key] === null) continue;
     try {
       validateStructuredProjectionValue(row[key], field.structuredProjection);
     } catch {
-      throw new RecordServiceError(403, "ENTITY_STRUCTURED_PROJECTION_INVALID",
-        "Record does not match its published structured projection");
+      throw new RecordServiceError(
+        403,
+        "ENTITY_STRUCTURED_PROJECTION_INVALID",
+        "Record does not match its published structured projection",
+      );
     }
     structured.add(key);
   }
   if (
     fields.some(
       (field) =>
-        !structured.has(field) && row[field] !== null &&
+        !structured.has(field) &&
+        row[field] !== null &&
         typeof row[field] === "object" &&
         !(row[field] instanceof Date),
     )

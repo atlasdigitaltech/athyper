@@ -15,7 +15,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck:native-tests": "tsc -p tsconfig.native-test.json --noEmit"
   },
   "dependencies": {
     "@athyper/server-contract-auth": "workspace:*",
@@ -28,7 +29,8 @@
     "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/server-contract-publication": "workspace:*",
     "@athyper/contract-platform-collection": "workspace:*",
-    "@athyper/platform-temporal": "workspace:*"
+    "@athyper/platform-temporal": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

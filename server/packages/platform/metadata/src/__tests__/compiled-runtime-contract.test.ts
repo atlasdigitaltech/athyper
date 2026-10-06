@@ -32,8 +32,8 @@ const descriptor = {
     idField: "id",
     tenantField: "tenant_id",
   },
-  fields: profile.fieldPolicies
-    .flatMap((p: { fields: string[] }) => p.fields)
+  fields: (profile.fieldPolicies as readonly { fields: readonly string[] }[])
+    .flatMap((p: { fields: readonly string[] }) => p.fields)
     .map((key: string) => ({
       key,
       storagePath: key,
@@ -279,13 +279,78 @@ describe("compiled-only runtime contract", () => {
 it("requires identical structured projection declarations in Core and the signed runtime", () => {
   const structuredProjection = {kind:"object_array",maxItems:2,fields:[{key:"state",type:"string",nullable:false}]};
   const key = descriptor.fields[0]!.key;
-  const native = {...descriptor, fields:descriptor.fields.map(field=>field.key===key?{...field,type:"json",structuredProjection}:field)};
+  const native = {...descriptor, fields:descriptor.fields.map((field: typeof descriptor.fields[number])=>field.key===key?{...field,type:"json",structuredProjection}:field)};
   const runtimeWithJson = {...runtime, content:{...runtime.content,descriptor:native}};
   const fields = (core.content.fields as any[]).map(field=>field.key===key?{...field,dataType:"json",structuredProjection}:field);
   const coreWithJson = {...core,content:{...core.content,fields}};
   expect(()=>validateCompiledRuntimeContracts([runtimeWithJson,coreWithJson,operation])).not.toThrow();
   expect(()=>validateCompiledRuntimeContracts([runtimeWithJson,{...coreWithJson,content:{...coreWithJson.content,fields:fields.map(field=>field.key===key?{...field,structuredProjection:{...structuredProjection,maxItems:3}}:field)}},operation])).toThrow("FIELD_MISMATCH");
   for (const property of ["filterable","sortable","searchable"]) {
-    expect(()=>parseCompiledRuntimeContract({...runtimeWithJson,content:{...runtimeWithJson.content,descriptor:{...native,fields:native.fields.map(field=>field.key===key?{...field,[property]:true}:field)}}},publication)).toThrow("non-queryable JSON");
+    expect(()=>parseCompiledRuntimeContract({...runtimeWithJson,content:{...runtimeWithJson.content,descriptor:{...native,fields:native.fields.map((field: typeof descriptor.fields[number])=>field.key===key?{...field,[property]:true}:field)}}},publication)).toThrow("non-queryable JSON");
   }
+});
+
+const nativeSource = {
+  entityId: "00000000-0000-4000-8000-000000000002",
+  releaseId: publication.releaseId,
+  contractHash: "c".repeat(64),
+  tenantId: null,
+};
+const resource = { owner: "platform", namespace: "entity", key: "security", version: 1, hash: "d".repeat(64) };
+function nativeRuntime() {
+  return artifact("runtime_contract", "runtime", {
+    descriptor: { ...descriptor, schema: "athyper.entity-runtime-descriptor/1.1",
+      liveReadContract: { schema: "entity.live-read/1", source: nativeSource,
+        security: resource, storageAuthority: { ...resource, key: "storage" } } },
+    dependencies: [`${entityCode}/core`, `${entityCode}/operation`],
+  });
+}
+const nativePublication = { ...publication, ...nativeSource };
+it("keeps source and compiled hashes distinct through split-runtime decoding", () => {
+  expect(parseCompiledRuntimeContract(nativeRuntime(), nativePublication)).toMatchObject({
+    contractHash: nativeSource.contractHash, compiledHash: "a".repeat(64),
+    releaseId: nativeSource.releaseId, liveReadContract: { source: nativeSource },
+  });
+  expect(parseCompiledRuntimeContract(runtime, { ...publication, contractHash: nativeSource.contractHash })).toMatchObject({
+    contractHash: "a".repeat(64), compiledHash: "a".repeat(64),
+  });
+});
+it("rejects missing and mismatched independently published native source coordinates", () => {
+  expect(() => parseCompiledRuntimeContract(nativeRuntime(), publication)).toThrow("SOURCE_PIN_REQUIRED");
+  for (const coordinate of [
+    { ...nativePublication, releaseId: "00000000-0000-4000-8000-000000000003" },
+    { ...nativePublication, entityId: "00000000-0000-4000-8000-000000000003" },
+    { ...nativePublication, contractHash: "b".repeat(64) },
+    { ...nativePublication, tenantId: "00000000-0000-4000-8000-000000000003" },
+  ]) expect(() => parseCompiledRuntimeContract(nativeRuntime(), coordinate)).toThrow("SOURCE_PIN_MISMATCH");
+});
+it("validates native graph structure before allocation without mistaking it for publication authority", () => {
+  const members = [core, operation, nativeRuntime()];
+  expect(() => validateCompiledRuntimeContracts(members)).not.toThrow();
+  expect(() => validateCompiledRuntimeContracts(members, nativePublication)).not.toThrow();
+  expect(() => validateCompiledRuntimeContracts(members, publication)).toThrow("SOURCE_PIN_REQUIRED");
+});
+it("rejects pin erasure, legacy relabeling and unknown native versions in split artifacts", () => {
+  const d = nativeRuntime().content.descriptor as Record<string, unknown>;
+  for (const invalid of [
+    { ...d, liveReadContract: undefined },
+    { ...d, schema: "athyper.entity-runtime-descriptor/1.0" },
+    { ...d, schema: "athyper.entity-runtime-descriptor/1.2" },
+    { ...d, liveReadContract: { ...(d.liveReadContract as Record<string, unknown>), unknown: true } },
+  ]) expect(() => artifact("runtime_contract", "runtime", { descriptor: invalid,
+    dependencies: [`${entityCode}/core`, `${entityCode}/operation`] })).toThrow();
+});
+it("requires independently installed source pins on the actual shared reader path", async () => {
+  const members = [core, operation, nativeRuntime()];
+  const nativeRelease = { ...release, artifacts: members.map(a => ({ artifactKey: a.artifactKey,
+    artifactType: a.artifactType, entityCode, hash: a.artifactHash, ref: `${a.artifactKey}.json` })) };
+  const source = {
+    findAdmittedRelease: vi.fn(async () => nativeRelease),
+    findPublicationCoordinate: vi.fn(async () => nativePublication),
+    findArtifact: vi.fn(async (input: { entry: { artifactKey: string } }) => members.find(a => a.artifactKey === input.entry.artifactKey) ?? null),
+  };
+  const metadata = createCompiledMetadataReader(new PinnedCompiledEntityReader({ source }));
+  expect(await metadata.getEntityDescriptor(context, entityCode)).toMatchObject({ contractHash: nativeSource.contractHash });
+  source.findPublicationCoordinate.mockResolvedValueOnce(publication as typeof nativePublication);
+  await expect(metadata.getEntityDescriptor(context, entityCode)).rejects.toThrow("SOURCE_PIN_REQUIRED");
 });

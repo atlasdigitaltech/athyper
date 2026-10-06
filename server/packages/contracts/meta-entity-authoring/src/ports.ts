@@ -23,6 +23,11 @@ export class AuthoringPolicyError extends Error {
 }
 
 export interface MetaEntityAuthoringRepository {
+  readNativeDraftSave?(input: {changeSetId: string; entityId: string; actorId: string; tenantId: string | null; revision: number}): Promise<import("./native-authoring-graph.js").NativeMetaEntityGraph | null>;
+  executeNativeCoreLayoutCommands?(input: {changeSetId: string; entityId: string; actorId: string; tenantId: string | null; batch: unknown}): Promise<import("./label-commands.js").LabelCommandResult>;
+  loadNativeGraph?(input: {changeSetId: string; entityId: string; actorId: string; tenantId: string | null}): Promise<import("./native-authoring-graph.js").NativeMetaEntityGraph>;
+  executeReferenceCommands?(input: {changeSetId: string; actorId: string; tenantId: string | null; batch: unknown}): Promise<import("./reference-commands.js").ReferenceCommandResult>;
+  executeLabelCommands?(input: {changeSetId: string; actorId: string; tenantId: string | null; batch: unknown}): Promise<import("./label-commands.js").LabelCommandResult>;
   listDraftSaves?(changeSetId: string): Promise<readonly {revision: number; capturedAt: string; kind: string}[]>;
   readDraftSave?(changeSetId: string, revision: number): Promise<MetaEntityGraph | null>;
   listInspectionReleases?(tenantId: string): Promise<readonly MetaEntityInspectionRelease[]>;

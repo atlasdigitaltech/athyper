@@ -28,6 +28,7 @@ it.each(["plain", "masked", "denied"] as const)(
       compiledHash: "b".repeat(64),
       storage: { schema: "shared", object: "sample", idField: "id" },
       fields: [
+        { key: "code", storagePath: "code", type: "string", required: true, writableOn: [] },
         {
           key: "id",
           storagePath: "id",
@@ -54,14 +55,14 @@ it.each(["plain", "masked", "denied"] as const)(
         read: { code: "read", permissionCode: "sample.read" },
       },
       transitions: [],
-      listPresentation: { localizedLabels: localization },
+      listPresentation: { identityField: "code", localizedLabels: localization },
       recordPresentation: parseEntityRecordPresentation({
         schemaVersion: 1,
-        titleField: "id",
+        titleField: "code",
         localizedLabels: localization,
         badges: [{ field: "status", tones: { active: "success" } }],
         sections: [
-          { key: "overview", label: "Overview", fields: ["id", "status"] },
+          { key: "overview", label: "Overview", fields: ["code", "status"] },
         ],
       }),
       authorization: {
@@ -83,7 +84,7 @@ it.each(["plain", "masked", "denied"] as const)(
         fieldPolicies: [
           {
             key: "identity",
-            fields: ["id"],
+            fields: ["id", "code"],
             readOperation: "read",
             representation: "plain",
             writeOperations: [],

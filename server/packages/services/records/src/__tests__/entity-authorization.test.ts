@@ -1,3 +1,4 @@
+import { definedFixturePermission } from "../test-support/defined-permission.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { parseEntityAccessDecision } from "@athyper/contract-platform-entity-runtime";
@@ -48,7 +49,7 @@ const operationBindings = [
   return profile.operations.map((o) => ({
     entityCode: profile.entityCode,
     operationKey: o.key,
-    permissionCode: o.permissionCode,
+    permissionCode: definedFixturePermission(o.permissionCode),
     decisionMode: "authorize",
     requiredScopeKinds: entityScopeResolvers[o.scope].map(
       (key) =>

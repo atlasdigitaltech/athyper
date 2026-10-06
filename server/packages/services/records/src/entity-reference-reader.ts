@@ -121,6 +121,8 @@ export function createEntityReferenceReader(options: {
     );
     if (
       !target ||
+      target.entityCode !== relation.targetEntity ||
+      target.fields.find(field => field.key === relation.labelField)?.type === "uuid" ||
       target.planeKey !== context.planeKey ||
       !target.operations.read ||
       !target.operations.list

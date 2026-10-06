@@ -1,3 +1,4 @@
+import { definedFixturePermission } from "../test-support/defined-permission.js";
 import { readFileSync } from "node:fs";
 import { it, expect, vi } from "vitest";
 import type {
@@ -52,7 +53,7 @@ const context: VerifiedRequestContext = {
     operationBindings: profile.operations.map((o) => ({
       entityCode: profile.entityCode,
       operationKey: o.key,
-      permissionCode: o.permissionCode,
+      permissionCode: definedFixturePermission(o.permissionCode),
       decisionMode: "authorize",
       requiredScopeKinds: entityScopeResolvers[o.scope].map(
         (key) =>
