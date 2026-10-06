@@ -1,3 +1,5 @@
+import { validateConversionJsonData } from "./normalized-core-codec.js";
+import { prepareLegacySourceEnrollment, type LegacySourceEnrollmentInput } from "./legacy-source-enrollment.js";
 import { readNativeConversionHistory } from "./native-conversion-history.js";
 import { applyNativeGraphConversion, type NativeConversionApplicationPolicy, type NativeConversionApplicationInput } from "./native-conversion-application.js";
 import { validateNativeEntityLabelOwner } from "./native-localized-labels.js";
@@ -25,6 +27,8 @@ import type {
   ValidationReport,
 } from "@athyper/server-contract-meta-entity-authoring";
 import {
+  validateFoundationNode,
+  referenceUuid,
   parseNormalizedLayoutGraph,
   AuthoringConflictError,
   AuthoringPolicyError,
@@ -93,6 +97,13 @@ interface ArtifactRow {
   readonly compiled_json: unknown;
 }
 
+/** Installed read-only enrollment proposal resolver. It supplies no writer or
+ * publication authority; request DTOs cannot carry labels, identities or ports. */
+export interface LegacySourceEnrollmentPolicy {
+  readonly host: NativeAuthoringPolicy;
+  resolve(database: Kysely<Database>, input: NormalizedSaveCoordinate & { actorId: string; expectedRevision: number; expectedSourceHash: string }, source: MetaEntityGraph): Promise<LegacySourceEnrollmentInput>;
+}
+
 export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringRepository {
   constructor(
     private readonly database: Kysely<Database>,
@@ -108,7 +119,29 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly referencePolicy?: import("@athyper/server-contract-meta-entity-authoring").ReferenceCommandPolicy,
     private readonly nativePolicy?: NativeAuthoringPolicy,
     private readonly conversionPolicy?: NativeConversionApplicationPolicy,
+    private readonly enrollmentPolicy?: LegacySourceEnrollmentPolicy,
   ) {}
+  async prepareLegacyEnrollment(input: NormalizedSaveCoordinate & { actorId: string; expectedRevision: number; expectedSourceHash: string }) {
+    const policy = this.enrollmentPolicy;
+    if (!policy) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED", "An installed read-only source enrollment resolver is required.");
+    validateConversionJsonData(input, "/enrollment");
+    input = structuredClone(input);
+    if (Object.keys(input).sort().join() !== "actorId,changeSetId,entityId,expectedRevision,expectedSourceHash,tenantId" || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0 || !/^[a-f0-9]{64}$/.test(input.expectedSourceHash)) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_REQUEST_INVALID", "Exact saved source coordinates are required.");
+    for (const id of [input.entityId, input.changeSetId, input.actorId, ...(input.tenantId === null ? [] : [input.tenantId])]) validateFoundationNode(referenceUuid, id, "/enrollment/id");
+    return atomic(this.database, async tx => {
+      await policy.host.admit(tx, { ...input, batch: null }, "read");
+      const root = (await sql<{source: Record<string, unknown>}>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${input.changeSetId}::uuid AND entity_id=${input.entityId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid FOR SHARE`.execute(tx)).rows[0]?.source;
+      if (!root) throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND", "The scoped source draft is unavailable.");
+      if (Number(root.lock_version) !== input.expectedRevision) throw new AuthoringConflictError("Stale enrollment source revision.");
+      if (root.native_core_layout_version != null || root.reference_contract_version != null) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_VERSION_UNSUPPORTED", "Only an unenrolled legacy source can produce this proposal.");
+      const repository = new KyselyMetaEntityAuthoringRepository(tx);
+      const source = await repository.loadGraphParts(input.changeSetId, false);
+      if (sha256(source) !== input.expectedSourceHash) throw new AuthoringConflictError("Enrollment source hash changed.");
+      const resolved = await policy.resolve(tx, structuredClone(input), structuredClone(source));
+      if (resolved.context.entityId !== input.entityId || resolved.context.changeSetId !== input.changeSetId || resolved.context.tenantId !== input.tenantId || resolved.revision !== input.expectedRevision || resolved.sourceHash !== input.expectedSourceHash) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_SOURCE_MISMATCH", "Resolver must bind the exact locked source.");
+      return prepareLegacySourceEnrollment(source, resolved);
+    });
+  }
   async readNativeConversionHistory(input: NormalizedSaveCoordinate & {actorId: string; revision: number}) {
     if (!this.conversionPolicy) throw new AuthoringPolicyError("NATIVE_CONVERSION_HOST_NOT_CONFIGURED", "An installed archival conversion decoder is required.");
     const policy = this.conversionPolicy;

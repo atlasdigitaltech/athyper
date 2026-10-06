@@ -913,3 +913,38 @@ Country/State Region enrollment/conversion, positive canonical atomic history
 and compiler evidence, host/product-write approvals and deployed F6/F8/F9 still
 require completion. No source graph, control initializer, grant, publication or
 activation was applied.
+
+
+### Whole-source enrollment preparation — 7 October 2026
+
+Implemented the shared 2.1/2.2-to-2.3 legacy-source enrollment adapter and connected
+it to a read-only proposal method in the existing Kysely authoring repository.
+The adapter preserves every original property/member identity and reconstructs
+the exact source hash from the candidate. Labels must cover every explicit
+localized reference without changing fallback text or prior 2.2 localization.
+The identity inventory must cover all source fields with exact owner/tenant,
+non-retired status and consistent reservation provenance. No identity is allocated
+by the adapter; supplied records are preparation inputs, not evidence that they
+exist in PostgreSQL.
+
+Actual Country and State Region definitions pass across Studio, Neon and Mesh
+through the same implementation. Identity/provenance records in these fixtures
+are synthetic. These prove whole-source retention at enrollment, not whole-source
+native lowering, approved publication or installed security/storage resources.
+
+The repository proposal uses current installed host read admission and an exact
+scoped root lock. Stale revisions/hash, prior native/reference enrollment and
+resolver coordinates reject. Client requests cannot supply labels, identities or
+authority callbacks. Protocol tests verify revocation, stale revisions and
+resolver mismatch; all SQL in the positive protocol is SELECT. The method is not
+registered as a new API endpoint and writes no rows or historical snapshots.
+
+Seven enrollment/protocol tests pass; the full authoring suite passes 690 tests
+with four existing opt-in SQL skips. Source/test typechecks and foundation drift
+checks pass. DEV remains at dormant schema preparation:
+54 roots lack owned-label enrollment and neither native guard is installed. No
+source enrollment/application, grant, control initialization, host approval or
+F6/F8/F9 qualification was applied in this checkpoint. Remaining engineering is
+native whole-source mapping/installation and positive canonical atomic history/
+compiler qualification; independently approved host/product-write and deployed
+storage/security evidence remain necessary for live deployment.
