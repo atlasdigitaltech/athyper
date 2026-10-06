@@ -47,6 +47,7 @@ import {
   verifyNativeCompiledOperationControls,
   type NativeCompiledOperation,
 } from "./native-operation-compilation.js";
+import { compileNativeFieldReferenceBindings } from "./native-field-reference-compilation.js";
 import type { NativeConversionResource } from "./native-graph-conversion.js";
 
 /** Installed compilation inputs, not a draft grant or a deployed qualification.
@@ -78,7 +79,6 @@ const fail = (
 const emptyBranches = [
   "changeCaseBindings",
   "operationContextRequirements",
-  "fieldReferenceBindings",
   "materializationBindings",
   "materializationFieldMappings",
   "surfaceOperations",
@@ -126,6 +126,7 @@ export function compileNativeRelease(
     "entity",
     "fields",
     "fieldIdentities",
+    "fieldReferenceBindings",
     "operations",
     "runtimeProfiles",
     "surfaces",
@@ -340,9 +341,17 @@ export function compileNativeRelease(
         !/^[a-f0-9]{64}$/.test(labelReferences[0]!.resource.hash)
       )
         fail("/fields/relation/label", "NATIVE_RELEASE_RESOURCE_REQUIRED");
+      if (
+        !(graph.fieldReferenceBindings ?? []).some(
+          (binding) => binding.entityFieldId === field.id,
+        )
+      )
+        typeConfig.relationReference = {
+          relationKey: relation!.relationKey,
+          labelField: labelReferences[0]!.labelFieldKey,
+        };
       typeConfig.keyReference = {
         targetEntity: admitted!.entityCode,
-        targetKey: target![0]!.targetKeyKey,
         fields: (graph.relationFields ?? [])
           .filter((r) => r.entityRelationTargetId === target![0]!.id)
           .sort((a, b) => a.position - b.position)
@@ -355,6 +364,16 @@ export function compileNativeRelease(
     }
     return { ...field, fieldKey: fieldKey(field.id), typeConfig };
   });
+  const fieldReferenceBindings = compileNativeFieldReferenceBindings(
+    graph.fieldReferenceBindings ?? [],
+    fields.flatMap((field) => {
+      const reference = field.typeConfig.keyReference as
+        { targetEntity: string } | undefined;
+      return reference
+        ? [{ fieldId: field.id, targetEntityCode: reference.targetEntity }]
+        : [];
+    }),
+  );
   const fieldRosters = fields.map((f) => ({
     id: f.id,
     key: f.fieldKey,
@@ -725,6 +744,7 @@ export function compileNativeRelease(
     compilationContextHash: sha256(c),
     entity: graph.entity,
     fields,
+    fieldReferenceBindings,
     operations,
     ...structural,
     classProfiles: graph.classProfiles ?? [],

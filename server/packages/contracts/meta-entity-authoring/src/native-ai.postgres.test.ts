@@ -77,7 +77,7 @@ it.skipIf(!enabled)(
         "entity_relation",
       ])
         query(
-          `CREATE TABLE metadata.${t}(id uuid PRIMARY KEY,change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id),UNIQUE(change_set_id,id));`,
+          `CREATE TABLE metadata.${t}(id uuid PRIMARY KEY,change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id)${["entity_field", "entity_operation"].includes(t) ? ",UNIQUE(change_set_id,id)" : ""});`,
         );
       query(nativeAiDdl());
       const draft = randomUUID(),

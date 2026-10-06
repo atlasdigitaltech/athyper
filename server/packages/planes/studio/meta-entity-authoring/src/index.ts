@@ -129,3 +129,5 @@ export * from "./native-operation-compilation.js";
 
 export * from "./native-release-compilation.js";
 export * from "./native-conversion-composition.js";
+
+export * from "./native-field-reference-compilation.js";

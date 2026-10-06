@@ -796,3 +796,79 @@ enrolled in foundation CI. This is local evidence; remote CI and deployed
 qualification are not attested.
 
 The unchanged shared metadata suite also passes: 194 tests, with two existing opt-in cases skipped.
+
+
+### Reference-binding integration and deployed schema preparation — 7 October 2026
+
+The native compiler now preserves the existing typed reference-binding family.
+Each binding must select an exact native field whose compiled reference was
+resolved through the admitted relation/target-key context. Closed-property,
+identity, membership and target checks reject mismatch. Unsupported lookup,
+resolver and deprecated variants reject. Canonical relation references without
+legacy binding rows project through the existing shared reader contract. Actual
+Country/State Region source fixtures cover this family; they do not constitute
+whole-source conversion proof. State Region's explicit Details navigation is a
+source metadata proposal only; it has not been published or activated.
+
+Rollback rehearsal against the actual DEV schema found missing composite-FK
+anchors in generated AI DDL. Canonical generation now installs scoped unique
+anchors on entity_search_profile and entity_relation. The disposable PostgreSQL
+AI test starts those anchors without scoped uniqueness, proving the generator
+supplies it and still rejects cross-draft references and invalid provenance.
+
+The immutable forward migration 20261007_entity_native_resource_preparation.sql
+was rehearsed with rollback, then applied to athyper_studio through the bounded
+installer. Checksum:
+
+```text
+9ddaf1fd7edc0749559be10d3de6e64c0df8c2568cf0996e0fcb73afe1d3a474
+```
+
+It installs five forced-RLS AI tables and 14 dormant operation columns. Existing
+authoring/history rows are compared on their exact original columns inside the
+transaction. Authorization and activation-head hashes remain unchanged. The
+migration ledger is written within the same application transaction; checksum
+mismatch/repeated conflicting ledger entries reject. Replay recognizes only the
+exact applied checksum. No existing applied migration was modified.
+
+Commands and receipts:
+
+```sh
+node --test tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --output /tmp/athyper-native-resource-preparation-dry-run.json
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-native-resource-preparation-applied.json
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --apply=DEV-NATIVE-RESOURCE-PREPARATION --output /tmp/athyper-native-resource-preparation-replay.json
+node tooling/scripts/verification/inspect-entity-studio-foundation.mjs --output /tmp/athyper-native-conversion-readiness-after.json
+```
+
+Reinspection: zero missing AI/operation columns; both native guards remain absent.
+The four consumed native root columns are missing. There are 54 change sets and
+zero owned-label-scoped change sets. All five AI tables have forced RLS; the
+runtime role has no INSERT privilege on them. These are deployed schema facts,
+not product-write or F6/F8/F9 qualification. Native conversion cannot apply to an
+unqualified source by inventing ownership, labels, schema pins or legacy history.
+
+Remaining: qualified source enrollment/provenance and whole-source adapters for
+actual Country/State Region; canonical root/constraint cutover and positive
+atomic conversion/readback/history/compiler evidence; approved host/product-write
+resources and deployed F6/F8/F9. No authoring graph conversion, grants, MFA
+initialization/enforcement changes, publication or activation occurred.
+
+Validation: 683 authoring tests and 37 contract tests pass; four authoring and two
+contract opt-in SQL cases remain skipped in ordinary runs. The explicit generated
+AI PostgreSQL test passes. Installer SQL tests (3) and schema inspector tests (8)
+pass, as do source/test and focused native typechecks, six generation checks,
+migration-layout verification and the bounded build. Detailed local artifacts
+are evidence of the stated checks only, not remote CI or live-read approval.
+
+The added actual-reader relation fixtures exposed an invalid targetKey property
+in the producer's keyReference object. The producer now emits the existing closed
+key-reference wire shape and keeps the governed key in the relational projection.
+Both retained-binding and canonical-relation variants pass the actual reader.
+Source evidence was regenerated after the explicit State Region navigation edit.
+
+The broader test-reachability check remains red for four existing runner omissions:
+two platform entity-runtime contract tests have no package test script; the
+platform-catalogue and publication-token tests lack root runners. None of the
+new tests appears in that failure list. This checkpoint does not attest aggregate
+workspace/remote CI success or modify those unrelated runner configurations.

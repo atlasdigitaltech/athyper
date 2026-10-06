@@ -517,3 +517,98 @@ it("keeps the consumer plane distinct from independently registered storage", as
     code: "NATIVE_CONVERSION_COMPOSITION_MISMATCH",
   });
 });
+
+it.each([false, true])(
+  "projects admitted reference relations through the actual reader (retained binding: %s)",
+  (retained) => {
+    const f = fixture();
+    const graph = structuredClone(f.graph),
+      context = structuredClone(f.c);
+    Reflect.set(graph.fields[1]!, "relationId", id(240));
+    Reflect.set(graph, "relations", [
+      {
+        id: id(240),
+        relationKey: "parent",
+        relationKind: "many_to_one",
+        resolutionKind: "logical",
+        ownershipMode: "reference",
+        mutationMode: "read_only",
+        onDelete: "restrict",
+        onUpdate: "restrict",
+        status: "active",
+      },
+    ]);
+    Reflect.set(graph, "relationTargets", [
+      {
+        id: id(241),
+        entityRelationId: id(240),
+        relationTargetKey: "default",
+        targetEntityId: id(242),
+        targetKeyKey: "code",
+        isDefault: true,
+      },
+    ]);
+    Reflect.set(graph, "relationFields", [
+      {
+        id: id(243),
+        entityRelationTargetId: id(241),
+        sourceFieldId: graph.fields[1]!.id,
+        targetFieldKey: "code",
+        position: 1,
+      },
+    ]);
+    if (retained)
+      Reflect.set(graph, "fieldReferenceBindings", [
+        {
+          id: id(244),
+          entityFieldId: graph.fields[1]!.id,
+          bindingKey: "parent",
+          referenceKind: "entity_relation",
+          targetEntityCode: "synthetic_target",
+          status: "active",
+        },
+      ]);
+    Reflect.set(context.core, "relationIds", [id(240)]);
+    Reflect.set(context.structural, "targets", [
+      {
+        entityId: id(242),
+        entityCode: "synthetic_target",
+        keyKey: "code",
+        fieldKeys: ["code"],
+      },
+    ]);
+    Reflect.set(context, "relationLabels", [
+      {
+        relationId: id(240),
+        labelFieldKey: "name",
+        resource: context.identityResource,
+      },
+    ]);
+    const artifact = compileNativeRelease(
+      graph,
+      { ...context, graphHash: sha256(graph) },
+      f.controls,
+    );
+    const runtime = compileNativeRuntimeProjection({
+      native: artifact.descriptor,
+      registration: {
+        entityCode: graph.entity.entityCode,
+        plane: "studio",
+        storage: {
+          schema: "shared",
+          object: "synthetic_reference",
+          idField: "id",
+        },
+        columns: ["id", "code", "name"],
+      },
+      permissions: [],
+    });
+    expect(runtime.fields.find((field) => field.key === "code")).toMatchObject({
+      referenceTargetEntity: "synthetic_target",
+      keyReference: {
+        targetEntity: "synthetic_target",
+        fields: [{ source: "code", target: "code" }],
+      },
+    });
+  },
+);

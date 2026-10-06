@@ -104,3 +104,16 @@ test('installed snapshot guard signatures remain presence evidence only', () => 
   assert.deepEqual(present.nativeSnapshotGuards,{coreLayout: true,expanded: true,qualified: false});
   assert.equal(present.productionEnabled,false);
 });
+
+
+test("native root diagnostics expose missing repository prerequisites without qualifying an empty source", async () => {
+  const { assessNativeRootColumns } = await import("./inspect-entity-studio-foundation.mjs");
+  const missing = assessNativeRootColumns([]);
+  assert.deepEqual(missing.missing, ["native_core_layout_version", "source_kind", "authoring_schema_hash", "entity_label_id"]);
+  const columns = missing.missing.map((name) => ({ name, type: name === "native_core_layout_version" ? "integer" : name === "entity_label_id" ? "uuid" : "text" }));
+  const present = assessNativeRootColumns([{ name: "entity_change_set", columns }]);
+  assert.equal(present.columnsPresent, true);
+  assert.equal(present.cutoverQualified, false);
+  columns[0].type = "text";
+  assert.deepEqual(assessNativeRootColumns([{ name: "entity_change_set", columns }]).missing, ["native_core_layout_version"]);
+});

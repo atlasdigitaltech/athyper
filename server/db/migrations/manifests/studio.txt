@@ -46,3 +46,5 @@
 20261006_entity_reference_predicate_roots.sql
 20261006_entity_reference_anchor_guards.sql
 20261006_entity_core_layout_columns.sql
+
+20261007_entity_native_resource_preparation.sql

@@ -1,5 +1,5 @@
 {
-  "contractHash": "3d6be96dba919ac2cc3c7d20c899dfbf5be85ee97b5e3fbad112eb889c6607a0",
+  "contractHash": "ac5d91460abcac0c85b110588dadb45a0332a21070e0f18b2f45f2907fd941c0",
   "manifest": {
     "key": "entity.foundation-owned-labels/1",
     "scope": "owned-label-contract-and-scoped-persistence",
@@ -89,7 +89,7 @@
     },
     {
       "path": "metadata/entities/common/reference/state_region/definition.json",
-      "sha256": "2077a079ac67ac6307e311fda34d9bb03c059ebb5355de06816163ea79fe11fb",
+      "sha256": "0cc884431c2f20470183abf6b8267efe994ef11d258fd95c1712edcd7c0a97d9",
       "scope": "explicit-labels-only-synthetic-fixture"
     }
   ],

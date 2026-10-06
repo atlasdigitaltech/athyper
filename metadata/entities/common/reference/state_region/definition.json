@@ -258,6 +258,23 @@
           "version": 1
         }
       ]
+    },
+    "navigation": {
+      "mode": "scroll",
+      "tabs": [
+        {
+          "key": "details",
+          "label": "Details",
+          "sectionKeys": [
+            "overview",
+            "audit"
+          ],
+          "localizedLabel": {
+            "labelKey": "entity.state_region.navigation.details",
+            "defaultText": "Details"
+          }
+        }
+      ]
     }
   }
 }

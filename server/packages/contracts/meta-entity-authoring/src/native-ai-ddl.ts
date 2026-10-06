@@ -5,6 +5,9 @@ import { contractColumnCheck } from "./reference-member-ddl.js";
 export function nativeAiDdl(): string {
   const sql = [
     "-- GENERATED from contracts/meta-entity-authoring/native-ai-contract.ts; NOT a cutover migration.",
+    "-- Scoped anchors required by AI search/relation references; existing field/operation anchors are installed by the reference contract.",
+    "ALTER TABLE metadata.entity_search_profile ADD CONSTRAINT entity_search_profile_draft_id_uq UNIQUE(change_set_id,id);",
+    "ALTER TABLE metadata.entity_relation ADD CONSTRAINT entity_relation_draft_id_uq UNIQUE(change_set_id,id);",
     `CREATE FUNCTION metadata.fn_native_ai_text_array_valid(values_ text[], maximum_length integer) RETURNS boolean LANGUAGE sql IMMUTABLE STRICT AS $$ SELECT (cardinality(values_)=0 OR (array_ndims(values_)=1 AND array_lower(values_,1)=1)) AND cardinality(values_)=(SELECT count(DISTINCT v) FROM unnest(values_) AS v) AND NOT EXISTS(SELECT 1 FROM unnest(values_) AS v WHERE v IS NULL OR length(v)<1 OR length(v)>maximum_length) $$;`,
   ];
   for (const d of Object.values(nativeAiMembers)) {

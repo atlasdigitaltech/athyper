@@ -3,6 +3,23 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_resource_preparation.sql",
+      "path": "migrations/20261007_entity_native_resource_preparation.sql",
+      "sha256": "9ddaf1fd7edc0749559be10d3de6e64c0df8c2568cf0996e0fcb73afe1d3a474",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install generated typed AI families and dormant operation columns; compare original authoring/history rows and preserve controls, grants and native cutover blockers.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/27_native_ai.generated.sql",
+        "ddl/planes/studio/metadata/28_native_operation.generated.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261006_entity_core_layout_columns.sql",
       "path": "migrations/20261006_entity_core_layout_columns.sql",
       "sha256": "0daac5956ddb4c209c54253f694a59c24c580d2d3ba7951db34da99267ae3110",

@@ -509,7 +509,7 @@ Published, required-delivery-complete and currently-active are separate projecte
 *Composer home: Overview › Ownership and targets.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_target:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_target:generated:end -->
 
 One declared publication plane and its explicit requirement; no duplicate target arrays on the draft.
@@ -551,7 +551,7 @@ Composite FK (workspace_id,module_id) references control.workspace_module. Both 
 *Composer home: Data model › Fields (server-owned, Technical details).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_field_identity:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/25_reference_member_guards.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/25_reference_member_guards.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_field_identity:generated:end -->
 
 Small stable identity catalogue for fields whose versioned definition rows change across drafts.
@@ -706,7 +706,7 @@ Money defaults follow a declared acyclic dependency order. Validate explicit aut
 *Composer home: Data model › Fields › field Value rules panel.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_field_choice:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_field_choice:generated:end -->
 
 Use only for entity-owned inline choices. Registered catalogue domains stay catalogue-owned.
@@ -947,7 +947,7 @@ Unique operation/plane. Zero rows for an operation means no entity permission re
 *Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_access_permission:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_access_permission:generated:end -->
 
 Exact plane-specific permission for a surface or a capability action. It has the same shape as entity_operation_permission, but its owner is not an operation.
@@ -990,7 +990,7 @@ Unique draft/binding_key and operation/plane/scope_kind (existing constraints). 
 *Composer home: Access and behaviour › Operations.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_operation_field:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_operation_field:generated:end -->
 
 Explicit writable/request field enrollment.
@@ -1011,7 +1011,7 @@ Composite FK (operation_change_set_id,entity_operation_id) resolves an existing 
 *Composer home: Access and behaviour › Permissions and scope.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_authorization_profile:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_authorization_profile:generated:end -->
 
 Entity-level access/read/directory and owner semantics, together in one profile per plane.
@@ -1041,7 +1041,7 @@ Administration permission code/kind are one optional catalogue selection qualifi
 *Composer home: Access and behaviour › Field access.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_field_access:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_field_access:generated:end -->
 
 Keep one field/plane access row; separate read/query/write semantics explicitly.
@@ -1314,7 +1314,7 @@ The compiled surface contract exposes a derived formModes projection with mode, 
 *Composer home: Experience › Navigation groups (detail).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_surface_navigation_group:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_surface_navigation_group:generated:end -->
 
 Navigation tab label, behavior and membership owner. No component renderer or alternative surface-level navigation mode is stored.
@@ -1481,7 +1481,7 @@ Unique surface/placement key. Form mode uses the explicitly referenced create/pa
 *Composer home: Experience › Columns and views.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_surface_view:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_surface_view:generated:end -->
 
 Product default and named published list states, independent of personal saved-view data.
@@ -1508,7 +1508,7 @@ query_text is only the initial literal keyword string for the surface search pro
 *Composer home: Experience › Columns and views.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_surface_view_field:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_surface_view_field:generated:end -->
 
 One reusable row per view/field handles columns, sort and grouping without duplicate membership tables.
@@ -1530,7 +1530,7 @@ Unique view/field. At least one of visibility/sort/group must be selected. Query
 *Composer home: Experience › Filters/Visibility rules/Form behavior by purpose; record_lock in Access and behaviour › Record lock.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_predicate:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/24_reference_members.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_predicate:generated:end -->
 
 Typed conditions reused for supported list filters, locked record constraints and visibility conditions, with an explicit finite purpose.
@@ -1830,7 +1830,7 @@ Finite row variants have CHECK constraints. An action's exact per-plane permissi
 *Composer home: AI › Profile.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_ai_profile:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_ai_profile:generated:end -->
 
 Entity-facing AI declaration only. It does not store AI execution/autonomy policy.
@@ -1851,7 +1851,7 @@ Unique draft. AI search keys compile from the selected search profile. AI search
 *Composer home: AI › Fields.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_ai_field:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_ai_field:generated:end -->
 
 Ordered summary-field selections.
@@ -1869,7 +1869,7 @@ Unique profile/field and profile/position. Selections do not bypass field author
 *Composer home: AI › Bindings.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_ai_binding:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_ai_binding:generated:end -->
 
 Finite union of provider/action/presentation-profile selections with typed constraints.
@@ -1891,7 +1891,7 @@ Unique profile/kind/contract. A provider validates context and manifests; an act
 *Composer home: AI › References.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_ai_reference:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_ai_reference:generated:end -->
 
 AI relationship navigation refers to canonical structures, not independently authored joins.
@@ -1913,7 +1913,7 @@ Exactly one variant. AI relationshipKeys emits the approved reference entry fiel
 *Composer home: AI › Terms.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
 <!-- reference-ddl:entity_ai_term:generated:start -->
-**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `98920dbb2283e698b8237a5215c23886d54286ae8608b5d5db89b76bda2b116f`.
+**DDL status:** table declared in `server/db/ddl/planes/studio/metadata/27_native_ai.generated.sql`; all listed column names occur in this CREATE TABLE. This is source-DDL presence evidence, not equivalence of target types/rules or deployed qualification. Full metadata DDL inventory hash: `f1caf35fea208429cb7b4cab845be20ed8960d1480e57d717c0e5a3662d96187`.
 <!-- reference-ddl:entity_ai_term:generated:end -->
 
 Reviewed vocabulary terms attached to selected providers; learning-source provenance remains AI-owned.
@@ -3821,6 +3821,12 @@ Validation uses real repository savepoints, canonical plan preparation and the s
 
 `createNativeConversionApplicationPolicy` connects whole-source preparation, the atomic repository protocol, this producer and the existing shared native runtime projection/parser. The existing host must supply independently qualified conversion adapters and exact catalogue/security/provider evidence. Reader verification rechecks compilation context hashes, technical identity and registered storage; presentation-default substitution rejects. The factory is not installed by default, grants no product-write authority and cannot activate cutover. Positive synthetic fixtures exercise the actual producer and runtime reader, including translated labels, explicit navigation and preserved protected controls. Complete Country/State Region source coverage, canonical PostgreSQL application and deployed qualification still require their own evidence. No database or activation action accompanies this continuation.
 
+**Reference conversion and canonical preparation checkpoint (7 October 2026):** The native producer now validates and preserves existing typed entity-relation field-reference bindings against references lowered from admitted relation/target-key resources. Duplicate identities/membership, target mismatch, unknown properties and unsupported lookup/resolver/deprecated variants reject. Canonical relations without compatibility binding rows emit the existing relationReference projection for the shared reader. Actual-reader fixtures for both variants exposed and fixed an invalid targetKey property in keyReference; the governed key remains in the relational projection. Actual Country/State Region source fixtures cover the complete reference-binding family, not their complete whole-source conversion. State Region now declares explicit Details navigation over overview/audit in its source metadata proposal; no runtime inference, publication or activation accompanies that edit.
+
+The AI DDL generator lacked scoped search-profile/relation anchors needed by its composite FKs. Its canonical output is corrected. The new immutable forward migration `20261007_entity_native_resource_preparation.sql` installs these anchors, five typed AI tables with forced RLS and 14 dormant operation columns. PostgreSQL rollback rehearsal and DEV application preserve exact pre-existing authoring/history projections; separate authorization/activation-head fingerprints remain equal. Applied migration checksum and no-op replay are recorded through the existing migration ledger. No grants, protected-state initialization, constraint retirement or native cutover guard is installed.
+
+Current DEV evidence has zero missing AI/operation columns, but four consumed native root columns remain absent: native_core_layout_version, source_kind, authoring_schema_hash and entity_label_id. All 54 change sets lack owned-label scope; neither native guard exists. The readiness inspector now exposes root-column/type gaps and owned-label source enrollment explicitly. Complete actual Country/State Region source conversion therefore still requires qualified legacy source enrollment/provenance, root/constraint cutover and whole-source adapters, followed by positive canonical application/history/compiler evidence and approved host/product-write/deployed F6/F8/F9 qualification. Schema preparation is applied; native conversion and activation are not.
+
 **Typed AI component continuation (7 October 2026):** The five AI member families now have a typed descriptor, closed schemas, semantic validation and generated canonical target DDL. Selected compatibility conversion and compilation map summary fields, the existing ordered search profile, explicit relation/source-field bindings, provider/action/presentation bindings and optional description without a writable JSON declaration. Independently resolved field/operation/resource rosters supply references; provider installation and authorization are not established by these inputs. Summary, search and reference selections reject UUID, masked and omitted fields. Exact source hashes and member-ID inventories are required; required=false remains distinct from absence. Runtime output is validated through the existing shared AI parser.
 
 Vocabulary and registered collection references currently return named unavailable-adapter diagnostics; they are not silently discarded. The complete native graph still requires AI enrollment, scoped persistence, independently admitted learning provenance and collection resources, and full release compilation. Generated DDL has forced RLS without application write grants, includes exact union/provenance checks, and is not an applied migration. No host, initializer, publication, database application or live-read qualification is implied.
@@ -3898,7 +3904,7 @@ Generated reference-member implementation manifest; contract hash: `a7c1fe4f1c07
 <!-- reference-members:generated:end -->
 
 <!-- entity-foundation:generated:start -->
-Generated F0 owned-label sub-slice; contract hash: `3d6be96dba919ac2cc3c7d20c899dfbf5be85ee97b5e3fbad112eb889c6607a0`. This is generated contract evidence; database application and host qualification are recorded separately below the implementation evidence. It does not establish full-reference qualification or publication.
+Generated F0 owned-label sub-slice; contract hash: `ac5d91460abcac0c85b110588dadb45a0332a21070e0f18b2f45f2907fd941c0`. This is generated contract evidence; database application and host qualification are recorded separately below the implementation evidence. It does not establish full-reference qualification or publication.
 
 | API property | Target column |
 | --- | --- |

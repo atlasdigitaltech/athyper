@@ -1,3 +1,32 @@
+BEGIN;
+SET LOCAL lock_timeout='5s';
+SET LOCAL statement_timeout='30s';
+-- Freeze authoring/publication history during the bounded schema preparation.
+LOCK TABLE metadata.entity_change_set, metadata.entity_field,
+ metadata.entity_runtime_profile, metadata.entity_surface,
+ metadata.entity_surface_section, metadata.entity_surface_field_binding,
+ metadata.entity_operation, metadata.entity_release, snapshot.entity_contract_revision,
+ snapshot.entity_draft_save IN SHARE ROW EXCLUSIVE MODE;
+CREATE TEMP TABLE entity_native_installation_history (
+ table_name text PRIMARY KEY, column_names text[] NOT NULL, row_hash text NOT NULL
+) ON COMMIT DROP;
+DO $$ DECLARE table_name text; old_columns text[]; old_hash text;
+BEGIN
+ FOREACH table_name IN ARRAY ARRAY[
+ 'metadata.entity_change_set','metadata.entity_field','metadata.entity_runtime_profile',
+ 'metadata.entity_surface','metadata.entity_surface_section','metadata.entity_surface_field_binding',
+ 'metadata.entity_operation','metadata.entity_release','snapshot.entity_contract_revision','snapshot.entity_draft_save'] LOOP
+  SELECT array_agg(attname ORDER BY attnum) INTO old_columns FROM pg_attribute
+   WHERE attrelid=table_name::regclass AND attnum>0 AND NOT attisdropped;
+  EXECUTE format('SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text, %L)) FROM %s t','',table_name) INTO old_hash;
+  INSERT INTO pg_temp.entity_native_installation_history VALUES(table_name,old_columns,old_hash);
+ END LOOP;
+END $$;
+-- Install typed AI tables and dormant operation columns only. No canonical
+-- conversion, constraint retirement, control initialization, grants or activation.
+DO $$ BEGIN IF current_database()<>'athyper_studio' THEN
+ RAISE EXCEPTION 'Native authoring preparation requires the Studio database';
+END IF; END $$;
 -- GENERATED from contracts/meta-entity-authoring/native-ai-contract.ts; NOT a cutover migration.
 
 -- Scoped anchors required by AI search/relation references; existing field/operation anchors are installed by the reference contract.
@@ -137,3 +166,34 @@ CREATE INDEX ON metadata.entity_ai_term(change_set_id,provider_binding_id);
 CREATE TRIGGER graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_ai_term FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row();
 ALTER TABLE metadata.entity_ai_term ENABLE ROW LEVEL SECURITY;
 ALTER TABLE metadata.entity_ai_term FORCE ROW LEVEL SECURITY;
+
+-- GENERATED target-only additive operation columns. NOT a cutover migration; legacy constraints remain.
+ALTER TABLE metadata.entity_operation ADD COLUMN label_id uuid;
+ALTER TABLE metadata.entity_operation ADD COLUMN input_surface_id uuid;
+ALTER TABLE metadata.entity_operation ADD COLUMN result_surface_id uuid;
+ALTER TABLE metadata.entity_operation ADD COLUMN authorization_target text;
+ALTER TABLE metadata.entity_operation ADD COLUMN authorization_effect text;
+ALTER TABLE metadata.entity_operation ADD COLUMN requires_parent_read boolean;
+ALTER TABLE metadata.entity_operation ADD COLUMN requires_preflight boolean;
+ALTER TABLE metadata.entity_operation ADD COLUMN replacement_operation_id uuid;
+ALTER TABLE metadata.entity_operation ADD COLUMN handler_version integer;
+ALTER TABLE metadata.entity_operation ADD COLUMN preflight_key text;
+ALTER TABLE metadata.entity_operation ADD COLUMN preflight_version integer;
+ALTER TABLE metadata.entity_operation ADD COLUMN extension_field_mode text;
+ALTER TABLE metadata.entity_operation ADD COLUMN export_formats text[];
+ALTER TABLE metadata.entity_operation ADD COLUMN export_max_records bigint;
+ALTER TABLE metadata.entity_operation ADD CONSTRAINT entity_operation_native_pending_ck CHECK(label_id IS NULL AND input_surface_id IS NULL AND result_surface_id IS NULL AND authorization_target IS NULL AND authorization_effect IS NULL AND requires_parent_read IS NULL AND requires_preflight IS NULL AND replacement_operation_id IS NULL AND handler_version IS NULL AND preflight_key IS NULL AND preflight_version IS NULL AND extension_field_mode IS NULL AND export_formats IS NULL AND export_max_records IS NULL);
+
+-- Compare only the exact pre-installation columns; newly added NULL columns
+-- cannot change canonical member values, attribution, roots, releases or history.
+DO $$ DECLARE captured record; new_hash text;
+BEGIN
+ FOR captured IN SELECT * FROM pg_temp.entity_native_installation_history ORDER BY table_name LOOP
+  EXECUTE format('SELECT md5(coalesce(jsonb_agg(p.value ORDER BY p.value::text)::text, %L)) FROM %s t CROSS JOIN LATERAL (SELECT jsonb_object_agg(key,value) AS value FROM jsonb_each(to_jsonb(t)) WHERE key=ANY($1)) p','',captured.table_name)
+   INTO new_hash USING captured.column_names;
+  IF new_hash IS DISTINCT FROM captured.row_hash THEN
+   RAISE EXCEPTION 'ENTITY_NATIVE_PREPARATION_HISTORY_CHANGED: %',captured.table_name;
+  END IF;
+ END LOOP;
+END $$;
+COMMIT;
