@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 237,
+    "configuration:new": 240,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -1238,6 +1238,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:athyper_native_graph_postgres",
+      "category": "configuration",
+      "key": "athyper_native_graph_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_neon_database_admin_url",
       "category": "configuration",
       "key": "athyper_neon_database_admin_url",
@@ -1448,6 +1460,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:athyper_scoped_graph_postgres",
+      "category": "configuration",
+      "key": "athyper_scoped_graph_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_search_integration_local_skip",
       "category": "configuration",
       "key": "athyper_search_integration_local_skip",
@@ -1581,6 +1605,19 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/tenant-learning-extension.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:athyper_test_postgres_image",
+      "category": "configuration",
+      "key": "athyper_test_postgres_image",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

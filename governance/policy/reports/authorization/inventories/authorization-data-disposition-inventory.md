@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 760
+- Cataloged database tables: 774
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 42 |
+| metadata_authority | 56 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -675,6 +675,9 @@ or multiply classified runtime objects.
 | `mesh.network_relationship_kind` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.registration_exchange` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `metadata.entity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_access_permission` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_authoring_command_receipt` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_authorization_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_baseline_import` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_baseline_import_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_capability` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -683,12 +686,17 @@ or multiply classified runtime objects.
 | `metadata.entity_class_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_contract_test_case` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field_access` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field_choice` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field_identity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_reference_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_flow` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_flow_step` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_key` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_key_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_label` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_label_translation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_learning_ancestry` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_lifecycle_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_lifecycle_operation_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -697,10 +705,12 @@ or multiply classified runtime objects.
 | `metadata.entity_numbering_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation_context_requirement` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_operation_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation_permission` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation_rule` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_operation_scope_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_predicate` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_product_review_receipt` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_relation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_relation_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -712,8 +722,12 @@ or multiply classified runtime objects.
 | `metadata.entity_surface` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_component_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_field_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_navigation_group` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_operation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_section` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_view` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_view_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_target` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.publication_recovery_archive` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.publication_recovery_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `onboarding.onboarding_case` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
