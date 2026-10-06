@@ -34,6 +34,17 @@ export type NativeFamilyConversionAdapter<K extends NativeConversionFamily> = {
 export type NativeConversionAdapters = {
   readonly [K in NativeConversionFamily]: NativeFamilyConversionAdapter<K>;
 };
+/** Graph-level normalization of nested source paths into typed reference/label
+ * members before scalar adapters run. Installed owner code only. The inverse
+ * consumes the converted graph, not a captured source-value backup. */
+export interface NativeNestedConversionAdapter {
+  readonly resource: NativeConversionResource;
+  forward(source: MetaEntityGraph): MetaEntityGraph;
+  reverse(
+    prepared: MetaEntityGraph,
+    target: NativeMetaEntityGraph,
+  ): MetaEntityGraph;
+}
 export interface NativeGraphConversionContext {
   readonly source: {
     readonly entityId: string;
@@ -54,7 +65,10 @@ export interface NativeGraphConversionContext {
    * identities, operations and security references. This is mandatory and not
    * an authorization resolver or a callback accepted from HTTP. */
   validateRetained(source: MetaEntityGraph): void;
-  resolveLayout(core: NormalizedLayoutContext["core"]): NormalizedLayoutContext;
+  resolveLayout(
+    core: NormalizedLayoutContext["core"],
+    prepared?: MetaEntityGraph,
+  ): NormalizedLayoutContext;
 }
 const retained = [
   "entity",
@@ -99,6 +113,7 @@ export function prepareNativeGraphConversion(
   source: MetaEntityGraph,
   context: NativeGraphConversionContext,
   adapters: NativeConversionAdapters,
+  nested?: NativeNestedConversionAdapter,
 ) {
   validateConversionJsonData(source, "/source");
   if (
@@ -192,6 +207,131 @@ export function prepareNativeGraphConversion(
       "/retainedValidation/evidenceHash",
     );
   context.validateRetained(structuredClone(source));
+  let prepared = structuredClone(source);
+  let nestedProof:
+    | {
+        adapter: NativeConversionResource;
+        sourceHash: string;
+        preparedHash: string;
+      }
+    | undefined;
+  if (nested) {
+    installed(nested.resource, "/nested/resource");
+    prepared = nested.forward(structuredClone(source));
+    validateConversionJsonData(prepared, "/prepared");
+    if (
+      prepared.contractSchema !== source.contractSchema ||
+      Object.keys(prepared).sort().join() !== Object.keys(source).sort().join()
+    )
+      fail("NATIVE_CONVERSION_NESTED_GRAPH_INVALID", "/prepared");
+    if (Buffer.byteLength(canonicalJson(prepared)) > context.maximumBytes)
+      fail("NATIVE_CONVERSION_LIMIT", "/prepared");
+    // Nested presentation conversion cannot rewrite operations, protected
+    // controls, scopes, permissions, policies or other retained declarations.
+    const extensible = new Set([
+      "referenceMembers",
+      "ownedLabels",
+      "fieldIdentities",
+    ]);
+    for (const key of retained) {
+      if (
+        !extensible.has(key) &&
+        canonicalJson(prepared[key]) !== canonicalJson(source[key])
+      )
+        fail("NATIVE_CONVERSION_RETAINED_BRANCH_CHANGED", "/prepared/" + key);
+    }
+    const additionsOnly = (before: unknown, after: unknown, path: string) => {
+      if (!Array.isArray(before) || !Array.isArray(after))
+        return fail("NATIVE_CONVERSION_NESTED_GRAPH_INVALID", path);
+      const rows = new Map<string, string>();
+      for (const row of after) {
+        if (!row || typeof row.id !== "string" || rows.has(row.id))
+          return fail("NATIVE_CONVERSION_IDENTITY_CHANGED", path);
+        validateFoundationNode(referenceUuid, row.id, path);
+        rows.set(row.id, canonicalJson(row));
+      }
+      const beforeIds = new Set<string>();
+      for (const row of before) {
+        if (
+          !row ||
+          beforeIds.has(row.id) ||
+          rows.get(row.id) !== canonicalJson(row)
+        )
+          fail("NATIVE_CONVERSION_RETAINED_MEMBER_CHANGED", path);
+        beforeIds.add(row.id);
+      }
+    };
+    additionsOnly(
+      source.fieldIdentities,
+      prepared.fieldIdentities,
+      "/prepared/fieldIdentities",
+    );
+    if (!prepared.referenceMembers || !prepared.ownedLabels)
+      return fail("NATIVE_CONVERSION_DEPENDENCIES_REQUIRED", "/prepared");
+    if (
+      Object.keys(prepared.referenceMembers).sort().join() !==
+        Object.keys(source.referenceMembers!).sort().join() ||
+      prepared.referenceMembers.contract !==
+        source.referenceMembers!.contract ||
+      !prepared.referenceMembers.members ||
+      Object.keys(prepared.referenceMembers.members).sort().join() !==
+        Object.keys(source.referenceMembers!.members).sort().join()
+    )
+      fail(
+        "NATIVE_CONVERSION_NESTED_GRAPH_INVALID",
+        "/prepared/referenceMembers",
+      );
+    for (const kind of Object.keys(source.referenceMembers!.members)) {
+      const key = kind as keyof NonNullable<
+        MetaEntityGraph["referenceMembers"]
+      >["members"];
+      additionsOnly(
+        source.referenceMembers!.members[key],
+        prepared.referenceMembers.members[key],
+        "/prepared/referenceMembers/members/" + kind,
+      );
+    }
+    for (const kind of nativeConversionFamilies) {
+      const before = source[kind],
+        after = prepared[kind];
+      if (
+        !Array.isArray(before) ||
+        !Array.isArray(after) ||
+        canonicalJson(before.map((row) => row.id).sort()) !==
+          canonicalJson(after.map((row) => row.id).sort())
+      )
+        fail("NATIVE_CONVERSION_IDENTITY_CHANGED", "/prepared/" + kind);
+    }
+    for (const key of Object.keys(source.ownedLabels!)) {
+      if (key === "labels" || key === "translations") {
+        additionsOnly(
+          source.ownedLabels![key],
+          prepared.ownedLabels[key],
+          "/prepared/ownedLabels/" + key,
+        );
+      } else if (
+        canonicalJson(
+          source.ownedLabels![key as keyof typeof source.ownedLabels],
+        ) !==
+        canonicalJson(
+          prepared.ownedLabels[key as keyof typeof prepared.ownedLabels],
+        )
+      ) {
+        fail("NATIVE_CONVERSION_SCOPE_INVALID", "/prepared/ownedLabels/" + key);
+      }
+    }
+    if (
+      Object.keys(source.ownedLabels!).sort().join() !==
+      Object.keys(prepared.ownedLabels).sort().join()
+    )
+      fail("NATIVE_CONVERSION_NESTED_GRAPH_INVALID", "/prepared/ownedLabels");
+    context.validateRetained(structuredClone(prepared));
+    nestedProof = {
+      adapter: structuredClone(nested.resource),
+      sourceHash: sha256(source),
+      preparedHash: sha256(prepared),
+    };
+  }
   const converted: Record<string, unknown> = {},
     proof: Record<
       string,
@@ -207,7 +347,7 @@ export function prepareNativeGraphConversion(
     installed(r, "/adapters/" + kind);
     // Every family must be explicitly present. Missing is not silently normalized
     // to [], which would erase source absence semantics.
-    const original = source[kind];
+    const original = prepared[kind];
     if (!Array.isArray(original))
       return fail("NATIVE_CONVERSION_FAMILY_REQUIRED", "/source/" + kind);
     const target = adapter.forward(structuredClone(original) as never);
@@ -238,13 +378,32 @@ export function prepareNativeGraphConversion(
     runtime: converted.runtimeProfiles,
     surface: converted.surfaces,
   } as NormalizedLayoutContext["core"];
-  const layoutContext = context.resolveLayout(structuredClone(core));
+  const layoutContext = context.resolveLayout(
+    structuredClone(core),
+    structuredClone(prepared),
+  );
   if (
     layoutContext.coreContext.entityId !== context.source.entityId ||
     layoutContext.coreContext.tenantId !== context.source.tenantId ||
     canonicalJson(layoutContext.core) !== canonicalJson(core)
   )
     fail("NATIVE_CONVERSION_CONTEXT_MISMATCH", "/context");
+  if (nested) {
+    const declared = prepared
+      .referenceMembers!.members.navigationGroup.map(
+        ({ id, entitySurfaceId, position }) => ({
+          id,
+          entitySurfaceId,
+          position,
+        }),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const resolved = [...layoutContext.navigationGroups].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    );
+    if (canonicalJson(declared) !== canonicalJson(resolved))
+      fail("NATIVE_CONVERSION_CONTEXT_MISMATCH", "/context/navigationGroups");
+  }
   parseNormalizedLayoutGraph(
     {
       section: converted.surfaceSections,
@@ -268,7 +427,7 @@ export function prepareNativeGraphConversion(
     ),
   );
   const candidate = {
-    ...structuredClone(source),
+    ...structuredClone(prepared),
     ...converted,
     contractSchema: "athyper.meta-entity-contract/2.4",
     authoringSource: {
@@ -278,17 +437,45 @@ export function prepareNativeGraphConversion(
       authoringSchemaHash: context.authoringSchemaHash,
     },
   } as unknown as NativeMetaEntityGraph;
+  if (nested) {
+    // Reconstruct every scalar family from the final target, then invert nested
+    // normalization. Exact equality binds all source paths, including absence.
+    const inverse = { ...structuredClone(prepared) };
+    for (const kind of nativeConversionFamilies)
+      (inverse as unknown as Record<string, unknown>)[kind] = adapters[
+        kind
+      ].reverse(structuredClone(candidate[kind]) as never);
+    const restored = nested.reverse(inverse, structuredClone(candidate));
+    validateConversionJsonData(restored, "/inverse");
+    if (canonicalJson(restored) !== canonicalJson(source))
+      fail("NATIVE_CONVERSION_NOT_LOSSLESS", "/inverse");
+  }
   if (Buffer.byteLength(canonicalJson(candidate)) > context.maximumBytes)
     fail("NATIVE_CONVERSION_LIMIT", "/target");
   return {
-    schema: "entity.native-graph-conversion-proof/1" as const,
+    schema: nestedProof
+      ? ("entity.native-graph-conversion-proof/2" as const)
+      : ("entity.native-graph-conversion-proof/1" as const),
     source: structuredClone(context.source),
     contextHash: sha256({
       coreLayoutEvidenceHash,
       retainedValidation: context.retainedValidation,
       authoringSchemaHash: context.authoringSchemaHash,
+      ...(nestedProof ? { nested: nestedProof } : {}),
     }),
+    ...(nestedProof ? { nested: nestedProof } : {}),
     targetHash: sha256(candidate),
+    ...(nestedProof
+      ? {
+          retainedTargetHash: sha256(
+            Object.fromEntries(
+              retained
+                .filter((k) => Object.hasOwn(candidate, k))
+                .map((k) => [k, candidate[k]]),
+            ),
+          ),
+        }
+      : {}),
     preservedHash: sha256(
       Object.fromEntries(
         retained

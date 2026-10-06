@@ -112,6 +112,8 @@ it("preserves every retained branch and identity and produces a source-bound rev
   const { source, context, adapters } = fixture();
   const before = structuredClone(source);
   const proof = prepareNativeGraphConversion(source, context, adapters);
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/1");
+  expect(proof).not.toHaveProperty("nested");
   expect(proof.candidate.contractSchema).toBe(
     "athyper.meta-entity-contract/2.4",
   );
@@ -416,4 +418,205 @@ it("runs all five implemented scalar adapters through the complete preservation 
   expect(proof.candidate.surfaceSections).toEqual(l.section);
   expect(proof.candidate.surfaceFieldBindings).toEqual(l.binding);
   expect(proof.candidate.ownedLabels).toEqual(source.ownedLabels);
+});
+
+async function nestedFixture() {
+  const { convertLegacyDetailNavigation, compileNativeDetailNavigation } =
+    await import("./native-detail-navigation.js");
+  const f = fixture(),
+    c = layoutFixtureContext(),
+    l = layoutFixture();
+  const surface = c.core.surface.find((s) => s.surfaceKind === "detail")!;
+  const declaration = {
+    mode: "scroll" as const,
+    tabs: [{ key: "details", label: "Details", sectionKeys: ["details"] }],
+  };
+  const source = structuredClone(f.source);
+  const detail = source.surfaces!.find((s) => s.id === surface.id)!;
+  (detail as any).layoutConfig = { navigation: declaration };
+  const resource = {
+    owner: "synthetic-tests",
+    key: "nested-navigation",
+    version: 1,
+    hash: "9".repeat(64),
+  };
+  const labelContext = {
+    surface,
+    maximumSections: 10,
+    label: () => ({ label: "Details" }),
+  };
+  const nested: import("./native-graph-conversion.js").NativeNestedConversionAdapter =
+    {
+      resource,
+      forward(graph) {
+        const detail = graph.surfaces!.find((s) => s.id === surface.id)!;
+        const navigation = detail.layoutConfig!
+          .navigation as typeof declaration;
+        const converted = convertLegacyDetailNavigation(
+          navigation,
+          l.section,
+          labelContext,
+          {
+            sourceHash: sha256(navigation),
+            groups: {
+              details: { id: coreFixtureId(70), labelId: coreFixtureId(32) },
+            },
+          },
+        );
+        delete (detail as any).layoutConfig;
+        (graph.referenceMembers!.members.navigationGroup as any[]).push(
+          ...converted.groups,
+        );
+        return graph;
+      },
+      reverse(graph, target) {
+        const detail = graph.surfaces!.find((s) => s.id === surface.id)!;
+        (detail as any).layoutConfig = {
+          navigation: compileNativeDetailNavigation(
+            {
+              groups: target.referenceMembers!.members.navigationGroup,
+              sections: target.surfaceSections,
+            },
+            labelContext,
+          ),
+        };
+        (graph.referenceMembers!.members as any).navigationGroup = [];
+        return graph;
+      },
+    };
+  const context = {
+    ...f.context,
+    source: { ...f.context.source, graphHash: sha256(source) },
+    installedAdapters: [...f.context.installedAdapters, resource],
+  };
+  return { ...f, source, context, nested };
+}
+it("integrates the real navigation mapping into a source-bound graph proof without rewriting controls", async () => {
+  const f = await nestedFixture(),
+    before = structuredClone(f.source);
+  const proof = prepareNativeGraphConversion(
+    f.source,
+    f.context,
+    f.adapters,
+    f.nested,
+  );
+  expect(
+    proof.candidate.referenceMembers!.members.navigationGroup,
+  ).toHaveLength(1);
+  expect(
+    proof.candidate.referenceMembers!.members.navigationGroup[0]!
+      .sectionDisplay,
+  ).toBe("continuous");
+  expect(proof.schema).toBe("entity.native-graph-conversion-proof/2");
+  expect(proof.nested!.sourceHash).toBe(sha256(f.source));
+  expect(proof.nested!.preparedHash).not.toBe(proof.nested!.sourceHash);
+  expect(proof.retainedTargetHash).not.toBe(proof.preservedHash);
+  expect(f.context.validateRetained).toHaveBeenCalledTimes(2);
+  expect(f.source).toEqual(before);
+});
+it("rejects lossy nested inverses, uninstalled adapters and reversible control changes", async () => {
+  const f = await nestedFixture();
+  expect(() =>
+    prepareNativeGraphConversion(
+      f.source,
+      {
+        ...f.context,
+        installedAdapters: f.context.installedAdapters.slice(0, -1),
+      },
+      f.adapters,
+      f.nested,
+    ),
+  ).toThrow("NATIVE_CONVERSION_ADAPTER_NOT_INSTALLED");
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, f.adapters, {
+      ...f.nested,
+      reverse: (graph) => graph,
+    }),
+  ).toThrow("NATIVE_CONVERSION_NOT_LOSSLESS");
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, f.adapters, {
+      ...f.nested,
+      forward(graph) {
+        const prepared = f.nested.forward(graph);
+        (prepared as any).operations = [{ id: coreFixtureId(200) }] as any;
+        return prepared;
+      },
+    }),
+  ).toThrow("NATIVE_CONVERSION_RETAINED_BRANCH_CHANGED");
+});
+it("rejects replacement of existing members and invalid additive identity inventories", async () => {
+  const f = await nestedFixture();
+  const existing = {
+    id: coreFixtureId(300),
+    entityId: f.context.source.entityId,
+    tenantId: null,
+    fieldKey: "original",
+    parentIdentityId: null,
+  };
+  (f.source as any).fieldIdentities = [existing] as any;
+  f.context.source.graphHash = sha256(f.source);
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, f.adapters, {
+      ...f.nested,
+      forward(graph) {
+        const prepared = f.nested.forward(graph);
+        (prepared as any).fieldIdentities = [
+          { ...existing, fieldKey: "renamed" },
+        ] as any;
+        return prepared;
+      },
+    }),
+  ).toThrow("NATIVE_CONVERSION_RETAINED_MEMBER_CHANGED");
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, f.adapters, {
+      ...f.nested,
+      forward(graph) {
+        const prepared = f.nested.forward(graph);
+        (prepared.fieldIdentities as any[]).push(existing);
+        return prepared;
+      },
+    }),
+  ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
+});
+it("rejects nested core identity replacement and inconsistent installed navigation evidence", async () => {
+  const f = await nestedFixture();
+  expect(() =>
+    prepareNativeGraphConversion(f.source, f.context, f.adapters, {
+      ...f.nested,
+      forward(graph) {
+        const prepared = f.nested.forward(graph);
+        (prepared.fields![0] as any).id = coreFixtureId(999);
+        return prepared;
+      },
+    }),
+  ).toThrow("NATIVE_CONVERSION_IDENTITY_CHANGED");
+  expect(() =>
+    prepareNativeGraphConversion(
+      f.source,
+      {
+        ...f.context,
+        resolveLayout: (core) => ({
+          ...layoutFixtureContext(),
+          core,
+          navigationGroups: [],
+        }),
+      },
+      f.adapters,
+      f.nested,
+    ),
+  ).toThrow("NATIVE_CONVERSION_CONTEXT_MISMATCH");
+  expect(() =>
+    prepareNativeGraphConversion(
+      f.source,
+      {
+        ...f.context,
+        validateRetained: (graph) => {
+          if (graph.referenceMembers!.members.navigationGroup.length)
+            throw Error("added label or reference was not admitted");
+        },
+      },
+      f.adapters,
+      f.nested,
+    ),
+  ).toThrow("added label or reference was not admitted");
 });

@@ -3,10 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "../../../../..",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
+    "types": ["node", "vitest/globals"],
     "composite": false,
     "incremental": false
   },
@@ -19,10 +16,8 @@
     "src/legacy-native-core-adapters.test.ts",
     "src/legacy-native-layout-adapters.test.ts",
     "src/native-list-view.test.ts",
-    "src/native-field-choices.test.ts"
+    "src/native-field-choices.test.ts",
+    "src/native-detail-navigation.test.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "exclude": ["node_modules", "dist"]
 }
