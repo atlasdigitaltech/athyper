@@ -14,6 +14,11 @@ mkdirSync(directory, { recursive: true, mode: 0o700 });
 const path = join(directory, 'state.json');
 const state = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { schema: 'athyper.dev-trust-provisioning/1' };
 if (state.schema !== 'athyper.dev-trust-provisioning/1') throw Error('Unexpected provisioning state');
+const refreshExpired = process.argv.includes('--refresh-expired-tokens');
+if (refreshExpired && (!state.project?.id || !state.publicKeyFingerprint || ['publisher','verifier'].some(purpose =>
+  !state[purpose]?.identity?.id || !state[purpose]?.membership || !state[purpose]?.privilege || !state[purpose]?.tokenAuth || !state[purpose]?.token)))
+  throw Error('Refresh requires an already provisioned DEV trust identity/keyset; no new authority is created');
+const refreshed = [];
 const save = () => { writeFileSync(path, JSON.stringify(state), { mode: 0o600 }); chmodSync(path, 0o600); };
 const admin = bootstrap.bootstrap?.identity?.credentials?.token;
 if (!admin) throw Error('DEV secret-store administration credential unavailable');
@@ -48,6 +53,7 @@ async function readSecret(ref, token = admin) {
 }
 let privateSecret = await readSecret(privateRef), publicSecret = await readSecret(publicRef);
 if (!!privateSecret !== !!publicSecret) throw Error('PARTIAL_DEV_KEYSET: preserve existing key; reconcile before retry');
+if (refreshExpired && (!privateSecret || !publicSecret)) throw Error('Refresh requires the existing DEV keyset; key creation is not permitted');
 if (!privateSecret && !publicSecret) {
   const pair = generateKeyPairSync('ed25519');
   // Private material stays in memory until sent to the secret manager; no disk copy.
@@ -84,9 +90,20 @@ for (const [purpose, names] of [['publisher', [privateRef, publicRef]], ['verifi
   if (!identity.tokenAuth) {
     identity.tokenAuth = await api(`/api/v1/auth/token-auth/identities/${identity.identity.id}`, { accessTokenTTL: 604800, accessTokenMaxTTL: 604800, accessTokenNumUsesLimit: 0 }); save();
   }
-  if (!identity.token) {
+  let expired = false;
+  if (refreshExpired) {
+    const probe = await request(`/api/v3/secrets/raw/${publicRef}${query}`, undefined, identity.token);
+    if (!probe.ok) {
+      const body = await probe.json().catch(() => ({}));
+      expired = [401,403].includes(probe.status) && /expired|expiration/i.test(String(body.message ?? body.error ?? ''));
+      if (!expired) throw Error(`Token refresh refused: failure is not confirmed expiry (${probe.status})`);
+    } else await probe.body?.cancel();
+  }
+  if (!identity.token || expired) {
     identity.token = (await api(`/api/v1/auth/token-auth/identities/${identity.identity.id}/tokens`, { name: `dev-publication-${purpose}-v1`, organizationSlug: bootstrap.bootstrap.organization.slug })).accessToken;
-    if (!identity.token) throw Error('DEV token creation returned no credential'); save();
+    if (!identity.token) throw Error('DEV token creation returned no credential');
+    if (expired) refreshed.push(purpose);
+    save();
   }
   const tokenPath = join(directory, `${purpose}-token`);
   writeFileSync(tokenPath, identity.token, { mode: 0o600 }); chmodSync(tokenPath, 0o600);
@@ -116,7 +133,8 @@ const receipt = { schema: 'athyper.dev-trust-qualification/1', observedAt: new D
   projectId: state.project.id, projectSlug, publisherIdentityId: state.publisher.identity.id, verifierIdentityId: state.verifier.identity.id,
   publisherName: `athyper-publication-dev-publisher`, verifierName: `athyper-publication-dev-verifier`,
   keyId, publicKeyFingerprint: fingerprint, privateReference: privateRef, publicReference: publicRef,
-  signVerify: true, verifierPrivateDeniedStatus: privateDenied, publisherCrossProjectDeniedStatus: publisherCrossProject,
+  credentialsRefreshed: refreshed, ...(refreshExpired ? { authorityChanged: false } : {}), signVerify: true, verifierPrivateDeniedStatus: privateDenied, publisherCrossProjectDeniedStatus: publisherCrossProject,
   verifierCrossProjectDeniedStatus: verifierCrossProject, productionAccessTested: false, deploymentChanged: false, releaseApproved: false };
+if (refreshExpired) writeFileSync(join(directory, `qualification-refresh-${Date.now()}.json`), JSON.stringify(receipt, null, 2), { mode: 0o600 });
 writeFileSync(join(directory, 'qualification.json'), JSON.stringify(receipt, null, 2), { mode: 0o600 });
 console.log(JSON.stringify(receipt));

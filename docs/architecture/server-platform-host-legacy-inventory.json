@@ -30,7 +30,7 @@
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 144,
+    "routes:new": 143,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -21250,18 +21250,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/collection-authoring-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/meta-entity-authoring/inspection/address-preview-choices",
-      "category": "routes",
-      "key": "get /api/meta-entity-authoring/inspection/address-preview-choices",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

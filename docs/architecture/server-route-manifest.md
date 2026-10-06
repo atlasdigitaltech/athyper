@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 356 |
+| Current-only identities | 359 |
 | Legacy occurrences | 898 |
-| Current occurrences | 422 |
+| Current occurrences | 425 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -368,7 +368,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/meta-entity-authoring/change-sets/:param/notifications/:param/templates` | 0 | 1 |
 | current-only | GET | `/api/meta-entity-authoring/change-sets/:param/notifications/:param/templates/:param` | 0 | 1 |
 | current-only | GET | `/api/meta-entity-authoring/collection-providers` | 0 | 1 |
-| current-only | GET | `/api/meta-entity-authoring/inspection/address-preview-choices` | 0 | 1 |
 | current-only | GET | `/api/meta-entity-authoring/inspection/notifications/:param` | 0 | 1 |
 | current-only | GET | `/api/meta-entity-authoring/inspection/releases` | 0 | 1 |
 | current-only | GET | `/api/meta-entity-authoring/inspection/releases/:param` | 0 | 1 |
@@ -456,6 +455,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/p2p/open-receipt-lines` | 1 | 0 |
 | legacy-only | GET | `/api/p2p/open-requisition-lines` | 1 | 0 |
 | legacy-only | GET | `/api/p2p/open-service-sheet-lines` | 1 | 0 |
+| current-only | GET | `/api/platform-control/meta-entity-authoring/change-sets/:param/graph` | 0 | 1 |
 | current-only | GET | `/api/platform-control/session` | 0 | 1 |
 | legacy-only | GET | `/api/platform/admin/enterprise-features` | 1 | 0 |
 | legacy-only | GET | `/api/platform/admin/health` | 1 | 0 |
@@ -1033,6 +1033,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/notifications/webhooks/email-bounce` | 1 | 0 |
 | legacy-only | POST | `/api/notifications/whatsapp/consent` | 1 | 0 |
 | current-only | POST | `/api/operations/notifications/deliveries/:param/replay` | 0 | 1 |
+| current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/adopt` | 0 | 1 |
+| current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/approve` | 0 | 1 |
+| current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/submit` | 0 | 1 |
 | legacy-only | POST | `/api/platform/admin/cache` | 1 | 0 |
 | legacy-only | POST | `/api/platform/admin/cache/clear` | 1 | 0 |
 | legacy-only | POST | `/api/platform/admin/fx-rates` | 1 | 0 |

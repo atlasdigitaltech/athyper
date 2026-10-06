@@ -10,10 +10,10 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | ---------------------------------------------------- | ----: |
 | Swagger operations                                   |   125 |
 | Swagger paths                                        |   117 |
-| Backend method/path identities extracted from source |   437 |
-| Source identities absent from Swagger                |   312 |
+| Backend method/path identities extracted from source |   444 |
+| Source identities absent from Swagger                |   319 |
 | studio URL entries (including patterns)              |    70 |
-| neon URL entries (including patterns)                |   113 |
+| neon URL entries (including patterns)                |   146 |
 | mesh URL entries (including patterns)                |    61 |
 
 ## Jump to
@@ -32,9 +32,9 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin                          | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | ------------------------------- | ------------------: | ----------------: | ------------------------: | --------------------------: |
-| https://api.dev.athyper.test    |                 439 |               439 |                         0 |                          36 |
+| https://api.dev.athyper.test    |                 446 |               446 |                         0 |                          36 |
 | https://studio.dev.athyper.test |                  74 |                74 |                         0 |                           1 |
-| https://neon.dev.athyper.test   |                 117 |               117 |                         0 |                           1 |
+| https://neon.dev.athyper.test   |                 150 |               150 |                         0 |                           1 |
 | https://mesh.dev.athyper.test   |                  65 |                65 |                         0 |                           1 |
 
 Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
@@ -390,6 +390,15 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/core/identity-access](https://neon.dev.athyper.test/core/identity-access)  
   Module — Identity & Access Management · [source](../../apps/neon/lib/catalog-routes.ts)
 
+- **GET** [/core/identity-access/principals](https://neon.dev.athyper.test/core/identity-access/principals)  
+  Entity list — Principals · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/identity-access/principals/new](https://neon.dev.athyper.test/core/identity-access/principals/new)  
+  Entity create — Principals · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/core/identity-access/principals/{entityId}`  
+  Entity detail — Principals · [source](../../apps/neon/lib/catalog-routes.ts)
+
 - **GET** [/core/integration](https://neon.dev.athyper.test/core/integration)  
   Module — Integration Hub · [source](../../apps/neon/lib/catalog-routes.ts)
 
@@ -480,8 +489,44 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/mdg/location-address](https://neon.dev.athyper.test/mdg/location-address)  
   Module — Location & Address Governance · [source](../../apps/neon/lib/catalog-routes.ts)
 
+- **GET** [/mdg/location-address/address-uses](https://neon.dev.athyper.test/mdg/location-address/address-uses)  
+  Entity list — Address Uses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address/address-uses/new](https://neon.dev.athyper.test/mdg/location-address/address-uses/new)  
+  Entity create — Address Uses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/location-address/address-uses/{entityId}`  
+  Entity detail — Address Uses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address/addresses](https://neon.dev.athyper.test/mdg/location-address/addresses)  
+  Entity list — Addresses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address/addresses/new](https://neon.dev.athyper.test/mdg/location-address/addresses/new)  
+  Entity create — Addresses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/location-address/addresses/{entityId}`  
+  Entity detail — Addresses · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address/states-regions](https://neon.dev.athyper.test/mdg/location-address/states-regions)  
+  Entity list — States and regions · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address/states-regions/new](https://neon.dev.athyper.test/mdg/location-address/states-regions/new)  
+  Entity create — States and regions · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/location-address/states-regions/{entityId}`  
+  Entity detail — States and regions · [source](../../apps/neon/lib/catalog-routes.ts)
+
 - **GET** [/mdg/organization-reference](https://neon.dev.athyper.test/mdg/organization-reference)  
   Module — Organization & Reference Data · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/countries](https://neon.dev.athyper.test/mdg/organization-reference/countries)  
+  Entity list — Countries · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/countries/new](https://neon.dev.athyper.test/mdg/organization-reference/countries/new)  
+  Entity create — Countries · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/organization-reference/countries/{entityId}`  
+  Entity detail — Countries · [source](../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/organization-reference/currencies](https://neon.dev.athyper.test/mdg/organization-reference/currencies)  
   Entity list — Currencies · [source](../../apps/neon/lib/catalog-routes.ts)
@@ -492,8 +537,35 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** `/mdg/organization-reference/currencies/{entityId}`  
   Entity detail — Currencies · [source](../../apps/neon/lib/catalog-routes.ts)
 
+- **GET** [/mdg/organization-reference/languages](https://neon.dev.athyper.test/mdg/organization-reference/languages)  
+  Entity list — Languages · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/languages/new](https://neon.dev.athyper.test/mdg/organization-reference/languages/new)  
+  Entity create — Languages · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/organization-reference/languages/{entityId}`  
+  Entity detail — Languages · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/locales](https://neon.dev.athyper.test/mdg/organization-reference/locales)  
+  Entity list — Locales · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/locales/new](https://neon.dev.athyper.test/mdg/organization-reference/locales/new)  
+  Entity create — Locales · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/organization-reference/locales/{entityId}`  
+  Entity detail — Locales · [source](../../apps/neon/lib/catalog-routes.ts)
+
 - **GET** [/mdg/organization-reference/new](https://neon.dev.athyper.test/mdg/organization-reference/new)  
   Default entity create · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/time-zones](https://neon.dev.athyper.test/mdg/organization-reference/time-zones)  
+  Entity list — Timezones · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference/time-zones/new](https://neon.dev.athyper.test/mdg/organization-reference/time-zones/new)  
+  Entity create — Timezones · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/organization-reference/time-zones/{entityId}`  
+  Entity detail — Timezones · [source](../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/product-item](https://neon.dev.athyper.test/mdg/product-item)  
   Module — Product & Item Governance · [source](../../apps/neon/lib/catalog-routes.ts)
@@ -525,6 +597,15 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/people/external-workforce](https://neon.dev.athyper.test/people/external-workforce)  
   Module — External Workforce · [source](../../apps/neon/lib/catalog-routes.ts)
 
+- **GET** [/people/external-workforce/external-workers](https://neon.dev.athyper.test/people/external-workforce/external-workers)  
+  Entity list — External Workers · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/external-workforce/external-workers/new](https://neon.dev.athyper.test/people/external-workforce/external-workers/new)  
+  Entity create — External Workers · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/people/external-workforce/external-workers/{entityId}`  
+  Entity detail — External Workers · [source](../../apps/neon/lib/catalog-routes.ts)
+
 - **GET** [/people/payroll](https://neon.dev.athyper.test/people/payroll)  
   Module — Payroll · [source](../../apps/neon/lib/catalog-routes.ts)
 
@@ -536,6 +617,24 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 
 - **GET** [/people/workforce](https://neon.dev.athyper.test/people/workforce)  
   Module — Core Human Resources · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/workforce/employees](https://neon.dev.athyper.test/people/workforce/employees)  
+  Entity list — Employees · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/workforce/employees/new](https://neon.dev.athyper.test/people/workforce/employees/new)  
+  Entity create — Employees · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/people/workforce/employees/{entityId}`  
+  Entity detail — Employees · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/workforce/people](https://neon.dev.athyper.test/people/workforce/people)  
+  Entity list — People · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/workforce/people/new](https://neon.dev.athyper.test/people/workforce/people/new)  
+  Entity create — People · [source](../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/people/workforce/people/{entityId}`  
+  Entity detail — People · [source](../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/projects-services](https://neon.dev.athyper.test/projects-services)  
   Workspace — Projects & Services · [source](../../apps/neon/lib/catalog-routes.ts)
@@ -1799,6 +1898,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** `/api/entity-runtime/{entityCode}/intake/{flowKey}/operations/{operation}`  
   Route contract · [source](../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
 
+- **GET** `/api/entity-runtime/{entityCode}/own-record`  
+  Route contract · [source](../../server/packages/services/records/src/entity-list-routes.ts)
+
 - **GET** `/api/entity-runtime/{entityCode}/records/{recordId}/bootstrap`  
   Route contract · [source](../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
 
@@ -1831,6 +1933,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/entity-runtime/{entityCode}/views`  
   Raw route · [source](../../server/packages/platform/preferences/src/entity-views-routes.ts)
+
+- **GET** [/api/entity-runtime/directory](https://api.dev.athyper.test/api/entity-runtime/directory)  
+  Route contract · [source](../../server/packages/services/records/src/entity-list-routes.ts)
 
 ### Source routes: /api/governance
 
@@ -2060,9 +2165,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** [/api/meta-entity-authoring/collection-providers](https://api.dev.athyper.test/api/meta-entity-authoring/collection-providers)  
   Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/collection-authoring-routes.ts)
 
-- **GET** [/api/meta-entity-authoring/inspection/address-preview-choices](https://api.dev.athyper.test/api/meta-entity-authoring/inspection/address-preview-choices)  
-  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
-
 - **GET** `/api/meta-entity-authoring/inspection/notifications/{entityCode}`  
   Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
 
@@ -2218,6 +2320,18 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 ### Source routes: /api/platform-control
 
+- **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/adopt`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)
+
+- **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/approve`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)
+
+- **GET** `/api/platform-control/meta-entity-authoring/change-sets/{id}/graph`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)
+
+- **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/submit`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)
+
 - **GET** [/api/platform-control/session](https://api.dev.athyper.test/api/platform-control/session)  
   Route contract · [source](../../server/apps/platform-host/src/composition/control-plane/session.ts)
 
@@ -2243,6 +2357,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/platform/preferences/saved-views/{id}/clone`  
   Raw route · [source](../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** [/api/platform/profile/appearance](https://api.dev.athyper.test/api/platform/profile/appearance)  
+  Route contract · [source](../../server/packages/platform/experience/src/routes.ts)
 
 - **POST** [/api/platform/saved-views](https://api.dev.athyper.test/api/platform/saved-views)  
   Raw route · [source](../../server/packages/platform/preferences/src/saved-view-routes.ts)
@@ -2345,6 +2462,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/studio/publication-policies/{id}/execute`  
   Route contract · [source](../../server/apps/platform-host/src/composition/shared/publication/workload-routes.ts)
+
+- **POST** `/api/studio/publication-policies/{id}/replace`  
+  Route contract · [source](../../server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts)
 
 ### Source routes: /api/webhooks
 
