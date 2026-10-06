@@ -4,9 +4,14 @@ import {
   validateFoundationNode,
   validateReferenceMember,
   validateNormalizedCoreRow,
+  type MetaEntityGraph,
   type NormalizedCoreRow,
   type ReferenceMember,
 } from "@athyper/server-contract-meta-entity-authoring";
+import type {
+  NativeConversionResource,
+  NativeNestedConversionAdapter,
+} from "./native-graph-conversion.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 export interface LegacyFieldChoices {
@@ -175,4 +180,206 @@ export function convertLegacyFieldChoices(
   )
     fail("NATIVE_CHOICES_LABEL_SOURCE_MISMATCH", "/source");
   return result;
+}
+
+export interface LegacyNativeFieldChoicesAdapterInput {
+  readonly source: MetaEntityGraph;
+  readonly sourceHash: string;
+  readonly resource: NativeConversionResource;
+  readonly dependencies: readonly NativeConversionResource[];
+  readonly mappings: Readonly<
+    Record<
+      string,
+      {
+        readonly context: NativeFieldChoiceContext;
+        readonly choices: Readonly<
+          Record<string, { readonly id: string; readonly labelId: string }>
+        >;
+      }
+    >
+  >;
+}
+/** Correlate repeated binding declarations with one field-owned choice inventory.
+ * Unaccounted display properties remain visible to subsequent adapters. */
+export function createLegacyNativeFieldChoicesAdapter(
+  input: LegacyNativeFieldChoicesAdapterInput,
+): NativeNestedConversionAdapter {
+  validateConversionJsonData(input.source, "/source");
+  if (sha256(input.source) !== input.sourceHash)
+    fail("NATIVE_CHOICES_SOURCE_HASH_MISMATCH", "/source");
+  const sourceHash = input.sourceHash;
+  const mappings = Object.fromEntries(
+    Object.entries(input.mappings).map(([id, m]) => [
+      id,
+      {
+        context: {
+          ...m.context,
+          field: structuredClone(m.context.field),
+          domainValues:
+            m.context.domainValues === null
+              ? null
+              : [...m.context.domainValues],
+        },
+        choices: structuredClone(m.choices),
+      },
+    ]),
+  );
+  const declarations = (input.source.surfaceFieldBindings ?? []).filter(
+    (b) =>
+      b.displayConfig &&
+      (Object.hasOwn(b.displayConfig, "lookup") ||
+        Object.hasOwn(b.displayConfig, "statusTones")),
+  );
+  const fieldIds = [...new Set(declarations.map((b) => b.entityFieldId))];
+  if (
+    !fieldIds.length ||
+    fieldIds.some((id) => typeof id !== "string") ||
+    Object.keys(mappings).sort().join() !== fieldIds.sort().join()
+  )
+    fail("NATIVE_CHOICES_INVENTORY_INVALID", "/mappings");
+  const members = structuredClone(input.source.referenceMembers);
+  if (!members)
+    return fail("NATIVE_CHOICES_REFERENCE_MEMBERS_REQUIRED", "/source");
+  const addedIds = Object.values(mappings).flatMap((m) =>
+    Object.values(m.choices).map((c) => c.id),
+  );
+  if (
+    new Set(addedIds).size !== addedIds.length ||
+    Object.values(members.members).some((rows) =>
+      rows.some((r) => addedIds.includes(r.id)),
+    ) ||
+    members.members.fieldChoice.some((c) =>
+      Object.hasOwn(mappings, c.entityFieldId),
+    )
+  )
+    fail(
+      "NATIVE_CHOICES_CORRELATED_SOURCE_CONFLICT",
+      "/source/referenceMembers",
+    );
+  const shapes = new Map<string, { fieldId: string; tones: boolean }>();
+  const forward = (graph: MetaEntityGraph): MetaEntityGraph => {
+    if (sha256(graph) !== sourceHash)
+      fail("NATIVE_CHOICES_SOURCE_HASH_MISMATCH", "/source");
+    const result = structuredClone(graph);
+    const selected = new Map<string, LegacyFieldChoices>();
+    const seenBindings = new Set<string>();
+    for (const b of result.surfaceFieldBindings ?? []) {
+      if (!declarations.some((d) => d.id === b.id)) continue;
+      if (!b.id || seenBindings.has(b.id) || !b.entityFieldId)
+        fail("NATIVE_CHOICES_BINDING_SCOPE_INVALID", "/bindings");
+      seenBindings.add(b.id!);
+      const m = mappings[b.entityFieldId!];
+      if (
+        !m ||
+        m.context.field.id !== b.entityFieldId ||
+        (graph.fields ?? []).filter((f) => f.id === b.entityFieldId).length !==
+          1 ||
+        (graph.surfaces ?? []).filter((s) => s.id === b.entitySurfaceId)
+          .length !== 1
+      )
+        fail("NATIVE_CHOICES_BINDING_SCOPE_INVALID", "/bindings");
+      const display = b.displayConfig!;
+      const lookup = display.lookup as Record<string, unknown> | undefined;
+      if (
+        !lookup ||
+        typeof lookup !== "object" ||
+        Array.isArray(lookup) ||
+        Object.keys(lookup).join() !== "options"
+      )
+        fail(
+          "NATIVE_CHOICES_LOOKUP_UNSUPPORTED",
+          "/bindings/displayConfig/lookup",
+        );
+      const value = {
+        options: lookup!.options,
+        tones: Object.hasOwn(display, "statusTones") ? display.statusTones : {},
+      } as LegacyFieldChoices;
+      const previous = selected.get(b.entityFieldId!);
+      if (previous && canonicalJson(previous) !== canonicalJson(value))
+        fail(
+          "NATIVE_CHOICES_CORRELATED_SOURCE_CONFLICT",
+          "/bindings/displayConfig",
+        );
+      selected.set(b.entityFieldId!, value);
+      shapes.set(b.id!, {
+        fieldId: b.entityFieldId!,
+        tones: Object.hasOwn(display, "statusTones"),
+      });
+      const rest = { ...display };
+      delete rest.lookup;
+      delete rest.statusTones;
+      (b as { displayConfig?: object }).displayConfig = rest;
+      if (!Object.keys(rest).length)
+        delete (b as { displayConfig?: object }).displayConfig;
+    }
+    const additions = [...selected].flatMap(([fieldId, source]) => {
+      const m = mappings[fieldId]!;
+      return convertLegacyFieldChoices(source, m.context, {
+        sourceHash: sha256(source),
+        choices: m.choices,
+      });
+    });
+    (result.referenceMembers!.members as { fieldChoice: unknown }).fieldChoice =
+      [...members.members.fieldChoice, ...additions];
+    return result;
+  };
+  const preparedHash = sha256(forward(input.source));
+  return {
+    resource: structuredClone(input.resource),
+    dependencies: structuredClone(input.dependencies),
+    forward,
+    reverse(prepared, target) {
+      if (sha256(prepared) !== preparedHash)
+        fail("NATIVE_CHOICES_SOURCE_HASH_MISMATCH", "/prepared");
+      if (!target.referenceMembers)
+        return fail("NATIVE_CHOICES_REFERENCE_MEMBERS_REQUIRED", "/target");
+      const projections = new Map<string, LegacyFieldChoices>();
+      for (const [fieldId, m] of Object.entries(mappings)) {
+        const fields = target.fields.filter((f) => f.id === fieldId);
+        const rows = target.referenceMembers.members.fieldChoice.filter(
+          (r) => r.entityFieldId === fieldId,
+        );
+        const expected = Object.values(m.choices)
+          .map((c) => c.id)
+          .sort();
+        if (
+          fields.length !== 1 ||
+          canonicalJson(rows.map((r) => r.id).sort()) !==
+            canonicalJson(expected)
+        )
+          fail("NATIVE_CHOICES_INVENTORY_INVALID", "/target");
+        projections.set(
+          fieldId,
+          compileNativeFieldChoices(rows, { ...m.context, field: fields[0]! }),
+        );
+      }
+      const result = structuredClone(prepared);
+      for (const b of result.surfaceFieldBindings ?? []) {
+        const shape = shapes.get(b.id ?? "");
+        if (!shape) continue;
+        const bindings = target.surfaceFieldBindings.filter(
+          (n) =>
+            n.id === b.id &&
+            n.entityFieldId === shape.fieldId &&
+            n.entitySurfaceId === b.entitySurfaceId,
+        );
+        if (bindings.length !== 1)
+          fail("NATIVE_CHOICES_BINDING_SCOPE_INVALID", "/target/bindings");
+        const value = projections.get(shape.fieldId)!;
+        if (!shape.tones && Object.keys(value.tones).length)
+          fail("NATIVE_CHOICES_REVERSE_NOT_REPRESENTABLE", "/target/tones");
+        (b as { displayConfig?: object }).displayConfig = {
+          ...b.displayConfig,
+          lookup: { options: value.options },
+          ...(shape.tones ? { statusTones: value.tones } : {}),
+        };
+      }
+      (
+        result.referenceMembers!.members as { fieldChoice: unknown }
+      ).fieldChoice = result.referenceMembers!.members.fieldChoice.filter(
+        (r) => !addedIds.includes(r.id),
+      );
+      return result;
+    },
+  };
 }

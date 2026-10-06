@@ -330,3 +330,59 @@ it("reconstructs nested list controls and readable identity through the producti
     adapter.surfaces.reverse(native.map((row) => ({ ...row, maxFilters: 21 }))),
   ).toThrow("NATIVE_LIST_SETTINGS_CAPABILITY_DENIED");
 });
+it("maps explicit legacy column width into the typed binding and compiles edits without replay", () => {
+  const f = fixture();
+  const binding = {
+    ...f.surfaceFieldBindings[0]!,
+    displayConfig: { defaultWidth: 240 },
+  };
+  const input = {
+    ...f,
+    surfaceFieldBindings: [binding],
+    mappings: {
+      ...f.mappings,
+      surfaceFieldBindings: {
+        [binding.id!]: {
+          ...f.mappings.surfaceFieldBindings[binding.id!]!,
+          sourceHash: sha256(binding),
+        },
+      },
+    },
+  };
+  const a = createLegacyNativeLayoutAdapters(input).surfaceFieldBindings;
+  const rows = a.forward(input.surfaceFieldBindings);
+  expect(rows[0]!.width).toBe(240);
+  expect(a.reverse(rows)).toEqual(input.surfaceFieldBindings);
+  expect(
+    a.reverse(rows.map((r) => ({ ...r, width: 320 })))[0]!.displayConfig,
+  ).toEqual({ defaultWidth: 320 });
+  expect(() => a.reverse(rows.map((r) => ({ ...r, width: 32 })))).toThrow(
+    "NATIVE_LAYOUT_WIDTH_RUNTIME_UNSUPPORTED",
+  );
+  for (const displayConfig of [
+    { defaultWidth: 0 },
+    { defaultWidth: 47 },
+    { defaultWidth: 1201 },
+    { defaultWidth: 1.5 },
+    { defaultWidth: "240" },
+    { defaultWidth: 240, widget: "unknown" },
+    {},
+  ]) {
+    const invalid = { ...binding, displayConfig };
+    expect(() =>
+      createLegacyNativeLayoutAdapters({
+        ...input,
+        surfaceFieldBindings: [invalid],
+        mappings: {
+          ...input.mappings,
+          surfaceFieldBindings: {
+            [binding.id!]: {
+              ...input.mappings.surfaceFieldBindings[binding.id!]!,
+              sourceHash: sha256(invalid),
+            },
+          },
+        },
+      }),
+    ).toThrow();
+  }
+});

@@ -283,11 +283,23 @@ it.each([false, true])(
       c = layoutFixtureContext(),
       l = layoutFixture();
     if (listView) {
+      (c.core.field[1] as { dataType: string }).dataType = "enum";
+      (
+        c.coreContext.catalogues[0]!.columns[1] as {
+          supportedDataTypes: readonly string[];
+        }
+      ).supportedDataTypes = ["enum"];
+      (c.components[0]! as { dataTypes: readonly string[] }).dataTypes = [
+        "string",
+        "text",
+        "enum",
+      ];
       (l as { binding: unknown }).binding = [
         ...l.binding,
         {
           ...l.binding[0]!,
           id: coreFixtureId(62),
+          width: 240,
           entitySurfaceId: c.core.surface[0]!.id,
           entitySurfaceSectionId: null,
         },
@@ -388,7 +400,16 @@ it.each([false, true])(
       position: row.position,
       columnSpan: row.columnSpan,
       ...(listView && row.entitySurfaceId === c.core.surface[0]!.id
-        ? { displayConfig: { defaultVisible: true } }
+        ? {
+            displayConfig: {
+              defaultVisible: true,
+              defaultWidth: 240,
+              lookup: {
+                options: [{ value: "active", label: "Fixture label" }],
+              },
+              statusTones: { active: "success" },
+            },
+          }
         : {}),
     }));
     const source: MetaEntityGraph = {
@@ -511,6 +532,33 @@ it.each([false, true])(
           },
         },
       });
+      const { createLegacyNativeFieldChoicesAdapter } =
+        await import("./native-field-choices.js");
+      const afterView = viewAdapter.forward(afterNavigation);
+      const choiceAdapter = createLegacyNativeFieldChoicesAdapter({
+        source: afterView,
+        sourceHash: sha256(afterView),
+        resource: {
+          owner: "synthetic-tests",
+          key: "choices-adapter",
+          version: 1,
+          hash: "5".repeat(64),
+        },
+        dependencies: [labelResource],
+        mappings: {
+          [c.core.field[1]!.id]: {
+            context: {
+              field: c.core.field[1]!,
+              maximumChoices: 10,
+              domainValues: null,
+              labelText: () => "Fixture label",
+            },
+            choices: {
+              active: { id: coreFixtureId(95), labelId: coreFixtureId(32) },
+            },
+          },
+        },
+      });
       nested = composeNativeNestedConversionAdapters(
         {
           owner: "synthetic-tests",
@@ -518,7 +566,7 @@ it.each([false, true])(
           version: 1,
           hash: "6".repeat(64),
         },
-        [nested, viewAdapter],
+        [nested, viewAdapter, choiceAdapter],
       );
     }
     const preparedGraph = nested.forward(source);
@@ -587,6 +635,7 @@ it.each([false, true])(
       source,
       {
         ...f.context,
+        resolveLayout: (core) => ({ ...c, core }),
         source: { ...f.context.source, graphHash: sha256(source) },
         installedAdapters: [
           ...new Map(
@@ -615,11 +664,20 @@ it.each([false, true])(
         proof.candidate.referenceMembers!.members.surfaceViewField,
       ).toHaveLength(1);
       expect(proof.nested!.dependencies).toEqual(nested.dependencies);
+      expect(
+        proof.candidate.referenceMembers!.members.fieldChoice,
+      ).toHaveLength(1);
+      expect(
+        proof.candidate.surfaceFieldBindings.find(
+          (b) => b.id === coreFixtureId(62),
+        )!.width,
+      ).toBe(240);
       expect(() =>
         prepareNativeGraphConversion(
           source,
           {
             ...f.context,
+            resolveLayout: (core) => ({ ...c, core }),
             source: { ...f.context.source, graphHash: sha256(source) },
             installedAdapters: [
               ...new Map(

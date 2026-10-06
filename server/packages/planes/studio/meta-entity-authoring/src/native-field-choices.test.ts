@@ -7,6 +7,7 @@ import {
   convertLegacyFieldChoices,
   compileNativeFieldChoices,
   type LegacyFieldChoices,
+  type NativeFieldChoiceContext,
 } from "./native-field-choices.js";
 import { sha256 } from "./deterministic.js";
 function fixture() {
@@ -147,4 +148,203 @@ it("handles prototype-like enum values as literal keys without changing object p
   expect(Object.getPrototypeOf(result.tones)).toBe(Object.prototype);
   expect(Object.hasOwn(result.tones, "__proto__")).toBe(true);
   expect(result).toEqual(source);
+});
+
+async function graphFixture(name = "country") {
+  const { readFileSync } = await import("node:fs");
+  const { emptyReferenceMembers } =
+    await import("@athyper/server-contract-meta-entity-authoring");
+  const { parseSharedReferenceProduct, compileSharedReferenceProduct } =
+    await import("./authoring/product.js");
+  const { createLegacyNativeFieldChoicesAdapter } =
+    await import("./native-field-choices.js");
+  const { layoutFixtureRow } =
+    await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
+  const product = parseSharedReferenceProduct(
+    JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../../../../metadata/entities/common/reference/" +
+            name +
+            "/definition.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ),
+  );
+  const original = compileSharedReferenceProduct(product, "studio").graph;
+  const source = {
+    ...original,
+    contractSchema: "athyper.meta-entity-contract/2.3" as const,
+    referenceMembers: emptyReferenceMembers(),
+    surfaceFieldBindings: original.surfaceFieldBindings!.map((b, i) => ({
+      ...b,
+      id: coreFixtureId(7000 + i),
+    })),
+  };
+  const declaration = source.surfaceFieldBindings.find(
+    (b) => b.displayConfig?.lookup,
+  )!;
+  const selected = {
+    options: (
+      declaration.displayConfig!.lookup as {
+        options: LegacyFieldChoices["options"];
+      }
+    ).options,
+    tones: declaration.displayConfig!.statusTones,
+  } as LegacyFieldChoices;
+  const context: NativeFieldChoiceContext = {
+    ...fixture().context,
+    field: {
+      ...fixture().context.field,
+      id: declaration.entityFieldId!,
+      domainCode: null,
+    },
+    domainValues: null,
+  };
+  const labels = Object.fromEntries(
+    selected.options.map((o, i) => [coreFixtureId(8000 + i), o.label]),
+  );
+  const choices = Object.fromEntries(
+    selected.options.map((o, i) => [
+      o.value,
+      { id: coreFixtureId(9000 + i), labelId: coreFixtureId(8000 + i) },
+    ]),
+  );
+  const admittedContext = {
+    ...context,
+    labelText: (id: string) => labels[id]!,
+  };
+  const input = {
+    source,
+    sourceHash: sha256(source),
+    resource: {
+      owner: "test",
+      key: "field-choices",
+      version: 1,
+      hash: "a".repeat(64),
+    },
+    dependencies: [],
+    mappings: { [context.field.id]: { context: admittedContext, choices } },
+  };
+  const adapter = createLegacyNativeFieldChoicesAdapter(input);
+  const prepared = adapter.forward(source);
+  const target = {
+    ...prepared,
+    contractSchema: "athyper.meta-entity-contract/2.4" as const,
+    fields: [context.field],
+    runtimeProfiles: [],
+    surfaces: [],
+    surfaceSections: [],
+    surfaceFieldBindings: source.surfaceFieldBindings.map((b, i) =>
+      layoutFixtureRow("binding", b.id!, {
+        entitySurfaceId: b.entitySurfaceId!,
+        entityFieldId: b.entityFieldId!,
+        bindingKey: "fixture_" + i,
+        bindingKind: "field",
+        position: i + 1,
+        columnSpan: 1,
+      }),
+    ),
+    authoringSource: {
+      entityId: coreFixtureId(100),
+      tenantId: null,
+      sourceKind: "product" as const,
+      authoringSchemaHash: "b".repeat(64),
+    },
+  };
+  return { input, source, adapter, prepared, target, context };
+}
+for (const name of ["country", "state_region"])
+  it(
+    "accounts for actual " +
+      name +
+      " repeated choice displays without consuming unrelated paths",
+    async () => {
+      const f = await graphFixture(name);
+      expect(f.adapter.reverse(f.prepared, f.target)).toEqual(f.source);
+      expect(f.prepared.referenceMembers!.members.fieldChoice).toHaveLength(2);
+      for (const b of f.prepared.surfaceFieldBindings!.filter(
+        (b) => b.entityFieldId === f.context.field.id,
+      )) {
+        expect(b.displayConfig).not.toHaveProperty("lookup");
+        expect(b.displayConfig).not.toHaveProperty("statusTones");
+        expect(b.displayConfig).toHaveProperty("semanticRole", "status");
+      }
+      const target = structuredClone(f.target);
+      (
+        target.referenceMembers!.members.fieldChoice[0] as { tone: string }
+      ).tone = "danger";
+      const restored = f.adapter.reverse(f.prepared, target);
+      for (const b of restored.surfaceFieldBindings!.filter(
+        (b) => b.entityFieldId === f.context.field.id,
+      ))
+        expect(
+          (b.displayConfig!.statusTones as Record<string, string>).active,
+        ).toBe("danger");
+    },
+  );
+it("rejects conflicting declarations, overwritten members, unsupported lookups and target scope loss", async () => {
+  const { createLegacyNativeFieldChoicesAdapter } =
+    await import("./native-field-choices.js");
+  const f = await graphFixture();
+  const source = structuredClone(f.source);
+  const bindings = source.surfaceFieldBindings.filter(
+    (b) => b.displayConfig?.lookup,
+  );
+  (bindings[1]!.displayConfig as { statusTones: object }).statusTones = {
+    active: "danger",
+    deprecated: "warning",
+  };
+  expect(() =>
+    createLegacyNativeFieldChoicesAdapter({
+      ...f.input,
+      source,
+      sourceHash: sha256(source),
+    }),
+  ).toThrow("NATIVE_CHOICES_CORRELATED_SOURCE_CONFLICT");
+  const lookup = structuredClone(f.source);
+  (
+    lookup.surfaceFieldBindings.find((b) => b.displayConfig?.lookup)!
+      .displayConfig!.lookup as Record<string, unknown>
+  ).provider = "unknown";
+  expect(() =>
+    createLegacyNativeFieldChoicesAdapter({
+      ...f.input,
+      source: lookup,
+      sourceHash: sha256(lookup),
+    }),
+  ).toThrow("NATIVE_CHOICES_LOOKUP_UNSUPPORTED");
+  const collision = {
+    ...f.input,
+    mappings: {
+      [f.context.field.id]: {
+        ...f.input.mappings[f.context.field.id]!,
+        choices: Object.fromEntries(
+          Object.entries(f.input.mappings[f.context.field.id]!.choices).map(
+            ([k, v]) => [k, { ...v, id: coreFixtureId(1) }],
+          ),
+        ),
+      },
+    },
+  };
+  expect(() => createLegacyNativeFieldChoicesAdapter(collision)).toThrow(
+    "NATIVE_CHOICES_CORRELATED_SOURCE_CONFLICT",
+  );
+  expect(() =>
+    f.adapter.reverse(f.prepared, { ...f.target, surfaceFieldBindings: [] }),
+  ).toThrow("NATIVE_CHOICES_BINDING_SCOPE_INVALID");
+  const target = structuredClone(f.target);
+  (target.referenceMembers!.members as { fieldChoice: unknown }).fieldChoice =
+    [];
+  expect(() => f.adapter.reverse(f.prepared, target)).toThrow(
+    "NATIVE_CHOICES_INVENTORY_INVALID",
+  );
+  expect(() =>
+    f.adapter.forward({
+      ...f.source,
+      entity: { ...f.source.entity, entityCode: "stale" },
+    }),
+  ).toThrow("NATIVE_CHOICES_SOURCE_HASH_MISMATCH");
 });

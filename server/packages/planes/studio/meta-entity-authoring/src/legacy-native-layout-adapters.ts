@@ -183,6 +183,7 @@ export function createLegacyNativeLayoutAdapters(
       (input.listSettings || input.surfaceIdentities)
         ? ["layoutConfig"]
         : []),
+      ...(family === "surfaceFieldBindings" ? ["displayConfig"] : []),
       ...direct[family],
       ...Object.keys(labels[family]),
       ...(family === "surfaces" ? [] : ["position"]),
@@ -354,6 +355,32 @@ export function createLegacyNativeLayoutAdapters(
             "/surfaces/layoutConfig",
           );
       }
+      if (
+        family === "surfaceFieldBindings" &&
+        Object.hasOwn(legacy, "displayConfig")
+      ) {
+        const display = legacy.displayConfig as Record<string, unknown>;
+        if (
+          !display ||
+          typeof display !== "object" ||
+          Array.isArray(display) ||
+          Object.keys(display).join() !== "defaultWidth"
+        )
+          fail(
+            "NATIVE_LAYOUT_LEGACY_PATH_UNSUPPORTED",
+            "/surfaceFieldBindings/displayConfig",
+          );
+        if (
+          !Number.isSafeInteger(display.defaultWidth) ||
+          (display.defaultWidth as number) < 48 ||
+          (display.defaultWidth as number) > 1200
+        )
+          fail(
+            "NATIVE_LAYOUT_WIDTH_RUNTIME_UNSUPPORTED",
+            "/surfaceFieldBindings/displayConfig/defaultWidth",
+          );
+        row.width = display.defaultWidth;
+      }
       validate(row);
       return row;
     };
@@ -442,6 +469,11 @@ export function createLegacyNativeLayoutAdapters(
             }
             values.layoutConfig = config;
           }
+          if (
+            family === "surfaceFieldBindings" &&
+            keys.includes("displayConfig")
+          )
+            values.displayConfig = { defaultWidth: row.width };
           if (family !== "surfaces")
             values.position = (row.position as number) - shift;
           const legacy = Object.fromEntries(
