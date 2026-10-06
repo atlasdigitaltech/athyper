@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
+  nativeAiMembers,
+  nativeAiRowNode,
+  validateFoundationNode,
+  validateNativeAiSemantics,
+  type NativeAiGraph,
+  type NativeAiKind,
   normalizedCoreMembers,
   normalizedLayoutMembers,
   validateNormalizedCoreRow,
@@ -15,6 +21,13 @@ export type GraphTable = Exclude<
   keyof typeof BRANCH_COLUMNS,
   "entity_class_profile"
 >;
+export type NativeAiTable =
+  | "entity_ai_profile"
+  | "entity_ai_field"
+  | "entity_ai_binding"
+  | "entity_ai_reference"
+  | "entity_ai_term";
+export type GraphWriteTable = GraphTable | NativeAiTable;
 export type StoredRow = Readonly<Record<string, unknown>>;
 export interface RowChange {
   readonly id: string;
@@ -22,7 +35,7 @@ export interface RowChange {
   readonly values: StoredRow;
 }
 export interface BranchPlan {
-  readonly table: GraphTable;
+  readonly table: GraphWriteTable;
   readonly insert: readonly RowChange[];
   readonly update: readonly RowChange[];
   readonly remove: readonly StoredRow[];
@@ -80,7 +93,10 @@ const keys: Record<GraphTable, readonly string[]> = {
     "source_field_key",
   ],
 };
-export const positionConstraints: Partial<Record<GraphTable, string>> = {
+export const positionConstraints: Partial<Record<GraphWriteTable, string>> = {
+  entity_ai_field: "entity_ai_field_logical_1_uq",
+  entity_ai_binding: "entity_ai_binding_logical_1_uq",
+  entity_ai_reference: "entity_ai_reference_logical_0_uq",
   entity_key_field: "entity_key_field_position_uq",
   entity_search_field: "entity_search_field_position_uq",
   entity_relation_field: "entity_relation_field_position_uq",
@@ -171,8 +187,52 @@ export function planNormalizedBranch(
   }
   return plan;
 }
+/** Native AI uses the same scoped writer as core/layout and retained members.
+ * Planning grants no authority and performs no database writes. Full-graph
+ * references and installed provider/provenance evidence must be admitted by the
+ * enclosing native transaction before applying these plans. */
+export function planNativeAiGraph(
+  incoming: NativeAiGraph,
+  stored: Readonly<Record<NativeAiKind, readonly StoredRow[]>>,
+  maximumMembers: number,
+): readonly BranchPlan[] {
+  validateNativeAiSemantics(incoming, maximumMembers);
+  const identities: Record<NativeAiKind, readonly string[]> = {
+    profile: [],
+    field: ["ai_profile_id", "entity_field_id"],
+    binding: ["ai_profile_id", "binding_kind", "contract_key"],
+    reference: ["id"],
+    term: ["ai_profile_id", "phrase", "provider_binding_id"],
+  };
+  return (Object.keys(nativeAiMembers) as NativeAiKind[]).map((kind) => {
+    const descriptor = nativeAiMembers[kind];
+    for (const row of incoming[kind])
+      validateFoundationNode(nativeAiRowNode(kind), row, "/ai/" + kind);
+    const plan = planMappedBranch(
+      descriptor.table as NativeAiTable,
+      ["id", ...Object.keys(descriptor.columns)],
+      identities[kind],
+      incoming[kind],
+      stored[kind],
+      Object.fromEntries(
+        Object.entries(descriptor.columns).map(([p, c]) => [p, c.column]),
+      ),
+    );
+    // Learning provenance is not initialized by a graph echo, and cannot be
+    // changed in-place. A future candidate command needs its own approved source.
+    if (kind === "term") {
+      for (const row of plan.insert)
+        if (row.values.origin_kind !== "authored")
+          fail("AUTHORING_SERVICE_PROPERTY_SOURCE_REQUIRED", descriptor.table);
+      for (const row of plan.update)
+        if (Object.keys(row.values).some((k) => k.startsWith("origin_")))
+          fail("AUTHORING_SERVICE_PROPERTY_IMMUTABLE", descriptor.table);
+    }
+    return plan;
+  });
+}
 function planMappedBranch(
-  table: GraphTable,
+  table: GraphWriteTable,
   columns: readonly string[],
   identityKeys: readonly string[],
   incoming: readonly object[] | undefined,

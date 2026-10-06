@@ -11,8 +11,18 @@ const c = {
   change_set_id: "draft",
   created_by: "author",
 };
-function fixture(rows: Record<string, StoredRow[]> = {}, denied = false) {
+function fixture(
+  rows: Record<string, StoredRow[]> = {},
+  denied = false,
+  nativeOrder = false,
+) {
   const query = vi.fn(async (statement: string, parameters: unknown[]) => {
+    if (nativeOrder && statement.includes("SELECT conname,condeferrable"))
+      return {
+        rows: [
+          { conname: "entity_ai_field_logical_1_uq", condeferrable: true },
+        ],
+      };
     if (statement.includes("SELECT to_jsonb")) {
       const table = /FROM (?:"metadata"\."|metadata\.)(\w+)/.exec(
         statement,
@@ -175,6 +185,80 @@ it("rejects an ordered update when the forward migration is unavailable", async 
       f.query.mock.calls.some(([statement]) =>
         /^(UPDATE|INSERT|DELETE)/.test(statement),
       ),
+    ).toBe(false);
+  } finally {
+    await f.db.destroy();
+  }
+});
+
+it("applies native AI ordering edits with scoped updates and the actual generated deferrable constraint", async () => {
+  const f = fixture({}, false, true);
+  try {
+    await writeReconciliationPlans(
+      f.db,
+      [
+        {
+          table: "entity_ai_field",
+          insert: [],
+          remove: [],
+          update: [
+            {
+              id: "first",
+              before: { id: "first", position: 1 },
+              values: { position: 2 },
+            },
+            {
+              id: "second",
+              before: { id: "second", position: 2 },
+              values: { position: 1 },
+            },
+          ],
+        },
+      ],
+      { ...c, tenant_id: null },
+    );
+    const statements = f.query.mock.calls.map(([statement]) => statement);
+    expect(
+      statements.filter((s) => s.startsWith("SET CONSTRAINTS")),
+    ).toHaveLength(2);
+    expect(statements[1]).toContain(
+      '"metadata"."entity_ai_field_logical_1_uq" DEFERRED',
+    );
+    expect(statements.at(-1)).toContain("IMMEDIATE");
+    for (const s of statements.filter((s) => s.startsWith("UPDATE"))) {
+      expect(s).toContain('"metadata"."entity_ai_field"');
+      expect(s).toContain("tenant_id IS NOT DISTINCT FROM");
+      expect(s).toContain("change_set_id=");
+      expect(s).toContain("entity_id=");
+      expect(s).not.toContain("created_at=");
+      expect(s).not.toContain("created_by=");
+    }
+    expect(statements.some((s) => /^(DELETE|INSERT)/.test(s))).toBe(false);
+  } finally {
+    await f.db.destroy();
+  }
+});
+it("rejects native AI order edits before DML when the installed constraint cannot defer", async () => {
+  const f = fixture();
+  try {
+    await expect(
+      writeReconciliationPlans(
+        f.db,
+        [
+          {
+            table: "entity_ai_field",
+            insert: [],
+            remove: [],
+            update: [
+              { id: "first", before: { position: 1 }, values: { position: 2 } },
+            ],
+          },
+        ],
+        c,
+      ),
+    ).rejects.toMatchObject({ code: "AUTHORING_ORDER_MIGRATION_REQUIRED" });
+    expect(
+      f.query.mock.calls.some(([s]) => /^(UPDATE|INSERT|DELETE)/.test(s)),
     ).toBe(false);
   } finally {
     await f.db.destroy();

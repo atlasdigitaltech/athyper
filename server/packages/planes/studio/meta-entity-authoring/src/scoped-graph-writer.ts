@@ -6,6 +6,7 @@ import {
   positionConstraints,
   type BranchPlan,
   type GraphTable,
+  type GraphWriteTable,
   type StoredRow,
 } from "./graph-reconciliation.js";
 
@@ -48,7 +49,10 @@ export async function readReconciliationPlans(
   }
   return plans;
 }
-function scope(table: GraphTable, c: GraphCoordinate): RawBuilder<unknown> {
+function scope(
+  table: GraphWriteTable,
+  c: GraphCoordinate,
+): RawBuilder<unknown> {
   return table === "entity_materialization_field_mapping"
     ? sql`tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid AND entity_materialization_binding_id IN
       (SELECT id FROM metadata.entity_materialization_binding WHERE change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid)`
@@ -61,7 +65,7 @@ function value(item: unknown) {
 }
 async function update(
   db: DB,
-  table: GraphTable,
+  table: GraphWriteTable,
   id: string,
   values: StoredRow,
   c: GraphCoordinate,
@@ -104,7 +108,7 @@ async function assertNoImplicitRemovals(db: DB, plans: readonly BranchPlan[]) {
     for (const ref of refs.rows) {
       const selected =
         ref.schema_name === "metadata"
-          ? removed.get(ref.table_name as GraphTable)
+          ? removed.get(ref.table_name as GraphWriteTable)
           : undefined;
       const retained =
         await sql`SELECT 1 FROM ${sql.table(`${ref.schema_name}.${ref.table_name}`)}

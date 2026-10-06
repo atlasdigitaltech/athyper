@@ -514,3 +514,39 @@ Validation for this checkpoint: 596 authoring tests pass across 106 executed fil
 with three existing opt-in PostgreSQL cases excluded from the ordinary run.
 Source/test and focused native-test typechecks pass; all six generated-contract
 checks pass. No new skip or disabled assertion was introduced.
+
+
+### Sparse ordering and native AI reconciliation checkpoint — 7 October 2026
+
+The shared scalar layout adapter now offers explicit `dense-siblings` conversion
+for sparse source positions. Actual Country and State Region list-coordinate
+fixtures preserve numeric order, normalize to consecutive one-based positions,
+and reconstruct original slots exactly, including an edited order. Independent
+nullable section scopes remain independent. Missing convention, duplicate slots,
+changed scopes, incomplete rosters and invalid native ordinals reject. This is
+selected coordinate coverage, not a whole-source conversion receipt.
+
+`prepareNativeAiSave` prepares the five AI table families inside the existing
+native authoring transaction. It requires a scoped editable native 2.5 root and
+its installed schema guard, checks local references and reads bounded exact
+entity/tenant/draft rows. Plans use the existing shared reconciliation writer;
+they do not initialize protected operation state. Existing learning provenance
+is preserved on echo; attempted changes or unauthoritative candidate inserts
+reject. No new command endpoint or alternate repository is introduced.
+
+The explicitly enabled disposable PostgreSQL rehearsal passed using generated
+AI DDL and the real shared writer. It verifies attribution preservation,
+deferrable order swaps, rollback after a later foreign-key failure, wrong-draft
+write rejection and protection of retained incoming dependents. Its prerequisite
+tables/guard are synthetic and its transaction covers AI members, not complete
+source-format conversion, revision/idempotency or release compilation.
+
+Ordinary authoring regression: 607 passed across 108 executed files; four opt-in
+PostgreSQL cases excluded, including this separately executed passing rehearsal.
+Source/test and focused native-test typechecks, the 13-task bounded dependency
+build and all six generation checks pass. No assertion was suppressed. The new
+ordinary tests and explicitly enabled SQL
+rehearsal are enrolled in foundation CI. Whole-source mappings, canonical atomic
+application, whole-release lowering, approved host/product-write authority and
+deployed F6/F8/F9 qualification remain incomplete. No DEV migration, grant,
+initialization, publication or activation occurred.

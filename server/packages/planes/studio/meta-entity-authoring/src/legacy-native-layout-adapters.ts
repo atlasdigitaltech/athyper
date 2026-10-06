@@ -53,6 +53,10 @@ export interface LegacyNativeLayoutAdapterInput {
   >;
   readonly listSettings?: Readonly<Record<string, NativeListSettingsContext>>;
   readonly positionConvention: "zero-based" | "one-based";
+  /** Explicit migration of sparse sibling positions to dense native ordinals.
+   * The source convention remains mandatory; duplicate source slots reject.
+   * Historical export uses the captured slot inventory, never captured row values. */
+  readonly positionMapping?: "boundary" | "dense-siblings";
   /** Resolve a label from independently admitted owned-label metadata. */
   labelText(labelId: string): string;
 }
@@ -99,6 +103,12 @@ export function createLegacyNativeLayoutAdapters(
 ): Pick<NativeConversionAdapters, Family> {
   if (!["zero-based", "one-based"].includes(input.positionConvention))
     fail("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED", "/positionConvention");
+  if (
+    input.positionMapping !== undefined &&
+    !["boundary", "dense-siblings"].includes(input.positionMapping)
+  )
+    fail("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED", "/positionMapping");
+  const dense = input.positionMapping === "dense-siblings";
   const surfaceIdentities = structuredClone(input.surfaceIdentities ?? {});
   const identitySourceIds = input.surfaces
     .filter(
@@ -146,6 +156,82 @@ export function createLegacyNativeLayoutAdapters(
           .join()
     )
       fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/" + family);
+    // Scope slots by exact surface and parent. Array order is not presentation order.
+    const sibling = (row: Readonly<Record<string, unknown>>) =>
+      canonicalJson([
+        row.entitySurfaceId,
+        family === "surfaceSections"
+          ? (row.parentSectionId ?? null)
+          : (row.entitySurfaceSectionId ?? null),
+      ]);
+    const slots = new Map<string, number[]>();
+    const sourceGroups = new Map<string, string>();
+    if (dense && family !== "surfaces") {
+      for (const value of source) {
+        const row = value as unknown as Readonly<Record<string, unknown>>;
+        const position = row.position;
+        if (
+          !Number.isSafeInteger(position) ||
+          (position as number) < (shift ? 0 : 1) ||
+          (position as number) > 32767
+        )
+          fail(
+            "NATIVE_LAYOUT_POSITION_INVALID",
+            `/${family}/${String(row.id)}/position`,
+          );
+        const group = sibling(row),
+          groupSlots = slots.get(group) ?? [];
+        if (groupSlots.includes(position as number))
+          fail(
+            "NATIVE_LAYOUT_POSITION_AMBIGUOUS",
+            `/${family}/${String(row.id)}/position`,
+          );
+        groupSlots.push(position as number);
+        slots.set(group, groupSlots);
+        sourceGroups.set(String(row.id), group);
+      }
+      for (const groupSlots of slots.values()) groupSlots.sort((a, b) => a - b);
+    }
+    const densePosition = (
+      row: Readonly<Record<string, unknown>>,
+      reverse: boolean,
+    ) => {
+      const group = sibling(row),
+        groupSlots = slots.get(group);
+      if (group !== sourceGroups.get(String(row.id)) || !groupSlots)
+        return fail(
+          "NATIVE_LAYOUT_POSITION_SCOPE_CHANGED",
+          `/${family}/${String(row.id)}`,
+        );
+      const position = row.position as number;
+      const converted = reverse
+        ? groupSlots[position - 1]
+        : groupSlots.indexOf(position) + 1;
+      if (converted === undefined || (!reverse && converted === 0))
+        return fail(
+          "NATIVE_LAYOUT_POSITION_INVALID",
+          `/${family}/${String(row.id)}/position`,
+        );
+      return converted;
+    };
+    const validateRoster = (rows: readonly unknown[], reverse: boolean) => {
+      if (!dense || family === "surfaces") return;
+      const ids = rows.map((v) => (v as { id: string }).id);
+      if (
+        new Set(ids).size !== ids.length ||
+        ids.slice().sort().join() !== [...shapes.keys()].sort().join()
+      )
+        fail("NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID", "/" + family);
+      const used = new Set<string>();
+      for (const value of rows) {
+        const row = value as Readonly<Record<string, unknown>>;
+        densePosition(row, reverse);
+        const key = canonicalJson([sibling(row), row.position]);
+        if (used.has(key))
+          fail("NATIVE_LAYOUT_POSITION_AMBIGUOUS", "/" + family);
+        used.add(key);
+      }
+    };
     const listShapes = new Map(
       source.map((row) => [
         row.id,
@@ -243,10 +329,12 @@ export function createLegacyNativeLayoutAdapters(
         if (
           !Number.isSafeInteger(position) ||
           (position as number) < (shift ? 0 : 1) ||
-          (position as number) > 32767 - shift
+          (position as number) > 32767 - (dense ? 0 : shift)
         )
           fail("NATIVE_LAYOUT_POSITION_INVALID", `/${family}/position`);
-        row.position = (position as number) + shift;
+        row.position = dense
+          ? densePosition(legacy, false)
+          : (position as number) + shift;
       }
       if (family === "surfaces" && Object.hasOwn(legacy, "layoutConfig")) {
         const config = legacy.layoutConfig as Record<string, unknown>;
@@ -405,8 +493,9 @@ export function createLegacyNativeLayoutAdapters(
             ],
           }
         : {}),
-      forward: (rows: Source<K>) =>
-        rows.map((row) => {
+      forward: (rows: Source<K>) => {
+        validateRoster(rows, false);
+        return rows.map((row) => {
           validateConversionJsonData(row, "/" + family);
           const mapping = mappings[row.id ?? ""];
           if (!mapping || sha256(row) !== mapping.sourceHash)
@@ -415,9 +504,11 @@ export function createLegacyNativeLayoutAdapters(
             row as unknown as Readonly<Record<string, unknown>>,
             mapping,
           );
-        }) as unknown as Target<K>,
-      reverse: (rows: Target<K>) =>
-        rows.map((target) => {
+        }) as unknown as Target<K>;
+      },
+      reverse: (rows: Target<K>) => {
+        validateRoster(rows, true);
+        return rows.map((target) => {
           validateConversionJsonData(target, "/" + family);
           validate(target);
           const keys = shapes.get(target.id),
@@ -475,7 +566,9 @@ export function createLegacyNativeLayoutAdapters(
           )
             values.displayConfig = { defaultWidth: row.width };
           if (family !== "surfaces")
-            values.position = (row.position as number) - shift;
+            values.position = dense
+              ? densePosition(row, true)
+              : (row.position as number) - shift;
           const legacy = Object.fromEntries(
             keys.map((key) => [key, values[key]]),
           );
@@ -484,7 +577,8 @@ export function createLegacyNativeLayoutAdapters(
           )
             fail("NATIVE_LAYOUT_REVERSE_NOT_REPRESENTABLE", "/" + family);
           return legacy;
-        }) as unknown as Source<K>,
+        }) as unknown as Source<K>;
+      },
     } as NativeConversionAdapters[K];
   }
   return {

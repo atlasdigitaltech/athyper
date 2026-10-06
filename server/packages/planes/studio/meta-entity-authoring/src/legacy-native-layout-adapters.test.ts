@@ -386,3 +386,174 @@ it("maps explicit legacy column width into the typed binding and compiles edits 
     ).toThrow();
   }
 });
+
+it.each(["country", "state_region"])(
+  "densifies %s's actual sparse list coordinates and reconstructs their historical slots",
+  async (name) => {
+    const { readFileSync } = await import("node:fs");
+    const { parseSharedReferenceProduct, compileSharedReferenceProduct } =
+      await import("./authoring/product.js");
+    const graph = compileSharedReferenceProduct(
+      parseSharedReferenceProduct(
+        JSON.parse(
+          readFileSync(
+            new URL(
+              "../../../../../../metadata/entities/common/reference/" +
+                name +
+                "/definition.json",
+              import.meta.url,
+            ),
+            "utf8",
+          ),
+        ),
+      ),
+      "studio",
+    ).graph;
+    const surface = graph.surfaces!.find((s) => s.surfaceKind === "list")!;
+    // Test the exact reference coordinates; nested display declarations have
+    // separate adapters and are deliberately not claimed as coverage here.
+    const rows = graph
+      .surfaceFieldBindings!.filter(
+        (b) =>
+          b.entitySurfaceId === surface.id &&
+          graph.fields.find((f) => f.id === b.entityFieldId)?.dataType !==
+            "uuid",
+      )
+      .map((b, i) => ({
+        id: coreFixtureId(500 + i),
+        entitySurfaceId: b.entitySurfaceId,
+        entityFieldId: b.entityFieldId,
+        bindingKey: b.bindingKey,
+        position: b.position,
+      }));
+    expect(Math.max(...rows.map((r) => r.position))).toBeGreaterThan(
+      rows.length,
+    );
+    const f = fixture(),
+      seed = Object.values(f.mappings.surfaceFieldBindings)[0]!.initialization;
+    const input: LegacyNativeLayoutAdapterInput = {
+      ...f,
+      positionMapping: "dense-siblings",
+      surfaceFieldBindings: rows,
+      mappings: {
+        ...f.mappings,
+        surfaceFieldBindings: Object.fromEntries(
+          rows.map((row) => [
+            row.id,
+            {
+              sourceHash: sha256(row),
+              initialization: {
+                ...seed,
+                id: row.id,
+                entitySurfaceId: row.entitySurfaceId,
+                entitySurfaceSectionId: null,
+                entityFieldId: row.entityFieldId,
+                bindingKey: row.bindingKey,
+              },
+            },
+          ]),
+        ),
+      },
+    };
+    const adapter =
+      createLegacyNativeLayoutAdapters(input).surfaceFieldBindings;
+    const native = adapter.forward(rows.slice().reverse());
+    expect(native.map((r) => r.position).sort((a, b) => a - b)).toEqual(
+      rows.map((_, i) => i + 1),
+    );
+    expect(adapter.reverse(native).slice().reverse()).toEqual(rows);
+    const first = native.find((r) => r.position === 1)!,
+      second = native.find((r) => r.position === 2)!;
+    const reordered = native.map((r) =>
+      r.id === first.id
+        ? { ...r, position: 2 }
+        : r.id === second.id
+          ? { ...r, position: 1 }
+          : r,
+    );
+    const inverse = adapter.reverse(reordered);
+    const slots = rows.map((r) => r.position).sort((a, b) => a - b);
+    expect(inverse.find((r) => r.id === first.id)!.position).toBe(slots[1]);
+    expect(inverse.find((r) => r.id === second.id)!.position).toBe(slots[0]);
+    expect(() => adapter.reverse(native.slice(1))).toThrow(
+      "NATIVE_LAYOUT_MAPPING_INVENTORY_INVALID",
+    );
+    expect(() =>
+      adapter.reverse(native.map((r) => ({ ...r, position: 1 }))),
+    ).toThrow("NATIVE_LAYOUT_POSITION_AMBIGUOUS");
+    expect(() =>
+      adapter.reverse(
+        native.map((r) => ({
+          ...r,
+          entitySurfaceSectionId: coreFixtureId(900),
+        })),
+      ),
+    ).toThrow("NATIVE_LAYOUT_POSITION_SCOPE_CHANGED");
+    expect(() =>
+      adapter.reverse(native.map((r) => ({ ...r, position: rows.length + 1 }))),
+    ).toThrow("NATIVE_LAYOUT_POSITION_INVALID");
+    const invalid = rows.map((r) => ({ ...r, position: 0 }));
+    expect(() =>
+      createLegacyNativeLayoutAdapters({
+        ...input,
+        surfaceFieldBindings: invalid,
+      }),
+    ).toThrow("NATIVE_LAYOUT_POSITION_AMBIGUOUS");
+  },
+);
+it("keeps independent sibling slots, accepts the sparse source ceiling and still requires declared provenance", () => {
+  const f = fixture(),
+    original = f.surfaceFieldBindings[0]!,
+    seed = f.mappings.surfaceFieldBindings[original.id!]!.initialization;
+  const rows = [
+    { ...original, position: 32767 },
+    {
+      ...original,
+      id: coreFixtureId(501),
+      bindingKey: "second",
+      entitySurfaceSectionId: coreFixtureId(502),
+      position: 0,
+    },
+  ];
+  const input: LegacyNativeLayoutAdapterInput = {
+    ...f,
+    positionMapping: "dense-siblings",
+    surfaceFieldBindings: rows,
+    mappings: {
+      ...f.mappings,
+      surfaceFieldBindings: Object.fromEntries(
+        rows.map((r) => [
+          r.id!,
+          {
+            sourceHash: sha256(r),
+            initialization: {
+              ...seed,
+              id: r.id!,
+              bindingKey: r.bindingKey,
+              entitySurfaceSectionId: r.entitySurfaceSectionId!,
+            },
+          },
+        ]),
+      ),
+    },
+  };
+  const a = createLegacyNativeLayoutAdapters(input).surfaceFieldBindings;
+  const native = a.forward(rows);
+  expect(native.map((r) => r.position)).toEqual([1, 1]);
+  expect(a.reverse(native)).toEqual(rows);
+  expect(() =>
+    createLegacyNativeLayoutAdapters({ ...input, positionMapping: "boundary" }),
+  ).toThrow("NATIVE_LAYOUT_POSITION_INVALID");
+  expect(() =>
+    createLegacyNativeLayoutAdapters({
+      ...input,
+      positionConvention: "one-based",
+    }),
+  ).toThrow("NATIVE_LAYOUT_POSITION_INVALID");
+  expect(() =>
+    createLegacyNativeLayoutAdapters({
+      ...input,
+      positionMapping: "guess" as "boundary",
+    }),
+  ).toThrow("NATIVE_LAYOUT_POSITION_SOURCE_REQUIRED");
+});
