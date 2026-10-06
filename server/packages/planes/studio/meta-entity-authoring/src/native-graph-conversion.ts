@@ -538,3 +538,38 @@ export function prepareNativeGraphConversion(
     candidate,
   };
 }
+
+/** Registered owner composition of accounted nested paths. Every child resource
+ * and dependency remains installed evidence in the outer conversion proof.
+ * Reverse order restores each preceding prepared shape from typed target rows;
+ * this does not replay a captured legacy graph or admit request-supplied code. */
+export function composeNativeNestedConversionAdapters(
+  resource: NativeConversionResource,
+  adapters: readonly NativeNestedConversionAdapter[],
+): NativeNestedConversionAdapter {
+  if (!adapters.length)
+    throw new FoundationContractError(
+      "NATIVE_CONVERSION_NESTED_ADAPTERS_REQUIRED",
+      "/adapters",
+    );
+  const steps = [...adapters];
+  return {
+    resource: structuredClone(resource),
+    dependencies: [
+      ...new Map(
+        steps
+          .flatMap((a) => [a.resource, ...(a.dependencies ?? [])])
+          .map((r) => [canonicalJson(r), structuredClone(r)]),
+      ).values(),
+    ],
+    forward: (source) =>
+      steps.reduce((graph, a) => a.forward(graph), structuredClone(source)),
+    reverse: (prepared, target) =>
+      [...steps]
+        .reverse()
+        .reduce(
+          (graph, a) => a.reverse(graph, target),
+          structuredClone(prepared),
+        ),
+  };
+}

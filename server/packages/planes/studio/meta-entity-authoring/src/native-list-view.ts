@@ -5,12 +5,17 @@ import {
   validateReferenceMember,
   validateNormalizedCoreRow,
   validateNormalizedLayoutRow,
+  type MetaEntityGraph,
   type ReferenceMember,
   type NormalizedCoreContext,
   type NormalizedCoreRow,
   type NormalizedLayoutContext,
   type NormalizedLayoutRow,
 } from "@athyper/server-contract-meta-entity-authoring";
+import type {
+  NativeConversionResource,
+  NativeNestedConversionAdapter,
+} from "./native-graph-conversion.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 export interface LegacyDefaultListView {
@@ -312,4 +317,276 @@ export function convertLegacyDefaultListView(
   )
     fail("NATIVE_VIEW_NOT_LOSSLESS", "/source");
   return result;
+}
+
+export interface LegacyNativeListViewAdapterInput {
+  readonly source: MetaEntityGraph;
+  readonly sourceHash: string;
+  readonly resource: NativeConversionResource;
+  readonly dependencies: readonly NativeConversionResource[];
+  readonly mappings: Readonly<
+    Record<
+      string,
+      {
+        readonly context: NativeListViewContext;
+        readonly viewId: string;
+        readonly viewKey: string;
+        readonly fieldMemberIds: Readonly<Record<string, string>>;
+      }
+    >
+  >;
+}
+/** Account for defaultState and explicit list-binding defaultVisible together.
+ * Other display paths remain untouched for their own adapters. The inverse reads
+ * current typed views, never a backup of legacy visibility or sort values. */
+export function createLegacyNativeListViewAdapter(
+  input: LegacyNativeListViewAdapterInput,
+): NativeNestedConversionAdapter {
+  validateConversionJsonData(input.source, "/source");
+  if (sha256(input.source) !== input.sourceHash)
+    fail("NATIVE_VIEW_SOURCE_HASH_MISMATCH", "/source");
+  const sourceHash = input.sourceHash;
+  const mappings = structuredClone(input.mappings);
+  const enrolled = (input.source.surfaces ?? []).filter(
+    (s) => s.layoutConfig && Object.hasOwn(s.layoutConfig, "defaultState"),
+  );
+  if (
+    !enrolled.length ||
+    enrolled.some((s) => !s.id || s.surfaceKind !== "list") ||
+    new Set(enrolled.map((s) => s.id)).size !== enrolled.length ||
+    Object.keys(mappings).sort().join() !==
+      enrolled
+        .map((s) => s.id)
+        .sort()
+        .join()
+  )
+    fail("NATIVE_VIEW_ID_INVENTORY_INVALID", "/mappings");
+  const mappedIds = new Set(
+    Object.values(mappings).flatMap((m) => [
+      m.viewId,
+      ...Object.values(m.fieldMemberIds),
+    ]),
+  );
+  if (
+    mappedIds.size !==
+    Object.values(mappings).reduce(
+      (n, m) => n + 1 + Object.keys(m.fieldMemberIds).length,
+      0,
+    )
+  )
+    fail("NATIVE_VIEW_ID_INVENTORY_INVALID", "/mappings");
+  const originals = input.source.referenceMembers;
+  if (!originals)
+    return fail("NATIVE_VIEW_REFERENCE_MEMBERS_REQUIRED", "/source");
+  // Conversion additions cannot overwrite prior authoring members.
+  if (
+    Object.values(originals.members).some((rows) =>
+      rows.some((r) => mappedIds.has(r.id)),
+    )
+  )
+    fail("NATIVE_VIEW_ID_INVENTORY_INVALID", "/mappings");
+  if (
+    originals.members.surfaceView.some(
+      (v) =>
+        v.viewKind === "default" && Object.hasOwn(mappings, v.entitySurfaceId),
+    )
+  )
+    fail(
+      "NATIVE_VIEW_CORRELATED_SOURCE_CONFLICT",
+      "/source/referenceMembers/surfaceView",
+    );
+  const bindingShapes = new Map<
+    string,
+    { surfaceId: string; keys: string[] }
+  >();
+  const forward = (graph: MetaEntityGraph) => {
+    validateConversionJsonData(graph, "/source");
+    if (sha256(graph) !== sourceHash)
+      fail("NATIVE_VIEW_SOURCE_HASH_MISMATCH", "/source");
+    const result = structuredClone(graph);
+    if (!result.referenceMembers)
+      return fail("NATIVE_VIEW_REFERENCE_MEMBERS_REQUIRED", "/source");
+    for (const surface of result.surfaces ?? []) {
+      const m = mappings[surface.id ?? ""];
+      if (!m) continue;
+      if (
+        m.context.surface.id !== surface.id ||
+        m.context.surface.surfaceKind !== "list"
+      )
+        fail("NATIVE_VIEW_BINDING_SCOPE_INVALID", "/mappings");
+      const bindings = (result.surfaceFieldBindings ?? [])
+        .filter((b) => b.entitySurfaceId === surface.id)
+        .sort((a, b) => a.position - b.position);
+      if (
+        bindings.length !== m.context.bindings.length ||
+        new Set(bindings.map((b) => b.id)).size !== bindings.length ||
+        new Set(bindings.map((b) => b.position)).size !== bindings.length
+      )
+        fail("NATIVE_VIEW_BINDING_SCOPE_INVALID", "/bindings");
+      const visibleFields: string[] = [];
+      for (const b of bindings) {
+        const matches = m.context.bindings.filter(
+          (n) => n.id === b.id && n.entityFieldId === b.entityFieldId,
+        );
+        const fields = m.context.fields.filter((f) => f.id === b.entityFieldId);
+        if (
+          !b.id ||
+          matches.length !== 1 ||
+          fields.length !== 1 ||
+          !Number.isSafeInteger(b.position) ||
+          b.position < 0
+        )
+          fail("NATIVE_VIEW_BINDING_SCOPE_INVALID", "/bindings");
+        const identities = m.context.identities.filter(
+          (i) => i.id === fields[0]!.fieldIdentityId,
+        );
+        const display = b.displayConfig;
+        if (
+          identities.length !== 1 ||
+          !display ||
+          !Object.hasOwn(display, "defaultVisible") ||
+          typeof display.defaultVisible !== "boolean"
+        )
+          fail(
+            "NATIVE_VIEW_EXPLICIT_VISIBILITY_REQUIRED",
+            "/bindings/displayConfig/defaultVisible",
+          );
+        if (display!.defaultVisible)
+          visibleFields.push(identities[0]!.fieldKey);
+        bindingShapes.set(b.id!, {
+          surfaceId: surface.id!,
+          keys: Object.keys(display!),
+        });
+        const rest = { ...display };
+        delete rest.defaultVisible;
+        (b as { displayConfig?: object }).displayConfig = rest;
+        if (!Object.keys(rest).length)
+          delete (b as { displayConfig?: object }).displayConfig;
+      }
+      const selected = {
+        defaultState: surface.layoutConfig!.defaultState,
+        visibleFields,
+      } as LegacyDefaultListView;
+      const converted = convertLegacyDefaultListView(selected, m.context, {
+        ...m,
+        sourceHash: sha256(selected),
+      });
+      const members = result.referenceMembers.members;
+      (members as { surfaceView: unknown }).surfaceView = [
+        ...members.surfaceView,
+        converted.view,
+      ];
+      (members as { surfaceViewField: unknown }).surfaceViewField = [
+        ...members.surfaceViewField,
+        ...converted.fields,
+      ];
+      const config = { ...surface.layoutConfig! };
+      delete config.defaultState;
+      (surface as { layoutConfig?: object }).layoutConfig = config;
+      if (!Object.keys(config).length)
+        delete (surface as { layoutConfig?: object }).layoutConfig;
+    }
+    return result;
+  };
+  const preparedHash = sha256(forward(input.source));
+  return {
+    resource: structuredClone(input.resource),
+    dependencies: structuredClone(input.dependencies),
+    forward,
+    reverse(prepared, target) {
+      if (sha256(prepared) !== preparedHash)
+        fail("NATIVE_VIEW_SOURCE_HASH_MISMATCH", "/prepared");
+      if (!target.referenceMembers)
+        return fail("NATIVE_VIEW_REFERENCE_MEMBERS_REQUIRED", "/target");
+      const result = structuredClone(prepared);
+      for (const [id, m] of Object.entries(mappings)) {
+        const surface = result.surfaces?.find((s) => s.id === id);
+        const native = target.surfaces.filter((s) => s.id === id);
+        const views = target.referenceMembers.members.surfaceView.filter(
+          (v) => v.id === m.viewId,
+        );
+        const fieldIds = new Set(Object.values(m.fieldMemberIds));
+        const fields = target.referenceMembers.members.surfaceViewField.filter(
+          (f) => fieldIds.has(f.id),
+        );
+        if (
+          target.referenceMembers.members.surfaceViewField.some(
+            (f) => f.viewId === m.viewId && !fieldIds.has(f.id),
+          )
+        )
+          fail("NATIVE_VIEW_ID_INVENTORY_INVALID", "/target/fields");
+        if (
+          !surface ||
+          native.length !== 1 ||
+          views.length !== 1 ||
+          fields.length !== fieldIds.size
+        )
+          return fail("NATIVE_VIEW_ID_INVENTORY_INVALID", "/target");
+        const projection = compileNativeDefaultListView(
+          { view: views[0]!, fields },
+          {
+            ...m.context,
+            surface: native[0]!,
+            fields: target.fields,
+            bindings: target.surfaceFieldBindings.filter(
+              (b) => b.entitySurfaceId === id,
+            ),
+          },
+        );
+        (surface as { layoutConfig?: object }).layoutConfig = {
+          ...surface.layoutConfig,
+          defaultState: projection.defaultState,
+        };
+        const visibleOrder = (result.surfaceFieldBindings ?? [])
+          .filter((b) => b.entitySurfaceId === id)
+          .sort((a, b) => a.position - b.position)
+          .map(
+            (b) =>
+              m.context.identities.find(
+                (i) =>
+                  i.id ===
+                  target.fields.find((f) => f.id === b.entityFieldId)
+                    ?.fieldIdentityId,
+              )?.fieldKey,
+          )
+          .filter(
+            (key): key is string =>
+              key !== undefined && projection.visibleFields.includes(key),
+          );
+        if (
+          canonicalJson(visibleOrder) !==
+          canonicalJson(projection.visibleFields)
+        )
+          fail(
+            "NATIVE_VIEW_REVERSE_NOT_REPRESENTABLE",
+            "/target/visibleFields",
+          );
+        for (const b of result.surfaceFieldBindings ?? []) {
+          const shape = bindingShapes.get(b.id ?? "");
+          if (!shape || shape.surfaceId !== id) continue;
+          const field = target.fields.find((f) => f.id === b.entityFieldId);
+          const identity = m.context.identities.find(
+            (i) => i.id === field?.fieldIdentityId,
+          );
+          if (!identity)
+            return fail("NATIVE_VIEW_FIELD_MAPPING_INVALID", "/target");
+          const values = {
+            ...b.displayConfig,
+            defaultVisible: projection.visibleFields.includes(
+              identity.fieldKey,
+            ),
+          };
+          (b as { displayConfig?: object }).displayConfig = Object.fromEntries(
+            shape.keys.map((k) => [k, values[k as keyof typeof values]]),
+          );
+        }
+      }
+      const members = result.referenceMembers!.members;
+      (members as { surfaceView: unknown }).surfaceView =
+        members.surfaceView.filter((v) => !mappedIds.has(v.id));
+      (members as { surfaceViewField: unknown }).surfaceViewField =
+        members.surfaceViewField.filter((v) => !mappedIds.has(v.id));
+      return result;
+    },
+  };
 }

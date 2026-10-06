@@ -16,6 +16,7 @@ import {
 } from "./authoring/product.js";
 import { sha256 } from "./deterministic.js";
 import {
+  createLegacyNativeListViewAdapter,
   convertLegacyDefaultListView,
   compileNativeDefaultListView,
   type LegacyDefaultListView,
@@ -140,7 +141,7 @@ function fixture(name = "country") {
       keys.map((key, i) => [key, coreFixtureId(4000 + i)]),
     ),
   };
-  return { context, source, mapping };
+  return { context, source, mapping, graph };
 }
 for (const name of ["country", "state_region"])
   it(
@@ -250,4 +251,180 @@ it("compiles row edits and rejects gapped order, mismatched scope or duplicate m
       f.context,
     ),
   ).toThrow("NATIVE_VIEW_MEMBER_SCOPE_INVALID");
+});
+
+async function adapterFixture(name = "country") {
+  const { emptyReferenceMembers } =
+    await import("@athyper/server-contract-meta-entity-authoring");
+  const f = fixture(name);
+  const graph = {
+    ...f.graph,
+    contractSchema: "athyper.meta-entity-contract/2.3" as const,
+    referenceMembers: emptyReferenceMembers(),
+    surfaceFieldBindings: f.graph.surfaceFieldBindings!.map((b) => {
+      const native = f.context.bindings.find(
+        (n) => n.entityFieldId === b.entityFieldId,
+      );
+      return {
+        ...b,
+        id:
+          b.entitySurfaceId === f.context.surface.id
+            ? native!.id
+            : coreFixtureId(6000 + b.position),
+      };
+    }),
+  };
+  const resource = {
+    owner: "component-tests",
+    key: "default-list-view",
+    version: 1,
+    hash: "c".repeat(64),
+  };
+  const input = {
+    source: graph,
+    sourceHash: sha256(graph),
+    resource,
+    dependencies: [resource],
+    mappings: { [f.context.surface.id]: { context: f.context, ...f.mapping } },
+  };
+  const adapter = createLegacyNativeListViewAdapter(input);
+  const prepared = adapter.forward(graph);
+  const target = {
+    ...prepared,
+    contractSchema: "athyper.meta-entity-contract/2.4" as const,
+    fields: f.context.fields,
+    surfaces: [f.context.surface],
+    runtimeProfiles: [],
+    surfaceSections: [],
+    surfaceFieldBindings: f.context.bindings,
+    authoringSource: {
+      entityId: f.context.entityId,
+      tenantId: null,
+      sourceKind: "product" as const,
+      authoringSchemaHash: "d".repeat(64),
+    },
+  };
+  return { ...f, input, graph, adapter, prepared, target };
+}
+for (const name of ["country", "state_region"])
+  it(
+    "accounts for actual " +
+      name +
+      " list visibility/state in the graph adapter",
+    async () => {
+      const f = await adapterFixture(name);
+      expect(f.adapter.reverse(f.prepared, f.target)).toEqual(f.graph);
+      expect(
+        f.prepared.surfaces!.find((s) => s.id === f.context.surface.id)!
+          .layoutConfig,
+      ).not.toHaveProperty("defaultState");
+      expect(
+        f.prepared
+          .surfaceFieldBindings!.filter(
+            (b) => b.entitySurfaceId === f.context.surface.id,
+          )
+          .every(
+            (b) =>
+              !b.displayConfig ||
+              !Object.hasOwn(b.displayConfig, "defaultVisible"),
+          ),
+      ).toBe(true);
+      // Detail declarations are preserved for their own mappings, not discarded.
+      expect(
+        f.prepared.surfaces!.find((s) => s.surfaceKind === "detail"),
+      ).toEqual(f.graph.surfaces!.find((s) => s.surfaceKind === "detail"));
+      const target = structuredClone(f.target);
+      (
+        target.referenceMembers!.members.surfaceView[0] as { density: string }
+      ).density = "compact";
+      const inverse = f.adapter.reverse(f.prepared, target);
+      expect(
+        (
+          inverse.surfaces!.find((s) => s.id === f.context.surface.id)!
+            .layoutConfig!.defaultState as { density: string }
+        ).density,
+      ).toBe("compact");
+    },
+  );
+it("preserves unaccounted display properties and rejects missing visibility, conflicting identity or stale source", async () => {
+  const f = await adapterFixture();
+  const source = structuredClone(f.graph);
+  const binding = source.surfaceFieldBindings!.find(
+    (b) => b.entitySurfaceId === f.context.surface.id,
+  )!;
+  (binding as { displayConfig: object }).displayConfig = {
+    ...binding.displayConfig,
+    unsupported: "retain",
+  };
+  const a = createLegacyNativeListViewAdapter({
+    ...f.input,
+    source,
+    sourceHash: sha256(source),
+  });
+  expect(
+    a.forward(source).surfaceFieldBindings!.find((b) => b.id === binding.id)!
+      .displayConfig,
+  ).toEqual({ unsupported: "retain" });
+  expect(
+    a.reverse(a.forward(source), {
+      ...f.target,
+      referenceMembers: a.forward(source).referenceMembers,
+    }),
+  ).toEqual(source);
+  delete (binding as { displayConfig?: object }).displayConfig;
+  expect(() =>
+    createLegacyNativeListViewAdapter({
+      ...f.input,
+      source,
+      sourceHash: sha256(source),
+    }),
+  ).toThrow("NATIVE_VIEW_EXPLICIT_VISIBILITY_REQUIRED");
+  expect(() => f.adapter.forward(source)).toThrow(
+    "NATIVE_VIEW_SOURCE_HASH_MISMATCH",
+  );
+  const bad = structuredClone(f.input);
+  (Object.values(bad.mappings)[0]!.context.bindings[0] as { id: string }).id =
+    coreFixtureId(8888);
+  expect(() => createLegacyNativeListViewAdapter(bad)).toThrow(
+    "NATIVE_VIEW_BINDING_SCOPE_INVALID",
+  );
+});
+it("rejects missing typed members, prepared tampering and unrepresentable visible-order edits", async () => {
+  const f = await adapterFixture();
+  const duplicate = structuredClone(f.graph);
+  (
+    duplicate.referenceMembers!.members as { surfaceView: unknown }
+  ).surfaceView = [
+    {
+      ...f.target.referenceMembers!.members.surfaceView[0]!,
+      id: coreFixtureId(7777),
+    },
+  ];
+  expect(() =>
+    createLegacyNativeListViewAdapter({
+      ...f.input,
+      source: duplicate,
+      sourceHash: sha256(duplicate),
+    }),
+  ).toThrow("NATIVE_VIEW_CORRELATED_SOURCE_CONFLICT");
+  const missing = structuredClone(f.target);
+  (
+    missing.referenceMembers!.members as { surfaceViewField: unknown }
+  ).surfaceViewField = [];
+  expect(() => f.adapter.reverse(f.prepared, missing)).toThrow(
+    "NATIVE_VIEW_ID_INVENTORY_INVALID",
+  );
+  expect(() =>
+    f.adapter.reverse({ ...f.prepared, operations: [] }, f.target),
+  ).toThrow("NATIVE_VIEW_SOURCE_HASH_MISMATCH");
+  const reordered = structuredClone(f.target);
+  const visible = reordered.referenceMembers!.members.surfaceViewField.filter(
+    (v) => v.visiblePosition !== null,
+  );
+  (visible[0] as { visiblePosition: number }).visiblePosition = visible.length;
+  (visible[visible.length - 1] as { visiblePosition: number }).visiblePosition =
+    1;
+  expect(() => f.adapter.reverse(f.prepared, reordered)).toThrow(
+    "NATIVE_VIEW_REVERSE_NOT_REPRESENTABLE",
+  );
 });
