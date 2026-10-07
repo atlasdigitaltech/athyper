@@ -5,6 +5,45 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Resource publication and host composition — 2026-10-08
+
+The shared publication contract now carries Studio-only `entity_authoring_descriptor`
+and `entity_identity_review` artifacts. Compilation, signing and dispatch require
+an exact approved source and an explicit current qualification adapter. Resources
+use the existing signed envelope/manifest, immutable compilation, payload projection
+and activation head; they create neither a parallel ledger nor Entity runtime rows.
+Installed readers now verify that same envelope format, including release number,
+payload hash and signing-key coordinates, before resolving descriptor/review content.
+
+The control host can compose the canonical ownership/identity policies from an
+installed descriptor pin, trusted verifier, current reviewer-eligibility callback
+and transactional audit adapter. Identity reviews are selected by exact entity,
+draft and source hash; missing or ambiguous installed evidence rejects. Admission
+rechecks descriptor availability and exact actor/entity/draft scope. These bindings
+are optional and remain disabled in DEV until real configuration is supplied.
+
+DEV installed `20261008_entity_authoring_resource_projection.sql`, SHA-256
+`c8b38846dec2f8af92a13d79f931aa6f6d3751b2de22b06ee8883417f09753e5`,
+after rollback rehearsal and exact predecessor-function preflight. This forward
+migration exempts the two payload resource kinds from Entity-row projection checks;
+it retains existing activation integrity checks. Existing rows and activation heads
+were unchanged. Private receipt: `identity-correspondence-20261008/resource-projection-applied.json`.
+The separate PostgreSQL test stages/verifies/activates both kinds and rolls back;
+its verification fixture is not human approval or deployed resource qualification.
+
+Validation: publication service 461 tests pass; authoring baseline 830 tests pass
+(six opt-in exclusions), plus two new policy-composition cases. The focused resource
+reader/policy suite passes six tests. Ed25519 round-trip, absent qualification,
+source drift, scope changes, revoked descriptor and ambiguous review rejection are
+covered. PostgreSQL activation rehearsal passes.
+
+**Still required:** the approved-source publication adapter, installed current
+reviewer-eligibility/verifier configuration, restricted resource-read privileges,
+and actual independently approved descriptor/review releases. No Country/State
+Region ownership or identity rows changed. Native conversion and deployed F6/F8/F9
+are not established by this checkpoint. The earlier reader-only status below is
+historical and superseded for publication support, not for live authority.
+
 ## Installed-resource readers and restricted grants — 2026-10-08
 
 `installed-reference-resources.ts` adds a concrete SQL read adapter over existing

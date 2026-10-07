@@ -19,6 +19,32 @@ const document = {
   descriptorHash: sha256(descriptor),
 };
 function fixture(value: Record<string, unknown> = document) {
+  const payload = value;
+  const kind =
+    payload.schema === "entity.legacy-identity-review/1"
+      ? "entity_identity_review"
+      : "entity_authoring_descriptor";
+  value = {
+    envelope: {
+      schema: "athyper.publication-artifact.v1",
+      publicationKey: "fixture.resource",
+      releaseId: "release",
+      releaseNo: 1,
+      targetPlane: "studio",
+      artifactKind: kind,
+      payload,
+    },
+    manifest: {
+      publicationKey: "fixture.resource",
+      releaseId: "release",
+      releaseNo: 1,
+      targetPlane: "studio",
+      artifactKind: kind,
+      payloadSha256: sha256(payload),
+      signingKeyId: "fixture-key",
+      signatureAlgorithm: "Ed25519",
+    },
+  };
   const signature = sign(
     null,
     Buffer.from(canonicalJson(value)),
@@ -26,12 +52,13 @@ function fixture(value: Record<string, unknown> = document) {
   ).toString("base64");
   const row = {
     document: value,
+    release_no: 1,
     unsigned_hash: sha256(value),
     signature,
     algorithm: "Ed25519",
     key_id: "fixture-key",
-    author_id: "author",
-    reviewer_id: "reviewer",
+    author_id: "00000000-0000-4000-8000-000000000001",
+    reviewer_id: "00000000-0000-4000-8000-000000000002",
   };
   query.mockResolvedValue({ rows: [row] });
   const authorizeReview = vi.fn(async () => {});
@@ -103,10 +130,15 @@ it("rejects missing/ambiguous installation and byte/hash/signature drift", async
 it("binds identity review principals and source coordinates to the installed decision", async () => {
   const receipt = {
     schema: "entity.legacy-identity-review/1",
-    proposerId: "author",
-    reviewerId: "reviewer",
-    entityId: "entity",
-    changeSetId: "draft",
+    reference: "fixture-review",
+    tenantId: null,
+    authoringSchemaHash: "b".repeat(64),
+    reviewedPlanHash: "c".repeat(64),
+    releases: [],
+    proposerId: "00000000-0000-4000-8000-000000000001",
+    reviewerId: "00000000-0000-4000-8000-000000000002",
+    entityId: "00000000-0000-4000-8000-000000000003",
+    changeSetId: "00000000-0000-4000-8000-000000000004",
     sourceHash: "a".repeat(64),
   };
   const f = fixture(receipt);
@@ -115,8 +147,8 @@ it("binds identity review principals and source coordinates to the installed dec
     pin: { ...f.pin, kind: "entity_identity_review" },
   });
   const input = {
-    entityId: "entity",
-    changeSetId: "draft",
+    entityId: "00000000-0000-4000-8000-000000000003",
+    changeSetId: "00000000-0000-4000-8000-000000000004",
     expectedSourceHash: "a".repeat(64),
   } as Parameters<typeof store.load>[1];
   const loaded = await store.load(tx, input);

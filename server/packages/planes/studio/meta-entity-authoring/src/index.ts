@@ -177,3 +177,4 @@ export {
   resolveInstalledAuthoringDescriptor,
   type InstalledReferenceResourcePin,
 } from "./installed-reference-resources.js";
+export { createProductReferenceResourcePolicies } from "./product-reference-resource-policies.js";

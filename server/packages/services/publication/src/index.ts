@@ -6,14 +6,25 @@ export {
 } from "./publication-artifact-store.js";
 export { KyselyPublicationAuthorityRepository } from "./kysely-authority-repository.js";
 export { KyselyPublicationRecoveryDiscovery } from "./kysely-recovery-discovery.js";
-export { classifyDevPublicationChange, type ClassifyDevPublicationChangeInput } from "./shared/policy/classify-change.js";
+export {
+  classifyDevPublicationChange,
+  type ClassifyDevPublicationChangeInput,
+} from "./shared/policy/classify-change.js";
 export {
   KyselyPublicationAuthorityWork,
   type KyselyPublicationAuthorityWorkOptions,
 } from "./kysely-publication-authority-work.js";
 export { KyselyLocalProjectionRepository } from "./kysely-local-projection-repository.js";
-export {adoptEntityPair, entityAdoptionTransaction, type CoordinatedAdoptionPorts} from './coordinated-entity-adoption.js';
-export {activateProductGroup, type ProductActivationGroup, type ProductActivationGroupPorts} from './coordinated-entity-adoption.js';
+export {
+  adoptEntityPair,
+  entityAdoptionTransaction,
+  type CoordinatedAdoptionPorts,
+} from "./coordinated-entity-adoption.js";
+export {
+  activateProductGroup,
+  type ProductActivationGroup,
+  type ProductActivationGroupPorts,
+} from "./coordinated-entity-adoption.js";
 export {
   PublicationOrchestrationError,
   PublicationOrchestrator,
@@ -45,15 +56,26 @@ export * from "./file-entity-release-review-store.js";
 
 export { businessPartnerInitialCaseSchema } from "./entity-initial-case-schema.js";
 export { localPreviewRoot } from "./shared/preview/environment.js";
-export type { ActiveCaseContract, InitialCaseContract } from "./shared/case-contract/model.js";
+export type {
+  ActiveCaseContract,
+  InitialCaseContract,
+} from "./shared/case-contract/model.js";
 
 export {
   compileDocumentCollection,
   withDocumentCollectionSource,
 } from "./shared/collections/compiler.js";
-export type { CollectionCompilationBinding, CollectionPermission } from "./shared/collections/compiler.js";
+export type {
+  CollectionCompilationBinding,
+  CollectionPermission,
+} from "./shared/collections/compiler.js";
 export * from "./compiled-entity-artifact-compiler.js";
-export type { CompiledRuntimePublication, CompiledRuntimeSource } from "./compilation/compiled-runtime.js";
+export type {
+  CompiledRuntimePublication,
+  CompiledRuntimeSource,
+} from "./compilation/compiled-runtime.js";
 export * from "./entity-operation-binding-compiler.js";
-export {readPublishedCollectionConfiguration} from "./collection-configuration-source.js";
+export { readPublishedCollectionConfiguration } from "./collection-configuration-source.js";
 export { lowerNativeRuntimePublication } from "./compilation/native-runtime.js";
+
+export * from "./compilation/entity-authoring-resource.js";

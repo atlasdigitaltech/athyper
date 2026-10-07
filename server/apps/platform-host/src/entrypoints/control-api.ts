@@ -212,7 +212,17 @@ export async function startControlApi() {
           audit,
           authenticator,
           authority: config.authority,
-          ...(productLabelEnrollment ? { productLabelEnrollment } : {}),
+          ...(productLabelEnrollment
+            ? {
+                productLabelEnrollment,
+                ...(productLabelEnrollment.referenceEnrollment
+                  ? {
+                      productReferenceEnrollment:
+                        productLabelEnrollment.referenceEnrollment,
+                    }
+                  : {}),
+              }
+            : {}),
           environment: "local",
           instance: "dev",
           domainSuffix: "dev.athyper.test",

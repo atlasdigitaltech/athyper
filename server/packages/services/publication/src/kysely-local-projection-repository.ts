@@ -138,12 +138,28 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
   }): Promise<ActiveReleaseProjection> {
     // Resumed, previously verified deployments must pass the same admission
     // gate. Do not rely exclusively on today's staging path having run.
-    const stored = await sql<Row>`SELECT payload_json FROM runtime_meta.applied_release_payload
-      WHERE applied_release_id=${input.appliedReleaseId}::uuid AND artifact_kind='compiled_entity_runtime'`.execute(this.database);
+    const stored =
+      await sql<Row>`SELECT payload_json FROM runtime_meta.applied_release_payload
+      WHERE applied_release_id=${input.appliedReleaseId}::uuid AND artifact_kind='compiled_entity_runtime'`.execute(
+        this.database,
+      );
     for (const payload of stored.rows) {
-      const artifacts = (payload["payload_json"] as { artifacts?: { artifactType: string; content: { descriptor: Record<string, unknown> } }[] }).artifacts;
-      if (!Array.isArray(artifacts)) throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Runtime artifacts required");
-      for (const artifact of artifacts) if (artifact.artifactType === "runtime_contract") assertOperationProjection(artifact.content.descriptor);
+      const artifacts = (
+        payload["payload_json"] as {
+          artifacts?: {
+            artifactType: string;
+            content: { descriptor: Record<string, unknown> };
+          }[];
+        }
+      ).artifacts;
+      if (!Array.isArray(artifacts))
+        throw new PublicationContractError(
+          "ARTIFACT_PAYLOAD_INVALID",
+          "Runtime artifacts required",
+        );
+      for (const artifact of artifacts)
+        if (artifact.artifactType === "runtime_contract")
+          assertOperationProjection(artifact.content.descriptor);
     }
     await sql`SELECT runtime_meta.fn_activate_release(${input.appliedReleaseId}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
       this.database,
@@ -170,7 +186,11 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
       if (artifact.artifactType !== "runtime_contract") continue;
       const descriptor = artifact.content.descriptor as
         Record<string, unknown> | undefined;
-      if (!descriptor) throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Runtime descriptor required");
+      if (!descriptor)
+        throw new PublicationContractError(
+          "ARTIFACT_PAYLOAD_INVALID",
+          "Runtime descriptor required",
+        );
       assertOperationProjection(descriptor);
       const bindings = descriptor?.["operation_scope_bindings"];
       if (!Array.isArray(bindings) || bindings.length === 0) continue;
@@ -355,7 +375,9 @@ function assertArtifactCoordinates(
   const payloadPlane =
     envelope.artifactKind === "entity_runtime"
       ? envelope.payload.entityDescriptor.plane
-      : envelope.artifactKind === "compiled_entity_runtime"
+      : envelope.artifactKind === "compiled_entity_runtime" ||
+          envelope.artifactKind === "entity_authoring_descriptor" ||
+          envelope.artifactKind === "entity_identity_review"
         ? envelope.targetPlane
         : envelope.payload.plane;
   if (
@@ -387,6 +409,28 @@ function assertArtifactCoordinates(
 }
 export function projectionJson(artifact: PublicationArtifactDocumentV1) {
   const envelope = artifact.envelope;
+  if (
+    envelope.artifactKind === "entity_authoring_descriptor" ||
+    envelope.artifactKind === "entity_identity_review"
+  ) {
+    return {
+      applied_release_payload: {
+        id: envelope.releaseId,
+        tenant_id: null,
+        artifact_kind: envelope.artifactKind,
+        payload_schema_version: "1.0",
+        payload_hash: artifact.manifest.payloadSha256,
+        payload_json: envelope.payload,
+        coordinates: {
+          release_id: envelope.releaseId,
+          release_no: envelope.releaseNo,
+          publication_key: envelope.publicationKey,
+          plane_code: envelope.targetPlane,
+        },
+        generated_at: envelope.generatedAt,
+      },
+    };
+  }
   if (envelope.artifactKind === "compiled_entity_runtime") {
     const payload = envelope.payload;
     return {

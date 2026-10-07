@@ -1,6 +1,15 @@
 import { runtimeVersionCompatible } from "./runtime-version.js";
-import {collectionPublicationFromGraph,parseCollectionPublicationDescriptor,collectionPublicationKey} from "@athyper/server-contract-publication";
-import { parseEntityRuntimeDescriptor, parseCompiledRuntimeContract, assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
+import {
+  collectionPublicationFromGraph,
+  parseCollectionPublicationDescriptor,
+  collectionPublicationKey,
+} from "@athyper/server-contract-publication";
+import {
+  parseEntityRuntimeDescriptor,
+  parseCompiledRuntimeContract,
+  assertCompleteRuntimeOperations,
+  validateCompiledRuntimeContracts,
+} from "@athyper/server-platform-metadata";
 import { authoredAuthorization } from "./entity-authorization-compiler.js";
 import {
   parseEntityAuthorizationProfile,
@@ -27,6 +36,12 @@ export interface PublicationArtifactLoaderOptions {
   readonly verifier: PublicationVerifier;
   readonly canonicalizer: PublicationCanonicalizer;
   readonly runtimeVersion: string;
+  readonly authoringResources?: {
+    qualify(
+      kind: "entity_authoring_descriptor" | "entity_identity_review",
+      payload: unknown,
+    ): Promise<void>;
+  };
   readonly authorizationRuntime?: {
     qualify(profile: unknown, bindings: unknown): void;
   };
@@ -87,6 +102,26 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       envelope.minimumRuntimeVersion,
     );
     if (!runtimeCompatible) throw failure("RUNTIME_INCOMPATIBLE");
+    if (
+      envelope.artifactKind === "entity_authoring_descriptor" ||
+      envelope.artifactKind === "entity_identity_review"
+    ) {
+      if (!this.options.authoringResources)
+        throw failure("RUNTIME_INCOMPATIBLE");
+      if (
+        envelope.artifactKind === "entity_authoring_descriptor" &&
+        this.options.canonicalizer.sha256(
+          this.options.canonicalizer.canonicalBytes(
+            envelope.payload.descriptor,
+          ),
+        ) !== envelope.payload.descriptorHash
+      )
+        throw failure("PROJECTION_HASH_MISMATCH");
+      await this.options.authoringResources.qualify(
+        envelope.artifactKind,
+        envelope.payload,
+      );
+    }
     if (envelope.artifactKind === "business_partner_definition_bundle") {
       const payload = envelope.payload;
       if (payload.bundleSchemaVersion !== "1.0.0")
@@ -131,30 +166,65 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         throw failure("ARTIFACT_PAYLOAD_INVALID");
       }
       try {
-        const publication = { releaseId: envelope.releaseId, releaseNo: envelope.releaseNo,
-          contractHash: typeof manifest.evidence?.sourceContractHash === "string" ? manifest.evidence.sourceContractHash.replace(/^sha256:/, "") : undefined,
-          entityId: typeof manifest.evidence?.sourceEntityId === "string" ? manifest.evidence.sourceEntityId : undefined, tenantId: envelope.payload.tenantId ?? null };
-        validateCompiledRuntimeContracts(envelope.payload.artifacts, publication);
+        const publication = {
+          releaseId: envelope.releaseId,
+          releaseNo: envelope.releaseNo,
+          contractHash:
+            typeof manifest.evidence?.sourceContractHash === "string"
+              ? manifest.evidence.sourceContractHash.replace(/^sha256:/, "")
+              : undefined,
+          entityId:
+            typeof manifest.evidence?.sourceEntityId === "string"
+              ? manifest.evidence.sourceEntityId
+              : undefined,
+          tenantId: envelope.payload.tenantId ?? null,
+        };
+        validateCompiledRuntimeContracts(
+          envelope.payload.artifacts,
+          publication,
+        );
         assertCompleteRuntimeOperations(envelope.payload.artifacts);
-        for (const artifact of envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")) {
+        for (const artifact of envelope.payload.artifacts.filter(
+          (item) => item.artifactType === "runtime_contract",
+        )) {
           // Source release identity is not the compiled package hash. Recheck
           // the compiler's provenance assertion against the signed manifest.
-          const source = (artifact.content.descriptor as Record<string, unknown>)?.source;
-          if (source !== undefined && (!source || typeof source !== "object" || Array.isArray(source) ||
-            typeof (source as Record<string, unknown>).entity_id !== "string" ||
-            typeof (source as Record<string, unknown>).release_hash !== "string" ||
-            (source as Record<string, unknown>).entity_id !== manifest.evidence?.sourceEntityId ||
-            (source as Record<string, unknown>).release_hash !== manifest.evidence?.sourceReleaseHash))
+          const source = (
+            artifact.content.descriptor as Record<string, unknown>
+          )?.source;
+          if (
+            source !== undefined &&
+            (!source ||
+              typeof source !== "object" ||
+              Array.isArray(source) ||
+              typeof (source as Record<string, unknown>).entity_id !==
+                "string" ||
+              typeof (source as Record<string, unknown>).release_hash !==
+                "string" ||
+              (source as Record<string, unknown>).entity_id !==
+                manifest.evidence?.sourceEntityId ||
+              (source as Record<string, unknown>).release_hash !==
+                manifest.evidence?.sourceReleaseHash)
+          )
             throw failure("ARTIFACT_MANIFEST_INVALID");
-          const descriptor = parseCompiledRuntimeContract(artifact, publication);
+          const descriptor = parseCompiledRuntimeContract(
+            artifact,
+            publication,
+          );
           // Wire/source validation is not installed F6/F8/F9 qualification. The
           // current loader has no governed live-read registry adapter; do not
           // let its legacy authorization qualifier attest this new capability.
           if (descriptor.liveReadContract)
-            throw new Error("ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE");
+            throw new Error(
+              "ENTITY_LIVE_READ_DEPLOYMENT_QUALIFICATION_UNAVAILABLE",
+            );
           if (descriptor.authorizationRuntime) {
-            if (!this.options.authorizationRuntime) throw failure("RUNTIME_INCOMPATIBLE");
-            this.options.authorizationRuntime.qualify(descriptor.authorization!, descriptor.authorizationRuntime);
+            if (!this.options.authorizationRuntime)
+              throw failure("RUNTIME_INCOMPATIBLE");
+            this.options.authorizationRuntime.qualify(
+              descriptor.authorization!,
+              descriptor.authorizationRuntime,
+            );
           } else if (!descriptor.collectionRelationship) {
             throw failure("RUNTIME_INCOMPATIBLE");
           }
@@ -186,7 +256,9 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
           !c.tenantId ||
           descriptor.sourceEntityCode !== c.entityCode ||
           d.plane !== envelope.targetPlane ||
-          !descriptor.configuration.targetPlanes.includes(envelope.targetPlane) ||
+          !descriptor.configuration.targetPlanes.includes(
+            envelope.targetPlane,
+          ) ||
           c.releaseId !== envelope.releaseId ||
           c.releaseNo !== envelope.releaseNo ||
           c.publicationKey !== envelope.publicationKey ||
@@ -201,18 +273,56 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         throw failure("ARTIFACT_PAYLOAD_INVALID");
       }
     }
-    if (envelope.artifactKind === "entity_runtime" && envelope.payload.entityDescriptor.descriptorKind === "entity_notifications") {
+    if (
+      envelope.artifactKind === "entity_runtime" &&
+      envelope.payload.entityDescriptor.descriptorKind ===
+        "entity_notifications"
+    ) {
       try {
-        const descriptor = parseNotificationPublicationDescriptor(envelope.payload.entityDescriptor.descriptor);
-        const c=envelope.payload.entityContract, d=envelope.payload.entityDescriptor;
-        const members=c.contract["capabilities"];
-        if(!Array.isArray(members))throw new TypeError("Missing notification source");
-        const notifications=Object.fromEntries(members.filter(m=>m?.declaration?.enabled===true&&m.binding?.notifications!==undefined).map(m=>[m.capabilityKey,m.binding.notifications]));
-        const target=members.find(m=>m.binding?.notifications)?.binding.notifications.targetEntityCode;
-        const source=parseNotificationPublicationDescriptor({schema:descriptor.schema,sourceEntityCode:c.entityCode,entityCode:target,notifications});
-        const hash=(v:unknown)=>this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(v));
-        if (hash(source)!==hash(descriptor)||!c.tenantId||descriptor.sourceEntityCode !== c.entityCode || d.plane!==envelope.targetPlane || c.releaseId!==envelope.releaseId || c.releaseNo!==envelope.releaseNo || c.publicationKey!==envelope.publicationKey || envelope.publicationKey!==`metadata.notifications.${descriptor.entityCode}.${c.tenantId.replaceAll("-","")}`) throw new TypeError("Notification source or coordinates mismatch");
-      } catch { throw failure("ARTIFACT_PAYLOAD_INVALID"); }
+        const descriptor = parseNotificationPublicationDescriptor(
+          envelope.payload.entityDescriptor.descriptor,
+        );
+        const c = envelope.payload.entityContract,
+          d = envelope.payload.entityDescriptor;
+        const members = c.contract["capabilities"];
+        if (!Array.isArray(members))
+          throw new TypeError("Missing notification source");
+        const notifications = Object.fromEntries(
+          members
+            .filter(
+              (m) =>
+                m?.declaration?.enabled === true &&
+                m.binding?.notifications !== undefined,
+            )
+            .map((m) => [m.capabilityKey, m.binding.notifications]),
+        );
+        const target = members.find((m) => m.binding?.notifications)?.binding
+          .notifications.targetEntityCode;
+        const source = parseNotificationPublicationDescriptor({
+          schema: descriptor.schema,
+          sourceEntityCode: c.entityCode,
+          entityCode: target,
+          notifications,
+        });
+        const hash = (v: unknown) =>
+          this.options.canonicalizer.sha256(
+            this.options.canonicalizer.canonicalBytes(v),
+          );
+        if (
+          hash(source) !== hash(descriptor) ||
+          !c.tenantId ||
+          descriptor.sourceEntityCode !== c.entityCode ||
+          d.plane !== envelope.targetPlane ||
+          c.releaseId !== envelope.releaseId ||
+          c.releaseNo !== envelope.releaseNo ||
+          c.publicationKey !== envelope.publicationKey ||
+          envelope.publicationKey !==
+            `metadata.notifications.${descriptor.entityCode}.${c.tenantId.replaceAll("-", "")}`
+        )
+          throw new TypeError("Notification source or coordinates mismatch");
+      } catch {
+        throw failure("ARTIFACT_PAYLOAD_INVALID");
+      }
     }
     const hasLearning =
       envelope.artifactKind === "entity_runtime" &&
@@ -226,8 +336,10 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       envelope.artifactKind === "entity_runtime" &&
       (manifest.evidence?.["importedBaseline"] !== undefined ||
         hasLearning ||
-        envelope.payload.entityDescriptor.descriptorKind === "collection_configuration" ||
-        envelope.payload.entityDescriptor.descriptorKind === "entity_notifications" ||
+        envelope.payload.entityDescriptor.descriptorKind ===
+          "collection_configuration" ||
+        envelope.payload.entityDescriptor.descriptorKind ===
+          "entity_notifications" ||
         envelope.payload.entityDescriptor.descriptorKind ===
           "entity_case_runtime" ||
         envelope.payload.entityDescriptor.descriptor["authorizationRuntime"] !==
@@ -387,11 +499,16 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
             descriptorSchemaVersion:
               envelope.payload.entityDescriptor.descriptorSchemaVersion,
           }
-        : envelope.artifactKind === "compiled_entity_runtime"
-            ? {
-                payloadHash: manifest.payloadSha256,
-                payloadSchemaVersion: "2.0",
-              }
+        : envelope.artifactKind === "compiled_entity_runtime" ||
+            envelope.artifactKind === "entity_authoring_descriptor" ||
+            envelope.artifactKind === "entity_identity_review"
+          ? {
+              payloadHash: manifest.payloadSha256,
+              payloadSchemaVersion:
+                envelope.artifactKind === "compiled_entity_runtime"
+                  ? "2.0"
+                  : "1.0",
+            }
           : {
               definitionBundleHash: envelope.payload.bundleHash,
               definitionBundleSchemaVersion:

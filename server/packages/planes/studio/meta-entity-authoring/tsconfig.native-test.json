@@ -52,7 +52,8 @@
     "src/legacy-identity-review.test.ts",
     "src/product-reference-enrollment.test.ts",
     "src/product-reference-enrollment-routes.test.ts",
-    "src/installed-reference-resources.test.ts"
+    "src/installed-reference-resources.test.ts",
+    "src/product-reference-resource-policies.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

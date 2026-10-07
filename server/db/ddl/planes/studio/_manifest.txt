@@ -120,6 +120,7 @@ planes/studio/master/07_functions.sql
 planes/studio/metadata/07_functions.sql
 planes/studio/publication/07_functions.sql
 common/runtime_meta/07_functions.sql
+common/runtime_meta/13_authoring_resource_projection.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
 common/log/07_functions.sql

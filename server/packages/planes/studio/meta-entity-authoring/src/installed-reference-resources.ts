@@ -1,5 +1,8 @@
 import { sql, type Transaction } from "kysely";
-import type { PublicationVerifier } from "@athyper/server-contract-publication";
+import {
+  parsePublicationArtifactEnvelope,
+  type PublicationVerifier,
+} from "@athyper/server-contract-publication";
 import { AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import type {
@@ -17,6 +20,7 @@ export interface InstalledReferenceResourcePin {
 }
 interface ResourceRow {
   document: Record<string, unknown>;
+  release_no: number;
   unsigned_hash: string;
   signature: string;
   algorithm: string;
@@ -64,7 +68,7 @@ export function createInstalledReferenceResourceReader(options: {
       denied();
     const rows = (
       await sql<ResourceRow>`SELECT c.unsigned_document AS document,c.unsigned_hash,a.signature,a.signature_algorithm AS algorithm,a.signing_key_id AS key_id,
-   r.created_by AS author_id,r.approved_by AS reviewer_id
+   r.release_no,r.created_by AS author_id,r.approved_by AS reviewer_id
    FROM publication.release r JOIN publication.artifact a ON a.publication_release_id=r.id AND a.plane_code='studio'
    JOIN publication.artifact_compilation c ON c.publication_release_id=r.id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind
    JOIN runtime_meta.applied_release installed ON installed.source_release_id=r.id AND installed.publication_key=r.release_key AND installed.artifact_hash=a.content_hash
@@ -98,13 +102,36 @@ export function createInstalledReferenceResourceReader(options: {
       }))
     )
       return denied();
+    const envelope = parsePublicationArtifactEnvelope(row.document.envelope);
+    const manifest = row.document.manifest as
+      Record<string, unknown> | undefined;
+    if (
+      envelope.releaseNo !== row.release_no ||
+      envelope.artifactKind !== pin.kind ||
+      envelope.releaseId !== pin.releaseId ||
+      envelope.publicationKey !== pin.publicationKey ||
+      envelope.targetPlane !== "studio" ||
+      !manifest ||
+      manifest.releaseId !== pin.releaseId ||
+      manifest.publicationKey !== pin.publicationKey ||
+      manifest.releaseNo !== envelope.releaseNo ||
+      manifest.artifactKind !== pin.kind ||
+      manifest.targetPlane !== "studio" ||
+      manifest.signingKeyId !== row.key_id ||
+      manifest.signatureAlgorithm !== row.algorithm ||
+      manifest.payloadSha256 !== sha256(envelope.payload)
+    )
+      return denied();
     await options.authorizeReview(tx, {
       authorId: row.author_id,
       reviewerId: row.reviewer_id,
       releaseId: pin.releaseId,
     });
     return {
-      document: structuredClone(row.document),
+      document: structuredClone(envelope.payload) as unknown as Record<
+        string,
+        unknown
+      >,
       authorId: row.author_id,
       reviewerId: row.reviewer_id,
     };

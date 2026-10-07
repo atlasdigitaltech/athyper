@@ -4,6 +4,8 @@ import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-en
 import {
   createProductCommandAuthority,
   createProductLabelHost,
+  createProductReferenceResourcePolicies,
+  type ProductReferenceEnrollmentOptions,
   type createProductLabelEnrollment,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { createControlProductCommandGovernance } from "./product-command-governance.js";
@@ -19,7 +21,14 @@ export async function createControlProductCommandRuntime(options: {
   authority: PlatformAuthority;
   labels: NormalizedAuthoringPolicy;
   audit: AuditRecorder<Database>;
-}): Promise<Parameters<typeof createProductLabelEnrollment>[0]> {
+  referenceResources?: Parameters<
+    typeof createProductReferenceResourcePolicies
+  >[0];
+}): Promise<
+  Parameters<typeof createProductLabelEnrollment>[0] & {
+    referenceEnrollment?: ProductReferenceEnrollmentOptions;
+  }
+> {
   async function role(db: Database) {
     const result = await sql<{
       login: string;
@@ -84,7 +93,9 @@ export async function createControlProductCommandRuntime(options: {
     new Set(labels.supportedLocales).size !== labels.supportedLocales.length
   )
     throw Error("PRODUCT_COMMAND_LABEL_POLICY_INVALID");
-  return {
+  const runtime: Parameters<typeof createProductLabelEnrollment>[0] & {
+    referenceEnrollment?: ProductReferenceEnrollmentOptions;
+  } = {
     database: options.commandDatabase,
     authority: createProductCommandAuthority({
       issuer: options.issuerDatabase,
@@ -125,4 +136,19 @@ export async function createControlProductCommandRuntime(options: {
         throw Error("PRODUCT_COMMAND_AUDIT_REQUIRED");
     },
   };
+  if (options.referenceResources) {
+    if (
+      options.referenceResources.authorityTenantId !==
+      options.authority.tenantId
+    )
+      throw Error("PRODUCT_REFERENCE_AUTHORITY_MISMATCH");
+    runtime.referenceEnrollment = {
+      database: runtime.database,
+      authority: runtime.authority,
+      resolvePolicies: createProductReferenceResourcePolicies(
+        options.referenceResources,
+      ),
+    };
+  }
+  return runtime;
 }

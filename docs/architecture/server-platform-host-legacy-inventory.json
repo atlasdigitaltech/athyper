@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 248,
+    "configuration:new": 249,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 377,
+    "operational-scripts:new": 378,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -4325,6 +4325,18 @@
       "currentLocations": [
         "server/apps/platform-host/src/kernel/bootstrap.ts",
         "server/apps/platform-host/src/scripts/recover-dev-publication.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:entity_resource_dev_postgres",
+      "category": "configuration",
+      "key": "entity_resource_dev_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/services/publication/src/compilation/entity-authoring-resource.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -12720,6 +12732,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260922_attachment_workspace.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_projection",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_projection",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_projection.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

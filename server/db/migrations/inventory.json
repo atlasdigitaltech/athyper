@@ -1860,6 +1860,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/44_reference_command_privileges.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_projection.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_projection.sql",
+      "sha256": "c8b38846dec2f8af92a13d79f931aa6f6d3751b2de22b06ee8883417f09753e5",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit forward payload verification support for Studio authoring resources; no activation or graph mutations.",
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/13_authoring_resource_projection.sql"
+      ]
     }
   ]
 }

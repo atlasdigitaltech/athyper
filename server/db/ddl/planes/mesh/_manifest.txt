@@ -102,6 +102,7 @@ common/shared/07_functions.sql
 planes/mesh/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
+common/runtime_meta/13_authoring_resource_projection.sql
 planes/mesh/master/07_functions.sql
 common/master/07_functions.sql
 common/snapshot/07_functions.sql

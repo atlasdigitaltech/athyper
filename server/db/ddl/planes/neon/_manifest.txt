@@ -101,6 +101,7 @@ common/shared/07_functions.sql
 planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
+common/runtime_meta/13_authoring_resource_projection.sql
 planes/neon/master/07_functions.sql
 planes/neon/master/33_partner_organization_identity.sql
 planes/neon/master/14_payment_instrument_integrity.sql

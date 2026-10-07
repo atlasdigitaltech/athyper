@@ -3107,6 +3107,18 @@ Descriptor/compiler/codec trust is governed independently of immutable pins. A v
 
 #### Contract inventory and generation coverage
 
+Installed authoring-descriptor and historical identity-review resources use the
+existing publication envelope/manifest and immutable payload activation projection
+(`entity_authoring_descriptor`, `entity_identity_review`, Studio-only). Compilation,
+signing, dispatch and consuming host resolution require explicit trusted adapters
+and exact approved source/hash coordinates. Shape validation, signatures and local
+activation do not substitute for current independent human-review eligibility.
+Host command composition resolves the installed descriptor and exact draft/source
+review within the canonical transaction; missing or ambiguous evidence rejects.
+The implemented optional bindings and DEV forward projection migration are recorded
+in the qualification runbook; neither declares actual enrollment or F6/F8/F9 passed.
+
+
 F0 includes a first-class resources inventory alongside relational property mappings. Each entry records resource key, schema version and schema hash, content version/hash where applicable, owning package/service, producer, consuming adapters, dependency pins, trust/revocation policy and conformance-suite identifier/results. Pending identifiers/hashes are explicit pending evidence, never fabricated values. Distinguish a resolver interface schema from its implementation version and a catalogue schema from a particular catalogue publication. Resource inventory entries are typed contract inputs; runtime publication content remains owned by its existing resource service.
 
 | Contract family | Producer / accountable owner | Consumers | Qualification and drift evidence |
