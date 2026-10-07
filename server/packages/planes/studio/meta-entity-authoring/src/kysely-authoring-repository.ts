@@ -1,24 +1,61 @@
-import {prepareLegacyLabelEnrollment} from "./legacy-label-enrollment.js";
+import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
-import { applyLegacySourceEnrollment, type LegacyEnrollmentApplicationInput, type LegacyEnrollmentApplicationPolicy } from "./legacy-enrollment-application.js";
+import {
+  applyLegacySourceEnrollment,
+  type LegacyEnrollmentApplicationInput,
+  type LegacyEnrollmentApplicationPolicy,
+} from "./legacy-enrollment-application.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
-import { prepareLegacySourceEnrollment, type LegacySourceEnrollmentInput } from "./legacy-source-enrollment.js";
+import {
+  prepareLegacySourceEnrollment,
+  type LegacySourceEnrollmentInput,
+} from "./legacy-source-enrollment.js";
 import { readNativeConversionHistory } from "./native-conversion-history.js";
-import { applyNativeGraphConversion, type NativeConversionApplicationPolicy, type NativeConversionApplicationInput } from "./native-conversion-application.js";
+import {
+  applyNativeGraphConversion,
+  type NativeConversionApplicationPolicy,
+  type NativeConversionApplicationInput,
+} from "./native-conversion-application.js";
 import { validateNativeEntityLabelOwner } from "./native-localized-labels.js";
-import { saveNativeCoreLayoutCommands, lockNativeDraft, assertNativeAuthoringContract, type NativeAuthoringPolicy, type NativeCommandInput, type NativeDraftRoot } from "./native-core-layout-persistence.js";
-import { loadNativeSupplementalMembers, validateNativeSupplementalReferences } from "./native-supplemental-storage.js";
-import { loadNormalizedCoreLayout, type NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
-import type { NativeAuthoringSnapshot, ExpandedNativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
-import {loadReferenceMembers,saveReferenceCommands,loadFieldIdentities} from "./normalized-reference-storage.js";
-import { loadNormalizedLabels, saveLabelCommands } from "./normalized-label-storage.js";
+import {
+  saveNativeCoreLayoutCommands,
+  lockNativeDraft,
+  assertNativeAuthoringContract,
+  type NativeAuthoringPolicy,
+  type NativeCommandInput,
+  type NativeDraftRoot,
+} from "./native-core-layout-persistence.js";
+import {
+  loadNativeSupplementalMembers,
+  validateNativeSupplementalReferences,
+} from "./native-supplemental-storage.js";
+import {
+  loadNormalizedCoreLayout,
+  type NormalizedSaveCoordinate,
+} from "./normalized-core-layout-storage.js";
+import type {
+  NativeAuthoringSnapshot,
+  ExpandedNativeMetaEntityGraph,
+} from "@athyper/server-contract-meta-entity-authoring";
+import {
+  loadReferenceMembers,
+  saveReferenceCommands,
+  loadFieldIdentities,
+} from "./normalized-reference-storage.js";
+import {
+  loadNormalizedLabels,
+  saveLabelCommands,
+} from "./normalized-label-storage.js";
 import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
 import { preserveOperationProtectedState } from "./operation-protected-state.js";
 import { bindCanonicalRelationTargets } from "./canonical-relation-targets.js";
 import { assertCanonicalRelationAuthoring } from "./canonical-relations.js";
 import { normalizeGraphStorageOrder } from "./graph-storage-order.js";
 import { changed, snakeKey } from "./graph-reconciliation.js";
-import { readReconciliationPlans, writeReconciliationPlans } from "./scoped-graph-writer.js";
+import {
+  readReconciliationPlans,
+  writeReconciliationPlans,
+} from "./scoped-graph-writer.js";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type {
@@ -53,11 +90,16 @@ interface EntityHeaderRow {
   readonly entity_code: unknown;
   readonly entity_class: unknown;
   readonly ownership_model: unknown;
-  readonly label_root?: {entity_label_id?:string|null;default_locale?: string;reference_contract_version?:number;native_core_layout_version?:number};
+  readonly label_root?: {
+    entity_label_id?: string | null;
+    default_locale?: string;
+    reference_contract_version?: number;
+    native_core_layout_version?: number;
+  };
 }
 interface ChangeSetRow {
-  readonly reference_contract_version?:unknown;
-  readonly native_core_layout_version?:unknown;
+  readonly reference_contract_version?: unknown;
+  readonly native_core_layout_version?: unknown;
   readonly id: unknown;
   readonly tenant_id: unknown;
   readonly entity_id: unknown;
@@ -104,7 +146,15 @@ interface ArtifactRow {
  * publication authority; request DTOs cannot carry labels, identities or ports. */
 export interface LegacySourceEnrollmentPolicy {
   readonly host: NativeAuthoringPolicy;
-  resolve(database: Kysely<Database>, input: NormalizedSaveCoordinate & { actorId: string; expectedRevision: number; expectedSourceHash: string }, source: MetaEntityGraph): Promise<LegacySourceEnrollmentInput>;
+  resolve(
+    database: Kysely<Database>,
+    input: NormalizedSaveCoordinate & {
+      actorId: string;
+      expectedRevision: number;
+      expectedSourceHash: string;
+    },
+    source: MetaEntityGraph,
+  ): Promise<LegacySourceEnrollmentInput>;
 }
 
 export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringRepository {
@@ -127,12 +177,21 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   ) {}
   async executeLegacyEnrollment(input: LegacyEnrollmentApplicationInput) {
     const policy = this.enrollmentApplicationPolicy;
-    if (!policy) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED", "Independent canonical enrollment authority is required.");
-    return atomic(this.database, async tx => {
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED",
+        "Independent canonical enrollment authority is required.",
+      );
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT legacy_source_enrollment`.execute(tx);
       try {
         const repository = new KyselyMetaEntityAuthoringRepository(tx);
-        const result = await applyLegacySourceEnrollment(tx, input, policy, () => repository.loadGraphParts(input.changeSetId, false));
+        const result = await applyLegacySourceEnrollment(
+          tx,
+          input,
+          policy,
+          () => repository.loadGraphParts(input.changeSetId, false),
+        );
         await sql`RELEASE SAVEPOINT legacy_source_enrollment`.execute(tx);
         return result;
       } catch (error) {
@@ -142,44 +201,125 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async prepareLegacyEnrollment(input: NormalizedSaveCoordinate & { actorId: string; expectedRevision: number; expectedSourceHash: string }) {
+  async prepareLegacyEnrollment(
+    input: NormalizedSaveCoordinate & {
+      actorId: string;
+      expectedRevision: number;
+      expectedSourceHash: string;
+    },
+  ) {
     const policy = this.enrollmentPolicy;
-    if (!policy) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED", "An installed read-only source enrollment resolver is required.");
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED",
+        "An installed read-only source enrollment resolver is required.",
+      );
     validateConversionJsonData(input, "/enrollment");
     input = structuredClone(input);
-    if (Object.keys(input).sort().join() !== "actorId,changeSetId,entityId,expectedRevision,expectedSourceHash,tenantId" || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0 || !/^[a-f0-9]{64}$/.test(input.expectedSourceHash)) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_REQUEST_INVALID", "Exact saved source coordinates are required.");
-    for (const id of [input.entityId, input.changeSetId, input.actorId, ...(input.tenantId === null ? [] : [input.tenantId])]) validateFoundationNode(referenceUuid, id, "/enrollment/id");
-    return atomic(this.database, async tx => {
+    if (
+      Object.keys(input).sort().join() !==
+        "actorId,changeSetId,entityId,expectedRevision,expectedSourceHash,tenantId" ||
+      !Number.isSafeInteger(input.expectedRevision) ||
+      input.expectedRevision < 0 ||
+      !/^[a-f0-9]{64}$/.test(input.expectedSourceHash)
+    )
+      throw new AuthoringPolicyError(
+        "LEGACY_ENROLLMENT_REQUEST_INVALID",
+        "Exact saved source coordinates are required.",
+      );
+    for (const id of [
+      input.entityId,
+      input.changeSetId,
+      input.actorId,
+      ...(input.tenantId === null ? [] : [input.tenantId]),
+    ])
+      validateFoundationNode(referenceUuid, id, "/enrollment/id");
+    return atomic(this.database, async (tx) => {
       await policy.host.admit(tx, { ...input, batch: null }, "read");
-      const root = (await sql<{source: Record<string, unknown>}>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${input.changeSetId}::uuid AND entity_id=${input.entityId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid FOR SHARE`.execute(tx)).rows[0]?.source;
-      if (!root) throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND", "The scoped source draft is unavailable.");
-      if (Number(root.lock_version) !== input.expectedRevision) throw new AuthoringConflictError("Stale enrollment source revision.");
-      if (root.native_core_layout_version != null || root.reference_contract_version != null) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_VERSION_UNSUPPORTED", "Only an unenrolled legacy source can produce this proposal.");
+      const root = (
+        await sql<{
+          source: Record<string, unknown>;
+        }>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${input.changeSetId}::uuid AND entity_id=${input.entityId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid FOR SHARE`.execute(
+          tx,
+        )
+      ).rows[0]?.source;
+      if (!root)
+        throw new AuthoringPolicyError(
+          "AUTHORING_DRAFT_NOT_FOUND",
+          "The scoped source draft is unavailable.",
+        );
+      if (Number(root.lock_version) !== input.expectedRevision)
+        throw new AuthoringConflictError("Stale enrollment source revision.");
+      if (
+        root.native_core_layout_version != null ||
+        root.reference_contract_version != null
+      )
+        throw new AuthoringPolicyError(
+          "LEGACY_ENROLLMENT_VERSION_UNSUPPORTED",
+          "Only an unenrolled legacy source can produce this proposal.",
+        );
       const repository = new KyselyMetaEntityAuthoringRepository(tx);
       const source = await repository.loadGraphParts(input.changeSetId, false);
-      if (sha256(source) !== input.expectedSourceHash) throw new AuthoringConflictError("Enrollment source hash changed.");
-      const resolved = await policy.resolve(tx, structuredClone(input), structuredClone(source));
-      if (resolved.context.entityId !== input.entityId || resolved.context.changeSetId !== input.changeSetId || resolved.context.tenantId !== input.tenantId || resolved.revision !== input.expectedRevision || resolved.sourceHash !== input.expectedSourceHash) throw new AuthoringPolicyError("LEGACY_ENROLLMENT_SOURCE_MISMATCH", "Resolver must bind the exact locked source.");
+      if (sha256(source) !== input.expectedSourceHash)
+        throw new AuthoringConflictError("Enrollment source hash changed.");
+      const resolved = await policy.resolve(
+        tx,
+        structuredClone(input),
+        structuredClone(source),
+      );
+      if (
+        resolved.context.entityId !== input.entityId ||
+        resolved.context.changeSetId !== input.changeSetId ||
+        resolved.context.tenantId !== input.tenantId ||
+        resolved.revision !== input.expectedRevision ||
+        resolved.sourceHash !== input.expectedSourceHash
+      )
+        throw new AuthoringPolicyError(
+          "LEGACY_ENROLLMENT_SOURCE_MISMATCH",
+          "Resolver must bind the exact locked source.",
+        );
       return prepareLegacySourceEnrollment(source, resolved);
     });
   }
-  async readNativeConversionHistory(input: NormalizedSaveCoordinate & {actorId: string; revision: number}) {
-    if (!this.conversionPolicy) throw new AuthoringPolicyError("NATIVE_CONVERSION_HOST_NOT_CONFIGURED", "An installed archival conversion decoder is required.");
+  async readNativeConversionHistory(
+    input: NormalizedSaveCoordinate & { actorId: string; revision: number },
+  ) {
+    if (!this.conversionPolicy)
+      throw new AuthoringPolicyError(
+        "NATIVE_CONVERSION_HOST_NOT_CONFIGURED",
+        "An installed archival conversion decoder is required.",
+      );
     const policy = this.conversionPolicy;
-    return atomic(this.database, tx => readNativeConversionHistory(tx, input, policy));
+    return atomic(this.database, (tx) =>
+      readNativeConversionHistory(tx, input, policy),
+    );
   }
   async executeNativeConversion(input: NativeConversionApplicationInput) {
     const policy = this.conversionPolicy;
-    if (!policy) throw new AuthoringPolicyError("NATIVE_CONVERSION_HOST_NOT_CONFIGURED", "Installed conversion/schema/compiler/reader evidence is required.");
-    return atomic(this.database, async tx => {
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "NATIVE_CONVERSION_HOST_NOT_CONFIGURED",
+        "Installed conversion/schema/compiler/reader evidence is required.",
+      );
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT native_format_conversion`.execute(tx);
       try {
-        const repository = new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy.host);
+        const repository = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          undefined,
+          undefined,
+          policy.host,
+        );
         const result = await applyNativeGraphConversion(tx, input, policy, {
           source: () => repository.loadGraphParts(input.changeSetId, false),
-          native: async root => {
+          native: async (root) => {
             const graph = await repository.nativeSnapshot(tx, input, root);
-            if (graph.contractSchema !== "athyper.meta-entity-contract/2.5") throw new AuthoringPolicyError("NATIVE_CONVERSION_READBACK_VERSION_INVALID", "Expanded native readback required.");
+            if (graph.contractSchema !== "athyper.meta-entity-contract/2.5")
+              throw new AuthoringPolicyError(
+                "NATIVE_CONVERSION_READBACK_VERSION_INVALID",
+                "Expanded native readback required.",
+              );
             return graph;
           },
         });
@@ -194,12 +334,27 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   }
   async executeNativeCoreLayoutCommands(input: NativeCommandInput) {
     const policy = this.nativePolicy;
-    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission, budgets and initialization sources are required.");
-    return atomic(this.database, async tx => {
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_HOST_NOT_CONFIGURED",
+        "Independent host admission, budgets and initialization sources are required.",
+      );
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT native_core_layout_batch`.execute(tx);
       try {
-        const repository = new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy);
-        const result = await saveNativeCoreLayoutCommands(tx, input, policy, root => repository.nativeSnapshot(tx, input, root));
+        const repository = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          undefined,
+          undefined,
+          policy,
+        );
+        const result = await saveNativeCoreLayoutCommands(
+          tx,
+          input,
+          policy,
+          (root) => repository.nativeSnapshot(tx, input, root),
+        );
         await sql`RELEASE SAVEPOINT native_core_layout_batch`.execute(tx);
         return result;
       } catch (error) {
@@ -209,123 +364,407 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async loadNativeGraph(input: NormalizedSaveCoordinate & { actorId: string }): Promise<NativeAuthoringSnapshot> {
+  async loadNativeGraph(
+    input: NormalizedSaveCoordinate & { actorId: string },
+  ): Promise<NativeAuthoringSnapshot> {
     const policy = this.nativePolicy;
-    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent host admission is required.");
-    return atomic(this.database, async tx => {
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_HOST_NOT_CONFIGURED",
+        "Independent host admission is required.",
+      );
+    return atomic(this.database, async (tx) => {
       await policy.admit(tx, { ...input, batch: null }, "read");
-      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash, policy.snapshotVersions);
-      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash, root.nativeVersion);
-      const graph = await new KyselyMetaEntityAuthoringRepository(tx, undefined, undefined, undefined, policy).nativeSnapshot(tx, input, root);
+      const root = await lockNativeDraft(
+        tx,
+        input,
+        policy.commands.authoringSchemaHash,
+        policy.snapshotVersions,
+      );
+      await assertNativeAuthoringContract(
+        tx,
+        input,
+        root.authoringSchemaHash,
+        root.nativeVersion,
+      );
+      const graph = await new KyselyMetaEntityAuthoringRepository(
+        tx,
+        undefined,
+        undefined,
+        undefined,
+        policy,
+      ).nativeSnapshot(tx, input, root);
       const state = await loadNormalizedCoreLayout(tx, input);
       const context = await policy.resolveContext(tx, input, state);
-      if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
-        throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "Read context must match the exact source scope.");
-      parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
-      validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
+      if (
+        context.coreContext.entityId !== input.entityId ||
+        context.coreContext.tenantId !== input.tenantId
+      )
+        throw new AuthoringPolicyError(
+          "NORMALIZED_SAVE_CONTEXT_MISMATCH",
+          "Read context must match the exact source scope.",
+        );
+      parseNormalizedLayoutGraph(state.layout, {
+        ...context,
+        maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers),
+        core: state.core,
+      });
+      validateNativeSnapshotReferences(
+        graph,
+        input,
+        policy.commands.maxMembers,
+      );
       return graph;
     });
   }
-  async readNativeDraftSave(input: NormalizedSaveCoordinate & { actorId: string; revision: number }): Promise<NativeAuthoringSnapshot | null> {
+  async readNativeDraftSave(
+    input: NormalizedSaveCoordinate & { actorId: string; revision: number },
+  ): Promise<NativeAuthoringSnapshot | null> {
     const policy = this.nativePolicy;
-    if (!policy) throw new AuthoringPolicyError("NATIVE_AUTHORING_HOST_NOT_CONFIGURED", "Independent history admission is required.");
-    if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new AuthoringPolicyError("AUTHORING_REVISION_INVALID", "Valid saved revision required.");
-    return atomic(this.database, async tx => {
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_HOST_NOT_CONFIGURED",
+        "Independent history admission is required.",
+      );
+    if (!Number.isSafeInteger(input.revision) || input.revision < 0)
+      throw new AuthoringPolicyError(
+        "AUTHORING_REVISION_INVALID",
+        "Valid saved revision required.",
+      );
+    return atomic(this.database, async (tx) => {
       await policy.admit(tx, { ...input, batch: null }, "history");
-      const root = await lockNativeDraft(tx, input, policy.commands.authoringSchemaHash, policy.snapshotVersions);
-      await assertNativeAuthoringContract(tx, input, root.authoringSchemaHash, root.nativeVersion);
-      const row = (await sql<{graph: NativeAuthoringSnapshot; graph_hash: string}>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(tx)).rows[0];
+      const root = await lockNativeDraft(
+        tx,
+        input,
+        policy.commands.authoringSchemaHash,
+        policy.snapshotVersions,
+      );
+      await assertNativeAuthoringContract(
+        tx,
+        input,
+        root.authoringSchemaHash,
+        root.nativeVersion,
+      );
+      const row = (
+        await sql<{
+          graph: NativeAuthoringSnapshot;
+          graph_hash: string;
+        }>`SELECT graph,graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${input.changeSetId}::uuid AND lock_version=${input.revision} AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid`.execute(
+          tx,
+        )
+      ).rows[0];
       if (!row) return null;
-      if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
+      if (sha256(row.graph) !== row.graph_hash)
+        throw new AuthoringConflictError(
+          "Saved history integrity check failed",
+        );
       validateNativeEntityLabelOwner(row.graph, input);
       const source = row.graph.authoringSource;
-      const savedVersion = row.graph.contractSchema === "athyper.meta-entity-contract/2.5" ? 2 : row.graph.contractSchema === "athyper.meta-entity-contract/2.4" ? 1 : null;
-      const historicalVersions = policy.historicalSnapshotVersions ?? [root.nativeVersion];
-      if (savedVersion === null || !historicalVersions.includes(savedVersion) || !source || source.entityId !== input.entityId || source.tenantId !== input.tenantId || source.sourceKind !== root.sourceKind || source.authoringSchemaHash !== root.authoringSchemaHash)
-        throw new AuthoringPolicyError("NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH", "History requires an exact supported source version and scope.");
-      if (row.graph.contractSchema === 'athyper.meta-entity-contract/2.5') validateNativeSupplementalReferences(row.graph, policy.commands.maxMembers);
-      const state = { core: { field: row.graph.fields, runtime: row.graph.runtimeProfiles, surface: row.graph.surfaces }, layout: { section: row.graph.surfaceSections, binding: row.graph.surfaceFieldBindings } };
+      const savedVersion =
+        row.graph.contractSchema === "athyper.meta-entity-contract/2.5"
+          ? 2
+          : row.graph.contractSchema === "athyper.meta-entity-contract/2.4"
+            ? 1
+            : null;
+      const historicalVersions = policy.historicalSnapshotVersions ?? [
+        root.nativeVersion,
+      ];
+      if (
+        savedVersion === null ||
+        !historicalVersions.includes(savedVersion) ||
+        !source ||
+        source.entityId !== input.entityId ||
+        source.tenantId !== input.tenantId ||
+        source.sourceKind !== root.sourceKind ||
+        source.authoringSchemaHash !== root.authoringSchemaHash
+      )
+        throw new AuthoringPolicyError(
+          "NATIVE_AUTHORING_HISTORY_SOURCE_MISMATCH",
+          "History requires an exact supported source version and scope.",
+        );
+      if (row.graph.contractSchema === "athyper.meta-entity-contract/2.5")
+        validateNativeSupplementalReferences(
+          row.graph,
+          policy.commands.maxMembers,
+        );
+      const state = {
+        core: {
+          field: row.graph.fields,
+          runtime: row.graph.runtimeProfiles,
+          surface: row.graph.surfaces,
+        },
+        layout: {
+          section: row.graph.surfaceSections,
+          binding: row.graph.surfaceFieldBindings,
+        },
+      };
       const context = await policy.resolveContext(tx, input, state);
-      if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
-        throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "History context must match its source.");
-      parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
-      validateNativeSnapshotReferences(row.graph, input, policy.commands.maxMembers);
+      if (
+        context.coreContext.entityId !== input.entityId ||
+        context.coreContext.tenantId !== input.tenantId
+      )
+        throw new AuthoringPolicyError(
+          "NORMALIZED_SAVE_CONTEXT_MISMATCH",
+          "History context must match its source.",
+        );
+      parseNormalizedLayoutGraph(state.layout, {
+        ...context,
+        maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers),
+        core: state.core,
+      });
+      validateNativeSnapshotReferences(
+        row.graph,
+        input,
+        policy.commands.maxMembers,
+      );
       return row.graph;
     });
   }
-  private async nativeSnapshot(tx: Transaction<Database>, input: NormalizedSaveCoordinate, root: NativeDraftRoot): Promise<NativeAuthoringSnapshot> {
+  private async nativeSnapshot(
+    tx: Transaction<Database>,
+    input: NormalizedSaveCoordinate,
+    root: NativeDraftRoot,
+  ): Promise<NativeAuthoringSnapshot> {
     const expanded = root.nativeVersion === 2;
     const parts = await this.loadGraphParts(input.changeSetId, true, expanded);
     validateNativeEntityLabelOwner(parts, input);
     const state = await loadNormalizedCoreLayout(tx, input);
-    const core = {...parts,
-      authoringSource: {entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash},
-      fields: state.core.field, runtimeProfiles: state.core.runtime, surfaces: state.core.surface,
-      surfaceSections: state.layout.section, surfaceFieldBindings: state.layout.binding};
+    const core = {
+      ...parts,
+      authoringSource: {
+        entityId: input.entityId,
+        tenantId: input.tenantId,
+        sourceKind: root.sourceKind,
+        authoringSchemaHash: root.authoringSchemaHash,
+      },
+      fields: state.core.field,
+      runtimeProfiles: state.core.runtime,
+      surfaces: state.core.surface,
+      surfaceSections: state.layout.section,
+      surfaceFieldBindings: state.layout.binding,
+    };
     if (!expanded) {
-      const graph: NativeAuthoringSnapshot = {...core, contractSchema: 'athyper.meta-entity-contract/2.4'};
-      validateNativeSnapshotReferences(graph, input, this.nativePolicy!.commands.maxMembers);
+      const graph: NativeAuthoringSnapshot = {
+        ...core,
+        contractSchema: "athyper.meta-entity-contract/2.4",
+      };
+      validateNativeSnapshotReferences(
+        graph,
+        input,
+        this.nativePolicy!.commands.maxMembers,
+      );
       return graph;
     }
     const policy = this.nativePolicy;
-    if (!policy?.snapshotVersions?.includes(2)) throw new AuthoringPolicyError('NATIVE_AUTHORING_HOST_NOT_CONFIGURED', 'Expanded source admission and a finite snapshot budget are required.');
-    const graph: ExpandedNativeMetaEntityGraph = {...core, contractSchema: 'athyper.meta-entity-contract/2.5', ...await loadNativeSupplementalMembers(tx, input, policy.commands.maxMembers)};
+    if (!policy?.snapshotVersions?.includes(2))
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_HOST_NOT_CONFIGURED",
+        "Expanded source admission and a finite snapshot budget are required.",
+      );
+    const graph: ExpandedNativeMetaEntityGraph = {
+      ...core,
+      contractSchema: "athyper.meta-entity-contract/2.5",
+      ...(await loadNativeSupplementalMembers(
+        tx,
+        input,
+        policy.commands.maxMembers,
+      )),
+    };
     validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
     return graph;
   }
   /** Executes reviewed source-bound label enrollment through the existing writer.
    * Host admission and DB RLS are independent mandatory controls, never supplied
    * by the proposal. Replay reconstructs the batch from immutable source history. */
-  async executeLegacyLabelEnrollment(input: {changeSetId:string;actorId:string;tenantId:string|null;proposal:Parameters<typeof prepareLegacyLabelEnrollment>[1]}) {
-    if(!this.nativePolicy||!this.normalizedPolicy)throw new AuthoringPolicyError("PRODUCT_AUTHORING_AUTHORITY_REQUIRED","Installed host admission and normalized command policy are required.");
-    validateConversionJsonData(input,"/enrollment");
-    const request=structuredClone(input),host=this.nativePolicy,policy=this.normalizedPolicy;
-    if(!Number.isSafeInteger(request.proposal.revision)||request.proposal.revision<0||!/^[a-f0-9]{64}$/.test(request.proposal.sourceHash))throw new AuthoringPolicyError("LEGACY_LABEL_SOURCE_MISMATCH","Exact source revision and hash required.");
-    return atomic(this.database,async tx=>{
+  async executeLegacyLabelEnrollment(input: {
+    changeSetId: string;
+    actorId: string;
+    tenantId: string | null;
+    proposal: Parameters<typeof prepareLegacyLabelEnrollment>[1];
+  }) {
+    if (!this.nativePolicy || !this.normalizedPolicy)
+      throw new AuthoringPolicyError(
+        "PRODUCT_AUTHORING_AUTHORITY_REQUIRED",
+        "Installed host admission and normalized command policy are required.",
+      );
+    validateConversionJsonData(input, "/enrollment");
+    const request = structuredClone(input),
+      host = this.nativePolicy,
+      policy = this.normalizedPolicy;
+    if (
+      !Number.isSafeInteger(request.proposal.revision) ||
+      request.proposal.revision < 0 ||
+      !/^[a-f0-9]{64}$/.test(request.proposal.sourceHash)
+    )
+      throw new AuthoringPolicyError(
+        "LEGACY_LABEL_SOURCE_MISMATCH",
+        "Exact source revision and hash required.",
+      );
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT legacy_label_enrollment`.execute(tx);
       try {
-        const root=await assertLegacyCommandSource(tx,request.changeSetId,request.tenantId);
-        if(root.tenant_id!==request.tenantId)throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND","Exact source scope is required.");
-        await host.admit(tx,{changeSetId:request.changeSetId,entityId:string(root,"entity_id"),tenantId:request.tenantId,actorId:request.actorId,batch:null},"read");
-        const repository=new KyselyMetaEntityAuthoringRepository(tx,undefined,policy,undefined,host);
-        const source=Number(root.lock_version)===request.proposal.revision?await repository.loadGraph(request.changeSetId):await repository.readDraftSave(request.changeSetId,request.proposal.revision);
-        if(!source)throw new AuthoringConflictError("Enrollment source history unavailable.");
-        const prepared=prepareLegacyLabelEnrollment(source,request.proposal,policy);
-        const result=await repository.executeLabelCommands({changeSetId:request.changeSetId,actorId:request.actorId,tenantId:request.tenantId,batch:prepared.batch});
+        const root = await assertLegacyCommandSource(
+          tx,
+          request.changeSetId,
+          request.tenantId,
+        );
+        if (root.tenant_id !== request.tenantId)
+          throw new AuthoringPolicyError(
+            "AUTHORING_DRAFT_NOT_FOUND",
+            "Exact source scope is required.",
+          );
+        await host.admit(
+          tx,
+          {
+            changeSetId: request.changeSetId,
+            entityId: string(root, "entity_id"),
+            tenantId: request.tenantId,
+            actorId: request.actorId,
+            batch: null,
+          },
+          "read",
+        );
+        const repository = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          policy,
+          undefined,
+          host,
+        );
+        const source =
+          Number(root.lock_version) === request.proposal.revision
+            ? await repository.loadGraph(request.changeSetId)
+            : await repository.readDraftSave(
+                request.changeSetId,
+                request.proposal.revision,
+              );
+        if (!source)
+          throw new AuthoringConflictError(
+            "Enrollment source history unavailable.",
+          );
+        const prepared = prepareLegacyLabelEnrollment(
+          source,
+          request.proposal,
+          policy,
+        );
+        const result = await repository.executeLabelCommands({
+          changeSetId: request.changeSetId,
+          actorId: request.actorId,
+          tenantId: request.tenantId,
+          batch: prepared.batch,
+        });
         await sql`RELEASE SAVEPOINT legacy_label_enrollment`.execute(tx);
-        return {...result,sourceHash:prepared.sourceHash,proposalHash:prepared.proposalHash};
-      } catch(error){
+        return {
+          ...result,
+          sourceHash: prepared.sourceHash,
+          proposalHash: prepared.proposalHash,
+        };
+      } catch (error) {
         await sql`ROLLBACK TO SAVEPOINT legacy_label_enrollment`.execute(tx);
         await sql`RELEASE SAVEPOINT legacy_label_enrollment`.execute(tx);
         throw error;
       }
     });
   }
-  private async admitLegacyProductCommand(tx: Transaction<Database>, input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
-    const source=await assertLegacyCommandSource(tx,input.changeSetId,input.tenantId);
-    if(source.tenant_id!==input.tenantId)throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND","Exact source scope is required.");
-    if(source.tenant_id===null){
-      if(!this.nativePolicy)throw new AuthoringPolicyError("PRODUCT_AUTHORING_AUTHORITY_REQUIRED","Install the independently governed product-host admission path before product commands.");
-      await this.nativePolicy.admit(tx,{...input,entityId:string(source,"entity_id")},"write");
+  private async admitLegacyProductCommand(
+    tx: Transaction<Database>,
+    input: {
+      changeSetId: string;
+      actorId: string;
+      tenantId: string | null;
+      batch: unknown;
+    },
+  ) {
+    const source = await assertLegacyCommandSource(
+      tx,
+      input.changeSetId,
+      input.tenantId,
+    );
+    if (source.tenant_id !== input.tenantId)
+      throw new AuthoringPolicyError(
+        "AUTHORING_DRAFT_NOT_FOUND",
+        "Exact source scope is required.",
+      );
+    if (source.tenant_id === null) {
+      if (!this.nativePolicy)
+        throw new AuthoringPolicyError(
+          "PRODUCT_AUTHORING_AUTHORITY_REQUIRED",
+          "Install the independently governed product-host admission path before product commands.",
+        );
+      await this.nativePolicy.admit(
+        tx,
+        { ...input, entityId: string(source, "entity_id") },
+        "write",
+      );
     }
   }
-  async executeReferenceCommands(input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
-    if(!this.referencePolicy)throw new AuthoringPolicyError("REFERENCE_AUTHORING_NOT_CONFIGURED","Host budget evidence required");
-    const policy=this.referencePolicy;
-    return atomic(this.database,async tx=>{
+  async executeReferenceCommands(input: {
+    changeSetId: string;
+    actorId: string;
+    tenantId: string | null;
+    batch: unknown;
+  }) {
+    if (!this.referencePolicy)
+      throw new AuthoringPolicyError(
+        "REFERENCE_AUTHORING_NOT_CONFIGURED",
+        "Host budget evidence required",
+      );
+    const policy = this.referencePolicy;
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT normalized_reference_batch`.execute(tx);
-      try{await this.admitLegacyProductCommand(tx,input);const result=await saveReferenceCommands(tx,input,policy,(revision,kind)=>captureDraftSave(tx,input.changeSetId,revision,input.actorId,kind));await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);return result;}
-      catch(error){await sql`ROLLBACK TO SAVEPOINT normalized_reference_batch`.execute(tx);await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);throw error;}
+      try {
+        await this.admitLegacyProductCommand(tx, input);
+        const result = await saveReferenceCommands(
+          tx,
+          input,
+          policy,
+          (revision, kind) =>
+            captureDraftSave(
+              tx,
+              input.changeSetId,
+              revision,
+              input.actorId,
+              kind,
+            ),
+        );
+        await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT normalized_reference_batch`.execute(tx);
+        await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);
+        throw error;
+      }
     });
   }
-  async executeLabelCommands(input: {changeSetId: string; actorId: string; tenantId: string | null; batch: unknown}) {
-    if (!this.normalizedPolicy) throw new AuthoringPolicyError("NORMALIZED_AUTHORING_NOT_CONFIGURED", "Host locale and budget evidence is required");
+  async executeLabelCommands(input: {
+    changeSetId: string;
+    actorId: string;
+    tenantId: string | null;
+    batch: unknown;
+  }) {
+    if (!this.normalizedPolicy)
+      throw new AuthoringPolicyError(
+        "NORMALIZED_AUTHORING_NOT_CONFIGURED",
+        "Host locale and budget evidence is required",
+      );
     const policy = this.normalizedPolicy;
-    return atomic(this.database, async tx => {
+    return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT normalized_label_batch`.execute(tx);
       try {
         await this.admitLegacyProductCommand(tx, input);
-        const result = await saveLabelCommands(tx, input, policy, (revision, kind) => captureDraftSave(tx, input.changeSetId, revision, input.actorId, kind));
+        const result = await saveLabelCommands(
+          tx,
+          input,
+          policy,
+          (revision, kind) =>
+            captureDraftSave(
+              tx,
+              input.changeSetId,
+              revision,
+              input.actorId,
+              kind,
+            ),
+        );
         await sql`RELEASE SAVEPOINT normalized_label_batch`.execute(tx);
         return result;
       } catch (error) {
@@ -424,8 +863,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     if (!row) return null;
     if (sha256(row.graph) !== row.graph_hash)
       throw new AuthoringConflictError("Saved history integrity check failed");
-    if ((row.graph as {contractSchema: string}).contractSchema === "athyper.meta-entity-contract/2.4")
-      throw new AuthoringPolicyError("NATIVE_AUTHORING_READER_REQUIRED", "Use the versioned native reader; history cannot be decoded as legacy metadata.");
+    if (
+      (row.graph as { contractSchema: string }).contractSchema ===
+      "athyper.meta-entity-contract/2.4"
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_READER_REQUIRED",
+        "Use the versioned native reader; history cannot be decoded as legacy metadata.",
+      );
     return row.graph;
   }
   async forkDraft(input: { sourceChangeSetId: string; actorId: string }) {
@@ -480,8 +925,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     if (!/^[a-z][a-z0-9_]{1,62}$/.test(input.entityCode))
       throw new TypeError("Canonical entity code required");
     const registration = parseEntityRegistration(input.registration);
-    if (input.productBase && (!input.tenantId || registration || input.baseRelease))
-      throw new AuthoringPolicyError("FORBIDDEN", "Product ancestry requires an isolated tenant knowledge draft");
+    if (
+      input.productBase &&
+      (!input.tenantId || registration || input.baseRelease)
+    )
+      throw new AuthoringPolicyError(
+        "FORBIDDEN",
+        "Product ancestry requires an isolated tenant knowledge draft",
+      );
     if (registration && !input.tenantId)
       throw new AuthoringPolicyError(
         "FORBIDDEN",
@@ -492,7 +943,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         tx,
       );
       if (input.productBase)
-        await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`system-entity-release:${input.entityId}`},0))`.execute(tx);
+        await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`system-entity-release:${input.entityId}`},0))`.execute(
+          tx,
+        );
       if (registration) {
         // Inserts only a draft identity. Conflicts fail; no existing identity,
         // publication, grant, or retired row is reactivated.
@@ -537,7 +990,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           );
       }
       if (input.productBase) {
-        const base = (await sql`SELECT r.id FROM metadata.entity_release r
+        const base = (
+          await sql`SELECT r.id FROM metadata.entity_release r
           JOIN metadata.entity_change_set c ON c.id=r.change_set_id AND c.tenant_id IS NULL
           WHERE r.id=${input.productBase.releaseId}::uuid AND r.release_hash=${input.productBase.releaseHash}
             AND r.entity_id=${input.entityId}::uuid AND r.tenant_id IS NULL
@@ -545,8 +999,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
             AND r.contract_signature IS NOT NULL AND r.signature_algorithm='Ed25519'
             AND c.approved_by IS NOT NULL AND c.approved_by<>c.created_by AND c.approved_by IS DISTINCT FROM c.submitted_by
             AND NOT EXISTS(SELECT 1 FROM metadata.entity_release newer WHERE newer.entity_id=r.entity_id
-              AND newer.tenant_id IS NULL AND newer.release_no>r.release_no)`.execute(tx)).rows;
-        if (base.length !== 1) throw new AuthoringConflictError("The pinned product predecessor changed");
+              AND newer.tenant_id IS NULL AND newer.release_no>r.release_no)`.execute(
+            tx,
+          )
+        ).rows;
+        if (base.length !== 1)
+          throw new AuthoringConflictError(
+            "The pinned product predecessor changed",
+          );
       }
       const result =
         await sql<ChangeSetRow>`INSERT INTO metadata.entity_change_set(id,tenant_id,entity_id,change_set_code,branch_code,title,created_by,base_release_id)
@@ -569,7 +1029,11 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async loadGraph(id: string): Promise<MetaEntityGraph> {
     return this.loadGraphParts(id, false);
   }
-  private async loadGraphParts(id: string, native: boolean, expanded = false): Promise<MetaEntityGraph> {
+  private async loadGraphParts(
+    id: string,
+    native: boolean,
+    expanded = false,
+  ): Promise<MetaEntityGraph> {
     const header = required(
       (
         await sql<EntityHeaderRow>`SELECT e.entity_code,e.entity_class,e.ownership_model,to_jsonb(cs) AS label_root FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${id}::uuid`.execute(
@@ -577,12 +1041,32 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         )
       ).rows[0],
     );
-    if (header.label_root?.native_core_layout_version != null && ![1, 2].includes(header.label_root.native_core_layout_version))
-      throw new AuthoringPolicyError("NATIVE_AUTHORING_VERSION_UNSUPPORTED", "Unknown source versions cannot use a legacy decoder.");
-    if (([1, 2].includes(header.label_root?.native_core_layout_version ?? 0)) !== native)
-      throw new AuthoringPolicyError(native ? "NATIVE_AUTHORING_SOURCE_NOT_INITIALIZED" : "NATIVE_AUTHORING_READER_REQUIRED", "The reader must match the declared source version.");
-    if (native && (header.label_root?.native_core_layout_version === 2) !== expanded)
-      throw new AuthoringPolicyError('NATIVE_AUTHORING_VERSION_UNSUPPORTED', 'The native reader must match the declared branch inventory.');
+    if (
+      header.label_root?.native_core_layout_version != null &&
+      ![1, 2].includes(header.label_root.native_core_layout_version)
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_VERSION_UNSUPPORTED",
+        "Unknown source versions cannot use a legacy decoder.",
+      );
+    if (
+      [1, 2].includes(header.label_root?.native_core_layout_version ?? 0) !==
+      native
+    )
+      throw new AuthoringPolicyError(
+        native
+          ? "NATIVE_AUTHORING_SOURCE_NOT_INITIALIZED"
+          : "NATIVE_AUTHORING_READER_REQUIRED",
+        "The reader must match the declared source version.",
+      );
+    if (
+      native &&
+      (header.label_root?.native_core_layout_version === 2) !== expanded
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_AUTHORING_VERSION_UNSUPPORTED",
+        "The native reader must match the declared branch inventory.",
+      );
     const rows = async (table: GraphTable) => {
       const result =
         table === "entity_class_profile"
@@ -591,34 +1075,64 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
             )
           : table === "entity_relation_target"
             ? await sql<JsonRow>`SELECT to_jsonb(t) || jsonb_build_object('target_entity_code',e.entity_code) AS value FROM metadata.entity_relation_target t JOIN metadata.entity e ON e.id=t.target_entity_id
-              WHERE t.change_set_id=${id}::uuid ORDER BY t.id`.execute(this.database)
-          : table === "entity_materialization_field_mapping"
-            ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
+              WHERE t.change_set_id=${id}::uuid ORDER BY t.id`.execute(
+                this.database,
+              )
+            : table === "entity_materialization_field_mapping"
+              ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
               JOIN metadata.entity_materialization_binding b ON b.id=t.entity_materialization_binding_id
                 AND b.tenant_id IS NOT DISTINCT FROM t.tenant_id
               WHERE b.change_set_id=${id}::uuid ORDER BY t.id`.execute(
-                this.database,
-              )
-            : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
-                this.database,
-              );
+                  this.database,
+                )
+              : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
+                  this.database,
+                );
       return result.rows.map((row) => object(row.value));
     };
-    const branch = async <T extends object>(table: GraphTable): Promise<T[]> => {
-      if (expanded && table === 'entity_operation') return [];
-      if (native && ["entity_field", "entity_runtime_profile", "entity_surface", "entity_surface_section", "entity_surface_field_binding"].includes(table)) return [];
-      return (await rows(table)).map(row => decodeRow<T>(row, BRANCH_COLUMNS[table]));
+    const branch = async <T extends object>(
+      table: GraphTable,
+    ): Promise<T[]> => {
+      if (expanded && table === "entity_operation") return [];
+      if (
+        native &&
+        [
+          "entity_field",
+          "entity_runtime_profile",
+          "entity_surface",
+          "entity_surface_section",
+          "entity_surface_field_binding",
+        ].includes(table)
+      )
+        return [];
+      return (await rows(table)).map((row) =>
+        decodeRow<T>(row, BRANCH_COLUMNS[table]),
+      );
     };
-    const ownedLabels = header.label_root?.default_locale ? await loadNormalizedLabels(this.database, id) : null;
-    const referenceMembers = header.label_root?.reference_contract_version ? await loadReferenceMembers(this.database,id) : null;
-    const fieldIdentities = referenceMembers ? await loadFieldIdentities(this.database,id) : undefined;
+    const ownedLabels = header.label_root?.default_locale
+      ? await loadNormalizedLabels(this.database, id)
+      : null;
+    const referenceMembers = header.label_root?.reference_contract_version
+      ? await loadReferenceMembers(this.database, id)
+      : null;
+    const fieldIdentities = referenceMembers
+      ? await loadFieldIdentities(this.database, id)
+      : undefined;
     return {
-      ...(referenceMembers ? {referenceMembers,fieldIdentities} : {}),
+      ...(referenceMembers ? { referenceMembers, fieldIdentities } : {}),
       ...(ownedLabels ? { ownedLabels } : {}),
-      contractSchema: referenceMembers ? "athyper.meta-entity-contract/2.3" : ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1",
+      contractSchema: referenceMembers
+        ? "athyper.meta-entity-contract/2.3"
+        : ownedLabels
+          ? "athyper.meta-entity-contract/2.2"
+          : "athyper.meta-entity-contract/2.1",
       entity: {
         entityCode: string(header, "entity_code"),
-        ...(native && header.label_root?.entity_label_id !== undefined && header.label_root?.entity_label_id !== null ? {entityLabelId: header.label_root.entity_label_id} : {}),
+        ...(native &&
+        header.label_root?.entity_label_id !== undefined &&
+        header.label_root?.entity_label_id !== null
+          ? { entityLabelId: header.label_root.entity_label_id }
+          : {}),
         entityClass: string(header, "entity_class"),
         ownershipModel: string(header, "ownership_model"),
       },
@@ -663,9 +1177,12 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         const context = object(row["input_context"]);
         return {
           key: String(row["test_key"]),
-          assertion: (context["assertion"] === "learning_fixture_set" ? "learning_fixture_set" : context["assertion"] === "path_equals"
-            ? "path_equals"
-            : "path_exists") as "learning_fixture_set" | "path_exists" | "path_equals",
+          assertion: (context["assertion"] === "learning_fixture_set"
+            ? "learning_fixture_set"
+            : context["assertion"] === "path_equals"
+              ? "path_equals"
+              : "path_exists") as
+            "learning_fixture_set" | "path_exists" | "path_equals",
           path: String(context["path"] ?? ""),
           ...(context["expected"] !== undefined
             ? { expected: context["expected"] }
@@ -677,9 +1194,13 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async replaceGraph(
     input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
   ) {
-    return atomic(this.database, async tx => {
+    return atomic(this.database, async (tx) => {
       await replaceGraphInTransaction(tx, input);
-      return required(await new KyselyMetaEntityAuthoringRepository(tx).get(input.changeSetId));
+      return required(
+        await new KyselyMetaEntityAuthoringRepository(tx).get(
+          input.changeSetId,
+        ),
+      );
     });
   }
   /** Keeps imported draft creation and graph replacement inside the transfer transaction. */
@@ -857,10 +1378,19 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       // Tenant knowledge drafts may reference a shared product identity. They
       // cannot enter the legacy full-entity publication path: compiled extension
       // delivery and runtime ancestry admission must be registered first.
-      const sharedProduct = (await sql<{ shared_product: boolean }>`SELECT EXISTS(SELECT 1 FROM metadata.entity
-        WHERE id=${cs["entity_id"]}::uuid AND tenant_id IS NULL AND ownership_model='system') AS shared_product`.execute(tx)).rows[0];
+      const sharedProduct = (
+        await sql<{
+          shared_product: boolean;
+        }>`SELECT EXISTS(SELECT 1 FROM metadata.entity
+        WHERE id=${cs["entity_id"]}::uuid AND tenant_id IS NULL AND ownership_model='system') AS shared_product`.execute(
+          tx,
+        )
+      ).rows[0];
       if (sharedProduct?.shared_product)
-        throw new AuthoringPolicyError("LEARNING_EXTENSION_PUBLICATION_UNAVAILABLE", "Tenant product extensions require qualified compiled publication and runtime ancestry admission");
+        throw new AuthoringPolicyError(
+          "LEARNING_EXTENSION_PUBLICATION_UNAVAILABLE",
+          "Tenant product extensions require qualified compiled publication and runtime ancestry admission",
+        );
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${cs["tenant_id"] ?? "global"}:${cs["entity_id"]}`},0))`.execute(
         tx,
       );
@@ -922,17 +1452,29 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async getSignedRelease(id: string) {
     // Coordinated recovery must redispatch the originally signed native graph,
     // not pair its signature with a target-specific descriptor or SQL ledger hash.
-    const native = (await sql<{ contract_json: MetaEntityGraph; contract_signature: string;
-      signature_algorithm: string; signing_key_id: string }>`SELECT s.contract_json,r.contract_signature,
+    const native = (
+      await sql<{
+        contract_json: MetaEntityGraph;
+        contract_signature: string;
+        signature_algorithm: string;
+        signing_key_id: string;
+      }>`SELECT s.contract_json,r.contract_signature,
       r.signature_algorithm,r.signing_key_id FROM metadata.entity_release r
       JOIN snapshot.entity_contract_revision s ON s.id=r.revision_id AND s.entity_id=r.entity_id AND s.tenant_id IS NULL
       JOIN publication.entity_release_link l ON l.entity_release_id=r.id
       JOIN publication.release p ON p.id=l.publication_release_id
       WHERE r.id=${id}::uuid AND r.tenant_id IS NULL AND p.tenant_id=shared.current_tenant_id_soft()
-        AND p.metadata ? 'humanExecutionPolicy' AND r.published_by=master.current_principal_id_soft()`
-      .execute(this.database)).rows[0];
-    if (native) return { ...compileGraph(native.contract_json), signature: native.contract_signature,
-      signatureAlgorithm: native.signature_algorithm, signingKeyId: native.signing_key_id };
+        AND p.metadata ? 'humanExecutionPolicy' AND r.published_by=master.current_principal_id_soft()`.execute(
+        this.database,
+      )
+    ).rows[0];
+    if (native)
+      return {
+        ...compileGraph(native.contract_json),
+        signature: native.contract_signature,
+        signatureAlgorithm: native.signature_algorithm,
+        signingKeyId: native.signing_key_id,
+      };
     const result =
       await sql<ArtifactRow>`SELECT r.contract_hash,r.signature_algorithm,r.signing_key_id,r.contract_signature,a.compiled_hash,a.compiled_json FROM metadata.entity_release r JOIN snapshot.entity_release_artifact a ON a.source_release_id=r.id WHERE r.id=${id}::uuid ORDER BY a.plane_key LIMIT 1`.execute(
         this.database,
@@ -996,19 +1538,47 @@ async function replaceGraphInTransaction(
   db: Kysely<Database>,
   input: Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],
 ) {
-  input = { ...input, graph: normalizeGraphStorageOrder(await bindCanonicalRelationTargets(db, input.changeSetId, input.graph)) };
-  try { assertCanonicalRelationAuthoring(input.graph); } catch (error) {
-    throw new AuthoringPolicyError("ENTITY_RELATION_AUTHORING_INVALID", (error as Error).message);
+  input = {
+    ...input,
+    graph: normalizeGraphStorageOrder(
+      await bindCanonicalRelationTargets(db, input.changeSetId, input.graph),
+    ),
+  };
+  try {
+    assertCanonicalRelationAuthoring(input.graph);
+  } catch (error) {
+    throw new AuthoringPolicyError(
+      "ENTITY_RELATION_AUTHORING_INVALID",
+      (error as Error).message,
+    );
   }
-  if(input.graph.referenceMembers!==undefined){if(canonicalJson(await loadReferenceMembers(db,input.changeSetId))!==canonicalJson(input.graph.referenceMembers)||canonicalJson(await loadFieldIdentities(db,input.changeSetId))!==canonicalJson(input.graph.fieldIdentities))throw new AuthoringPolicyError("NORMALIZED_COMMAND_REQUIRED","Use typed commands to change normalized reference members");}
+  if (input.graph.referenceMembers !== undefined) {
+    if (
+      canonicalJson(await loadReferenceMembers(db, input.changeSetId)) !==
+        canonicalJson(input.graph.referenceMembers) ||
+      canonicalJson(await loadFieldIdentities(db, input.changeSetId)) !==
+        canonicalJson(input.graph.fieldIdentities)
+    )
+      throw new AuthoringPolicyError(
+        "NORMALIZED_COMMAND_REQUIRED",
+        "Use typed commands to change normalized reference members",
+      );
+  }
   if (input.graph.ownedLabels !== undefined) {
     const stored = await loadNormalizedLabels(db, input.changeSetId);
-    if (canonicalJson(stored) !== canonicalJson(input.graph.ownedLabels)) throw new AuthoringPolicyError("NORMALIZED_COMMAND_REQUIRED", "Use typed commands to change normalized labels");
+    if (canonicalJson(stored) !== canonicalJson(input.graph.ownedLabels))
+      throw new AuthoringPolicyError(
+        "NORMALIZED_COMMAND_REQUIRED",
+        "Use typed commands to change normalized labels",
+      );
   }
   const validation = validateGraph(input.graph);
   if (validation.issues.length) {
     const issue = validation.issues[0]!;
-    throw new AuthoringPolicyError("ENTITY_GRAPH_INVALID", `${issue.path}: ${issue.message}`);
+    throw new AuthoringPolicyError(
+      "ENTITY_GRAPH_INVALID",
+      `${issue.path}: ${issue.message}`,
+    );
   }
   if (input.graph.classProfiles?.length) {
     const classRow = required(
@@ -1027,20 +1597,41 @@ async function replaceGraphInTransaction(
         "Entity class profiles are immutable platform-owned defaults",
       );
   }
-  const locked = required((await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${input.changeSetId}::uuid FOR UPDATE OF cs`.execute(db)).rows[0]);
+  const locked = required(
+    (
+      await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${input.changeSetId}::uuid FOR UPDATE OF cs`.execute(
+        db,
+      )
+    ).rows[0],
+  );
   if (locked.native_core_layout_version != null)
-    throw new AuthoringPolicyError("NATIVE_AUTHORING_COMMAND_REQUIRED", "Legacy graph replacement cannot mutate a native source.");
+    throw new AuthoringPolicyError(
+      "NATIVE_AUTHORING_COMMAND_REQUIRED",
+      "Legacy graph replacement cannot mutate a native source.",
+    );
   if (locked.entity_code !== input.graph.entity.entityCode)
-    throw new AuthoringPolicyError("AUTHORING_ENTITY_IDENTITY_MISMATCH", "The graph must belong to the locked draft entity.");
+    throw new AuthoringPolicyError(
+      "AUTHORING_ENTITY_IDENTITY_MISMATCH",
+      "The graph must belong to the locked draft entity.",
+    );
   if (Number(locked.lock_version) !== input.expectedRevision)
-    throw new AuthoringConflictError("Stale authoring revision; reload before retrying");
+    throw new AuthoringConflictError(
+      "Stale authoring revision; reload before retrying",
+    );
   if (locked.status !== "draft" && locked.status !== "rejected")
-    throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_EDITABLE", "Only draft or rejected graphs can be edited.");
+    throw new AuthoringPolicyError(
+      "AUTHORING_DRAFT_NOT_EDITABLE",
+      "Only draft or rejected graphs can be edited.",
+    );
   input = {
     ...input,
     graph: {
       ...input.graph,
-      operations: await preserveOperationProtectedState(db, input.changeSetId, input.graph.operations),
+      operations: await preserveOperationProtectedState(
+        db,
+        input.changeSetId,
+        input.graph.operations,
+      ),
     },
   };
   const coordinate = {
@@ -1049,7 +1640,10 @@ async function replaceGraphInTransaction(
     change_set_id: input.changeSetId,
     created_by: input.actorId,
   };
-  const branches: [Exclude<GraphTable, "entity_class_profile">, readonly object[] | undefined][] = [
+  const branches: [
+    Exclude<GraphTable, "entity_class_profile">,
+    readonly object[] | undefined,
+  ][] = [
     ["entity_runtime_profile", input.graph.runtimeProfiles],
     ["entity_field", input.graph.fields],
     ["entity_key", input.graph.keys],
@@ -1064,23 +1658,14 @@ async function replaceGraphInTransaction(
     ["entity_operation", input.graph.operations],
     ["entity_operation_permission", input.graph.operationPermissions],
     ["entity_operation_rule", input.graph.operationRules],
-    [
-      "entity_operation_scope_binding",
-      input.graph.operationScopeBindings,
-    ],
+    ["entity_operation_scope_binding", input.graph.operationScopeBindings],
     ["entity_change_case_binding", input.graph.changeCaseBindings],
     [
       "entity_operation_context_requirement",
       input.graph.operationContextRequirements,
     ],
-    [
-      "entity_field_reference_binding",
-      input.graph.fieldReferenceBindings,
-    ],
-    [
-      "entity_materialization_binding",
-      input.graph.materializationBindings,
-    ],
+    ["entity_field_reference_binding", input.graph.fieldReferenceBindings],
+    ["entity_materialization_binding", input.graph.materializationBindings],
     [
       "entity_materialization_field_mapping",
       input.graph.materializationFieldMappings,
@@ -1099,10 +1684,19 @@ async function replaceGraphInTransaction(
       input.graph.lifecycleOperationBindings,
     ],
     ["entity_numbering_binding", input.graph.numberingBindings],
-    ["entity_contract_test_case", input.graph.tests?.map(test => ({
-      testKey: test.key, testKind: "compilation", title: test.key,
-      inputContext: { assertion: test.assertion, path: test.path, ...(test.expected !== undefined ? { expected: test.expected } : {}) },
-    }))],
+    [
+      "entity_contract_test_case",
+      input.graph.tests?.map((test) => ({
+        testKey: test.key,
+        testKind: "compilation",
+        title: test.key,
+        inputContext: {
+          assertion: test.assertion,
+          path: test.path,
+          ...(test.expected !== undefined ? { expected: test.expected } : {}),
+        },
+      })),
+    ],
   ];
   const plans = await readReconciliationPlans(db, input.changeSetId, branches);
   if (!plans.some(changed)) return;
@@ -1122,12 +1716,21 @@ async function replaceGraphInTransaction(
       });
   if (Number(advanced.rows[0]?.["revision"]) !== input.expectedRevision + 1)
     throw new AuthoringConflictError("Stale authoring revision");
-  await captureDraftSave(db, input.changeSetId, input.expectedRevision, input.actorId, "previous");
+  await captureDraftSave(
+    db,
+    input.changeSetId,
+    input.expectedRevision,
+    input.actorId,
+    "previous",
+  );
   await writeReconciliationPlans(db, plans, coordinate);
   await sql`SELECT metadata.fn_validate_entity_graph(${input.changeSetId}::uuid)`.execute(
     db,
   );
-  if(locked.reference_contract_version===1)await sql`SELECT metadata.validate_reference_members(${input.changeSetId}::uuid)`.execute(db);
+  if (locked.reference_contract_version === 1)
+    await sql`SELECT metadata.validate_reference_members(${input.changeSetId}::uuid)`.execute(
+      db,
+    );
   await captureDraftSave(
     db,
     input.changeSetId,
@@ -1136,11 +1739,28 @@ async function replaceGraphInTransaction(
     "saved",
   );
 }
-async function assertLegacyCommandSource(db: Kysely<Database>, id: string, tenant: string | null) {
-  const row = (await sql<{source: Record<string, unknown>}>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${id}::uuid AND tenant_id IS NOT DISTINCT FROM ${tenant}::uuid FOR UPDATE`.execute(db)).rows[0];
-  if (!row) throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND", "Scoped source unavailable.");
+async function assertLegacyCommandSource(
+  db: Kysely<Database>,
+  id: string,
+  tenant: string | null,
+) {
+  const row = (
+    await sql<{
+      source: Record<string, unknown>;
+    }>`SELECT to_jsonb(cs) AS source FROM metadata.entity_change_set cs WHERE id=${id}::uuid AND tenant_id IS NOT DISTINCT FROM ${tenant}::uuid FOR UPDATE`.execute(
+      db,
+    )
+  ).rows[0];
+  if (!row)
+    throw new AuthoringPolicyError(
+      "AUTHORING_DRAFT_NOT_FOUND",
+      "Scoped source unavailable.",
+    );
   if (row.source.native_core_layout_version != null)
-    throw new AuthoringPolicyError("NATIVE_AUTHORING_COMMAND_REQUIRED", "Native labels/reference editing requires a version-aware complete snapshot protocol.");
+    throw new AuthoringPolicyError(
+      "NATIVE_AUTHORING_COMMAND_REQUIRED",
+      "Native labels/reference editing requires a version-aware complete snapshot protocol.",
+    );
   return row.source;
 }
 async function captureDraftSave(

@@ -13,13 +13,13 @@ The Entity Studio blueprint remains the design authority. This dependency-based
 sequence supersedes the earlier chat-only six-activity ordering. Scope/sequencing
 is authorized by the owner; it is not release approval or a passed qualification.
 
-| Milestone | Work and dependencies | Accountable engineering role | Named assignee / target date | Concrete exit evidence |
-| --- | --- | --- | --- | --- |
-| M1 — governed bootstrap/product writes | Compose the existing authenticated governance capability with typed commands and the actual NULL-tenant DB role/RLS/function path. Bootstrap uses the existing API/CLI; a published composer UI is not its prerequisite. | Platform/tenant governance maintainer; shared authoring persistence maintainer | Pending owner assignment / pending target date; requested 2026-10-07 | Actual application-role authorized command commits canonical rows and immutable history; revoked/forged scope and unauthorized direct DML reject. Independent author/reviewer separation proved through existing governance. No superuser receipt substitutes for this proof. |
-| P — parallel preparation | Review label mappings, identity correspondence and ownership provenance; build host composition and F6/F8 adapters. Does not wait on M1 for pure preparation; applying changes does. | Shared authoring maintainer; identity/migration maintainer; storage/provider maintainer; authorization-framework maintainer | Pending named assignments / dates | Exact-source proposals, coverage findings, typed adapters and meaningful positive/negative tests. These do not clear enrollment or live-read gates. |
-| M2 — canonical enrollment | Apply source ownership, stable identities and labels through qualified commands after M1 and each command's actual dependencies. Do not impose a blanket ownership-before-label dependency where the legacy command contract does not require it. | Shared authoring persistence maintainer; identity/migration maintainer with authorization reviewer | Pending owner assignment / pending target date | Both actual drafts have canonical owned labels, validated field identities and source provenance; revision/conflict/replay/rollback and original-history preservation pass. |
-| M3 — native conversion and compiler/reader proof | Depends on complete M2 resource/ownership enrollment and installed required dependencies. | Shared authoring/compiler maintainer | Pending owner assignment / pending target date | Both actual graphs convert atomically; exact native readback, immutable pre/post history, whole-release compile and reader compatibility pass. Pending cutover constraints change only through the qualified forward migration. |
-| M4 — publish host and qualify deployed reads | Depends on M3 plus installed F6/F8 resources and F9 mappings. Publish/activate through independent governance. F5 additionally gates production. | Host/plane maintainer; F6 storage/provider maintainer with platform governance review; F8 authorization-framework maintainer; F9 identity/migration maintainer | Pending named assignments / dates | Exact approved resource/release hashes, signed publication/activation evidence and authenticated positive/negative deployed tests, including revocation, plane lag and unmappable legacy pins. |
+| Milestone                                        | Work and dependencies                                                                                                                                                                                                                             | Accountable engineering role                                                                                                                                   | Named assignee / target date                                         | Concrete exit evidence                                                                                                                                                                                                                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1 — governed bootstrap/product writes           | Compose the existing authenticated governance capability with typed commands and the actual NULL-tenant DB role/RLS/function path. Bootstrap uses the existing API/CLI; a published composer UI is not its prerequisite.                          | Platform/tenant governance maintainer; shared authoring persistence maintainer                                                                                 | Pending owner assignment / pending target date; requested 2026-10-07 | Actual application-role authorized command commits canonical rows and immutable history; revoked/forged scope and unauthorized direct DML reject. Independent author/reviewer separation proved through existing governance. No superuser receipt substitutes for this proof. |
+| P — parallel preparation                         | Review label mappings, identity correspondence and ownership provenance; build host composition and F6/F8 adapters. Does not wait on M1 for pure preparation; applying changes does.                                                              | Shared authoring maintainer; identity/migration maintainer; storage/provider maintainer; authorization-framework maintainer                                    | Pending named assignments / dates                                    | Exact-source proposals, coverage findings, typed adapters and meaningful positive/negative tests. These do not clear enrollment or live-read gates.                                                                                                                           |
+| M2 — canonical enrollment                        | Apply source ownership, stable identities and labels through qualified commands after M1 and each command's actual dependencies. Do not impose a blanket ownership-before-label dependency where the legacy command contract does not require it. | Shared authoring persistence maintainer; identity/migration maintainer with authorization reviewer                                                             | Pending owner assignment / pending target date                       | Both actual drafts have canonical owned labels, validated field identities and source provenance; revision/conflict/replay/rollback and original-history preservation pass.                                                                                                   |
+| M3 — native conversion and compiler/reader proof | Depends on complete M2 resource/ownership enrollment and installed required dependencies.                                                                                                                                                         | Shared authoring/compiler maintainer                                                                                                                           | Pending owner assignment / pending target date                       | Both actual graphs convert atomically; exact native readback, immutable pre/post history, whole-release compile and reader compatibility pass. Pending cutover constraints change only through the qualified forward migration.                                               |
+| M4 — publish host and qualify deployed reads     | Depends on M3 plus installed F6/F8 resources and F9 mappings. Publish/activate through independent governance. F5 additionally gates production.                                                                                                  | Host/plane maintainer; F6 storage/provider maintainer with platform governance review; F8 authorization-framework maintainer; F9 identity/migration maintainer | Pending named assignments / dates                                    | Exact approved resource/release hashes, signed publication/activation evidence and authenticated positive/negative deployed tests, including revocation, plane lag and unmappable legacy pins.                                                                                |
 
 **Publication roles:** Platform Admin proposes; Platform Owner independently
 reviews. These roles do not replace the engineering owners above. Assignments and
@@ -99,6 +99,80 @@ security. These cannot be bypassed by an authoring token or a successful callbac
 M1 still needs the governed bootstrap service/CLI composition and qualified scoped
 product database authority. No DEV grants, product rows, history, ownership,
 protected-state initialization or activation changed in this checkpoint.
+
+### Scoped application-role label-write candidate — 2026-10-07
+
+The shared package now implements `createProductCommandAuthority` and
+`createProductLabelEnrollment`. The latter derives actor coordinates from the
+verified request context, executes the existing repository in a serializable
+application transaction and requires the host's transactional audit callback.
+No new route, permission code, MFA behavior or publication approval is added.
+The governance resolver is a required installed port, with no default allow.
+
+The SQL installation candidate separates issuer, application and NOLOGIN owner
+roles. Private admission tokens are stored only as hashes. Consumption checks the
+exact login/request/actor/authority tenant and binds access to a transaction and
+backend for at most 60 seconds. Application credentials cannot issue admissions;
+issuer or superuser sessions cannot consume them. Fixed table/column policies
+limit writes to labels, locale settings, revision advancement, command receipts
+and snapshots in the admitted product draft. Existing canonical graph/history
+checks remain in force. Service replay obtains fresh governance authorization.
+A transaction that already consumes an admission holds its row lock: concurrent
+revocation waits for transaction completion rather than cancelling it midway.
+
+Validation: the expanded canonical PostgreSQL rehearsal uses separate non-admin
+issuer and application logins. It commits a label enrollment, replays it without
+another revision, and rejects revoked governance/admissions, forged actor/session
+settings, unadmitted direct writes, admission issuance by the application and
+writes to another draft. An unavailable transactional audit callback rejects and rolls back initial
+enrollment. A failed subsequent canonical label command rolls back members,
+revision, receipt and saved history. The issuer's governance resolver,
+actors and role composition remain explicit fixtures; these are database mechanism
+proofs, not installed governance or independent human approval evidence.
+
+Ordinary verification: 790 authoring tests pass, with six opt-in exclusions;
+the PostgreSQL rehearsal above passes separately. Source and focused test
+typechecks, generated foundation checks and whitespace checks pass.
+
+Audit corrections for this candidate:
+
+- Admission is **scope enforcement**, not SQL-effect attestation. The rehearsal deliberately applies a different in-scope label mutation under a valid admission and rolls it back. Exact effects depend on the trusted canonical writer/audit path.
+- A rollback undoes token consumption. A simulated process failure proves reuse before expiry when separate revocation did not run; a committed consumption, explicit revocation and expiration each reject reuse. Concurrent revocation waits on an already consuming transaction.
+- Cleanup failure now raises `ProductCommandCleanupError` with code `PRODUCT_COMMAND_REVOCATION_FAILED`. Confirmed commits carry `outcome=committed` and the result; failed/unacknowledged transactions carry `outcome=unconfirmed` and the original failure. Raw cleanup errors/tokens are not exposed. The canonical enrollment test commits despite a failed revoke, then recovers the same result through fresh governance and the same idempotency key, without another revision. Unit tests cover execution failure and lost COMMIT acknowledgement as well.
+- The fresh-install SQL preflight rejects existing candidate roles/schema before mutation. Re-running the raw candidate fails explicitly; an eventual applied migration replays through the existing hash-pinned ledger. No `IF NOT EXISTS` adoption of unknown role privileges is permitted.
+- The fixture no longer grants `SELECT ON ALL TABLES`. Its read grant is the existing `BRANCH_COLUMNS` legacy-reader inventory plus `metadata.entity`; these fixture reads still do not qualify deployed RLS.
+
+The installation privilege inventory to qualify is:
+
+| Consumer                     | Required surface                                                                                                                                       | Qualification boundary                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Isolated governance issuer   | Column-limited INSERT into private admissions; bounded revoke routine                                                                                  | Installed governance binding, current human authority, isolated credentials; never application-role membership           |
+| Command application          | Candidate enter/admitted routines; revision advance/current-actor functions, canonical UUID allocation and principal-context functions                 | Explicit function ACL/ownership/search-path inspection; do not rely on fixture PUBLIC defaults                           |
+| Canonical graph reader       | `metadata.entity`, legacy `BRANCH_COLUMNS` tables including class profiles and relation targets, plus candidate root/labels/receipts and saved history | Review precise table/column and row-scope policies; qualify referenced entities separately; no blanket schema read grant |
+| Canonical label writer       | Root revision/attribution/locale columns; label/translation DML; command-receipt and immutable-history INSERT                                          | Candidate RLS plus canonical guards; no ownership, identity, operation, review or publication writes                     |
+| Transactional audit recorder | Existing audit contract and its actual function/table grants                                                                                           | Same application transaction; record failure rolls back the command                                                      |
+
+CI verification for the audit correction used explicit formatting base
+`2f1f39d25f68d0d62863a4007703273109c5a486`, covering the previous commit as well
+as this candidate. Formatting passes, including the previously stale repository
+file. The full `policy:static` CI profile reports **38/51 passed; 13 failed**:
+i18n, temporal discipline, server boundaries, server rebuild boundaries,
+authorization inventory, frontend spine, foundation phase 1, host capability
+registry, ESLint, OpenAPI, DDL coverage, strict theme-token integrity and CI
+entrypoints. Examples include an unregistered TypeScript ESLint plugin, existing
+HR provisioning cross-package imports, missing DDL manifest enrollment and missing
+`--fail-if-no-match` flags in CI. No gate was skipped, baseline expanded or policy
+weakened. This is not a green-CI claim. Detailed local logs are under
+`~/.athyper/instances/dev/artifacts/static-policy/2026-10-07T15-42-54.288Z-637111/ci/`.
+
+**Remaining M1 work:** wire the actual installed governance binding and trusted
+control-plane context; qualify the precise application read/execute privileges
+and role separation; enroll the candidate in the existing forward-migration
+process; run authenticated positive/negative commands against DEV. The SQL
+candidate has not been applied to DEV and no runtime login has received these
+roles. Actual Country/State Region enrollment, ownership/identity work and
+publication/live-read qualification remain pending. This checkpoint establishes
+application-role canonical writes in a disposable database, not M1 completion.
 
 ## Pilot and integration points
 
@@ -1385,7 +1459,6 @@ There are still nine coarse schema admission blockers (seven pending checks and
 two absent aggregate functions). No Country/State Region draft was enrolled or
 converted, and no release was activated.
 
-
 ### Aggregate snapshot references and versioned reference input (7 October 2026)
 
 The existing repository now applies `validateNativeSnapshotReferences` to current
@@ -1424,7 +1497,6 @@ from this run (no SQL changed). Production/test and native-test typechecks pass;
 generated foundation drift checks pass. The recorded historical v1 descriptor
 hash tests remain unchanged and pass. No skipped test or historical fixture hash
 was changed to accommodate v2.
-
 
 ### Database aggregate guard installation (7 October 2026)
 
@@ -1518,9 +1590,9 @@ Executed against DEV with a 32 MiB source/aggregate-history limit, 1,000-history
 limit and 30-second statement timeout. Evidence is retained privately at
 `~/.athyper/instances/dev/workspace/enrollment-inspection-20261007/sources.json`.
 
-| Source | Draft | Actual repository source hash | Saved history |
-| --- | --- | --- | --- |
-| Country | `28e155d7-9f18-48fd-9f4d-847ff80f7e87` | `259eb6b00119e4f685d43fa72806d78c8845422c4df79b34acc20dc262d12cae` | Two snapshots; checksums valid; current revision 1 matches |
+| Source       | Draft                                  | Actual repository source hash                                      | Saved history                                              |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Country      | `28e155d7-9f18-48fd-9f4d-847ff80f7e87` | `259eb6b00119e4f685d43fa72806d78c8845422c4df79b34acc20dc262d12cae` | Two snapshots; checksums valid; current revision 1 matches |
 | State Region | `9672c64b-b40f-43ce-8a2f-e0fbebd1154e` | `1056cb869b001425762fb5e979f4de91c0f747e824565010bb3018a4a0ead304` | Two snapshots; checksums valid; current revision 1 matches |
 
 Both actual graphs pass legacy validation. Both report exactly these enrollment

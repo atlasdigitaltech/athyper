@@ -139,3 +139,10 @@ export * from "./legacy-enrollment-application.js";
 export * from "./legacy-native-whole-source.js";
 
 export * from "./native-schema-qualification.js";
+export {
+  createProductCommandAuthority,
+  ProductCommandCleanupError,
+  type ProductCommandGovernance,
+  type ProductCommandScope,
+} from "./product-command-authority.js";
+export { createProductLabelEnrollment } from "./product-label-enrollment.js";

@@ -1,7 +1,17 @@
-import {sha256} from "./deterministic.js";
-import type {NativeAuthoringPolicy} from "./native-core-layout-persistence.js";
+import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
+import { createProductLabelEnrollment } from "./product-label-enrollment.js";
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import {
+  createProductCommandAuthority,
+  enterProductCommand,
+  withProductCommandAuthority,
+} from "./product-command-authority.js";
+import { sha256 } from "./deterministic.js";
+import type { NativeAuthoringPolicy } from "./native-core-layout-persistence.js";
 // Synthetic admission only; this disposable superuser fixture cannot qualify product RLS.
-const fixtureProductHost={admit:async()=>{}} as unknown as NativeAuthoringPolicy;
+const fixtureProductHost = {
+  admit: async () => {},
+} as unknown as NativeAuthoringPolicy;
 import {
   referenceFixture,
   referenceFixtureAnchors,
@@ -502,6 +512,377 @@ it.skipIf(!enabled)(
       await sql
         .raw(read("migrations/20261006_entity_owned_label_commands.sql"))
         .execute(db);
+      // Separate database login exercises the actual canonical label writer with
+      // scoped grants. Issuer/governance and broad fixture read grants below are
+      // test composition, NOT installed DEV authority or human approval evidence.
+      await sql
+        .raw(
+          `ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE metadata.entity_change_set FORCE ROW LEVEL SECURITY;
+        ALTER TABLE snapshot.entity_draft_save ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;`,
+        )
+        .execute(db);
+      await sql
+        .raw(
+          readFileSync(
+            new URL("./product-command-authority.sql", import.meta.url),
+            "utf8",
+          ),
+        )
+        .execute(db);
+      await sql
+        .raw(
+          `CREATE ROLE issuer_fixture LOGIN; GRANT athyper_product_command_issuer TO issuer_fixture;
+        CREATE ROLE command_fixture LOGIN; GRANT athyper_product_command_app TO command_fixture;
+
+        ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE metadata.entity_change_set FORCE ROW LEVEL SECURITY;
+        CREATE POLICY fixture_existing_product_read ON metadata.entity_change_set FOR SELECT TO athyperapp USING(tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());
+        ALTER TABLE snapshot.entity_draft_save ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;`,
+        )
+        .execute(db);
+      // Closed legacy-reader table inventory; unrelated/new tables are not granted.
+      await sql`GRANT SELECT ON ${sql.join(["metadata.entity", ...Object.keys(BRANCH_COLUMNS).map((table) => `metadata.${table}`)].map((table) => sql.table(table)))} TO command_fixture`.execute(
+        db,
+      );
+      // A second raw installer invocation must fail before changing existing roles.
+      await expect(
+        sql
+          .raw(
+            readFileSync(
+              new URL("./product-command-authority.sql", import.meta.url),
+              "utf8",
+            ),
+          )
+          .execute(db),
+      ).rejects.toThrow("PRODUCT_COMMAND_INSTALLATION_CONFLICT");
+      const appDb = new Kysely<Record<string, never>>({
+        dialect: new PostgresDialect({
+          pool: new Pool({
+            host: "127.0.0.1",
+            port,
+            user: "command_fixture",
+            database: "postgres",
+            max: 2,
+          }),
+        }),
+      });
+      const issuerDb = new Kysely<Record<string, never>>({
+        dialect: new PostgresDialect({
+          pool: new Pool({
+            host: "127.0.0.1",
+            port,
+            user: "issuer_fixture",
+            database: "postgres",
+            max: 1,
+          }),
+        }),
+      });
+      try {
+        const scope = {
+          authorityTenantId: randomUUID(),
+          actorId: original,
+          changeSetId: randomUUID(),
+        };
+        const productEntityId = randomUUID();
+        await sql`INSERT INTO metadata.entity(id,module_id,entity_code,entity_class,ownership_model,created_by)
+          VALUES(${productEntityId}::uuid,${randomUUID()}::uuid,'authority_probe','reference','system',${original}::uuid)`.execute(
+          db,
+        );
+        await sql`INSERT INTO metadata.entity_change_set(id,entity_id,change_set_code,title,created_by)
+          VALUES(${scope.changeSetId}::uuid,${productEntityId}::uuid,'authority_fixture','Scoped authority fixture',${original}::uuid)`.execute(
+          db,
+        );
+        const adminReader = new KyselyMetaEntityAuthoringRepository(db);
+        const source = await adminReader.loadGraph(scope.changeSetId);
+        const revision = (await adminReader.get(scope.changeSetId))!.revision;
+        const request = {
+          changeSetId: scope.changeSetId,
+          actorId: original,
+          tenantId: null,
+          proposal: {
+            sourceHash: sha256(source),
+            revision,
+            idempotencyKey: "product-authority-fixture-0001",
+            defaultLocale: "en",
+            requiredLocales: ["en"],
+            declarations: [
+              {
+                sourcePath: "/entity/entityCode",
+                labelKey: "reference.authority",
+                defaultText: source.entity.entityCode,
+              },
+            ],
+          },
+        };
+        let authorized = true;
+        const authority = createProductCommandAuthority({
+          issuer: issuerDb,
+          applicationLogin: "command_fixture",
+          governance: {
+            async authorize() {
+              if (!authorized) throw Error("GOVERNANCE_REVOKED");
+            },
+          },
+        });
+        const host: NativeAuthoringPolicy = {
+          ...fixtureProductHost,
+          async admit(connection, input) {
+            if (
+              input.actorId !== scope.actorId ||
+              input.changeSetId !== scope.changeSetId ||
+              input.tenantId !== null
+            )
+              throw Error("SCOPE_DENIED");
+            const admitted = (
+              await sql<{
+                ok: boolean;
+              }>`SELECT entity_command_private.admitted(${input.changeSetId}::uuid) ok`.execute(
+                connection,
+              )
+            ).rows[0]?.ok;
+            if (!admitted) throw Error("DATABASE_ADMISSION_REQUIRED");
+          },
+        };
+        let auditFails = true;
+        const enrollment = (selectedAuthority = authority) =>
+          createProductLabelEnrollment({
+            database: appDb,
+            authority: selectedAuthority,
+            labels: {
+              supportedLocales: ["en"],
+              maxCommands: 20,
+              maxBatchBytes: 16000,
+            },
+            host,
+            async audit(tx, _context, input) {
+              expect(input.actorId).toBe(scope.actorId);
+              expect(
+                (
+                  await sql<{
+                    role: string;
+                  }>`SELECT current_user AS role`.execute(tx)
+                ).rows[0]?.role,
+              ).toBe("command_fixture");
+              if (auditFails) throw Error("AUDIT_UNAVAILABLE");
+            },
+          });
+        const enroll = enrollment();
+        // Authentication/governance is deliberately fixture-owned in this rehearsal.
+        const context = {
+          tenantId: scope.authorityTenantId,
+          principalId: scope.actorId,
+        } as VerifiedRequestContext;
+        const run = () =>
+          enroll(context, {
+            changeSetId: request.changeSetId,
+            proposal: request.proposal,
+          });
+        await expect(run()).rejects.toThrow("AUDIT_UNAVAILABLE");
+        expect((await adminReader.get(scope.changeSetId))?.revision).toBe(
+          revision,
+        );
+        expect(
+          await adminReader.readDraftSave(scope.changeSetId, revision + 1),
+        ).toBeNull();
+        auditFails = false;
+        await expect(
+          sql`UPDATE metadata.entity_change_set SET default_locale='en' WHERE id=${scope.changeSetId}::uuid RETURNING id`.execute(
+            appDb,
+          ),
+        ).resolves.toMatchObject({ rows: [] });
+        await expect(
+          sql`INSERT INTO entity_command_private.admission(token_hash) VALUES(decode(repeat('00',32),'hex'))`.execute(
+            appDb,
+          ),
+        ).rejects.toThrow(/permission denied/);
+        await appDb.transaction().execute(async (tx) => {
+          await sql`SELECT set_config('app.current_principal_id',${original},true),set_config('app.current_tenant_id',${scope.authorityTenantId},true),set_config('app.entity_change_set_write_token',${scope.changeSetId + ":1"},true)`.execute(
+            tx,
+          );
+          expect(
+            (
+              await sql`UPDATE metadata.entity_change_set SET default_locale='en' WHERE id=${scope.changeSetId}::uuid RETURNING id`.execute(
+                tx,
+              )
+            ).rows,
+          ).toEqual([]);
+        });
+        await expect(
+          enrollment({
+            ...authority,
+            async revoke() {
+              throw Error("issuer unavailable after commit");
+            },
+          })(context, {
+            changeSetId: request.changeSetId,
+            proposal: request.proposal,
+          }),
+        ).rejects.toMatchObject({
+          code: "PRODUCT_COMMAND_REVOCATION_FAILED",
+          outcome: "committed",
+          committedResult: { revision: revision + 1 },
+        });
+        expect((await adminReader.get(scope.changeSetId))?.revision).toBe(
+          revision + 1,
+        );
+        // Fresh governance with the SAME canonical identity recovers the result.
+        const first = await run();
+        expect(first.revision).toBe(revision + 1);
+        expect(await run()).toEqual(first);
+        expect(
+          (await adminReader.loadGraph(scope.changeSetId)).ownedLabels?.labels,
+        ).toHaveLength(1);
+        authorized = false;
+        await expect(run()).rejects.toThrow("GOVERNANCE_REVOKED");
+        authorized = true;
+        await withProductCommandAuthority({
+          authority,
+          context: null,
+          scope,
+          command: request,
+          database: appDb,
+          execute: async (tx) => {
+            expect(
+              (
+                await sql`UPDATE metadata.entity_change_set SET default_locale='en' WHERE id=${draftId}::uuid RETURNING id`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toEqual([]);
+          },
+        });
+        // RLS constrains scope, not exact command SQL. Demonstrate an in-scope
+        // direct mutation under admission; canonical-writer trust is mandatory.
+        const reusable = await authority.issue(null, scope, request);
+        await expect(
+          appDb.transaction().execute(async (tx) => {
+            await enterProductCommand(tx, reusable, request);
+            await sql`SELECT metadata.fn_advance_entity_change_set(${scope.changeSetId}::uuid,${first.revision},${original}::uuid)`.execute(
+              tx,
+            );
+            const changed =
+              await sql`UPDATE metadata.entity_label SET default_text='Noncanonical effect',updated_by=${original}::uuid,updated_at=clock_timestamp() WHERE change_set_id=${scope.changeSetId}::uuid RETURNING id`.execute(
+                tx,
+              );
+            expect(changed.rows).toHaveLength(1);
+            throw Error("SIMULATED_PROCESS_FAILURE");
+          }),
+        ).rejects.toThrow("SIMULATED_PROCESS_FAILURE");
+        // Rollback undoes consumption; absent separate revocation it is reusable.
+        await appDb
+          .transaction()
+          .execute((tx) => enterProductCommand(tx, reusable, request));
+        await expect(
+          appDb
+            .transaction()
+            .execute((tx) => enterProductCommand(tx, reusable, request)),
+        ).rejects.toThrow("ADMISSION_DENIED");
+        await authority.revoke(reusable.token);
+        const expired = await authority.issue(null, scope, request);
+        await sql`UPDATE entity_command_private.admission SET expires_at=clock_timestamp()-interval '1 second' WHERE token_hash=sha256(convert_to(${expired.token},'UTF8'))`.execute(
+          db,
+        );
+        await expect(
+          appDb
+            .transaction()
+            .execute((tx) => enterProductCommand(tx, expired, request)),
+        ).rejects.toThrow("ADMISSION_DENIED");
+        const admission = await authority.issue(null, scope, request);
+        await expect(
+          appDb.transaction().execute(async (tx) => {
+            await enterProductCommand(
+              tx,
+              { ...admission, scope: { ...scope, actorId: randomUUID() } },
+              request,
+            );
+          }),
+        ).rejects.toThrow("CONTENT_MISMATCH");
+        await expect(
+          appDb.transaction().execute(async (tx) => {
+            await sql`SELECT set_config('app.current_tenant_id',${scope.authorityTenantId},true),set_config('app.current_principal_id',${randomUUID()},true)`.execute(
+              tx,
+            );
+            await sql`SELECT entity_command_private.enter(${admission.token},${admission.requestHash})`.execute(
+              tx,
+            );
+          }),
+        ).rejects.toThrow("ADMISSION_DENIED");
+        await authority.revoke(admission.token);
+        await expect(
+          appDb
+            .transaction()
+            .execute((tx) => enterProductCommand(tx, admission, request)),
+        ).rejects.toThrow("ADMISSION_DENIED");
+        await expect(
+          withProductCommandAuthority({
+            authority,
+            context: null,
+            scope,
+            command: request,
+            database: appDb,
+            execute: async (tx) => {
+              const current = await new KyselyMetaEntityAuthoringRepository(
+                tx,
+              ).loadGraph(scope.changeSetId);
+              await new KyselyMetaEntityAuthoringRepository(
+                tx,
+                undefined,
+                {
+                  supportedLocales: ["en"],
+                  maxCommands: 20,
+                  maxBatchBytes: 16000,
+                },
+                undefined,
+                fixtureProductHost,
+              ).executeLabelCommands({
+                changeSetId: scope.changeSetId,
+                actorId: original,
+                tenantId: null,
+                batch: {
+                  contract: "entity.authoring-label-commands/1",
+                  expectedRevision: first.revision,
+                  idempotencyKey: "product-authority-rollback-0001",
+                  commands: [
+                    {
+                      kind: "updateMember",
+                      memberKind: "label",
+                      member: { id: current.ownedLabels!.labels[0]!.id },
+                      set: { defaultText: "Rolled back" },
+                    },
+                  ],
+                },
+              });
+              throw Error("PRODUCT_COMMAND_ROLLBACK");
+            },
+          }),
+        ).rejects.toThrow("PRODUCT_COMMAND_ROLLBACK");
+        expect((await adminReader.get(scope.changeSetId))?.revision).toBe(
+          first.revision,
+        );
+        expect(
+          (await adminReader.loadGraph(scope.changeSetId)).ownedLabels
+            ?.labels[0]?.defaultText,
+        ).toBe(source.entity.entityCode);
+        expect(
+          (
+            await sql`SELECT 1 FROM metadata.entity_authoring_command_receipt WHERE change_set_id=${scope.changeSetId}::uuid AND idempotency_key='product-authority-rollback-0001'`.execute(
+              db,
+            )
+          ).rows,
+        ).toEqual([]);
+        expect(
+          await adminReader.readDraftSave(
+            scope.changeSetId,
+            first.revision + 1,
+          ),
+        ).toBeNull();
+      } finally {
+        await appDb.destroy();
+        await issuerDb.destroy();
+      }
       const normalized = new KyselyMetaEntityAuthoringRepository(
         db,
         undefined,
@@ -510,22 +891,61 @@ it.skipIf(!enabled)(
           maxCommands: 20,
           maxBatchBytes: 16000,
         },
-        undefined,fixtureProductHost,
+        undefined,
+        fixtureProductHost,
       );
       // Full enrollment application/replay using the real repository and history;
       // outer rollback retains the independent command fixtures below.
-      await expect(db.transaction().execute(async tx=>{
-        const bootstrap=new KyselyMetaEntityAuthoringRepository(tx,undefined,{supportedLocales:["en"],maxCommands:20,maxBatchBytes:16000},undefined,fixtureProductHost);
-        const source=await bootstrap.loadGraph(draftId);
-        const request={changeSetId:draftId,actorId:original,tenantId:null,proposal:{sourceHash:sha256(source),revision:2,idempotencyKey:"bootstrap-labels-fixture-0001",defaultLocale:"en",requiredLocales:["en"],declarations:[{sourcePath:"/entity/entityCode",labelKey:"reference.bootstrap",defaultText:source.entity.entityCode}]}};
-        const enrolled=await bootstrap.executeLegacyLabelEnrollment(request);
-        expect(enrolled.revision).toBe(3);
-        expect(await bootstrap.executeLegacyLabelEnrollment(request)).toEqual(enrolled);
-        expect((await bootstrap.loadGraph(draftId)).ownedLabels?.labels.some(l=>l.labelKey==="reference.bootstrap")).toBe(true);
-        await expect(bootstrap.executeLegacyLabelEnrollment({...request,proposal:{...request.proposal,sourceHash:"0".repeat(64)}})).rejects.toThrow("LEGACY_LABEL_SOURCE_MISMATCH");
-        expect((await bootstrap.get(draftId))?.revision).toBe(3);
-        throw Error("BOOTSTRAP_FIXTURE_ROLLBACK");
-      })).rejects.toThrow("BOOTSTRAP_FIXTURE_ROLLBACK");
+      await expect(
+        db.transaction().execute(async (tx) => {
+          const bootstrap = new KyselyMetaEntityAuthoringRepository(
+            tx,
+            undefined,
+            { supportedLocales: ["en"], maxCommands: 20, maxBatchBytes: 16000 },
+            undefined,
+            fixtureProductHost,
+          );
+          const source = await bootstrap.loadGraph(draftId);
+          const request = {
+            changeSetId: draftId,
+            actorId: original,
+            tenantId: null,
+            proposal: {
+              sourceHash: sha256(source),
+              revision: 2,
+              idempotencyKey: "bootstrap-labels-fixture-0001",
+              defaultLocale: "en",
+              requiredLocales: ["en"],
+              declarations: [
+                {
+                  sourcePath: "/entity/entityCode",
+                  labelKey: "reference.bootstrap",
+                  defaultText: source.entity.entityCode,
+                },
+              ],
+            },
+          };
+          const enrolled =
+            await bootstrap.executeLegacyLabelEnrollment(request);
+          expect(enrolled.revision).toBe(3);
+          expect(await bootstrap.executeLegacyLabelEnrollment(request)).toEqual(
+            enrolled,
+          );
+          expect(
+            (await bootstrap.loadGraph(draftId)).ownedLabels?.labels.some(
+              (l) => l.labelKey === "reference.bootstrap",
+            ),
+          ).toBe(true);
+          await expect(
+            bootstrap.executeLegacyLabelEnrollment({
+              ...request,
+              proposal: { ...request.proposal, sourceHash: "0".repeat(64) },
+            }),
+          ).rejects.toThrow("LEGACY_LABEL_SOURCE_MISMATCH");
+          expect((await bootstrap.get(draftId))?.revision).toBe(3);
+          throw Error("BOOTSTRAP_FIXTURE_ROLLBACK");
+        }),
+      ).rejects.toThrow("BOOTSTRAP_FIXTURE_ROLLBACK");
       const command = (
         expectedRevision: number,
         idempotencyKey: string,
@@ -641,11 +1061,17 @@ it.skipIf(!enabled)(
         )
         .execute(db);
       await db.transaction().execute(async (tx) => {
-        const nested = new KyselyMetaEntityAuthoringRepository(tx, undefined, {
-          supportedLocales: ["en", "ms"],
-          maxCommands: 20,
-          maxBatchBytes: 16000,
-        },undefined,fixtureProductHost);
+        const nested = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          {
+            supportedLocales: ["en", "ms"],
+            maxCommands: 20,
+            maxBatchBytes: 16000,
+          },
+          undefined,
+          fixtureProductHost,
+        );
         await expect(
           nested.executeLabelCommands(
             command(4, "normalized-command-0006", [
