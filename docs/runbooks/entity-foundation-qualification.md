@@ -5,6 +5,54 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Installed-resource readers and restricted grants — 2026-10-08
+
+`installed-reference-resources.ts` adds a concrete SQL read adapter over existing
+`publication.release`, signed artifacts, immutable compilations and local
+`runtime_meta` activation heads. Exact configured release/key/unsigned/artifact
+hashes must agree; the adapter locks those rows, checks both unsigned and signed
+content hashes and verifies Ed25519 through the installed verifier. It requires
+current independent human-review authorization on every read. No latest-version
+fallback, new release ledger or request-provided approval is introduced.
+The identity-review store binds the receipt's named principals to the approved
+resource release and re-resolves it for authorization. Descriptor resolution
+checks the closed versioned wrapper and exact descriptor-content hash.
+
+Restricted enrollment grants were rehearsed, then installed in DEV:
+`20261008_entity_reference_command_privileges.sql`, SHA-256
+`d0e07b0e4198501947d368abc188253b9c13e7615f182d347fae5b5434e6c276`.
+The application role receives only ownership/reference-marker root updates,
+field-identity/attribution updates, reserved-identity inserts and scoped historical
+and reference-member reads. Restrictive policies constrain reads/writes to the
+admitted NULL-tenant product draft. Identity lifecycle/deletion, field meaning,
+native cutover, publication and review writes are not granted. Exact command SQL
+still trusts the canonical writer; these grants do not independently attest review.
+Existing data and activation heads were compared unchanged. The runner's
+`authorizationAndHeadsUnchanged` field refers to authorization **rows** and heads;
+this migration intentionally changes the documented database ACL/policy surface.
+
+The disposable canonical PostgreSQL test proves reservation and historical reads
+under the restricted role, denial of field-key/lifecycle/delete/cutover writes,
+and absence of identity/history visibility without admission. Its admission
+function is explicitly a fixture; the separate real DEV application-role test
+proves unadmitted reads/writes remain denied after installation. No actual Country
+or State Region ownership/identity enrollment occurred. Private installation
+receipt: `identity-correspondence-20261008/reference-grants-installed.json`.
+
+Validation: 830 authoring tests passed (six opt-in exclusions); explicit native-test
+typechecking, canonical PostgreSQL rehearsal, installed DEV role verification,
+13 migration-runner tests and migration replay passed. Migration layout covers
+143 classified files and 135 retained SQL files.
+
+**Remaining deployment work:** bind the installed verifier and current governance
+eligibility adapter, qualify resource-read privileges and connect the resolver to
+the control entrypoint. The new descriptor/review resource kinds are explicit
+reader contracts; the publication compiler/activation registry does not yet
+produce/install them. Approved resources and named review evidence must pass that
+path before these readers can return live authority. No approved resource was
+fabricated or substituted with a fixture. Native conversion and live qualification
+remain pending actual enrollment.
+
 ## Reference command transport and review validation — 2026-10-08
 
 The control-plane composition accepts optional shared reference enrollment

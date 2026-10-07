@@ -449,6 +449,90 @@ it.skipIf(!enabled)(
             ).rejects.toMatchObject({
               code: "LEGACY_IDENTITY_INDEPENDENT_REVIEW_REQUIRED",
             });
+            await sql.raw("SET CONSTRAINTS ALL IMMEDIATE").execute(tx);
+            // ACL-only fixture: admission itself is qualified by the separate
+            // installed-role suite. These disposable roles and scope function
+            // are never installed as runtime authority.
+            await sql
+              .raw(
+                `CREATE ROLE athyper_product_command_app NOLOGIN;
+              CREATE ROLE athyper_product_command_issuer NOLOGIN;
+              CREATE ROLE athyper_product_command_owner NOLOGIN;
+              CREATE SCHEMA entity_command_private; CREATE SCHEMA master;
+              CREATE FUNCTION master.current_principal_id_soft() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('app.current_principal_id',true),'')::uuid $$;
+              CREATE FUNCTION entity_command_private.admitted(id uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT id::text=current_setting('fixture.admitted_draft',true) $$;
+              GRANT USAGE ON SCHEMA metadata,snapshot,shared,master,entity_command_private TO athyper_product_command_app;
+              GRANT SELECT ON metadata.entity_change_set,metadata.entity,metadata.entity_field TO athyper_product_command_app;
+              CREATE POLICY fixture_root_read ON metadata.entity_change_set FOR SELECT TO athyper_product_command_app USING(entity_command_private.admitted(id));
+              CREATE POLICY fixture_field_read ON metadata.entity_field FOR SELECT TO athyper_product_command_app USING(entity_command_private.admitted(change_set_id));
+              DO $$ DECLARE r record; BEGIN FOR r IN SELECT c.oid::regclass AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('metadata','snapshot') AND c.relkind='r' LOOP EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY',r.name); EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY',r.name); END LOOP; END $$;
+            `,
+              )
+              .execute(tx);
+            await sql
+              .raw(
+                read(
+                  "planes/studio/metadata/44_reference_command_privileges.sql",
+                ),
+              )
+              .execute(tx);
+            await sql`SELECT set_config('fixture.admitted_draft',${ownerDraft},true),set_config('app.current_principal_id',${ownerActor},true)`.execute(
+              tx,
+            );
+            await sql
+              .raw("SET LOCAL ROLE athyper_product_command_app")
+              .execute(tx);
+            expect(
+              (
+                await sql`SELECT id FROM metadata.entity_field_identity`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toHaveLength(1);
+            expect(
+              (
+                await sql`SELECT id FROM snapshot.entity_contract_revision`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toHaveLength(1);
+            const reserved =
+              await sql`INSERT INTO metadata.entity_field_identity(entity_id,tenant_id,field_key,identity_status,introduced_change_set_id,created_by) VALUES(${ownerEntity}::uuid,NULL,'acl_probe','reserved',${ownerDraft}::uuid,${ownerActor}::uuid) RETURNING id`.execute(
+                tx,
+              );
+            expect(reserved.rows).toHaveLength(1);
+            for (const statement of [
+              sql`UPDATE metadata.entity_field SET field_key='changed' WHERE id=${ownerField}::uuid`,
+              sql`DELETE FROM metadata.entity_field_identity`,
+              sql`UPDATE metadata.entity_field_identity SET identity_status='active'`,
+              sql`UPDATE metadata.entity_change_set SET native_core_layout_version=1`,
+            ]) {
+              await sql.raw("SAVEPOINT forbidden_acl").execute(tx);
+              await expect(statement.execute(tx)).rejects.toThrow();
+              await sql
+                .raw(
+                  "ROLLBACK TO SAVEPOINT forbidden_acl; RELEASE SAVEPOINT forbidden_acl",
+                )
+                .execute(tx);
+            }
+            await sql`SELECT set_config('fixture.admitted_draft','',true)`.execute(
+              tx,
+            );
+            expect(
+              (
+                await sql`SELECT id FROM metadata.entity_field_identity`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toHaveLength(0);
+            expect(
+              (
+                await sql`SELECT id FROM snapshot.entity_contract_revision`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toHaveLength(0);
+            await sql.raw("RESET ROLE").execute(tx);
             throw rolledBack;
           }),
       ).rejects.toBe(rolledBack);

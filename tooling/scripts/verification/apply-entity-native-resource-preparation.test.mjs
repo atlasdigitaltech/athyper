@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   preparationSql,
   ownershipInitializationMigrationName,
+  referencePrivilegesMigrationName,
   snapshotMigrationName,
   componentCatalogueMigrationName,
   rootMigrationName,
@@ -324,6 +325,43 @@ test("ownership preparation preserves rows and requires exact predecessor guards
       digest,
       false,
       ownershipInitializationMigrationName,
+    ).endsWith("ROLLBACK;\n"),
+  );
+});
+
+test("reference grants remain bounded and migration replay is ledger-owned", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        referencePrivilegesMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const applied = preparationSql(
+    source,
+    digest,
+    true,
+    referencePrivilegesMigrationName,
+  );
+  assert.match(applied, /REFERENCE_COMMAND_FORCED_RLS_REQUIRED/);
+  assert.match(applied, /AS RESTRICTIVE FOR UPDATE/);
+  assert.match(
+    applied,
+    /GRANT UPDATE\(field_identity_id,updated_by,updated_at\)/,
+  );
+  assert.doesNotMatch(
+    applied,
+    /GRANT (ALL|DELETE)|GRANT UPDATE ON|requires_mfa|CREATE ROLE/,
+  );
+  assert.match(applied, /OWNERSHIP_PREPARATION_CHANGED_DATA/);
+  assert.ok(
+    preparationSql(
+      source,
+      digest,
+      false,
+      referencePrivilegesMigrationName,
     ).endsWith("ROLLBACK;\n"),
   );
 });

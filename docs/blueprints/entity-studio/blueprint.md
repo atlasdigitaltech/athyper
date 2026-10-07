@@ -3591,6 +3591,16 @@ State the Phase-1 collaboration limit in the composer: one optimistic revision p
 
 #### Executable foundation sub-slice
 
+Resource-reader implementation (8 October 2026): exact descriptor/review pins are
+resolved from the existing publication compilation/artifact and local activation
+head records, with row locks, signature/content verification and mandatory current
+human-governance checks. Descriptor and identity-review reader contracts do not
+establish publication-kind support or approved installations. Restricted DEV
+ownership/identity column grants and draft-scoped restrictive policies are now
+installed; command activation still requires trusted resource bindings. No
+identity lifecycle, native cutover or publication privilege is added. The existing
+qualification runbook records the applied hash and qualification limits.
+
 The optional server reference-command transport binds ownership/identity commands
 to the existing authenticated, serializable product-command path. Request DTOs
 cannot supply actors, reviewers, source ownership or descriptor authority. Named

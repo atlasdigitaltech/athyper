@@ -170,3 +170,10 @@ export type {
   LegacyIdentityInstallationPolicy,
   LegacyIdentityInstallationResult,
 } from "./legacy-identity-installation.js";
+
+export {
+  createInstalledReferenceResourceReader,
+  createInstalledIdentityReviewStore,
+  resolveInstalledAuthoringDescriptor,
+  type InstalledReferenceResourcePin,
+} from "./installed-reference-resources.js";

@@ -51,7 +51,8 @@
     "src/product-command-authority.test.ts",
     "src/legacy-identity-review.test.ts",
     "src/product-reference-enrollment.test.ts",
-    "src/product-reference-enrollment-routes.test.ts"
+    "src/product-reference-enrollment-routes.test.ts",
+    "src/installed-reference-resources.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

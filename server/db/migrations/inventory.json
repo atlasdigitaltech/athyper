@@ -1846,6 +1846,20 @@
       "callers": [],
       "reason": "Allow existing Mesh publication workers to evaluate the principal context helper used by authorization and tenant RLS; no new table privileges.",
       "canonicalPaths": ["ddl/planes/mesh/master/11_grants.sql"]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_reference_command_privileges.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_reference_command_privileges.sql",
+      "sha256": "d0e07b0e4198501947d368abc188253b9c13e7615f182d347fae5b5434e6c276",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit scoped reference command privileges; no graph, lifecycle or activation changes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/44_reference_command_privileges.sql"
+      ]
     }
   ]
 }

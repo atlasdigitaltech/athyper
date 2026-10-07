@@ -81,7 +81,28 @@ it.skipIf(process.env.PRODUCT_COMMAND_DEV_POSTGRES !== "1")(
         ).rows,
       ).toEqual([]);
       await expect(
-        sql`UPDATE metadata.entity_change_set SET source_kind='product' WHERE false`.execute(
+        sql`UPDATE metadata.entity_change_set SET native_core_layout_version=1 WHERE false`.execute(
+          commandDatabase,
+        ),
+      ).rejects.toThrow();
+      // Reference preparation grants only the bounded source/identity columns;
+      // without an admitted transaction even those columns cannot change rows.
+      expect(
+        (
+          await sql`UPDATE metadata.entity_change_set SET source_kind='product' WHERE tenant_id IS NULL RETURNING id`.execute(
+            commandDatabase,
+          )
+        ).rows,
+      ).toEqual([]);
+      expect(
+        (
+          await sql`SELECT id FROM metadata.entity_field_identity`.execute(
+            commandDatabase,
+          )
+        ).rows,
+      ).toEqual([]);
+      await expect(
+        sql`DELETE FROM metadata.entity_field_identity WHERE false`.execute(
           commandDatabase,
         ),
       ).rejects.toThrow();
