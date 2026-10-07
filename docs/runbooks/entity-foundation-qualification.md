@@ -1329,3 +1329,49 @@ from this run (no SQL changed). Production/test and native-test typechecks pass;
 generated foundation drift checks pass. The recorded historical v1 descriptor
 hash tests remain unchanged and pass. No skipped test or historical fixture hash
 was changed to accommodate v2.
+
+
+### Database aggregate guard installation (7 October 2026)
+
+Applied forward migration `20261007_entity_native_snapshot_guards.sql`, SHA-256
+`6c555f7fc63d11b66b90aa58e02c2ff28327c09ba8519e842093646189942eb4`.
+The predecessor guard body is pinned; all applied predecessor files remain unchanged.
+Evidence directory:
+`~/.athyper/instances/dev/workspace/native-snapshot-20261007T093544Z/`
+contains the pre-application database backup, application/replay receipts, canonical
+schema inspection and foundation inspection. Rollback rehearsal/application compare
+all original metadata/history rows and authorization/active-head fingerprints;
+repeat application reports a no-op.
+
+The aggregate v1/v2 entry points compose existing root/core/layout/typed/reference
+checks and local operation/AI/ownership constraints. Deferred callbacks validate
+final transaction state on member mutations and both sides of draft moves.
+Materialization mapping scope derives from its parent. No host grants, protected
+state initialization, MFA enforcement or publication approval changed.
+
+Two nonexistent retirement columns were removed from the shared guard/writer map:
+`entity_runtime_profile.id_field_key` and `entity_operation.field_keys` are derived
+JSON projections, not SQL columns. Tests now compare retirement names with actual
+canonical CREATE TABLE definitions. Generated code no longer queries the absent
+component/capability-binding/overlay dictionaries; non-NULL selections reject with
+`NATIVE_REFERENCE_STORAGE_UNAVAILABLE` until their storage/resource resolution is
+implemented and qualified. This is an explicit remaining engineering limitation.
+
+Validation: 758 authoring tests pass (six opt-in exclusions), 55 contract tests
+pass (four opt-in exclusions), and ten migration-runner tests pass. The two removed
+retirement columns eliminate two dynamically generated retirement test cases; no
+test was blanket-skipped. The expanded disposable PostgreSQL constraint/aggregate
+rehearsal passes; all four typed-row guard tests also pass with PostgreSQL enabled.
+Production/test and native-test typechecks pass. PostgreSQL coverage includes an
+empty consistent partial draft, profile membership, late invalid edits, version
+mismatch, unavailable resource selection and savepoint rollback. This component
+fixture is not canonical whole-source repository/RLS qualification.
+
+Post-application schema candidate:
+`1e03c285538ab4b06d7551e0083294275f22f6cf8d25bfad2b10eeee2ee472f0`.
+Seven pending constraints remain; both aggregate functions now exist. This hash
+is captured evidence, not an independently approved installation fingerprint.
+Actual Country and State Region drafts remain revision 1, with zero owned-label
+rows and no native marker. Actual enrollment/application/history, complete resource
+resolution, approved host/product-write authority and deployed F6/F8/F9 remain
+unqualified. No native cutover or activation occurred.

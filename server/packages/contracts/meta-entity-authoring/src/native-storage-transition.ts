@@ -1,4 +1,6 @@
-/** Columns retired by the single canonical format-conversion writer. Historical
+/** Only physical columns belong here. Legacy runtime idFieldKey and operation
+ * fieldKeys are derived projections, not columns in canonical metadata DDL.
+ * Columns retired by the single canonical format-conversion writer. Historical
  * snapshots keep their original values; native rows do not dual-write them. */
 export const nativeRetiredColumns = {
   entity_field: [
@@ -9,7 +11,6 @@ export const nativeRetiredColumns = {
     "validation_spec",
   ],
   entity_runtime_profile: [
-    "id_field_key",
     "tenant_field_key",
     "record_version_field_key",
     "soft_delete_field_key",
@@ -22,5 +23,5 @@ export const nativeRetiredColumns = {
     "placeholder",
     "display_config",
   ],
-  entity_operation: ["label", "field_keys"],
+  entity_operation: ["label"],
 } as const;

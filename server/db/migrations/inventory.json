@@ -3,6 +3,23 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_snapshot_guards.sql",
+      "path": "migrations/20261007_entity_native_snapshot_guards.sql",
+      "sha256": "6c555f7fc63d11b66b90aa58e02c2ff28327c09ba8519e842093646189942eb4",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Compose database-local native snapshot guards and repair nonexistent retirement columns; retain pending cutover checks, original data/history, authority and activation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
+        "ddl/planes/studio/metadata/40_native_snapshot_guard.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_core_root_guards.sql",
       "path": "migrations/20261007_entity_native_core_root_guards.sql",
       "sha256": "8912bd7a2cae63dd7c14985582bb17d3e33b26415cce478ccfa34f5af63fdaf8",

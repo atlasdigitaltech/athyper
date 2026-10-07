@@ -101,6 +101,21 @@ export function nativeRowGuardsDdl(): string {
       const column = `r.${identifier(c.column)}`;
       rules.push(nativeColumnPredicate(c.node, column, c.sqlType));
       if ("reference" in c && c.reference) {
+        // These target dictionaries are not installed canonical storage. Reject
+        // selected values until their qualified storage/owner resolver exists;
+        // do not emit a SQL reference to a nonexistent or guessed resource table.
+        if (
+          [
+            "ui_component_contract",
+            "entity_capability_binding",
+            "entity_surface_overlay",
+          ].includes(c.reference)
+        ) {
+          checks.push(
+            `IF EXISTS (SELECT 1 FROM metadata.${table} r WHERE r.change_set_id=root.id AND ${column} IS NOT NULL) THEN RAISE EXCEPTION 'NATIVE_REFERENCE_STORAGE_UNAVAILABLE:${c.reference}' USING ERRCODE='23514'; END IF;`,
+          );
+          continue;
+        }
         const identity = c.reference === "entity_field_identity";
         rules.push(
           `(${column} IS NULL OR EXISTS (SELECT 1 FROM metadata.${identifier(c.reference)} target WHERE target.id=${column} AND target.entity_id=root.entity_id AND target.tenant_id IS NOT DISTINCT FROM root.tenant_id AND ${identity ? "(target.identity_status='active' OR (target.identity_status='reserved' AND target.introduced_change_set_id=root.id))" : "target.change_set_id=root.id"}))`,

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  snapshotMigrationName,
   rootMigrationName,
   revisionMigrationName,
   legacyNullabilityMigrationName,
@@ -115,17 +116,11 @@ test("typed row preparation preserves pending guards, data and legacy binding re
     statement,
     /DROP CONSTRAINT|SECURITY DEFINER|requires_mfa|\bGRANT\b|\bUPDATE\b|\bDELETE\b/,
   );
-  const generated = readFileSync(
-    new URL(
-      "../../../server/db/ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  assert.ok(
-    source.includes(
-      generated.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION"),
-    ),
+  // The applied predecessor is immutable; the forward correction carries the
+  // current generated body, which intentionally differs from this historical one.
+  assert.equal(
+    digest,
+    "a56e79e3fc4353b8a704a9bbadd7ca04abe45ec009b8a9119ac87fd0a04a97f3",
   );
 });
 test("keeps dollar-quoted guards intact and records the ledger inside the application transaction", () => {
@@ -229,4 +224,36 @@ test("nullability preparation installs equivalent legacy checks before relaxing 
     statement,
     /DROP CONSTRAINT|requires_mfa|\bGRANT\b|\bUPDATE\b|\bDELETE\b/,
   );
+});
+
+test("snapshot preparation composes real guards without retiring cutover or rewriting history", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + snapshotMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const applied = preparationSql(source, digest, true, snapshotMigrationName);
+  assert.ok(
+    source.includes(
+      readFileSync(
+        new URL(
+          "../../../server/db/ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ),
+  );
+  assert.match(applied, /NATIVE_SNAPSHOT_PREDECESSOR_UNKNOWN/);
+  assert.match(applied, /PERFORM metadata.fn_assert_native_typed_rows/);
+  assert.match(applied, /PERFORM metadata.validate_reference_members/);
+  assert.match(
+    applied,
+    /CREATE CONSTRAINT TRIGGER native_snapshot_final_guard/,
+  );
+  assert.doesNotMatch(applied, /DROP CONSTRAINT|requires_mfa|GRANT /);
+  assert.doesNotMatch(applied, /r\."field_keys"|r\."id_field_key"/);
 });

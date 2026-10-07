@@ -31,6 +31,33 @@ it("generates the committed structural guards without grants, protected-state wr
       expect(ddl).toContain(`r."${c.column}"`);
 });
 
+it("retires only real canonical columns and rejects unavailable resource dictionaries explicitly", () => {
+  const tables = readFileSync(
+    new URL(
+      "../../../../db/ddl/planes/studio/metadata/03_tables.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  for (const [table, columns] of Object.entries(nativeRetiredColumns)) {
+    const definition = tables.match(
+      new RegExp("CREATE TABLE metadata\\." + table + " \\([\\s\\S]*?\\n\\);"),
+    )?.[0];
+    expect(definition, table).toBeDefined();
+    for (const column of columns)
+      expect(definition).toMatch(new RegExp("\\b" + column + "\\s+"));
+  }
+  const ddl = nativeRowGuardsDdl();
+  for (const table of [
+    "ui_component_contract",
+    "entity_capability_binding",
+    "entity_surface_overlay",
+  ]) {
+    expect(ddl).toContain("NATIVE_REFERENCE_STORAGE_UNAVAILABLE:" + table);
+    expect(ddl).not.toContain('FROM metadata."' + table + '"');
+  }
+});
+
 it("rejects unsupported SQL representations instead of silently dropping their checks", () => {
   expect(() =>
     nativeColumnPredicate({ type: "object", properties: {} }, "v", "jsonb"),

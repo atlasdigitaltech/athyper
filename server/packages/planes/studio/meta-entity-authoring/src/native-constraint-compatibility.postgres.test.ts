@@ -401,6 +401,62 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
           referenceCheck,
         "Predicate field/value type invalid",
       );
+      // Install actual supplemental table definitions, without host grants.
+      query(read("28_native_operation.generated.sql"));
+      query(
+        read("27_native_ai.generated.sql").match(
+          /CREATE FUNCTION metadata\.fn_native_ai_text_array_valid[\s\S]*?\$\$;/,
+        )![0],
+      );
+      for (const table of read("27_native_ai.generated.sql").matchAll(
+        /CREATE TABLE metadata\.(\w+) \([\s\S]*?\n\);/g,
+      ))
+        query(table[0]);
+      query("ALTER TABLE metadata.entity_label ADD UNIQUE(change_set_id,id);");
+      query(
+        read("23_owned_label_authoring.sql").match(
+          /CREATE TABLE metadata\.entity_label_translation \([\s\S]*?\n\);/,
+        )![0],
+      );
+      query(read("33_native_typed_row_guards.generated.sql"));
+      query(
+        "ALTER TABLE metadata.entity_surface_navigation_group ADD COLUMN entity_id uuid, ADD COLUMN tenant_id uuid;",
+      );
+      query(read("40_native_snapshot_guard.sql"));
+      const aggregateCheck = `SELECT metadata.fn_assert_native_authoring_snapshot('${draft}','${pin}',2);`;
+      // A consistent empty native draft is a valid partial save, not a publishable entity.
+      // The aggregate compiles every guarded SQL branch against canonical columns.
+      query(
+        `BEGIN; DELETE FROM metadata.entity_predicate; DELETE FROM metadata.entity_surface_field_binding; DELETE FROM metadata.entity_surface_section; DELETE FROM metadata.entity_surface_navigation_group; DELETE FROM metadata.entity_surface; DELETE FROM metadata.entity_runtime_profile; DELETE FROM metadata.entity_field; ${aggregateCheck} COMMIT;`,
+      );
+      reject(
+        `INSERT INTO metadata.entity_surface(entity_id,change_set_id,surface_key,surface_kind,title,layout_kind,layout_config,component_contract_id,created_by) VALUES('${id}','${draft}','component','detail','Component','stack','{}','${randomUUID()}','${actor}');SELECT metadata.fn_assert_native_typed_rows('${draft}',2);`,
+        "NATIVE_REFERENCE_STORAGE_UNAVAILABLE:ui_component_contract",
+      );
+      const profileId = randomUUID();
+      query(
+        `INSERT INTO metadata.entity_ai_profile(id,entity_id,change_set_id,enabled,aliases,context_kinds,created_by) VALUES('${profileId}','${id}','${draft}',false,ARRAY[]::text[],ARRAY[]::text[],'${actor}');${aggregateCheck}`,
+      );
+      reject(
+        `UPDATE metadata.entity_ai_profile SET entity_id='${randomUUID()}';COMMIT;`,
+        "NATIVE_SNAPSHOT_OWNER_INVALID",
+      );
+      reject(
+        `INSERT INTO metadata.entity_ai_binding(entity_id,change_set_id,ai_profile_id,binding_kind,contract_key,contract_version,position,created_by) VALUES('${id}','${draft}','${profileId}','insight_provider','fixture.provider',1,2,'${actor}');COMMIT;`,
+        "NATIVE_SNAPSHOT_AI_ORDER_INVALID",
+      );
+      reject(
+        `SELECT metadata.fn_assert_native_authoring_contract('${draft}','${pin}');`,
+        "NATIVE_ROOT_PIN_INVALID",
+      );
+      // A successful explicit assertion cannot authorize a later invalid edit.
+      reject(
+        `${aggregateCheck} UPDATE metadata.entity_ai_profile SET tenant_id='${randomUUID()}';COMMIT;`,
+        "NATIVE_SNAPSHOT_OWNER_INVALID",
+      );
+      query(
+        `BEGIN;SAVEPOINT invalid_edit;UPDATE metadata.entity_ai_profile SET entity_id='${randomUUID()}';ROLLBACK TO SAVEPOINT invalid_edit;${aggregateCheck}COMMIT;`,
+      );
     } finally {
       if (created) docker("rm", "-f", name);
     }
