@@ -73,6 +73,33 @@ with explicitly synthetic fixture admission; its superuser execution is not M1
 product RLS qualification. Production/test typechecks pass. No DEV schema/data
 mutation, publication or activation occurred at this checkpoint.
 
+### Canonical label-enrollment writer checkpoint
+
+`KyselyMetaEntityAuthoringRepository.executeLegacyLabelEnrollment` now connects
+source-bound proposals to the existing canonical label writer. It requires an
+installed host and normalized command policy, checks scoped source coordinates,
+performs host read admission, validates the exact source revision/hash and then
+uses the existing product-command write admission, allocation, idempotency and
+snapshot protocol. Replay reconstructs the batch from checksum-verified immutable
+source history rather than the now-enrolled current graph. Nested savepoints keep
+source validation, writes, revisions and history atomic inside the caller's
+transaction. No separate provider, endpoint, authority ledger or privileged SQL
+writer was introduced.
+
+The expanded disposable PostgreSQL test executes canonical label enrollment,
+checks exact replay and loaded labels, rejects a stale source hash without an
+extra revision and rolls back the outer transaction. It uses explicitly synthetic
+host admission and a superuser database fixture. It is **not** application-role
+RLS qualification, actual Country/State Region enrollment or independent approval.
+Ordinary tests also reject enrollment when host admission is unconfigured.
+
+DEV's current product boundary remains unchanged: application-role UPDATE policies
+require a matching non-NULL tenant, and the revision advance function is invoker
+security. These cannot be bypassed by an authoring token or a successful callback.
+M1 still needs the governed bootstrap service/CLI composition and qualified scoped
+product database authority. No DEV grants, product rows, history, ownership,
+protected-state initialization or activation changed in this checkpoint.
+
 ## Pilot and integration points
 
 Country is the system-owned reference/read-only baseline. Principal is a

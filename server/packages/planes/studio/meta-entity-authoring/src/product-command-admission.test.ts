@@ -60,6 +60,24 @@ it.each(["label", "reference"] as const)(
           ),
         ),
       ).rejects.toMatchObject({ code: "PRODUCT_AUTHORING_AUTHORITY_REQUIRED" });
+      await expect(
+        new KyselyMetaEntityAuthoringRepository(
+          db,
+          undefined,
+          labels,
+        ).executeLegacyLabelEnrollment({
+          changeSetId: id,
+          actorId: id,
+          tenantId: null,
+          proposal: {
+            sourceHash: "0".repeat(64),
+            revision: 1,
+            idempotencyKey: "bootstrap-denied-0001",
+            defaultLocale: "en",
+            requiredLocales: ["en"],
+          },
+        }),
+      ).rejects.toMatchObject({ code: "PRODUCT_AUTHORING_AUTHORITY_REQUIRED" });
       const admit = vi.fn(async () => {
         throw Error("GOVERNANCE_REVOKED");
       });
@@ -73,8 +91,15 @@ it.each(["label", "reference"] as const)(
       );
       await expect(call(repo)).rejects.toThrow("GOVERNANCE_REVOKED");
       await expect(call(repo)).rejects.toThrow("GOVERNANCE_REVOKED");
-      const missingScope={...input,tenantId:undefined} as unknown as typeof input;
-      await expect(kind==="label"?repo.executeLabelCommands(missingScope):repo.executeReferenceCommands(missingScope)).rejects.toMatchObject({code:"AUTHORING_DRAFT_NOT_FOUND"});
+      const missingScope = {
+        ...input,
+        tenantId: undefined,
+      } as unknown as typeof input;
+      await expect(
+        kind === "label"
+          ? repo.executeLabelCommands(missingScope)
+          : repo.executeReferenceCommands(missingScope),
+      ).rejects.toMatchObject({ code: "AUTHORING_DRAFT_NOT_FOUND" });
       expect(admit).toHaveBeenCalledTimes(2);
       expect(admit).toHaveBeenCalledWith(
         expect.anything(),

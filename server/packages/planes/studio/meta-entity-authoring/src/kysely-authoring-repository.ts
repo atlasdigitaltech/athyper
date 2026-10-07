@@ -1,3 +1,4 @@
+import {prepareLegacyLabelEnrollment} from "./legacy-label-enrollment.js";
 import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import { applyLegacySourceEnrollment, type LegacyEnrollmentApplicationInput, type LegacyEnrollmentApplicationPolicy } from "./legacy-enrollment-application.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
@@ -271,6 +272,34 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     const graph: ExpandedNativeMetaEntityGraph = {...core, contractSchema: 'athyper.meta-entity-contract/2.5', ...await loadNativeSupplementalMembers(tx, input, policy.commands.maxMembers)};
     validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
     return graph;
+  }
+  /** Executes reviewed source-bound label enrollment through the existing writer.
+   * Host admission and DB RLS are independent mandatory controls, never supplied
+   * by the proposal. Replay reconstructs the batch from immutable source history. */
+  async executeLegacyLabelEnrollment(input: {changeSetId:string;actorId:string;tenantId:string|null;proposal:Parameters<typeof prepareLegacyLabelEnrollment>[1]}) {
+    if(!this.nativePolicy||!this.normalizedPolicy)throw new AuthoringPolicyError("PRODUCT_AUTHORING_AUTHORITY_REQUIRED","Installed host admission and normalized command policy are required.");
+    validateConversionJsonData(input,"/enrollment");
+    const request=structuredClone(input),host=this.nativePolicy,policy=this.normalizedPolicy;
+    if(!Number.isSafeInteger(request.proposal.revision)||request.proposal.revision<0||!/^[a-f0-9]{64}$/.test(request.proposal.sourceHash))throw new AuthoringPolicyError("LEGACY_LABEL_SOURCE_MISMATCH","Exact source revision and hash required.");
+    return atomic(this.database,async tx=>{
+      await sql`SAVEPOINT legacy_label_enrollment`.execute(tx);
+      try {
+        const root=await assertLegacyCommandSource(tx,request.changeSetId,request.tenantId);
+        if(root.tenant_id!==request.tenantId)throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND","Exact source scope is required.");
+        await host.admit(tx,{changeSetId:request.changeSetId,entityId:string(root,"entity_id"),tenantId:request.tenantId,actorId:request.actorId,batch:null},"read");
+        const repository=new KyselyMetaEntityAuthoringRepository(tx,undefined,policy,undefined,host);
+        const source=Number(root.lock_version)===request.proposal.revision?await repository.loadGraph(request.changeSetId):await repository.readDraftSave(request.changeSetId,request.proposal.revision);
+        if(!source)throw new AuthoringConflictError("Enrollment source history unavailable.");
+        const prepared=prepareLegacyLabelEnrollment(source,request.proposal,policy);
+        const result=await repository.executeLabelCommands({changeSetId:request.changeSetId,actorId:request.actorId,tenantId:request.tenantId,batch:prepared.batch});
+        await sql`RELEASE SAVEPOINT legacy_label_enrollment`.execute(tx);
+        return {...result,sourceHash:prepared.sourceHash,proposalHash:prepared.proposalHash};
+      } catch(error){
+        await sql`ROLLBACK TO SAVEPOINT legacy_label_enrollment`.execute(tx);
+        await sql`RELEASE SAVEPOINT legacy_label_enrollment`.execute(tx);
+        throw error;
+      }
+    });
   }
   private async admitLegacyProductCommand(tx: Transaction<Database>, input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
     const source=await assertLegacyCommandSource(tx,input.changeSetId,input.tenantId);

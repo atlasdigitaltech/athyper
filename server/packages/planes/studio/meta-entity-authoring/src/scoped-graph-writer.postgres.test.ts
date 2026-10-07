@@ -1,3 +1,4 @@
+import {sha256} from "./deterministic.js";
 import type {NativeAuthoringPolicy} from "./native-core-layout-persistence.js";
 // Synthetic admission only; this disposable superuser fixture cannot qualify product RLS.
 const fixtureProductHost={admit:async()=>{}} as unknown as NativeAuthoringPolicy;
@@ -511,6 +512,20 @@ it.skipIf(!enabled)(
         },
         undefined,fixtureProductHost,
       );
+      // Full enrollment application/replay using the real repository and history;
+      // outer rollback retains the independent command fixtures below.
+      await expect(db.transaction().execute(async tx=>{
+        const bootstrap=new KyselyMetaEntityAuthoringRepository(tx,undefined,{supportedLocales:["en"],maxCommands:20,maxBatchBytes:16000},undefined,fixtureProductHost);
+        const source=await bootstrap.loadGraph(draftId);
+        const request={changeSetId:draftId,actorId:original,tenantId:null,proposal:{sourceHash:sha256(source),revision:2,idempotencyKey:"bootstrap-labels-fixture-0001",defaultLocale:"en",requiredLocales:["en"],declarations:[{sourcePath:"/entity/entityCode",labelKey:"reference.bootstrap",defaultText:source.entity.entityCode}]}};
+        const enrolled=await bootstrap.executeLegacyLabelEnrollment(request);
+        expect(enrolled.revision).toBe(3);
+        expect(await bootstrap.executeLegacyLabelEnrollment(request)).toEqual(enrolled);
+        expect((await bootstrap.loadGraph(draftId)).ownedLabels?.labels.some(l=>l.labelKey==="reference.bootstrap")).toBe(true);
+        await expect(bootstrap.executeLegacyLabelEnrollment({...request,proposal:{...request.proposal,sourceHash:"0".repeat(64)}})).rejects.toThrow("LEGACY_LABEL_SOURCE_MISMATCH");
+        expect((await bootstrap.get(draftId))?.revision).toBe(3);
+        throw Error("BOOTSTRAP_FIXTURE_ROLLBACK");
+      })).rejects.toThrow("BOOTSTRAP_FIXTURE_ROLLBACK");
       const command = (
         expectedRevision: number,
         idempotencyKey: string,
