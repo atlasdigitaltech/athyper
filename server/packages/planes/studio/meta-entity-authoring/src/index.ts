@@ -148,3 +148,5 @@ export {
 export { createProductLabelEnrollment } from "./product-label-enrollment.js";
 
 export { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
+
+export { createProductLabelHost } from "./product-label-host.js";

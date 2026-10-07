@@ -51,8 +51,9 @@ allocation or whole-source mapping completeness.
 
 **Next milestone remains M1 + actual canonical enrollment.** Diagnostic reports
 and additional pure fixtures alone cannot complete it. Current implementation
-adds product-command admission below, but the installed product DB path, human
-review receipts and actual enrollment remain unqualified. No production/cutover
+adds product-command admission below, but the installed product DB path and actual
+enrollment remain unqualified. Draft mutation requires current authenticated
+authoring authority, not a human review receipt; independent review gates publication. No production/cutover
 or host activation is authorized by this status entry. Preserve all history until
 the separate F5 retention decision is approved.
 
@@ -225,6 +226,69 @@ where new operations require it.
 
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
+
+### Server-only governance/runtime composition — 8 October 2026
+
+Owner scope now defers the shared composer UI and UI wiring. They are not
+prerequisites for the independent control API's bounded enrollment command.
+`product-command-governance.ts` binds admission to the existing
+`metadata.entity.author` authorizer, reloads IAM permissions on every issuance
+and replay, and checks current active human identity, authentication epoch,
+authority coordinates and exact editable system-owned product draft. It does
+not use publication-review receipts as mutation authority. Existing control-plane
+and authorization-framework controls are preserved; no protected-state
+initializer or new operation requirement is supplied.
+
+`product-command-runtime.ts` composes separate governance, issuer and application
+connections, the canonical enrollment executor, admitted command host and existing
+transactional audit sink. Startup rejects non-Studio databases, unsafe or
+non-isolated role memberships, issuer/application overlap, missing audit privileges
+and invalid locale/command budgets. These preflights do not replace a complete
+installed privilege inventory or authenticated deployment tests. The bounded host
+admits legacy label commands only; it explicitly rejects native edits, reference
+allocation, history mutation and protected-state initialization.
+
+The control entrypoint accepts this optional configuration only as a complete set:
+`PLATFORM_CONTROL_COMMAND_ISSUER_DATABASE_URL_FILE`,
+`PLATFORM_CONTROL_COMMAND_APPLICATION_DATABASE_URL_FILE`,
+`PLATFORM_CONTROL_COMMAND_APPLICATION_LOGIN`, and
+`PLATFORM_CONTROL_COMMAND_LABEL_POLICY_FILE`. Secret and policy files use the
+existing private-file loader. Absence keeps the command route unavailable;
+partial or unsafe configuration fails startup. The application needs usage of
+`audit` and execution of the existing exact `audit.append_event` signature;
+no audit-table DML is justified. The immutable packaged transport migration has
+not been changed to imply that those deployed grants already exist.
+
+Actual DEV inspection still finds no product-command roles. Both current drafts
+remain revision 1 with undeclared source kind, locale and native/reference markers:
+Country `28e155d7-9f18-48fd-9f4d-847ff80f7e87`; State Region
+`9672c64b-b40f-43ce-8a2f-e0fbebd1154e`. The control role has SELECT authority for
+the principal/binding and product root checks. This read-only inspection does not
+establish an authenticated command, installed issuer/application logins, canonical
+source/identity enrollment or deployed F6/F8/F9 acceptance. Ownership initialization
+and reviewed historical identity allocation remain engineering work, separate
+from label enrollment and publication review. No persistent DEV mutation occurred.
+
+**Lifecycle audit disposition:** retain the existing
+`publication.entity_release_link` relationship between Entity source releases
+and shared publication releases. Counts across releases, artifacts, deployments,
+events, active heads and projections have different cardinalities; count differences
+alone do not prove leaked rows or duplicate authority. Any acceptance/reconciliation
+check must follow exact source/release/hash, declared destination and activation
+coordinates, distinguish historical superseded or failed attempts from current
+requirements, and report missing legacy declarations rather than invent targets.
+Do not delete active probe publications, collapse immutable source history or
+activate deferred materialization execution on this evidence. Materialization
+bindings/mapping authoring remain outside the reference slice. A future shared
+status read model must use these relationships and the existing authorization
+boundary, rather than become another mutable lifecycle ledger.
+
+Validation: full authoring tests and typechecks pass; the control-plane folder is
+now also exercised in the independent Entity Studio CI job. The packaged PostgreSQL
+scenario uses the real bounded command host and proves transaction/replay/rollback
+under its application role, but retains explicitly synthetic governance admission.
+It is not deployed acceptance. The earlier fixture and broad-suite evidence remains
+separate; M1/M2 and deployed qualification are still open.
 
 ### Atomic product-command migration package — 8 October 2026
 

@@ -1,3 +1,4 @@
+import { createProductLabelHost } from "./product-label-host.js";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
@@ -683,25 +684,7 @@ it.skipIf(!enabled)(
             },
           },
         });
-        const host: NativeAuthoringPolicy = {
-          ...fixtureProductHost,
-          async admit(connection, input) {
-            if (
-              input.actorId !== scope.actorId ||
-              input.changeSetId !== scope.changeSetId ||
-              input.tenantId !== null
-            )
-              throw Error("SCOPE_DENIED");
-            const admitted = (
-              await sql<{
-                ok: boolean;
-              }>`SELECT entity_command_private.admitted(${input.changeSetId}::uuid) ok`.execute(
-                connection,
-              )
-            ).rows[0]?.ok;
-            if (!admitted) throw Error("DATABASE_ADMISSION_REQUIRED");
-          },
-        };
+        const host = createProductLabelHost();
         let auditFails = true;
         const enrollmentOptions = (selectedAuthority = authority) => ({
           database: appDb,

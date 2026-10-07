@@ -234,6 +234,9 @@ jobs:
       - name: Test complete Entity authoring implementation suite
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring test
+      - name: Test governed control-plane composition
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run src/composition/control-plane
       - name: Test shared detail navigation
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
