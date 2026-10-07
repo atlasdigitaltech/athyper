@@ -418,6 +418,20 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
           /CREATE TABLE metadata\.entity_label_translation \([\s\S]*?\n\);/,
         )![0],
       );
+      query(read("41_ui_component_catalogue.generated.sql"));
+      const componentId = randomUUID();
+      query(
+        `INSERT INTO metadata.ui_component_contract VALUES ('${componentId}',NULL,'shared.test',1,'field_display','standard','${"a".repeat(64)}','platform','entity.ui','shared.test','${"b".repeat(64)}',ARRAY['string'],ARRAY['studio'],ARRAY['detail'],ARRAY[]::text[],ARRAY['one'],ARRAY[]::text[],ARRAY[]::text[],ARRAY[]::uuid[],false,'active');`,
+      );
+      reject(
+        `UPDATE metadata.ui_component_contract SET status='deprecated' WHERE id='${componentId}';`,
+        "UI_COMPONENT_IMMUTABLE_RESOURCE",
+      );
+      reject(
+        `DELETE FROM metadata.ui_component_contract WHERE id='${componentId}';`,
+        "UI_COMPONENT_IMMUTABLE_RESOURCE",
+      );
+
       query(read("33_native_typed_row_guards.generated.sql"));
       query(
         "ALTER TABLE metadata.entity_surface_navigation_group ADD COLUMN entity_id uuid, ADD COLUMN tenant_id uuid;",
@@ -431,7 +445,7 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
       );
       reject(
         `INSERT INTO metadata.entity_surface(entity_id,change_set_id,surface_key,surface_kind,title,layout_kind,layout_config,component_contract_id,created_by) VALUES('${id}','${draft}','component','detail','Component','stack','{}','${randomUUID()}','${actor}');SELECT metadata.fn_assert_native_typed_rows('${draft}',2);`,
-        "NATIVE_REFERENCE_STORAGE_UNAVAILABLE:ui_component_contract",
+        "NATIVE_TYPED_ROW_INVALID:entity_surface",
       );
       const profileId = randomUUID();
       query(

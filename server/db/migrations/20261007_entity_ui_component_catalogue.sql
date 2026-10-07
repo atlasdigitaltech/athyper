@@ -1,3 +1,60 @@
+BEGIN;
+CREATE TEMP TABLE native_nullability_original_rows(schema_name text,table_name text,row_hash text) ON COMMIT DROP;
+DO $$ DECLARE r record; h text; BEGIN
+ FOR r IN SELECT n.nspname,c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('metadata','snapshot') AND c.relkind='r' ORDER BY n.nspname,c.relname LOOP
+  EXECUTE format('SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),''[]''::jsonb)::text) FROM %I.%I t',r.nspname,r.relname) INTO h;
+  INSERT INTO native_nullability_original_rows VALUES(r.nspname,r.relname,h);
+ END LOOP;
+END $$;
+SET LOCAL lock_timeout='5s';
+DO $$ BEGIN
+ IF (SELECT count(*) FROM pg_constraint WHERE conrelid IN ('metadata.entity_change_set'::regclass,'metadata.entity_field'::regclass,'metadata.entity_runtime_profile'::regclass,'metadata.entity_surface'::regclass,'metadata.entity_surface_section'::regclass,'metadata.entity_surface_field_binding'::regclass,'metadata.entity_operation'::regclass) AND conname LIKE '%\_native_pending_ck' ESCAPE '\' AND convalidated) <> 7 THEN
+  RAISE EXCEPTION 'NATIVE_CORE_ROOT_REQUIRES_PENDING_GUARDS';
+ END IF;
+END $$;
+DO $$ BEGIN IF to_regclass('metadata.ui_component_contract') IS NOT NULL OR (SELECT md5(prosrc) FROM pg_proc WHERE oid='metadata.fn_assert_native_typed_rows(uuid,integer)'::regprocedure) IS DISTINCT FROM 'b7174a64fce0af39e5d7bcda25be7a2b' THEN RAISE EXCEPTION 'UI_COMPONENT_PREDECESSOR_UNKNOWN'; END IF; END $$;
+-- GENERATED immutable component resource projection; no installation or publication approval implied.
+CREATE FUNCTION metadata.fn_ui_component_set_valid(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE STRICT AS $$ SELECT cardinality(values_)=(SELECT count(DISTINCT v) FROM unnest(values_) v) $$;
+CREATE FUNCTION metadata.fn_ui_component_supported_data_types(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT (((native_item_0.value::text = 'string') IS TRUE OR (native_item_0.value::text = 'text') IS TRUE OR (native_item_0.value::text = 'integer') IS TRUE OR (native_item_0.value::text = 'bigint') IS TRUE OR (native_item_0.value::text = 'decimal') IS TRUE OR (native_item_0.value::text = 'boolean') IS TRUE OR (native_item_0.value::text = 'uuid') IS TRUE OR (native_item_0.value::text = 'date') IS TRUE OR (native_item_0.value::text = 'datetime') IS TRUE OR (native_item_0.value::text = 'json') IS TRUE OR (native_item_0.value::text = 'enum') IS TRUE OR (native_item_0.value::text = 'money') IS TRUE))))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_supported_planes(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT (((native_item_0.value::text = 'studio') IS TRUE OR (native_item_0.value::text = 'neon') IS TRUE OR (native_item_0.value::text = 'mesh') IS TRUE))))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_supported_surface_kinds(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT (((native_item_0.value::text = 'list') IS TRUE OR (native_item_0.value::text = 'detail') IS TRUE OR (native_item_0.value::text = 'form') IS TRUE OR (native_item_0.value::text = 'embedded') IS TRUE OR (native_item_0.value::text = 'lookup') IS TRUE))))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_supported_modes(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT ((native_item_0.value IS NOT NULL AND (length(native_item_0.value::text)>=1 AND length(native_item_0.value::text)<=127)) IS TRUE)))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_cardinalities(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT (((native_item_0.value::text = 'one') IS TRUE OR (native_item_0.value::text = 'many') IS TRUE))))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_option_keys(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT (((native_item_0.value::text = 'text_wrap') IS TRUE OR (native_item_0.value::text = 'fraction_digits') IS TRUE OR (native_item_0.value::text = 'date_style') IS TRUE OR (native_item_0.value::text = 'empty_text_label_id') IS TRUE))))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_filter_operators(values_ text[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT ((native_item_0.value IS NOT NULL AND (length(native_item_0.value::text)>=1 AND length(native_item_0.value::text)<=127)) IS TRUE)))) IS TRUE $$;
+CREATE FUNCTION metadata.fn_ui_component_compatible_display_ids(values_ uuid[]) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT (values_ IS NOT NULL AND (coalesce(array_ndims(values_),1)=1 AND coalesce(array_lower(values_,1),1)=1 AND NOT EXISTS (SELECT 1 FROM unnest(values_) AS native_item_0(value) WHERE NOT ((native_item_0.value IS NOT NULL AND (native_item_0.value::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) IS TRUE)))) IS TRUE $$;
+CREATE TABLE metadata.ui_component_contract (
+ id uuid NOT NULL CHECK(((id IS NOT NULL AND (id::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) IS TRUE) IS TRUE),
+ tenant_id uuid CHECK((((tenant_id IS NOT NULL AND (tenant_id::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) IS TRUE OR tenant_id IS NULL)) IS TRUE),
+ component_key text NOT NULL CHECK(((component_key IS NOT NULL AND (length(component_key::text)>=1 AND length(component_key::text)<=127)) IS TRUE) IS TRUE),
+ component_version integer NOT NULL CHECK(((component_version IS NOT NULL AND (component_version BETWEEN 1 AND 2147483647)) IS TRUE) IS TRUE),
+ component_level text NOT NULL CHECK((((component_level::text = 'surface') IS TRUE OR (component_level::text = 'section') IS TRUE OR (component_level::text = 'field_display') IS TRUE OR (component_level::text = 'field_input') IS TRUE OR (component_level::text = 'field_filter') IS TRUE OR (component_level::text = 'field_format') IS TRUE)) IS TRUE),
+ component_tier text NOT NULL CHECK((((component_tier::text = 'standard') IS TRUE OR (component_tier::text = 'shared_composite') IS TRUE OR (component_tier::text = 'domain_registered') IS TRUE)) IS TRUE),
+ manifest_hash text NOT NULL CHECK(((manifest_hash IS NOT NULL AND (manifest_hash::text ~ '^[a-f0-9]{64}$')) IS TRUE) IS TRUE),
+ resource_owner text NOT NULL CHECK(((resource_owner IS NOT NULL AND (length(resource_owner::text)>=1 AND length(resource_owner::text)<=127)) IS TRUE) IS TRUE),
+ resource_namespace text NOT NULL CHECK(((resource_namespace IS NOT NULL AND (length(resource_namespace::text)>=1 AND length(resource_namespace::text)<=127)) IS TRUE) IS TRUE),
+ publication_resource_key text NOT NULL CHECK(((publication_resource_key IS NOT NULL AND (length(publication_resource_key::text)>=1 AND length(publication_resource_key::text)<=127)) IS TRUE) IS TRUE),
+ publication_release_hash text NOT NULL CHECK(((publication_release_hash IS NOT NULL AND (publication_release_hash::text ~ '^[a-f0-9]{64}$')) IS TRUE) IS TRUE),
+ supported_data_types text[] NOT NULL CHECK((metadata.fn_ui_component_supported_data_types(supported_data_types)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(supported_data_types::text[])),
+ supported_planes text[] NOT NULL CHECK((metadata.fn_ui_component_supported_planes(supported_planes)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(supported_planes::text[])),
+ supported_surface_kinds text[] NOT NULL CHECK((metadata.fn_ui_component_supported_surface_kinds(supported_surface_kinds)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(supported_surface_kinds::text[])),
+ supported_modes text[] NOT NULL CHECK((metadata.fn_ui_component_supported_modes(supported_modes)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(supported_modes::text[])),
+ cardinalities text[] NOT NULL CHECK((metadata.fn_ui_component_cardinalities(cardinalities)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(cardinalities::text[])),
+ option_keys text[] NOT NULL CHECK((metadata.fn_ui_component_option_keys(option_keys)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(option_keys::text[])),
+ filter_operators text[] NOT NULL CHECK((metadata.fn_ui_component_filter_operators(filter_operators)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(filter_operators::text[])),
+ compatible_display_ids uuid[] NOT NULL CHECK((metadata.fn_ui_component_compatible_display_ids(compatible_display_ids)) IS TRUE) CHECK(metadata.fn_ui_component_set_valid(compatible_display_ids::text[])),
+ masked_representation_safe boolean NOT NULL CHECK((masked_representation_safe IS NOT NULL) IS TRUE),
+ status text NOT NULL CHECK((((status::text = 'active') IS TRUE OR (status::text = 'deprecated') IS TRUE)) IS TRUE),
+ PRIMARY KEY(id),
+ UNIQUE NULLS NOT DISTINCT(tenant_id,resource_owner,resource_namespace,component_key,component_version,component_level),
+ CHECK(cardinality(supported_planes)>0 AND cardinality(supported_surface_kinds)>0)
+);
+ALTER TABLE metadata.ui_component_contract ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metadata.ui_component_contract FORCE ROW LEVEL SECURITY;
+-- Publication-owned installation must supply its independently governed write authority.
+-- No application role, session flag or resource registration grants that authority here.
+CREATE FUNCTION metadata.guard_ui_component_immutable() RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'UI_COMPONENT_IMMUTABLE_RESOURCE' USING ERRCODE='23514'; END $$;
+CREATE TRIGGER ui_component_immutable BEFORE UPDATE OR DELETE ON metadata.ui_component_contract FOR EACH ROW EXECUTE FUNCTION metadata.guard_ui_component_immutable();
 -- GENERATED from the normalized core/layout/operation contracts.
 -- Structural component only. Pending cutover guards remain in force.
 CREATE OR REPLACE FUNCTION metadata.fn_assert_native_typed_rows(change_set uuid, expected_version integer)
@@ -274,3 +331,10 @@ BEGIN
   )) THEN RAISE EXCEPTION 'NATIVE_TYPED_ROW_INVALID:entity_operation' USING ERRCODE='23514'; END IF; END IF;
 END;
 $native_rows$;
+DO $$ DECLARE r record; h text; BEGIN
+ FOR r IN SELECT * FROM native_nullability_original_rows LOOP
+  EXECUTE format('SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),''[]''::jsonb)::text) FROM %I.%I t',r.schema_name,r.table_name) INTO h;
+  IF h IS DISTINCT FROM r.row_hash THEN RAISE EXCEPTION 'NATIVE_CORE_ROOT_ORIGINAL_ROWS_CHANGED: %.%',r.schema_name,r.table_name; END IF;
+ END LOOP;
+END $$;
+COMMIT;

@@ -1375,3 +1375,36 @@ Actual Country and State Region drafts remain revision 1, with zero owned-label
 rows and no native marker. Actual enrollment/application/history, complete resource
 resolution, approved host/product-write authority and deployed F6/F8/F9 remain
 unqualified. No native cutover or activation occurred.
+
+### UI component resource storage/resolution — 2026-10-07
+
+Implemented the closed typed resource descriptor, generated catalogue DDL, tenant/
+level/target-plane SQL reference checks and independent installed-resource resolver.
+Authoring/compiler composition replaces component rosters with resolved catalogue
+and installed evidence; the compiler context hash includes that evidence and the
+reader recheck uses the same resolver. Existing admission, initializer, security and
+storage ports remain intact. This composition is available for the approved host;
+no deployed host has been admitted by this work.
+
+DEV migration `20261007_entity_ui_component_catalogue.sql`, SHA-256
+`64b3aa01ca5d813bdd95ebb8a337528cdb3ab29e064d71ffc2ea7c48c39d5dbe`,
+was rehearsed with rollback, applied and replayed successfully. Backup and receipts:
+`~/.athyper/instances/dev/workspace/component-catalogue-20261007T095600Z/`.
+Every original metadata/history row and authorization/head fingerprint is unchanged.
+The empty catalogue has forced RLS, no new grants, immutable rows and typed checks.
+Installed resource evidence cannot be inferred from its presence. Candidate schema
+hash: `5fda0edf0e1cd00931941f846b8f6e615d29129bfb0854ec34065365124f42f4`.
+Seven pending cutover constraints remain. No native enrollment or activation ran.
+
+Validation: 766 authoring tests pass (six opt-in exclusions), 57 contract tests
+pass (four opt-in exclusions), 11 migration-runner tests pass. Both PostgreSQL
+suites pass (one aggregate scenario and four typed-row tests), including immutable
+catalogue mutation rejection. Authoring typechecks and generated-contract drift
+checks pass. These are framework/component proofs, not canonical whole-source
+Country/State Region history or deployed RLS/host qualification.
+
+Remaining: governed catalogue installation/read authority and host composition;
+actual Country/State Region enrollment/application/history; approved product-write
+and protected-state initialization provenance; deployed F6/F8/F9 evidence. Component
+slots, capability-binding and overlay resource dictionaries are not implemented by
+this checkpoint. No approval or resource identity has been fabricated.

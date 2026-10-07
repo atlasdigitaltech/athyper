@@ -7,6 +7,7 @@ import {
   nativeGuardMembers,
   nativeRowGuardsDdl,
 } from "./native-row-guards.js";
+import { uiComponentCatalogueDdl } from "./ui-component-contract.js";
 import { nativeRetiredColumns } from "./native-storage-transition.js";
 import { coreFixture, coreFixtureId } from "./normalized-core.fixtures.js";
 import { normalizedCoreMembers } from "./normalized-core-contract.js";
@@ -48,11 +49,7 @@ it("retires only real canonical columns and rejects unavailable resource diction
       expect(definition).toMatch(new RegExp("\\b" + column + "\\s+"));
   }
   const ddl = nativeRowGuardsDdl();
-  for (const table of [
-    "ui_component_contract",
-    "entity_capability_binding",
-    "entity_surface_overlay",
-  ]) {
+  for (const table of ["entity_capability_binding", "entity_surface_overlay"]) {
     expect(ddl).toContain("NATIVE_REFERENCE_STORAGE_UNAVAILABLE:" + table);
     expect(ddl).not.toContain('FROM metadata."' + table + '"');
   }
@@ -169,6 +166,14 @@ it.skipIf(process.env.ATHYPER_NATIVE_ROW_GUARDS_POSTGRES !== "1")(
         for (const c of Object.values(member.columns))
           if ("reference" in c && c.reference && !tables.has(c.reference))
             tables.set(c.reference, base());
+      tables.delete("ui_component_contract");
+      tables.set(
+        "entity_target",
+        new Map([
+          ["change_set_id", "uuid"],
+          ["target_plane", "text"],
+        ]),
+      );
       tables
         .get("entity_field_identity")!
         .set("identity_status", "text")
@@ -181,6 +186,7 @@ it.skipIf(process.env.ATHYPER_NATIVE_ROW_GUARDS_POSTGRES !== "1")(
                 `CREATE TABLE metadata."${table}"(${[...cols].map(([c, t]) => `"${c}" ${t}`).join(",")});`,
             )
             .join("\n") +
+          uiComponentCatalogueDdl() +
           nativeRowGuardsDdl(),
       );
       const root = coreFixtureId(900),

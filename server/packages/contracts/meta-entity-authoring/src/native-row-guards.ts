@@ -101,15 +101,33 @@ export function nativeRowGuardsDdl(): string {
       const column = `r.${identifier(c.column)}`;
       rules.push(nativeColumnPredicate(c.node, column, c.sqlType));
       if ("reference" in c && c.reference) {
+        if (c.reference === "ui_component_contract") {
+          const level =
+            member.table === "entity_surface"
+              ? "surface"
+              : member.table === "entity_surface_section"
+                ? "section"
+                : (
+                    {
+                      component_display_id: "field_display",
+                      component_input_id: "field_input",
+                      component_filter_id: "field_filter",
+                      component_format_id: "field_format",
+                    } as Record<string, string>
+                  )[c.column];
+          if (!level) throw Error("NATIVE_COMPONENT_LEVEL_UNDECLARED");
+          rules.push(
+            `(${column} IS NULL OR EXISTS (SELECT 1 FROM metadata.ui_component_contract target WHERE target.id=${column} AND (target.tenant_id IS NULL OR target.tenant_id=root.tenant_id) AND target.component_level='${level}' AND target.status='active' AND NOT EXISTS(SELECT 1 FROM metadata.entity_target plane WHERE plane.change_set_id=root.id AND NOT(plane.target_plane=ANY(target.supported_planes)))))`,
+          );
+          continue;
+        }
         // These target dictionaries are not installed canonical storage. Reject
         // selected values until their qualified storage/owner resolver exists;
         // do not emit a SQL reference to a nonexistent or guessed resource table.
         if (
-          [
-            "ui_component_contract",
-            "entity_capability_binding",
-            "entity_surface_overlay",
-          ].includes(c.reference)
+          ["entity_capability_binding", "entity_surface_overlay"].includes(
+            c.reference,
+          )
         ) {
           checks.push(
             `IF EXISTS (SELECT 1 FROM metadata.${table} r WHERE r.change_set_id=root.id AND ${column} IS NOT NULL) THEN RAISE EXCEPTION 'NATIVE_REFERENCE_STORAGE_UNAVAILABLE:${c.reference}' USING ERRCODE='23514'; END IF;`,

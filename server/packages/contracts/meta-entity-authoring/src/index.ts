@@ -28,3 +28,5 @@ export * from "./native-operation-contract.js";
 export * from "./native-root-contract.js";
 
 export * from "./native-storage-transition.js";
+
+export * from "./ui-component-contract.js";

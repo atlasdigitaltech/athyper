@@ -3,6 +3,23 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_ui_component_catalogue.sql",
+      "path": "migrations/20261007_entity_ui_component_catalogue.sql",
+      "sha256": "64b3aa01ca5d813bdd95ebb8a337528cdb3ab29e064d71ffc2ea7c48c39d5dbe",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Add immutable typed component catalogue and scoped references; preserve cutover guards and all original metadata/history. No resource installation or authority grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/41_ui_component_catalogue.generated.sql",
+        "ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_snapshot_guards.sql",
       "path": "migrations/20261007_entity_native_snapshot_guards.sql",
       "sha256": "6c555f7fc63d11b66b90aa58e02c2ff28327c09ba8519e842093646189942eb4",

@@ -19,6 +19,7 @@ export const nativeSchemaTables = [
       (member) => `metadata.${member.table}`,
     ),
     "metadata.entity_authoring_command_receipt",
+    "metadata.ui_component_contract",
     "snapshot.entity_draft_save",
   ]),
 ].sort();

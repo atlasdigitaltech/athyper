@@ -53,6 +53,7 @@ import type { NativeConversionResource } from "./native-graph-conversion.js";
 /** Installed compilation inputs, not a draft grant or a deployed qualification.
  * The repository obtains operation controls from its exact locked source. */
 export interface NativeReleaseCompilationContext {
+  readonly componentResourceEvidence?: readonly import("./native-component-resources.js").InstalledComponentEvidence[];
   readonly graphHash: string;
   readonly authoringSchemaHash: string;
   readonly core: NormalizedCoreContext;

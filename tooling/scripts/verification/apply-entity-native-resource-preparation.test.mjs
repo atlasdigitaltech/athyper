@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   preparationSql,
   snapshotMigrationName,
+  componentCatalogueMigrationName,
   rootMigrationName,
   revisionMigrationName,
   legacyNullabilityMigrationName,
@@ -236,16 +237,9 @@ test("snapshot preparation composes real guards without retiring cutover or rewr
   );
   const digest = createHash("sha256").update(source).digest("hex");
   const applied = preparationSql(source, digest, true, snapshotMigrationName);
-  assert.ok(
-    source.includes(
-      readFileSync(
-        new URL(
-          "../../../server/db/ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    ),
+  assert.equal(
+    digest,
+    "6c555f7fc63d11b66b90aa58e02c2ff28327c09ba8519e842093646189942eb4",
   );
   assert.match(applied, /NATIVE_SNAPSHOT_PREDECESSOR_UNKNOWN/);
   assert.match(applied, /PERFORM metadata.fn_assert_native_typed_rows/);
@@ -256,4 +250,38 @@ test("snapshot preparation composes real guards without retiring cutover or rewr
   );
   assert.doesNotMatch(applied, /DROP CONSTRAINT|requires_mfa|GRANT /);
   assert.doesNotMatch(applied, /r\."field_keys"|r\."id_field_key"/);
+});
+
+test("component catalogue preparation preserves original rows and installs canonical guards", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + componentCatalogueMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const applied = preparationSql(
+    source,
+    createHash("sha256").update(source).digest("hex"),
+    true,
+    componentCatalogueMigrationName,
+  );
+  for (const name of [
+    "41_ui_component_catalogue.generated.sql",
+    "33_native_typed_row_guards.generated.sql",
+  ])
+    assert.ok(
+      source.includes(
+        readFileSync(
+          new URL(
+            "../../../server/db/ddl/planes/studio/metadata/" + name,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      ),
+    );
+  assert.match(applied, /UI_COMPONENT_PREDECESSOR_UNKNOWN/);
+  assert.match(applied, /ORIGINAL_ROWS_CHANGED/);
+  assert.doesNotMatch(applied, /DROP CONSTRAINT|requires_mfa|GRANT /);
 });
