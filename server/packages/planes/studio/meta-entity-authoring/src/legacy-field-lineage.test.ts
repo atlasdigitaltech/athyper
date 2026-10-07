@@ -93,3 +93,164 @@ it("validates explicit hash-bound correspondence without granting identity autho
     unmappedCurrentFieldIds: [current.fields[0]!.id],
   });
 });
+
+import { proposeLegacyFieldCorrespondence } from "./legacy-field-lineage.js";
+it("prepares exact declarations for review across recreated IDs without granting identity authority", () => {
+  const current = graph([
+    { ...field, id: "00000000-0000-4000-8000-000000000002" },
+  ]);
+  const result = proposeLegacyFieldCorrespondence(current, graph([field]));
+  expect(result.mappings).toEqual([
+    { currentFieldId: current.fields[0]!.id, previousFieldId: field.id },
+  ]);
+  expect(result.unresolved).toEqual([]);
+  expect(result.reviewRequired).toBe(true);
+  expect(result.authority).toBe("not-established");
+  expect(result.mappingHash).toMatch(/^[a-f0-9]{64}$/);
+});
+it("never turns changed declarations, absent properties or duplicate candidates into continuity", () => {
+  for (const patch of [
+    { dataType: "uuid" },
+    { label: null },
+    { fieldKey: "renamed" },
+  ]) {
+    const result = proposeLegacyFieldCorrespondence(
+      graph([{ ...field, ...patch }]),
+      graph([field]),
+    );
+    expect(result.mappings).toEqual([]);
+    expect(result.unresolved[0]?.reason).toBe("changed-or-unavailable");
+  }
+  const duplicate = { ...field, id: "00000000-0000-4000-8000-000000000002" };
+  for (const [current, previous] of [
+    [graph([field]), graph([field, duplicate])],
+    [graph([field, duplicate]), graph([field])],
+  ]) {
+    const result = proposeLegacyFieldCorrespondence(current!, previous!);
+    expect(result.mappings).toEqual([]);
+    expect(result.unresolved.every((x) => x.reason === "ambiguous")).toBe(true);
+  }
+});
+
+import { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
+
+it("requires complete release and previous-field dispositions and binds them to one immutable plan", () => {
+  const current = graph([{ ...field, dataType: "uuid" }]);
+  const previous = graph([field]);
+  const releases = [{ releaseId: "release-a", graph: previous }];
+  const input = {
+    currentSourceHash: sha256(current),
+    releases: [
+      {
+        releaseId: "release-a",
+        previousSourceHash: sha256(previous),
+        mappings: [],
+        rebindRequiredPreviousFieldIds: [field.id],
+      },
+    ],
+  };
+  const result = validateLegacyFieldIdentityPlan(current, releases, input);
+  expect(result.rebindOccurrences).toBe(1);
+  expect(result.mappedOccurrences).toBe(0);
+  expect(result.authority).toBe("not-established");
+  for (const decisions of [
+    [],
+    [...input.releases, ...input.releases],
+    [{ ...input.releases[0]!, releaseId: "unknown" }],
+  ])
+    expect(() =>
+      validateLegacyFieldIdentityPlan(current, releases, {
+        ...input,
+        releases: decisions,
+      }),
+    ).toThrow("F9_RELEASE_COVERAGE_INVALID");
+  for (const ids of [[], [field.id, field.id], ["other"]])
+    expect(() =>
+      validateLegacyFieldIdentityPlan(current, releases, {
+        ...input,
+        releases: [
+          { ...input.releases[0]!, rebindRequiredPreviousFieldIds: ids },
+        ],
+      }),
+    ).toThrow("F9_LEGACY_DISPOSITION_INCOMPLETE");
+  expect(() =>
+    validateLegacyFieldIdentityPlan(current, releases, {
+      ...input,
+      currentSourceHash: "0".repeat(64),
+    }),
+  ).toThrow("F9_SOURCE_HASH_MISMATCH");
+  expect(() =>
+    validateLegacyFieldIdentityPlan(current, releases, {
+      ...input,
+      releases: [
+        {
+          ...input.releases[0]!,
+          mappings: [{ currentFieldId: field.id, previousFieldId: field.id }],
+          rebindRequiredPreviousFieldIds: [],
+        },
+      ],
+    }),
+  ).toThrow("F9_MAPPING_SEMANTICS_CHANGED");
+});
+
+import { legacyFieldDependentFindings } from "./legacy-field-lineage.js";
+it("classifies type/reference breaks and surfaces source-bound findings to dependents", () => {
+  for (const [old, current, kind] of [
+    [field, { ...field, dataType: "uuid" }, "semantic-type-change"],
+    [
+      {
+        ...field,
+        typeConfig: {
+          kind: "string",
+          keyReference: { targetEntity: "target" },
+        },
+      },
+      { ...field, typeConfig: { kind: "string" } },
+      "reference-binding-change",
+    ],
+    [field, { ...field, label: "New" }, "unclassified"],
+  ] as const) {
+    const previous = graph([old]),
+      next = graph([current]);
+    const plan = validateLegacyFieldIdentityPlan(
+      next,
+      [{ releaseId: "release-a", graph: previous }],
+      {
+        currentSourceHash: sha256(next),
+        releases: [
+          {
+            releaseId: "release-a",
+            previousSourceHash: sha256(previous),
+            mappings: [],
+            rebindRequiredPreviousFieldIds: [field.id],
+          },
+        ],
+      },
+    );
+    expect(plan.findings[0]).toMatchObject({
+      changeKind: kind,
+      compatibility: kind === "unclassified" ? "unknown" : "breaking",
+      blocking: true,
+    });
+    const dependency = {
+      dependentKey: "dependent",
+      releaseId: "release-a",
+      sourceHash: sha256(previous),
+      fieldId: field.id,
+    };
+    expect(legacyFieldDependentFindings(plan, [dependency])[0]).toMatchObject({
+      ...dependency,
+      code: "F9_REBIND_REQUIRED",
+    });
+    expect(
+      legacyFieldDependentFindings(plan, [
+        { ...dependency, sourceHash: "0".repeat(64) },
+      ])[0]?.code,
+    ).toBe("F9_DEPENDENCY_SOURCE_UNAVAILABLE");
+    expect(
+      legacyFieldDependentFindings(plan, [
+        { ...dependency, fieldId: "missing" },
+      ])[0]?.code,
+    ).toBe("F9_DEPENDENCY_FIELD_UNAVAILABLE");
+  }
+});

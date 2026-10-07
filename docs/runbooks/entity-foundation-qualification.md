@@ -224,6 +224,71 @@ where new operations require it.
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
 
+### Historical correspondence and migration registration — 8 October 2026
+
+The six preparation upgrades missing from the Studio migration manifest are now
+registered in dependency order. All six already have exact `applied` DEV ledger
+entries; no SQL bytes changed and no upgrade was reapplied. Migration-layout
+validation now passes. The canonical PostgreSQL native-constraint compatibility
+rehearsal passes with its existing explicit test-only cutover; it does not enable
+DEV conversion.
+
+The shared lineage implementation now prepares full-declaration correspondences
+(excluding only legacy member ID) and validates complete historical coverage.
+Every previous field must be explicitly mapped or explicitly rebind-required;
+missing/extra releases, duplicate mappings, changed declarations, stale source
+hashes and incomplete dispositions reject. The installed-evidence inspector
+emits these proposals alongside the existing direct-ID comparison. These are
+review candidates, not field-name joins, allocation authority or installed F9.
+
+Actual saved revision-2 sources were checked against all 14 immutable release
+snapshots: 292 of 295 historical field occurrences match completely apart from
+member ID. Country accounts for 285 matches across 13 releases; State Region
+accounts for seven across one release. The remaining differences are:
+
+| Release                                | Current field               | Historical difference requiring explicit disposition                               |
+| -------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| `5b1f71bd-cbbc-4d99-83e7-399c91d54fcf` | Country `status`            | Previously enum with `shared.ref_status_d`; current string                         |
+| `cdf2b92f-b038-4943-add0-5e6b08994292` | State Region `country_code` | Historical `keyReference` to Country; current type configuration lacks it          |
+| `cdf2b92f-b038-4943-add0-5e6b08994292` | State Region `parent_code`  | Historical compound `keyReference` to State Region; current configuration lacks it |
+
+The comparison above uses field names only to explain differences for human
+review; it does not establish those three identity correspondences. Proposed
+negative disposition is rebind-required, preserving original snapshots and
+controls. The owner accepted the 292 exact matches and three explicit rebind
+dispositions in this conversation, conditional on compatibility classification,
+named reviewer attribution, dependent findings and independent security checks.
+This acceptance is not an authenticated installation/publication receipt. Full
+source-bound proposals and complete plan hashes are in the private DEV workspace
+`identity-correspondence-20261008/enrollment-evidence.json`. Reproduce them with
+`tooling/scripts/verification/inspect-legacy-enrollment.dev.mts` and the two exact
+draft IDs in the installed checkpoint below. The earlier absence of direct member-ID
+matches must not be interpreted as 295 incompatible field declarations.
+
+Both current drafts remain revision 2 with verified saved history, allocated
+labels, NULL source kind and no stable field identities. The installed label host
+still excludes ownership/identity commands. The root pending constraint currently
+forbids ownership/schema pins; replacing it requires the corresponding canonical
+ownership initialization and history protocol, not a naked column update.
+The F6/F8 effective-security implementation currently exposes an evidence port;
+no production `withLockedEvidence` adapter was found in host composition. These
+are unfinished implementations, separate from the accepted correspondence disposition and still-required named reviewer attribution.
+Native conversion and deployed F6/F8/F9 are not complete. UI remains deferred.
+
+Compatibility findings classify Country’s enum-to-string change as a breaking
+semantic type change and the two State Region differences as breaking reference
+binding changes. Findings include release ID, exact source hash and old field ID.
+The shared dependent-findings function rejects missing/stale source pins and
+unknown fields, and reports rebind-required to matching dependents. Unknown
+changes remain unclassified/blocking. These helpers are not yet wired into a
+deployed installation/compiler dependency path; that wiring must precede install.
+Declaration equality remains separate from access, masking and relation-target
+security qualification.
+
+Validation: 811 authoring tests pass (six environment-dependent skips), including
+complete-release coverage and explicit rebind disposition rejection tests. The
+PostgreSQL constraint rehearsal and migration-layout check pass.
+
 ### Installed DEV command authority and label enrollment — 8 October 2026
 
 The optional server-only path is now installed. No shared composer UI or UI wiring
@@ -276,7 +341,7 @@ and two control-plane environment-dependent tests skip in the ordinary run.
 The installed-role PostgreSQL test and disposable scoped-save/replay/rollback test pass separately. Real authenticated requests reject forged actor/tenant fields and a stale source hash with HTTP 400; they leave both drafts at revision 2 with one command receipt each. This is bounded label-write
 qualification, not full native product-write or live-read qualification.
 
-Migration-layout validation still reports six pre-existing inventory/manifest disagreements for the 20261007 catalogue/native preparation upgrades. The new audit migration matches its inventory and Studio manifest; full repository CI is not claimed green. Applied migration bytes remain unchanged.
+At the earlier installation checkpoint, migration-layout validation reported six inventory/manifest disagreements for the 20261007 catalogue/native preparation upgrades. The new audit migration matches its inventory and Studio manifest; full repository CI is not claimed green. Applied migration bytes remain unchanged.
 
 ### Server-only governance/runtime composition — 8 October 2026
 

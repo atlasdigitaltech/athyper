@@ -1,4 +1,8 @@
-import { compareLegacyFieldLineage } from "./legacy-field-lineage.js";
+import {
+  compareLegacyFieldLineage,
+  proposeLegacyFieldCorrespondence,
+  validateLegacyFieldIdentityPlan,
+} from "./legacy-field-lineage.js";
 import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { sql, type Transaction } from "kysely";
 import {
@@ -181,7 +185,13 @@ export async function inspectLegacyEnrollmentEvidence(
     contractHash: r.contractHash,
     integrity: r.integrity,
     ...(r.integrity
-      ? { comparison: compareLegacyFieldLineage(source, r.graph) }
+      ? {
+          comparison: compareLegacyFieldLineage(source, r.graph),
+          correspondenceProposal: proposeLegacyFieldCorrespondence(
+            source,
+            r.graph,
+          ),
+        }
       : { blocker: "F9_RELEASE_SOURCE_INTEGRITY_INVALID" }),
   }));
   const labels = await loadNormalizedLabels(tx, changeSetId);
@@ -274,8 +284,27 @@ export async function inspectLegacyEnrollmentEvidence(
       throw error;
     }
   }
+  const identityPlanProposal = releases.every((r) => r.integrity)
+    ? validateLegacyFieldIdentityPlan(
+        source,
+        releases.map((r) => ({ releaseId: r.releaseId, graph: r.graph })),
+        {
+          currentSourceHash: sha256(source),
+          releases: releases.map((r) => {
+            const proposal = proposeLegacyFieldCorrespondence(source, r.graph);
+            return {
+              releaseId: r.releaseId,
+              previousSourceHash: proposal.previousSourceHash,
+              mappings: proposal.mappings,
+              rebindRequiredPreviousFieldIds: proposal.unmappedPreviousFieldIds,
+            };
+          }),
+        },
+      )
+    : null;
   return {
     schema: "entity.legacy-enrollment-evidence/1",
+    identityPlanProposal,
     ...(labelPlan ? { labelProposal: labelProposal() } : {}),
     changeSetId,
     entityId: root!.entity_id,
