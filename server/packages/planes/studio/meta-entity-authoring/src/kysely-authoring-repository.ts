@@ -1,3 +1,4 @@
+import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import { applyLegacySourceEnrollment, type LegacyEnrollmentApplicationInput, type LegacyEnrollmentApplicationPolicy } from "./legacy-enrollment-application.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import { prepareLegacySourceEnrollment, type LegacySourceEnrollmentInput } from "./legacy-source-enrollment.js";
@@ -220,6 +221,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
         throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "Read context must match the exact source scope.");
       parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
+      validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
       return graph;
     });
   }
@@ -246,6 +248,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       if (context.coreContext.entityId !== input.entityId || context.coreContext.tenantId !== input.tenantId)
         throw new AuthoringPolicyError("NORMALIZED_SAVE_CONTEXT_MISMATCH", "History context must match its source.");
       parseNormalizedLayoutGraph(state.layout, { ...context, maxMembers: Math.min(context.maxMembers, policy.commands.maxMembers), core: state.core });
+      validateNativeSnapshotReferences(row.graph, input, policy.commands.maxMembers);
       return row.graph;
     });
   }
@@ -258,11 +261,15 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       authoringSource: {entityId: input.entityId, tenantId: input.tenantId, sourceKind: root.sourceKind, authoringSchemaHash: root.authoringSchemaHash},
       fields: state.core.field, runtimeProfiles: state.core.runtime, surfaces: state.core.surface,
       surfaceSections: state.layout.section, surfaceFieldBindings: state.layout.binding};
-    if (!expanded) return {...core, contractSchema: 'athyper.meta-entity-contract/2.4'};
+    if (!expanded) {
+      const graph: NativeAuthoringSnapshot = {...core, contractSchema: 'athyper.meta-entity-contract/2.4'};
+      validateNativeSnapshotReferences(graph, input, this.nativePolicy!.commands.maxMembers);
+      return graph;
+    }
     const policy = this.nativePolicy;
     if (!policy?.snapshotVersions?.includes(2)) throw new AuthoringPolicyError('NATIVE_AUTHORING_HOST_NOT_CONFIGURED', 'Expanded source admission and a finite snapshot budget are required.');
     const graph: ExpandedNativeMetaEntityGraph = {...core, contractSchema: 'athyper.meta-entity-contract/2.5', ...await loadNativeSupplementalMembers(tx, input, policy.commands.maxMembers)};
-    validateNativeSupplementalReferences(graph, policy.commands.maxMembers);
+    validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
     return graph;
   }
   async executeReferenceCommands(input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {

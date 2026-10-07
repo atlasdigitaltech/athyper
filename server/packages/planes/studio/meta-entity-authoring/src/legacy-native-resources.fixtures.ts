@@ -44,6 +44,7 @@ const resource = (key: string) => ({
 export function resourceConversionFixture(
   name = "country",
   plane: AuthoringPlane = "studio",
+  graphVersion: 1 | 2 = 1,
 ) {
   const document = JSON.parse(
     readFileSync(
@@ -59,6 +60,7 @@ export function resourceConversionFixture(
   const legacy = compileSharedReferenceProduct(
     parseSharedReferenceProduct(document),
     plane,
+    graphVersion,
   ).graph;
   const config = legacy.surfaces!.find(
     (s) => s.layoutConfig?.authorization,
@@ -99,7 +101,20 @@ export function resourceConversionFixture(
   const source: MetaEntityGraph = {
     ...legacy,
     contractSchema: "athyper.meta-entity-contract/2.3",
-    referenceMembers: emptyReferenceMembers(),
+    referenceMembers: {
+      ...emptyReferenceMembers(),
+      members: {
+        ...emptyReferenceMembers().members,
+        target: [
+          {
+            id: id(799),
+            targetPlane: plane,
+            requirement: "required",
+            position: 1,
+          },
+        ],
+      },
+    },
     fieldIdentities: [],
     ownedLabels: {
       contract: "entity.authoring-owned-labels/1",

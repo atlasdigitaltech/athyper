@@ -75,7 +75,10 @@ export interface SharedReferenceDefinition {
 export function buildSharedReferenceGraph(
   definition: SharedReferenceDefinition,
   plane: AuthoringPlane,
+  graphVersion: 1 | 2 = 1,
 ): MetaEntityGraph {
+  if (graphVersion !== 1 && graphVersion !== 2)
+    throw Error("REFERENCE_GRAPH_VERSION_UNSUPPORTED");
   const id = (key: string) => {
     const h = createHash("sha256")
       .update(`shared-reference:${definition.entityCode}:${plane}:${key}`)
@@ -220,7 +223,9 @@ export function buildSharedReferenceGraph(
       operationKey: key,
       operationKind: "read",
       label: key === "list" ? definition.title : "View record",
-      fieldKeys,
+      // v1 reproduction preserves historical artifact hashes. v2 stops using
+      // the write-enrollment hint as a read projection; exposure stays explicit.
+      fieldKeys: graphVersion === 1 ? fieldKeys : [],
       auditEventCode: `${definition.entityCode}.${key}`,
     })),
     operationPermissions: ["list", "read"].map((key) => ({

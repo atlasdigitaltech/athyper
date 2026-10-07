@@ -330,6 +330,7 @@ export function parseSharedReferenceProduct(
 export function compileSharedReferenceProduct(
   product: SharedReferenceProduct,
   plane: AuthoringPlane,
+  graphVersion: 1 | 2 = 1,
 ) {
   // Revalidate caller-owned objects; a prior parse is not a mutation-proof capability.
   const { capabilities, ...definition } = product.definition;
@@ -339,6 +340,6 @@ export function compileSharedReferenceProduct(
   );
   if (!validated.planes.includes(plane))
     throw Error("REFERENCE_PRODUCT_TARGET_EXCLUDED");
-  const graph = buildSharedReferenceGraph(validated.definition, plane);
+  const graph = buildSharedReferenceGraph(validated.definition, plane, graphVersion);
   return { graph, artifact: compileGraph(graph) };
 }

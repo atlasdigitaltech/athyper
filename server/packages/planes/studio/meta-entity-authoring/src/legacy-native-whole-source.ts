@@ -1,3 +1,4 @@
+import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import {
   FoundationContractError,
   type MetaEntityGraph,
@@ -60,6 +61,8 @@ export type LegacyNativeWholeSourceStage = {
  * identities and resources for the exact intermediate source. No endpoint accepts
  * this object; no resource/ownership/catalogue authorization is inferred here. */
 export interface LegacyNativeWholeSourceInput {
+  /** Host budget for the combined snapshot, distinct from supplemental rows. */
+  readonly maximumSnapshotMembers: number;
   readonly source: MetaEntityGraph;
   readonly context: NativeExpandedConversionContext;
   readonly resource: NativeConversionResource;
@@ -165,6 +168,11 @@ export function resolveLegacyNativeWholeSource(
     adapters,
     nested,
     supplemental,
+  );
+  validateNativeSnapshotReferences(
+    proof.candidate,
+    input.context.source,
+    input.maximumSnapshotMembers,
   );
   return { context: input.context, adapters, nested, supplemental, proof };
 }

@@ -42,7 +42,7 @@ import { compileNativeDetailNavigation } from "./native-detail-navigation.js";
 import { compileNativeDetailFieldSections } from "./native-detail-sections.js";
 import { compileNativeFieldChoices } from "./native-field-choices.js";
 import { compileNativeDetailBadges } from "./native-detail-badges.js";
-import { validateNativeSupplementalReferences } from "./native-supplemental-storage.js";
+import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import {
   verifyNativeCompiledOperationControls,
   type NativeCompiledOperation,
@@ -193,7 +193,7 @@ export function compileNativeRelease(
     tenantId: c.core.tenantId,
     changeSetId: graph.ownedLabels.changeSetId,
   });
-  validateNativeSupplementalReferences(graph, c.core.maxMembers);
+  validateNativeSnapshotReferences(graph, graph.ownedLabels, c.core.maxMembers);
   const fieldKey = (id: string) => {
     const field = graph.fields.find((f) => f.id === id);
     const identities = c.core.identities.filter(

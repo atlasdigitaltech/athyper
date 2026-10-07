@@ -522,3 +522,26 @@ it("loads the native root label owner and rejects an unresolved FK without issui
     ),
   ).toBe(true);
 });
+
+it("rejects correctly hashed history with an invalid retained reference graph", async () => {
+  const f = repositoryFixture();
+  const input = { ...c, actorId: coreFixtureId(102) };
+  const graph = await f.repository.loadNativeGraph(input);
+  const invalid = structuredClone(graph);
+  Reflect.set(invalid.referenceMembers!.members, "navigationGroup", [
+    {
+      id: coreFixtureId(990),
+      entitySurfaceId: coreFixtureId(999),
+      groupKey: "missing",
+      iconKey: null,
+      sectionDisplay: null,
+      labelId: coreFixtureId(32),
+      position: 1,
+    },
+  ]);
+  // repositoryFixture recomputes the hash; hash integrity alone is insufficient.
+  f.save(invalid);
+  await expect(
+    f.repository.readNativeDraftSave({ ...input, revision: 4 }),
+  ).rejects.toThrow("REFERENCE_FOREIGN_MEMBER");
+});

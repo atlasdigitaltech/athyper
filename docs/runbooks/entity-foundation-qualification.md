@@ -1289,3 +1289,43 @@ qualification; approved host/product-write authority; deployed F6/F8/F9 evidence
 There are still nine coarse schema admission blockers (seven pending checks and
 two absent aggregate functions). No Country/State Region draft was enrolled or
 converted, and no release was activated.
+
+
+### Aggregate snapshot references and versioned reference input (7 October 2026)
+
+The existing repository now applies `validateNativeSnapshotReferences` to current
+snapshots (including save/conversion readback) and historical snapshots after the
+history hash/source checks. Whole-source preparation and native release compilation
+apply it too. It composes the retained reference parser and operation/AI membership
+validation, binds source coordinates and counts authored rows across branches.
+Installed core/layout/resource validation and independent host admission remain
+separate mandatory checks. This does not implement the missing SQL aggregate
+functions or attest complete retained-resource semantics.
+
+This found missing target rows in maintained fixtures and the v1 reference
+builder's nonempty read-operation `fieldKeys`. The explicit v2 builder emits no
+write enrollment for read operations. Version 1 remains the default, retaining
+historical descriptor-hash tests. The v2 positive fixtures use actual Country and
+State Region definitions and production conversion/compiler/reader code on all
+three planes, with synthetic resource authority. Negative cases reject undeclared
+targets, stale references, aggregate overflow, historical read enrollment and
+correctly hashed but invalid historical graphs. No production adapter silently
+drops historical read field keys.
+
+Read-only DEV inspection: both selected Country/State Region drafts remain at
+revision 1, with no native marker and zero operation-field rows. Schema candidate
+`fb9b7dcdebaf7f3fba98de0a1b48266957d533f432a82ce12a7f176c73ef04c0`
+still reports nine blockers (seven pending checks, two absent aggregate functions).
+Local inspection output: `/tmp/athyper-native-aggregate-schema-20261007.json`;
+this temporary file is diagnostic evidence, not a durable approved fingerprint.
+No migration, enrollment, grant, review approval or activation occurred in this step.
+
+Remaining engineering: complete database aggregate enforcement, canonical actual
+source enrollment/application/history evidence, and external resource qualification.
+Approved host/product-write authority and deployed F6/F8/F9 evidence remain absent.
+
+Validation: 760 authoring tests pass; six opt-in PostgreSQL cases remain excluded
+from this run (no SQL changed). Production/test and native-test typechecks pass;
+generated foundation drift checks pass. The recorded historical v1 descriptor
+hash tests remain unchanged and pass. No skipped test or historical fixture hash
+was changed to accommodate v2.

@@ -191,6 +191,14 @@ function fixture() {
     },
   );
   const references = emptyReferenceMembers();
+  Reflect.set(references.members, "target", [
+    {
+      id: id(399),
+      targetPlane: "studio",
+      requirement: "required",
+      position: 1,
+    },
+  ]);
   Reflect.set(
     references.members,
     "authorizationProfile",

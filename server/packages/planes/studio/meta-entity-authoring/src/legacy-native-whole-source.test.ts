@@ -1,3 +1,4 @@
+import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import { expect, it, vi } from "vitest";
 import {
   type MetaEntityGraph,
@@ -35,7 +36,7 @@ import type { EntityDetailNavigationV1 } from "@athyper/contract-platform-entity
 
 const id = (n: number) =>
   "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
-/** Complete actual product source with explicitly synthetic catalogue, label,
+/** Complete current product source with explicitly synthetic catalogue, label,
  * stable-ID and provider projections. Does not attest saved DEV sources/roles. */
 function fixture(
   name: string,
@@ -45,7 +46,7 @@ function fixture(
     graph: ExpandedNativeMetaEntityGraph,
   ): NativeReleaseCompilationContext;
 } {
-  const f = resourceConversionFixture(name, plane);
+  const f = resourceConversionFixture(name, plane, 2);
   let next = 10000;
   const alloc = () => id(next++);
   const resource = (key: string) => ({
@@ -827,6 +828,7 @@ function fixture(
     }),
   };
   return {
+    maximumSnapshotMembers: 10000,
     compilerContext(graph) {
       const {
         core: _,
@@ -946,6 +948,7 @@ it.each(
     expect(input.source).toEqual(original);
     expect(graph.surfaceSections.length).toBeGreaterThan(0);
     expect(graph.ai.profile).toHaveLength(1);
+    validateNativeSnapshotReferences(graph, graph.ownedLabels!, 10000);
     const compiler = input.compilerContext(graph);
     const artifact = compileNativeRelease(
       graph,
@@ -1111,4 +1114,60 @@ it("connects the whole-source resolver to the existing application/compiler/read
     policy.verifyReader(tx, artifact, proof.candidate),
   ).resolves.toBeUndefined();
   expect(qualify).toHaveBeenCalledWith(tx, input);
+});
+
+it.each(["country", "state_region"])(
+  "rejects historical %s read-field enrollment instead of treating it as native write enrollment",
+  (name) => {
+    const input = fixture(name);
+    expect(
+      input.source.operations.every(
+        (operation) => operation.fieldKeys!.length === 0,
+      ),
+    ).toBe(true);
+    const graph = structuredClone(
+      resolveLegacyNativeWholeSource(input).proof.candidate,
+    );
+    Reflect.set(graph.referenceMembers!.members, "operationField", [
+      {
+        id: id(999999),
+        entityOperationId: graph.operations[0]!.id,
+        entityFieldId: graph.fields[0]!.id,
+        position: 1,
+        operationChangeSetId: graph.ownedLabels!.changeSetId,
+      },
+    ]);
+    expect(() =>
+      validateNativeSnapshotReferences(graph, graph.ownedLabels!, 10000),
+    ).toThrow("REFERENCE_WRITE_OPERATION_INVALID");
+    expect(() =>
+      compileNativeRelease(
+        graph,
+        input.compilerContext(graph),
+        graph.operations.map((operation) => ({
+          ...operation,
+          requiresMfa: false,
+        })),
+      ),
+    ).toThrow("REFERENCE_WRITE_OPERATION_INVALID");
+  },
+);
+
+it("rejects aggregate target, reference and budget corruption in a complete snapshot", () => {
+  const input = fixture("country");
+  const graph = resolveLegacyNativeWholeSource(input).proof.candidate;
+  const validate = (value: typeof graph, budget = 10000) =>
+    validateNativeSnapshotReferences(value, graph.ownedLabels!, budget);
+  expect(() => validate(graph)).not.toThrow();
+  const missingTarget = structuredClone(graph);
+  Reflect.set(missingTarget.referenceMembers!.members, "target", []);
+  expect(() => validate(missingTarget)).toThrow("REFERENCE_TARGET_UNDECLARED");
+  const missingField = { ...graph, fields: [] };
+  expect(() => validate(missingField)).toThrow("REFERENCE_FOREIGN_MEMBER");
+  const branchMaximum = Math.max(
+    ...Object.values(graph)
+      .filter(Array.isArray)
+      .map((rows) => rows.length),
+  );
+  expect(() => validate(graph, branchMaximum)).toThrow("NATIVE_SNAPSHOT_LIMIT");
 });
