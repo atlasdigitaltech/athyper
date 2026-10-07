@@ -5,6 +5,74 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Active Studio reference-slice execution plan — 2026-10-07
+
+This section governs execution tracking for **Country and State Region Studio
+reference authoring**, separately from the older Country/Principal pilot below.
+The Entity Studio blueprint remains the design authority. This dependency-based
+sequence supersedes the earlier chat-only six-activity ordering. Scope/sequencing
+is authorized by the owner; it is not release approval or a passed qualification.
+
+| Milestone | Work and dependencies | Accountable engineering role | Named assignee / target date | Concrete exit evidence |
+| --- | --- | --- | --- | --- |
+| M1 — governed bootstrap/product writes | Compose the existing authenticated governance capability with typed commands and the actual NULL-tenant DB role/RLS/function path. Bootstrap uses the existing API/CLI; a published composer UI is not its prerequisite. | Platform/tenant governance maintainer; shared authoring persistence maintainer | Pending owner assignment / pending target date; requested 2026-10-07 | Actual application-role authorized command commits canonical rows and immutable history; revoked/forged scope and unauthorized direct DML reject. Independent author/reviewer separation proved through existing governance. No superuser receipt substitutes for this proof. |
+| P — parallel preparation | Review label mappings, identity correspondence and ownership provenance; build host composition and F6/F8 adapters. Does not wait on M1 for pure preparation; applying changes does. | Shared authoring maintainer; identity/migration maintainer; storage/provider maintainer; authorization-framework maintainer | Pending named assignments / dates | Exact-source proposals, coverage findings, typed adapters and meaningful positive/negative tests. These do not clear enrollment or live-read gates. |
+| M2 — canonical enrollment | Apply source ownership, stable identities and labels through qualified commands after M1 and each command's actual dependencies. Do not impose a blanket ownership-before-label dependency where the legacy command contract does not require it. | Shared authoring persistence maintainer; identity/migration maintainer with authorization reviewer | Pending owner assignment / pending target date | Both actual drafts have canonical owned labels, validated field identities and source provenance; revision/conflict/replay/rollback and original-history preservation pass. |
+| M3 — native conversion and compiler/reader proof | Depends on complete M2 resource/ownership enrollment and installed required dependencies. | Shared authoring/compiler maintainer | Pending owner assignment / pending target date | Both actual graphs convert atomically; exact native readback, immutable pre/post history, whole-release compile and reader compatibility pass. Pending cutover constraints change only through the qualified forward migration. |
+| M4 — publish host and qualify deployed reads | Depends on M3 plus installed F6/F8 resources and F9 mappings. Publish/activate through independent governance. F5 additionally gates production. | Host/plane maintainer; F6 storage/provider maintainer with platform governance review; F8 authorization-framework maintainer; F9 identity/migration maintainer | Pending named assignments / dates | Exact approved resource/release hashes, signed publication/activation evidence and authenticated positive/negative deployed tests, including revocation, plane lag and unmappable legacy pins. |
+
+**Publication roles:** Platform Admin proposes; Platform Owner independently
+reviews. These roles do not replace the engineering owners above. Assignments and
+calendar dates must come from the responsible people, not be manufactured by an
+agent. Missing assignments are escalated to Platform Owner during delivery
+planning; a deadline or assignment does not itself pass a technical gate.
+
+**Separate protected-state decision:** prior owner approval covers preservation
+in persistence and compilation only. New-operation initialization needs its own
+explicit owner decision and verified governed source before implementation. No
+onboarding, publication or general implementation approval extends that scope.
+Record the decision/provenance here when supplied; currently pending.
+
+**One F9 owner, two stages:** identity/migration maintainer owns (a) reviewed
+source-hash correspondence and canonical allocation/installation in M2 and (b)
+deployed identity resolution, rebind, ambiguity and plane-lag evidence in M4.
+Authorization-framework review remains required. Zero direct legacy member-ID
+matches does not prove every mapping is unrecoverable or require one manual
+review per field/release pair. Group equivalent evidence while retaining every
+source-hash binding; never infer authority from a field-name match.
+
+**Label preparation:** Country has 48 candidate locations, including 44 binding
+overrides, with 24 distinct text values. Group candidates for review by meaning
+and locale context; equal text alone does not imply a shared label identity. The
+two “Record ID” overrides require field/surface/visibility inspection against the
+no-visible-UUID rule; changing a caption is not a UUID exposure fix. State Region
+has an unapplied 15-label/16-command proposal. Neither proposal proves canonical
+allocation or whole-source mapping completeness.
+
+**Next milestone remains M1 + actual canonical enrollment.** Diagnostic reports
+and additional pure fixtures alone cannot complete it. Current implementation
+adds product-command admission below, but the installed product DB path, human
+review receipts and actual enrollment remain unqualified. No production/cutover
+or host activation is authorized by this status entry. Preserve all history until
+the separate F5 retention decision is approved.
+
+### Product-command admission implementation checkpoint
+
+Legacy label/reference product commands now require the existing installed
+`NativeAuthoringPolicy.admit` path with the scoped entity, actor and exact batch,
+inside the transaction and before mutation or idempotent receipt lookup. Budget
+configuration alone cannot enable these product commands. Every retry rechecks
+current authority. Existing tenant commands retain their established outer
+admission/RLS path; no business permission code, SQL grant or MFA rule was added.
+This does not wire an approved host or prove NULL-tenant application-role writes.
+
+Validation: 785 authoring tests pass (six opt-in exclusions), including missing
+product admission and current/repeated revoked-admission rejection before DML or
+receipt reads. The disposable PostgreSQL scoped-save/replay/rollback suite passes
+with explicitly synthetic fixture admission; its superuser execution is not M1
+product RLS qualification. Production/test typechecks pass. No DEV schema/data
+mutation, publication or activation occurred at this checkpoint.
+
 ## Pilot and integration points
 
 Country is the system-owned reference/read-only baseline. Principal is a

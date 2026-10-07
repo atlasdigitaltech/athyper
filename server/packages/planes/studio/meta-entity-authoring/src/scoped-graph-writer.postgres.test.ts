@@ -1,3 +1,6 @@
+import type {NativeAuthoringPolicy} from "./native-core-layout-persistence.js";
+// Synthetic admission only; this disposable superuser fixture cannot qualify product RLS.
+const fixtureProductHost={admit:async()=>{}} as unknown as NativeAuthoringPolicy;
 import {
   referenceFixture,
   referenceFixtureAnchors,
@@ -506,6 +509,7 @@ it.skipIf(!enabled)(
           maxCommands: 20,
           maxBatchBytes: 16000,
         },
+        undefined,fixtureProductHost,
       );
       const command = (
         expectedRevision: number,
@@ -626,7 +630,7 @@ it.skipIf(!enabled)(
           supportedLocales: ["en", "ms"],
           maxCommands: 20,
           maxBatchBytes: 16000,
-        });
+        },undefined,fixtureProductHost);
         await expect(
           nested.executeLabelCommands(
             command(4, "normalized-command-0006", [
@@ -743,6 +747,7 @@ it.skipIf(!enabled)(
         undefined,
         undefined,
         referencePolicy,
+        fixtureProductHost,
       );
       const referenceCommand = (
         revision: number,

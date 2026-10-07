@@ -272,12 +272,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     validateNativeSnapshotReferences(graph, input, policy.commands.maxMembers);
     return graph;
   }
+  private async admitLegacyProductCommand(tx: Transaction<Database>, input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
+    const source=await assertLegacyCommandSource(tx,input.changeSetId,input.tenantId);
+    if(source.tenant_id!==input.tenantId)throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND","Exact source scope is required.");
+    if(source.tenant_id===null){
+      if(!this.nativePolicy)throw new AuthoringPolicyError("PRODUCT_AUTHORING_AUTHORITY_REQUIRED","Install the independently governed product-host admission path before product commands.");
+      await this.nativePolicy.admit(tx,{...input,entityId:string(source,"entity_id")},"write");
+    }
+  }
   async executeReferenceCommands(input: {changeSetId:string;actorId:string;tenantId:string|null;batch:unknown}) {
     if(!this.referencePolicy)throw new AuthoringPolicyError("REFERENCE_AUTHORING_NOT_CONFIGURED","Host budget evidence required");
     const policy=this.referencePolicy;
     return atomic(this.database,async tx=>{
       await sql`SAVEPOINT normalized_reference_batch`.execute(tx);
-      try{await assertLegacyCommandSource(tx,input.changeSetId,input.tenantId);const result=await saveReferenceCommands(tx,input,policy,(revision,kind)=>captureDraftSave(tx,input.changeSetId,revision,input.actorId,kind));await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);return result;}
+      try{await this.admitLegacyProductCommand(tx,input);const result=await saveReferenceCommands(tx,input,policy,(revision,kind)=>captureDraftSave(tx,input.changeSetId,revision,input.actorId,kind));await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);return result;}
       catch(error){await sql`ROLLBACK TO SAVEPOINT normalized_reference_batch`.execute(tx);await sql`RELEASE SAVEPOINT normalized_reference_batch`.execute(tx);throw error;}
     });
   }
@@ -287,7 +295,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return atomic(this.database, async tx => {
       await sql`SAVEPOINT normalized_label_batch`.execute(tx);
       try {
-        await assertLegacyCommandSource(tx, input.changeSetId, input.tenantId);
+        await this.admitLegacyProductCommand(tx, input);
         const result = await saveLabelCommands(tx, input, policy, (revision, kind) => captureDraftSave(tx, input.changeSetId, revision, input.actorId, kind));
         await sql`RELEASE SAVEPOINT normalized_label_batch`.execute(tx);
         return result;
@@ -1104,6 +1112,7 @@ async function assertLegacyCommandSource(db: Kysely<Database>, id: string, tenan
   if (!row) throw new AuthoringPolicyError("AUTHORING_DRAFT_NOT_FOUND", "Scoped source unavailable.");
   if (row.source.native_core_layout_version != null)
     throw new AuthoringPolicyError("NATIVE_AUTHORING_COMMAND_REQUIRED", "Native labels/reference editing requires a version-aware complete snapshot protocol.");
+  return row.source;
 }
 async function captureDraftSave(
   db: Kysely<Database>,

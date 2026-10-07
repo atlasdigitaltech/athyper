@@ -3450,6 +3450,8 @@ Position qualification is a permanent seeded generative/differential CI suite, n
 
 ### 7.9.2 Consolidated delivery sequence
 
+Current execution dependencies, pending named assignments/dates and milestone exit evidence are tracked in [the existing qualification runbook](../../runbooks/entity-foundation-qualification.md#active-studio-reference-slice-execution-plan--2026-10-07). Governed API/CLI bootstrap and product database authority precede applied enrollment; they do not require an already published composer UI. Preparation may proceed in parallel. The next milestone requires actual governed writes and canonical enrollment, not additional diagnostic-only evidence.
+
 This is the delivery priority for the existing section 7.9 slices and F0–F5 gates. It replaces the earlier broad A–G staging without renumbering those contracts or creating another migration plan. Priorities identify the next useful evidence and experience; independent rehearsal and capacity work may proceed in parallel. A later priority never defers a mandatory authorization, integrity, review or publication prerequisite used by an earlier delivery. All milestones below remain unqualified until their implementation evidence is recorded.
 
 | Priority | Deliverable | Exit evidence and dependency boundary |
