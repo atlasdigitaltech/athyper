@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { inspectLegacyEnrollmentEvidence } from "../../../server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment-evidence.js";
 const args = process.argv.slice(2);
 assert.equal(
@@ -10,8 +10,12 @@ assert.equal(
   "--output",
   "Use --output PATH followed by exact draft UUIDs",
 );
-const output = args[1],
-  ids = args.slice(2);
+const output = args[1];
+const planning =
+  args[2] === "--label-plan-config"
+    ? JSON.parse(readFileSync(args[3]!, "utf8"))
+    : undefined;
+const ids = args.slice(planning ? 4 : 2);
 assert.ok(
   output &&
     ids.length > 0 &&
@@ -85,10 +89,20 @@ try {
       const sources = [];
       for (const id of ids)
         sources.push(
-          await inspectLegacyEnrollmentEvidence(tx, id, {
-            maximumBytes: 32 * 1024 * 1024,
-            maximumHistoryRows: 1000,
-          }),
+          await inspectLegacyEnrollmentEvidence(
+            tx,
+            id,
+            {
+              maximumBytes: 32 * 1024 * 1024,
+              maximumHistoryRows: 1000,
+            },
+            planning
+              ? {
+                  ...planning,
+                  declarations: planning.declarationsByDraft?.[id],
+                }
+              : undefined,
+          ),
         );
       return {
         observedAt: new Date().toISOString(),

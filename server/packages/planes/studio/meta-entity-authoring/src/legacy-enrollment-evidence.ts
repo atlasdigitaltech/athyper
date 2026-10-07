@@ -1,3 +1,4 @@
+import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { sql, type Transaction } from "kysely";
 import {
   AuthoringPolicyError,
@@ -65,6 +66,14 @@ export async function inspectLegacyEnrollmentEvidence(
   tx: Transaction<Record<string, never>>,
   changeSetId: string,
   limits: { maximumBytes: number; maximumHistoryRows: number },
+  labelPlan?: {
+    declarations?: Parameters<
+      typeof prepareLegacyLabelEnrollment
+    >[1]["declarations"];
+    defaultLocale: string;
+    requiredLocales: readonly string[];
+    policy: import("@athyper/server-contract-meta-entity-authoring").NormalizedAuthoringPolicy;
+  },
 ) {
   const fail = (code: string): never => {
     throw new AuthoringPolicyError(
@@ -177,8 +186,65 @@ export async function inspectLegacyEnrollmentEvidence(
       else throw error;
     }
   }
+  const labelMappingCandidates: {
+    sourcePath: string;
+    defaultText: string;
+    labelKey: null;
+  }[] = [];
+  if (labelPlan) {
+    const families = {
+      fields: ["label"],
+      surfaces: ["title"],
+      surfaceSections: ["title"],
+      surfaceFieldBindings: ["labelOverride", "helpText", "placeholder"],
+      operations: ["label"],
+    };
+    for (const [family, properties] of Object.entries(families)) {
+      const members = (source as unknown as Record<string, unknown>)[family];
+      if (!Array.isArray(members)) continue;
+      members.forEach((row: Record<string, unknown>, index) => {
+        for (const key of properties)
+          if (typeof row[key] === "string" && (row[key] as string).length)
+            labelMappingCandidates.push({
+              sourcePath: `/${family}/${index}/${key}`,
+              defaultText: row[key] as string,
+              labelKey: null,
+            });
+      });
+    }
+  }
+  function labelProposal() {
+    try {
+      return {
+        status: "prepared" as const,
+        proposal: prepareLegacyLabelEnrollment(
+          source,
+          {
+            sourceHash: sha256(source),
+            revision,
+            idempotencyKey: `legacy-labels:${changeSetId}:${sha256(source)}`,
+            defaultLocale: labelPlan!.defaultLocale,
+            requiredLocales: labelPlan!.requiredLocales,
+            ...(labelPlan!.declarations
+              ? { declarations: labelPlan!.declarations }
+              : {}),
+          },
+          labelPlan!.policy,
+        ),
+      };
+    } catch (error) {
+      if (error instanceof Error && "code" in error)
+        return {
+          status: "blocked" as const,
+          code: String(error.code),
+          mappingCandidates: labelMappingCandidates,
+        };
+      throw error;
+    }
+  }
   return {
     schema: "entity.legacy-enrollment-evidence/1",
+    ...(labelPlan ? { labelProposal: labelProposal() } : {}),
     changeSetId,
     entityId: root!.entity_id,
     tenantId: root!.tenant_id,

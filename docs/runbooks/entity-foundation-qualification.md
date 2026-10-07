@@ -1447,3 +1447,44 @@ Reproduce with exact scoped coordinates (codes are not runtime dispatch):
 ```sh
 pnpm exec tsx tooling/scripts/verification/inspect-legacy-enrollment.dev.mts --output /tmp/enrollment-evidence.json 28e155d7-9f18-48fd-9f4d-847ff80f7e87 9672c64b-b40f-43ce-8a2f-e0fbebd1154e
 ```
+
+### Source-bound label enrollment preparation — 2026-10-07
+
+`prepareLegacyLabelEnrollment` reuses the existing typed label commands and reducer.
+It deduplicates exact explicit localization declarations and preserves translations,
+recording source paths and temporary references. It rejects conflicting keys/text,
+missing required translations, locale mismatch, stale source hashes, duplicate or
+invalid JSON-pointer mappings and command/byte-budget overflow. Reviewed mappings
+for plain legacy strings must specify both the source path and label key; saved
+text must match exactly. No UUIDs, label keys or translations are guessed. A
+proposal hash binds the source hash, command batch and mapping provenance.
+
+The existing read-only DEV inspector accepts `--label-plan-config PATH` after its
+output argument. The config explicitly supplies `defaultLocale`, `requiredLocales`
+and the existing normalized command policy; optional `declarationsByDraft` supplies
+reviewed source-path declarations for each exact draft. This is proposal input, not
+authorization. English (`en`) is the proposed locale for this run, not an approved
+host locale. Other locale choices require regeneration and review.
+
+Actual DEV results, against the same source hashes recorded above:
+
+- State Region: **prepared**, 15 explicit labels and 16 existing typed commands.
+- Country: **blocked**, `LEGACY_LABEL_DECLARATIONS_REQUIRED`; 48 candidate field,
+  surface, section, binding and operation text locations exported with null label
+  keys for review. The current source-file fixture has localization declarations;
+  that does not establish them in the older saved Country graph.
+
+Private review artifacts:
+`~/.athyper/instances/dev/workspace/label-enrollment-proposal-20261007/config.json`
+and `proposals.json`. The latter contains State Region's exact batch and Country's
+mapping candidates. Candidate enumeration is a review aid, not proof that every
+nested display declaration has a completed native mapping. Source history remains
+checksum-valid. No command was applied, UUID allocated, grant changed or activation
+performed. Existing host admission/database authority must qualify before execution;
+this preparer does not supply a new writer or bypass those controls.
+
+Validation: 778 authoring tests pass (six opt-in exclusions), including both current
+reference definitions through the same preparer/reducer, explicit legacy mappings,
+source conflicts, translation preservation and budget rejection. Typechecks pass.
+Actual field-identity/source-ownership enrollment, native application/history,
+approved host/product-write authority and deployed F6/F8/F9 remain unfinished.
