@@ -89,6 +89,9 @@ export function canonicalNativeSchemaQuery(applicationRole: string) {
     "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
     "metadata.fn_assert_native_typed_rows(uuid,integer)",
     "metadata.fn_assert_native_layout_graph(uuid)",
+    "metadata.fn_assert_native_core_graph(uuid)",
+    "metadata.fn_assert_native_root(uuid,text,integer)",
+    "metadata.validate_reference_members(uuid)",
   ];
   return sql<{ evidence: NativeSchemaInspection }>`
     WITH selected AS (SELECT name,to_regclass(name) AS oid FROM unnest(${names}::text[]) AS s(name))
@@ -182,6 +185,9 @@ export function nativeSchemaBlockers(
     "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
     "metadata.fn_assert_native_typed_rows(uuid,integer)",
     "metadata.fn_assert_native_layout_graph(uuid)",
+    "metadata.fn_assert_native_core_graph(uuid)",
+    "metadata.fn_assert_native_root(uuid,text,integer)",
+    "metadata.validate_reference_members(uuid)",
   ]) {
     const matched = evidence.guards.filter((g) => g.signature === signature);
     if (matched.length !== 1 || !matched[0]!.definition)

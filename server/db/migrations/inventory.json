@@ -3,6 +3,22 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_core_root_guards.sql",
+      "path": "migrations/20261007_entity_native_core_root_guards.sql",
+      "sha256": "8912bd7a2cae63dd7c14985582bb17d3e33b26415cce478ccfa34f5af63fdaf8",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install native core graph and immutable root pin guards, preserving all pending cutover checks, metadata/history, authority and activation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/37_native_core_graph_guard.sql",
+        "ddl/planes/studio/metadata/38_native_root_guard.sql",
+        "ddl/planes/studio/metadata/39_reference_predicate_native_types.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_constraint_compatibility.sql",
       "path": "migrations/20261007_entity_native_constraint_compatibility.sql",
       "sha256": "77998c030b064d7532734f561614f7b30e9606c094c304012324d894dc6d722e",

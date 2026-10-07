@@ -277,3 +277,53 @@ describe("closed reference member commands", () => {
       expect(schema).toContain(variant);
   });
 });
+
+it.each(["string", "bigint"])(
+  "validates retained predicates against native %s fields without accepting mismatched payloads",
+  (type) => {
+    const graph = referenceFixture();
+    const original = graph.members.predicate[0]!;
+    const predicate = {
+      ...original,
+      entityFieldId: id(2),
+      operator: type === "bigint" ? "gte" : "eq",
+      valueKind: type === "bigint" ? "numeric" : "text",
+      valueText: type === "string" ? "value" : null,
+      valueNumeric: type === "bigint" ? "9007199254740993" : null,
+    };
+    const context = {
+      ...anchors,
+      tables: {
+        ...anchors.tables,
+        entity_field: anchors.tables.entity_field!.map((f) =>
+          f.id === id(2) ? { ...f, data_type: type } : f,
+        ),
+      },
+    };
+    const value = {
+      ...graph,
+      members: { ...graph.members, fieldChoice: [], predicate: [predicate] },
+    };
+    expect(() => parseReferenceMembers(value, context)).not.toThrow();
+    expect(() =>
+      parseReferenceMembers(
+        {
+          ...value,
+          members: {
+            ...value.members,
+            predicate: [
+              {
+                ...predicate,
+                valueKind: "boolean",
+                valueText: null,
+                valueNumeric: null,
+                valueBoolean: true,
+              },
+            ],
+          },
+        },
+        context,
+      ),
+    ).toThrow("REFERENCE_PREDICATE_TYPE_INVALID");
+  },
+);

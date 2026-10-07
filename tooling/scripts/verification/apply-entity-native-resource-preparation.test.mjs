@@ -9,6 +9,7 @@ import {
   legacyNullabilityMigrationName,
   typedRowMigrationName,
   constraintMigrationName,
+  coreRootMigrationName,
 } from "./apply-entity-native-resource-preparation.dev.mjs";
 const source = readFileSync(
   new URL(
@@ -18,6 +19,44 @@ const source = readFileSync(
   "utf8",
 );
 const digest = createHash("sha256").update(source).digest("hex");
+test("core/root guard preparation preserves original rows, pending gates and protected-state scope", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + coreRootMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const statement = preparationSql(
+    source,
+    createHash("sha256").update(source).digest("hex"),
+    true,
+    coreRootMigrationName,
+  );
+  assert.match(statement, /NATIVE_CORE_ROOT_REQUIRES_PENDING_GUARDS/);
+  assert.match(statement, /NATIVE_CORE_ROOT_ORIGINAL_ROWS_CHANGED/);
+  assert.match(statement, /NATIVE_CORE_ROOT_GUARD_ALREADY_EXISTS/);
+  assert.doesNotMatch(
+    statement,
+    /DROP CONSTRAINT|SECURITY DEFINER|requires_mfa|\bGRANT\b/,
+  );
+  for (const name of [
+    "37_native_core_graph_guard.sql",
+    "38_native_root_guard.sql",
+    "39_reference_predicate_native_types.sql",
+  ])
+    assert.ok(
+      source.includes(
+        readFileSync(
+          new URL(
+            "../../../server/db/ddl/planes/studio/metadata/" + name,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      ),
+    );
+});
 test("constraint compatibility pins predecessor definitions and retains cutover/authority protections", () => {
   const source = readFileSync(
     new URL(

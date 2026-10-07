@@ -1238,3 +1238,54 @@ retained-graph final validation, guarded source transition, removal of pending
 checks only after positive canonical whole-source conversion/compiler/reader
 proof, and callback/performance qualification. Owner review and installed resource
 evidence remain necessary for actual product-writing/deployed qualification.
+
+### Root/core guards and retained predicate types — 7 October 2026
+
+Applied DEV migration: `20261007_entity_native_core_root_guards.sql`. SHA-256:
+`8912bd7a2cae63dd7c14985582bb17d3e33b26415cce478ccfa34f5af63fdaf8`.
+Canonical DDL: 37 (core graph), 38 (root pins/transitions), 39 (retained predicate
+type compatibility). All seven pending checks remain in force. Original
+metadata/snapshot rows and authorization/activation fingerprints remain equal.
+Backup, rollback rehearsal, application, replay and schema evidence are at:
+`~/.athyper/instances/dev/workspace/native-core-root-20261007T084228Z/`.
+
+Schema inspection fingerprint:
+`fb9b7dcdebaf7f3fba98de0a1b48266957d533f432a82ce12a7f176c73ef04c0`.
+It includes root/core/reference helper definitions, not just their trigger
+wrappers; it is not an independently approved installation fingerprint.
+
+Core validation covers field identities/parents/cycles, duplicate identity use,
+currency references, property-family applicability, ranges/defaults, contract
+pairs, runtime modes and surface settings. Special numeric values, BC dates and
+out-of-range ISO dates reject. Identity catalogue changes revalidate native
+consumers under root locks. Required publication selections remain P checks; a
+consistent incomplete money draft remains saveable. Typed-row validation and
+independently resolved resource validation still have their separate roles.
+
+Root validation requires the exact descriptor/version, supported scope, reference
+version/locales and owned root label. Ordinary edits cannot clear or replace
+existing native/version/source pins. New native roots cannot bypass conversion
+by inserting a native marker. Existing revision and provenance guards remain.
+Deferred label/root callbacks catch root-label deletion or cross-tenant movement.
+This mechanism adds no initializer, publication approval or write grant.
+
+Retained predicate validation had an actual compatibility defect in both the
+TypeScript and SQL implementations: string/bigint were absent from their type
+maps. Both now support text/numeric predicates respectively, preserving large
+numeric strings and rejecting wrong payload types. The forward SQL replacement
+checks the exact predecessor body; the applied original DDL remains unchanged.
+
+Validation: 753 authoring tests and 54 contract tests pass (six/four opt-in cases
+excluded respectively); nine preparation-runner tests pass. Production/test and
+native-test typechecks pass. Twelve targeted tests, including the expanded
+PostgreSQL rehearsal, pass with the SQL opt-in enabled. Those fixtures exercise
+root repin/marker rejection, stale label/catalogue references, invalid field
+variants, incomplete drafts, exact large numeric predicates and rollback. They
+use synthetic catalogue/label authority and are not actual product enrollment.
+
+Remaining: aggregate whole-snapshot enforcement with retained authorization/AI
+and resource semantics; canonical whole-source repository application/history
+qualification; approved host/product-write authority; deployed F6/F8/F9 evidence.
+There are still nine coarse schema admission blockers (seven pending checks and
+two absent aggregate functions). No Country/State Region draft was enrolled or
+converted, and no release was activated.

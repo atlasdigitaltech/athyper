@@ -280,6 +280,127 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
         "NATIVE_LAYOUT_BINDING_GRAPH_INVALID",
       );
       query(graphCheck);
+      // Canonical core semantic guard, with a synthetic catalogue anchor.
+      const identityId = randomUUID();
+      query(
+        `CREATE TABLE metadata.entity_field_identity(id uuid,entity_id uuid,tenant_id uuid,parent_identity_id uuid,identity_status text,introduced_change_set_id uuid);ALTER TABLE metadata.entity_field ADD COLUMN field_identity_id uuid;INSERT INTO metadata.entity_field_identity VALUES('${identityId}','${id}',NULL,NULL,'reserved','${draft}');UPDATE metadata.entity_field SET field_identity_id='${identityId}',default_kind='none',key_generation='none';`,
+      );
+      query(read("37_native_core_graph_guard.sql"));
+      const coreCheck = `SELECT metadata.fn_assert_native_core_graph('${draft}');`;
+      query(coreCheck);
+      reject(
+        "UPDATE metadata.entity_field SET minimum=2;SET CONSTRAINTS ALL IMMEDIATE;",
+        "NATIVE_CORE_FIELD_VARIANT_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET min_length=20,max_length=10;COMMIT;",
+        "NATIVE_CORE_FIELD_VARIANT_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET default_kind='literal',default_text='value';COMMIT;",
+        "NATIVE_CORE_FIELD_VARIANT_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET currency_code='USD';COMMIT;",
+        "NATIVE_CORE_FIELD_VARIANT_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET validation_contract_key='validate';COMMIT;",
+        "NATIVE_CORE_FIELD_VARIANT_INVALID",
+      );
+      reject(
+        `UPDATE metadata.entity_field_identity SET entity_id='${randomUUID()}';COMMIT;`,
+        "NATIVE_CORE_FIELD_REFERENCE_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_surface SET allowed_page_sizes=ARRAY[10];COMMIT;",
+        "NATIVE_CORE_SURFACE_VARIANT_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_runtime_profile SET reference_capability_key='reference';COMMIT;",
+        "NATIVE_CORE_RUNTIME_VARIANT_INVALID",
+      );
+      query(
+        "BEGIN;UPDATE metadata.entity_field SET value_origin='stored',write_mode='mutable',default_kind='literal',default_text='value';SET CONSTRAINTS ALL IMMEDIATE;ROLLBACK;",
+      );
+      query(
+        "BEGIN;UPDATE metadata.entity_field SET data_type='money',type_config='{\"kind\":\"money\"}',precision=12,scale=2;SET CONSTRAINTS ALL IMMEDIATE;ROLLBACK;",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET data_type='decimal',type_config='{\"kind\":\"decimal\"}',minimum='NaN';COMMIT;",
+        "NATIVE_CORE_SCALAR_ENCODING_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_field SET data_type='date',type_config='{\"kind\":\"date\"}',minimum_date=DATE '0001-01-01 BC';COMMIT;",
+        "NATIVE_CORE_SCALAR_ENCODING_INVALID",
+      );
+      query(
+        "BEGIN;SAVEPOINT editing;UPDATE metadata.entity_field SET min_length=20,max_length=10;ROLLBACK TO SAVEPOINT editing;COMMIT;",
+      );
+      query(coreCheck);
+      const labelId = randomUUID(),
+        pin = "a".repeat(64);
+      query(
+        `ALTER TABLE metadata.entity_change_set ADD COLUMN reference_contract_version integer,ADD COLUMN default_locale text,ADD COLUMN required_locales text[];CREATE TABLE metadata.entity_label(id uuid,change_set_id uuid,entity_id uuid,tenant_id uuid,source_kind text);INSERT INTO metadata.entity_label VALUES('${labelId}','${draft}','${id}',NULL,'owned');UPDATE metadata.entity_change_set SET source_kind='product',authoring_schema_hash='${pin}',reference_contract_version=1,default_locale='en',required_locales=ARRAY['en'],entity_label_id='${labelId}';`,
+      );
+      query(read("38_native_root_guard.sql"));
+      const rootCheck = `SELECT metadata.fn_assert_native_root('${draft}','${pin}',2);`;
+      query(rootCheck);
+      reject(
+        `SELECT metadata.fn_assert_native_root('${draft}','${"b".repeat(64)}',2);`,
+        "NATIVE_ROOT_PIN_INVALID",
+      );
+      reject(
+        "UPDATE metadata.entity_change_set SET native_core_layout_version=NULL;",
+        "NATIVE_ROOT_REPIN_REQUIRES_VERSIONED_MIGRATION",
+      );
+      reject(
+        `UPDATE metadata.entity_change_set SET authoring_schema_hash='${"b".repeat(64)}';`,
+        "NATIVE_ROOT_REPIN_REQUIRES_VERSIONED_MIGRATION",
+      );
+      reject(
+        "UPDATE metadata.entity_change_set SET required_locales=ARRAY['fr'];COMMIT;",
+        "NATIVE_ROOT_DEPENDENCIES_INVALID",
+      );
+      reject(
+        "DELETE FROM metadata.entity_label;COMMIT;",
+        "NATIVE_ROOT_LABEL_INVALID",
+      );
+      reject(
+        `UPDATE metadata.entity_label SET tenant_id='${randomUUID()}';COMMIT;`,
+        "NATIVE_ROOT_LABEL_INVALID",
+      );
+      query(
+        "BEGIN;SAVEPOINT locale_edit;UPDATE metadata.entity_change_set SET required_locales=ARRAY['fr'];ROLLBACK TO SAVEPOINT locale_edit;COMMIT;",
+      );
+      query(rootCheck + coreCheck + graphCheck);
+      for (const table of read("24_reference_members.generated.sql").matchAll(
+        /CREATE TABLE metadata\.(\w+) \([\s\S]*?\n\);/g,
+      )) {
+        if (table[1] !== "entity_surface_navigation_group") query(table[0]);
+      }
+      const retained = read("25_reference_member_guards.sql").match(
+        /CREATE FUNCTION metadata\.validate_reference_members\(draft uuid\)[\s\S]*?END \$\$;/,
+      )![0];
+      query(retained);
+      const bindingId = query(
+        "SELECT id FROM metadata.entity_surface_field_binding LIMIT 1;",
+      ).trim();
+      query(
+        `INSERT INTO metadata.entity_predicate(entity_id,change_set_id,predicate_key,node_kind,purpose,field_binding_id,entity_field_id,operator,value_kind,value_text,position,created_by) VALUES('${id}','${draft}','visible','condition','visibility','${bindingId}','${fieldId}','eq','text','value',1,'${actor}');`,
+      );
+      const referenceCheck = `SELECT metadata.validate_reference_members('${draft}');`;
+      reject(referenceCheck, "Predicate field/value type invalid");
+      query(read("39_reference_predicate_native_types.sql"));
+      query(referenceCheck);
+      query(
+        `BEGIN;UPDATE metadata.entity_field SET data_type='bigint',type_config='{\"kind\":\"bigint\"}';UPDATE metadata.entity_predicate SET operator='gte',value_kind='numeric',value_text=NULL,value_numeric=9007199254740993;${referenceCheck}SET CONSTRAINTS ALL IMMEDIATE;ROLLBACK;`,
+      );
+      reject(
+        "UPDATE metadata.entity_predicate SET value_kind='boolean',value_text=NULL,value_boolean=true;" +
+          referenceCheck,
+        "Predicate field/value type invalid",
+      );
     } finally {
       if (created) docker("rm", "-f", name);
     }

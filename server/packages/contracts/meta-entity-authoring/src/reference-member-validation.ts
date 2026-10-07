@@ -291,8 +291,10 @@ export function parseReferenceMembers(
         );
         const expected = {
           text: "text",
+          string: "text",
           enum: "text",
           integer: "numeric",
+          bigint: "numeric",
           decimal: "numeric",
           money: "numeric",
           boolean: "boolean",
