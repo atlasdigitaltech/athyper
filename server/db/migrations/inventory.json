@@ -3,6 +3,21 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_constraint_compatibility.sql",
+      "path": "migrations/20261007_entity_native_constraint_compatibility.sql",
+      "sha256": "77998c030b064d7532734f561614f7b30e9606c094c304012324d894dc6d722e",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Replace verified legacy/native constraint conflicts and install deferred relational layout guards while retaining pending native cutover checks, original history and authority.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/35_native_constraint_compatibility.sql",
+        "ddl/planes/studio/metadata/36_native_layout_graph_guard.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_typed_row_preparation.sql",
       "path": "migrations/20261007_entity_native_typed_row_preparation.sql",
       "sha256": "a56e79e3fc4353b8a704a9bbadd7ca04abe45ec009b8a9119ac87fd0a04a97f3",

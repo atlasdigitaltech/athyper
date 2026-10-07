@@ -188,16 +188,23 @@ export async function writeReconciliationPlans(
             "parent_section_id",
             "entity_surface_section_id",
             "interaction_target",
+            "navigation_group_id",
+            "entity_surface_id",
+            "overlay_id",
+            "binding_kind",
           ].some((key) => Object.hasOwn(row.values, key)),
         ),
     )
     .map((plan) => positionConstraints[plan.table]!);
   if (deferred.length) {
+    const optional = deferred.includes("entity_surface_section_position_uq")
+      ? ["legacy_section_position_guard"]
+      : [];
     const evidence = await sql<{
       conname: string;
       condeferrable: boolean;
     }>`SELECT conname,condeferrable FROM pg_constraint
-      WHERE connamespace='metadata'::regnamespace AND conname IN (${sql.join(deferred.map((name) => sql`${name}`))})`.execute(
+      WHERE connamespace='metadata'::regnamespace AND conname IN (${sql.join([...deferred, ...optional].map((name) => sql`${name}`))})`.execute(
       db,
     );
     if (
@@ -212,6 +219,15 @@ export async function writeReconciliationPlans(
         "AUTHORING_ORDER_MIGRATION_REQUIRED",
         "Apply the scoped authoring order-constraint forward migration before updating ordered members.",
       );
+    for (const name of optional) {
+      const present = evidence.rows.find((row) => row.conname === name);
+      if (present && !present.condeferrable)
+        throw new AuthoringPolicyError(
+          "AUTHORING_ORDER_MIGRATION_REQUIRED",
+          "The installed legacy ordering guard must be deferrable.",
+        );
+      if (present) deferred.push(name);
+    }
     await sql`SET CONSTRAINTS ${sql.join(deferred.map((name) => sql.ref(`metadata.${name}`)))} DEFERRED`.execute(
       db,
     );

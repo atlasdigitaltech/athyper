@@ -8,6 +8,7 @@ import {
   revisionMigrationName,
   legacyNullabilityMigrationName,
   typedRowMigrationName,
+  constraintMigrationName,
 } from "./apply-entity-native-resource-preparation.dev.mjs";
 const source = readFileSync(
   new URL(
@@ -17,6 +18,43 @@ const source = readFileSync(
   "utf8",
 );
 const digest = createHash("sha256").update(source).digest("hex");
+test("constraint compatibility pins predecessor definitions and retains cutover/authority protections", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + constraintMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const statement = preparationSql(
+    source,
+    createHash("sha256").update(source).digest("hex"),
+    true,
+    constraintMigrationName,
+  );
+  assert.match(statement, /NATIVE_CONSTRAINT_PREDECESSOR_MISMATCH/);
+  assert.match(statement, /NATIVE_COMPATIBILITY_REQUIRES_PENDING_GUARDS/);
+  assert.match(statement, /NATIVE_COMPATIBILITY_ORIGINAL_ROWS_CHANGED/);
+  assert.doesNotMatch(
+    statement,
+    /DROP CONSTRAINT \w+_native_pending_ck|SECURITY DEFINER|requires_mfa|\bGRANT\b/,
+  );
+  for (const file of [
+    "35_native_constraint_compatibility.sql",
+    "36_native_layout_graph_guard.sql",
+  ])
+    assert.ok(
+      source.includes(
+        readFileSync(
+          new URL(
+            "../../../server/db/ddl/planes/studio/metadata/" + file,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      ),
+    );
+});
 test("typed row preparation preserves pending guards, data and legacy binding requiredness", () => {
   const source = readFileSync(
     new URL(

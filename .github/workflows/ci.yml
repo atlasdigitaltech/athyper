@@ -102,7 +102,8 @@ jobs:
           ATHYPER_NATIVE_GRAPH_POSTGRES: "1"
           ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES: "1"
           ATHYPER_LEGACY_ENROLLMENT_POSTGRES: "1"
-        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts
+          ATHYPER_NATIVE_CONSTRAINT_POSTGRES: "1"
+        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts src/native-constraint-compatibility.postgres.test.ts
 
       - name: Rehearse generated native row guards on PostgreSQL
         env:

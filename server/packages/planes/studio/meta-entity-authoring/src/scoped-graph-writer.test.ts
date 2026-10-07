@@ -15,8 +15,16 @@ function fixture(
   rows: Record<string, StoredRow[]> = {},
   denied = false,
   nativeOrder = false,
+  constraints: string[] = [],
 ) {
   const query = vi.fn(async (statement: string, parameters: unknown[]) => {
+    if (
+      constraints.length &&
+      statement.includes("SELECT conname,condeferrable")
+    )
+      return {
+        rows: constraints.map((conname) => ({ conname, condeferrable: true })),
+      };
     if (nativeOrder && statement.includes("SELECT conname,condeferrable"))
       return {
         rows: [
@@ -305,3 +313,45 @@ it("writes registered SQL arrays as arrays while preserving JSONB declarations",
   expect(writes[1]![0]).toContain("::jsonb");
   await f.db.destroy();
 });
+
+it.each(["navigation_group_id", "entity_surface_id"])(
+  "defers both section guards for %s moves",
+  async (key) => {
+    const f = fixture({}, false, false, [
+      "entity_surface_section_position_uq",
+      "legacy_section_position_guard",
+    ]);
+    try {
+      await writeReconciliationPlans(
+        f.db,
+        [
+          {
+            table: "entity_surface_section",
+            insert: [],
+            remove: [],
+            update: [
+              {
+                id: "section",
+                before: { id: "section" },
+                values: { [key]: "destination" },
+              },
+            ],
+          },
+        ],
+        c,
+      );
+      const statements = f.query.mock.calls
+        .map(([statement]) => statement)
+        .filter((s) => s.startsWith("SET CONSTRAINTS"));
+      expect(statements).toHaveLength(2);
+      expect(statements[0]).toContain(
+        '"metadata"."legacy_section_position_guard" DEFERRED',
+      );
+      expect(statements[1]).toContain(
+        '"metadata"."legacy_section_position_guard" IMMEDIATE',
+      );
+    } finally {
+      await f.db.destroy();
+    }
+  },
+);

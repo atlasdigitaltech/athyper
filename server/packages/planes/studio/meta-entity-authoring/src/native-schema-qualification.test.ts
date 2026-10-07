@@ -38,6 +38,7 @@ function fixture() {
       "metadata.fn_assert_native_authoring_contract(uuid,text)",
       "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
       "metadata.fn_assert_native_typed_rows(uuid,integer)",
+      "metadata.fn_assert_native_layout_graph(uuid)",
     ].map((signature) => ({
       signature,
       definition: "synthetic reviewed definition",

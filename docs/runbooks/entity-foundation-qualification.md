@@ -1182,3 +1182,59 @@ selected row-guard tests pass with PostgreSQL enabled, and seven preparation
 runner tests pass. Authoring production/test/native-test typechecks, contract
 typechecks and generated-contract drift checks pass. DEV rollback-only probes
 pass against the applied migration. These counts do not attest live-read gates.
+
+### Constraint compatibility and deferred layout integrity — 7 October 2026
+
+Applied DEV migration: `20261007_entity_native_constraint_compatibility.sql`;
+SHA-256: `77998c030b064d7532734f561614f7b30e9606c094c304012324d894dc6d722e`.
+It compares the five exact predecessor constraint definitions, requires all seven
+pending checks, and compares every original metadata/snapshot table before and
+after. The existing runner also verifies authorization and activation heads.
+Backup, rollback rehearsal, application, no-op replay and schema receipts:
+`~/.athyper/instances/dev/workspace/native-compatibility-20261007T061056Z/`.
+The resulting inspection fingerprint is
+`63e8b659a022ad9a093fee948b1f86f7cc724be64f733324c357a9612dcde175`; it is not
+independently approved installed evidence.
+
+| Constraint                                            | Implemented disposition                                                                                                                                                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Field computation                                     | Replace with legacy/native branches; preserve legacy computed JSON behavior; native computed fields are read-only and use consistent typed key/version pairs; missing P selections allowed in drafts |
+| Runtime version field                                 | Replace with legacy-key/native-ID branches; reject mixed representations and irrelevant native version IDs                                                                                           |
+| Projected-write, storage, default/type-config cluster | Retain; selected projected-write negative probe remains enforced                                                                                                                                     |
+| Section kind                                          | Extend domain with subsection and add representation-specific legacy/native membership CHECK                                                                                                         |
+| Section positions                                     | Add navigation scope; deferred companion trigger preserves narrower legacy ordering                                                                                                                  |
+| Binding positions                                     | Include binding kind and overlay owner; NULL legacy values preserve the old uniqueness scope                                                                                                         |
+| Seven pending cutover checks                          | Retain unchanged                                                                                                                                                                                     |
+
+The new invoker layout validator checks relational shape, cyclic/cross-navigation
+parents, mixed children, binding surface/field ownership, span, token, form/input
+variants, filter shape and dense order. Deferred triggers cover changes to all
+six relevant anchor/member tables. The schema inspector includes the validator
+body and trigger definitions. This does not assert complete root/core/security/AI
+validation or installed catalogue/component compatibility. The whole-graph
+admission functions remain absent; the nine coarse admission blockers remain.
+
+`native-constraint-compatibility.postgres.test.ts` loads canonical domains, base
+tables and native columns into disposable PostgreSQL. Only that fixture removes
+pending checks to test prospective native values; its navigation anchor and
+authority are synthetic, and canonical RLS/full repository enrollment are not
+claimed. It proves legacy computed/version behavior, consistent incomplete native
+values, legacy/native order scopes, native subsection selection, cross-owner/cycle
+rejection, late invalid writes after explicit validation, SET CONSTRAINTS,
+intermediate repair and savepoint rollback. CI explicitly enables this test with
+`ATHYPER_NATIVE_CONSTRAINT_POSTGRES=1`.
+
+The shared writer recognizes navigation/surface/overlay/binding-kind moves as
+order mutations and includes the legacy companion guard when installed, retaining
+compatibility with older schemas. Targeted tests pass: 55 tests including the
+PostgreSQL case; eight DEV preparation-runner tests. The full authoring suite
+passes 751 tests with six opt-in SQL cases excluded; production/test/native-test
+typechecks pass. DEV migration checks separately prove original-row preservation.
+
+No Country/State Region draft was enrolled or converted, and no native positive
+repository/history qualification, approved host/product-write grant or deployed
+F6/F8/F9 evidence is claimed. Remaining engineering: complete root/core and
+retained-graph final validation, guarded source transition, removal of pending
+checks only after positive canonical whole-source conversion/compiler/reader
+proof, and callback/performance qualification. Owner review and installed resource
+evidence remain necessary for actual product-writing/deployed qualification.
