@@ -1488,3 +1488,40 @@ reference definitions through the same preparer/reducer, explicit legacy mapping
 source conflicts, translation preservation and budget rejection. Typechecks pass.
 Actual field-identity/source-ownership enrollment, native application/history,
 approved host/product-write authority and deployed F6/F8/F9 remain unfinished.
+
+### Field-identity release lineage — 2026-10-07
+
+The existing reference command writer rejects identity reservation for an entity
+with releases (`F9_IDENTITY_SOURCE_REQUIRED`). This guard remains unchanged.
+`legacy-field-lineage.ts` now compares current and historical field members and
+validates supplied source-hash-bound correspondences. Exact field equality apart
+from member ID is deliberately conservative; altered semantics, labels or keys
+need separate review. Duplicate mappings, missing members and stale hashes reject.
+Unmapped fields are reported explicitly. No UUID allocation, field-name join,
+protected-state restoration, authority grant or identity retirement occurs.
+
+The existing read-only enrollment inspector loads releases under the exact entity
+and tenant coordinates. It verifies each snapshot using the existing database hash
+function and its release contract hash; a missing/cross-scope snapshot remains an
+integrity failure rather than disappearing from the inventory. The separate
+canonical-JSON source hashes used by the correspondence validator are recorded
+explicitly; they do not replace the historical database contract hashes. Release
+row and aggregate-byte limits apply before the comparison. This is not proof of
+human authorship/review, signature trust, current activation or installed F9 access.
+
+Actual DEV receipt:
+`~/.athyper/instances/dev/workspace/field-lineage-20261007/sources.json`.
+Country: 13 release snapshots with valid hashes; all 22 current fields lack direct
+member-ID correspondence in each snapshot. State Region: one valid release
+snapshot; all nine current fields lack direct member-ID correspondence. A field
+name match cannot clear this finding. Supplied, reviewed correspondence and a
+qualified canonical stable-identity allocation/install path remain required.
+The actual source and saved-history hashes remain unchanged.
+
+Validation: 783 authoring tests pass (six opt-in exclusions); production/test
+typechecks pass. New cases cover exact candidates, same-name/different-ID rejection,
+changed declaration review, ambiguous IDs, supplied correspondence, source-hash
+mismatch, duplicate mappings, changed semantics and incomplete coverage. No actual
+enrollment/database mutation ran. Source-ownership initialization, approved
+host/product-write composition and deployed F6/F8/F9 remain unfinished engineering
+and governance work; this diagnostic is not a replacement for those components.

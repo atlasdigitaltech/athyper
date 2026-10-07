@@ -1,3 +1,4 @@
+import { compareLegacyFieldLineage } from "./legacy-field-lineage.js";
 import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { sql, type Transaction } from "kysely";
 import {
@@ -152,6 +153,37 @@ export async function inspectLegacyEnrollmentEvidence(
     root!.tenant_id,
     history.map((r) => ({ ...r, revision: Number(r.revision) })),
   );
+  const releases = (
+    await sql<{
+      releaseId: string;
+      revisionId: string;
+      contractHash: string;
+      graph: MetaEntityGraph;
+      integrity: boolean;
+    }>`
+    SELECT r.id AS "releaseId",r.revision_id AS "revisionId",r.contract_hash AS "contractHash",v.contract_json AS graph,
+     coalesce((v.validation_status='valid' AND v.contract_hash=r.contract_hash AND v.contract_hash=snapshot.fn_compute_entity_contract_hash(v.contract_json)),false) AS integrity
+    FROM metadata.entity_release r LEFT JOIN snapshot.entity_contract_revision v ON v.id=r.revision_id AND v.entity_id=r.entity_id AND v.tenant_id IS NOT DISTINCT FROM r.tenant_id
+    WHERE r.entity_id=${root!.entity_id}::uuid AND r.tenant_id IS NOT DISTINCT FROM ${root!.tenant_id}::uuid
+    ORDER BY r.id LIMIT ${limits.maximumHistoryRows + 1}`.execute(tx)
+  ).rows;
+  if (
+    releases.length > limits.maximumHistoryRows ||
+    releases.reduce(
+      (n, r) => n + Buffer.byteLength(canonicalJson(r.graph)),
+      0,
+    ) > limits.maximumBytes
+  )
+    fail("ENROLLMENT_INSPECTION_RELEASE_HISTORY_TOO_LARGE");
+  const releaseLineage = releases.map((r) => ({
+    releaseId: r.releaseId,
+    revisionId: r.revisionId,
+    contractHash: r.contractHash,
+    integrity: r.integrity,
+    ...(r.integrity
+      ? { comparison: compareLegacyFieldLineage(source, r.graph) }
+      : { blocker: "F9_RELEASE_SOURCE_INTEGRITY_INVALID" }),
+  }));
   const labels = await loadNormalizedLabels(tx, changeSetId);
   const identities = await loadFieldIdentities(tx, changeSetId);
   const validation = validateGraph(source);
@@ -253,6 +285,7 @@ export async function inspectLegacyEnrollmentEvidence(
     contractSchema: source.contractSchema,
     sourceBytes: bytes,
     fieldCount: source.fields.length,
+    releaseLineage,
     identityCount: identities.length,
     labelCount: labels?.labels.length ?? 0,
     history: historyEvidence,
