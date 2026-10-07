@@ -6,6 +6,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { migrationSourcePath } from "./migration-source.mjs";
 
+export const ownershipInitializationMigrationName =
+  "20261008_entity_legacy_ownership_initialization.sql";
 export const componentCatalogueMigrationName =
   "20261007_entity_ui_component_catalogue.sql";
 export const snapshotMigrationName =
@@ -43,6 +45,7 @@ export function preparationSql(
       coreRootMigrationName,
       snapshotMigrationName,
       componentCatalogueMigrationName,
+      ownershipInitializationMigrationName,
     ].includes(selectedMigration),
   );
   assert.match(digest, /^[a-f0-9]{64}$/);
@@ -75,6 +78,7 @@ export function runPreparation(args) {
     "--core-root-guards",
     "--snapshot-guards",
     "--component-catalogue",
+    "--ownership-initialization",
   ]);
   let output;
   for (let i = 0; i < args.length; i++) {
@@ -102,28 +106,31 @@ export function runPreparation(args) {
       "--core-root-guards",
       "--snapshot-guards",
       "--component-catalogue",
+      "--ownership-initialization",
     ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--component-catalogue")
-    ? componentCatalogueMigrationName
-    : !allowed.has("--snapshot-guards")
-      ? snapshotMigrationName
-      : !allowed.has("--core-root-guards")
-        ? coreRootMigrationName
-        : !allowed.has("--constraint-compatibility")
-          ? constraintMigrationName
-          : !allowed.has("--typed-row-guards")
-            ? typedRowMigrationName
-            : !allowed.has("--legacy-nullability")
-              ? legacyNullabilityMigrationName
-              : !allowed.has("--revision-provenance")
-                ? revisionProvenanceMigrationName
-                : !allowed.has("--revision")
-                  ? revisionMigrationName
-                  : allowed.has("--root")
-                    ? migrationName
-                    : rootMigrationName;
+  const selectedMigration = !allowed.has("--ownership-initialization")
+    ? ownershipInitializationMigrationName
+    : !allowed.has("--component-catalogue")
+      ? componentCatalogueMigrationName
+      : !allowed.has("--snapshot-guards")
+        ? snapshotMigrationName
+        : !allowed.has("--core-root-guards")
+          ? coreRootMigrationName
+          : !allowed.has("--constraint-compatibility")
+            ? constraintMigrationName
+            : !allowed.has("--typed-row-guards")
+              ? typedRowMigrationName
+              : !allowed.has("--legacy-nullability")
+                ? legacyNullabilityMigrationName
+                : !allowed.has("--revision-provenance")
+                  ? revisionProvenanceMigrationName
+                  : !allowed.has("--revision")
+                    ? revisionMigrationName
+                    : allowed.has("--root")
+                      ? migrationName
+                      : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

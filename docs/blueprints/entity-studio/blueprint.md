@@ -3591,6 +3591,18 @@ State the Phase-1 collaboration limit in the composer: one optimistic revision p
 
 #### Executable foundation sub-slice
 
+Ownership/identity checkpoint (8 October 2026): the shared repository implements
+source-bound product ownership initialization and reviewed identity installation,
+with immutable receipts/history, replay and audit rollback. The forward DEV
+ownership guard is installed without application grants or graph mutation; native
+cutover remains disabled. Identity installation requires serializable application
+and independently resolved named-review evidence. Legacy ownership is recorded in
+typed root columns and the command receipt, without rewriting legacy snapshot
+content. Disposable PostgreSQL tests are not deployed authority. Runtime bindings,
+actual ownership/identity enrollment, installed F9 findings and native/live-read
+qualification remain open; detailed evidence is in the existing qualification
+runbook. No MFA initialization or enforcement changes are included.
+
 Current execution checkpoint (7 October 2026): detailed test runs and inspections are recorded in the [existing foundation qualification runbook](../../runbooks/entity-foundation-qualification.md#studio-reference-slice-country-and-state-region). Its Studio reference scope is distinct from the older Country/Principal qualification. Historical passing component counts do not establish whole-graph or deployed qualification.
 
 | Active work | Current evidence | Remaining acceptance |

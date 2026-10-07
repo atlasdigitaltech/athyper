@@ -1,3 +1,12 @@
+import {
+  applyLegacyIdentityInstallation,
+  type LegacyIdentityInstallationPolicy,
+} from "./legacy-identity-installation.js";
+import {
+  applyLegacyOwnershipInitialization,
+  type LegacyOwnershipInput,
+  type LegacyOwnershipPolicy,
+} from "./legacy-ownership-initialization.js";
 import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import {
@@ -174,7 +183,73 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly conversionPolicy?: NativeConversionApplicationPolicy,
     private readonly enrollmentPolicy?: LegacySourceEnrollmentPolicy,
     private readonly enrollmentApplicationPolicy?: LegacyEnrollmentApplicationPolicy,
+    private readonly ownershipPolicy?: LegacyOwnershipPolicy,
+    private readonly identityInstallationPolicy?: LegacyIdentityInstallationPolicy,
   ) {}
+  async executeLegacyIdentityInstallation(input: LegacyOwnershipInput) {
+    const policy = this.identityInstallationPolicy;
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "LEGACY_IDENTITY_HOST_NOT_CONFIGURED",
+        "Installed reviewed identity authority is required.",
+      );
+    return atomic(
+      this.database,
+      async (tx) => {
+        await sql`SAVEPOINT legacy_identity_installation`.execute(tx);
+        try {
+          const repository = new KyselyMetaEntityAuthoringRepository(tx);
+          const result = await applyLegacyIdentityInstallation(
+            tx,
+            input,
+            policy,
+            () => repository.loadGraphParts(input.changeSetId, false),
+          );
+          await sql`RELEASE SAVEPOINT legacy_identity_installation`.execute(tx);
+          return result;
+        } catch (error) {
+          await sql`ROLLBACK TO SAVEPOINT legacy_identity_installation`.execute(
+            tx,
+          );
+          await sql`RELEASE SAVEPOINT legacy_identity_installation`.execute(tx);
+          throw error;
+        }
+      },
+      true,
+    );
+  }
+  async executeLegacyOwnershipInitialization(input: LegacyOwnershipInput) {
+    const policy = this.ownershipPolicy;
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "LEGACY_OWNERSHIP_HOST_NOT_CONFIGURED",
+        "Installed ownership authority is required.",
+      );
+    return atomic(this.database, async (tx) => {
+      await sql`SAVEPOINT legacy_ownership_initialization`.execute(tx);
+      try {
+        const repository = new KyselyMetaEntityAuthoringRepository(tx);
+        const result = await applyLegacyOwnershipInitialization(
+          tx,
+          input,
+          policy,
+          () => repository.loadGraphParts(input.changeSetId, false),
+        );
+        await sql`RELEASE SAVEPOINT legacy_ownership_initialization`.execute(
+          tx,
+        );
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT legacy_ownership_initialization`.execute(
+          tx,
+        );
+        await sql`RELEASE SAVEPOINT legacy_ownership_initialization`.execute(
+          tx,
+        );
+        throw error;
+      }
+    });
+  }
   async executeLegacyEnrollment(input: LegacyEnrollmentApplicationInput) {
     const policy = this.enrollmentApplicationPolicy;
     if (!policy)
@@ -1829,8 +1904,11 @@ const NUMERIC_PROPERTIES = new Set([
 function atomic<T>(
   database: Kysely<Database>,
   work: (transaction: Transaction<Database>) => Promise<T>,
+  serializable = false,
 ): Promise<T> {
   return database.isTransaction
     ? work(database as Transaction<Database>)
-    : database.transaction().execute(work);
+    : serializable
+      ? database.transaction().setIsolationLevel("serializable").execute(work)
+      : database.transaction().execute(work);
 }

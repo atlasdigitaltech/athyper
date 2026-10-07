@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  ownershipInitializationMigrationName,
   snapshotMigrationName,
   componentCatalogueMigrationName,
   rootMigrationName,
@@ -284,4 +285,45 @@ test("component catalogue preparation preserves original rows and installs canon
   assert.match(applied, /UI_COMPONENT_PREDECESSOR_UNKNOWN/);
   assert.match(applied, /ORIGINAL_ROWS_CHANGED/);
   assert.doesNotMatch(applied, /DROP CONSTRAINT|requires_mfa|GRANT /);
+});
+
+test("ownership preparation preserves rows and requires exact predecessor guards", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        ownershipInitializationMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const applied = preparationSql(
+    source,
+    digest,
+    true,
+    ownershipInitializationMigrationName,
+  );
+  assert.match(applied, /OWNERSHIP_PREPARATION_CHANGED_DATA/);
+  assert.match(applied, /native_core_layout_version IS NULL/);
+  assert.match(applied, /guard_legacy_ownership_initialization/);
+  assert.doesNotMatch(applied, /\bGRANT\b|requires_mfa|SECURITY DEFINER/);
+  assert.ok(
+    source.includes(
+      readFileSync(
+        new URL(
+          "../../../server/db/ddl/planes/studio/metadata/43_legacy_ownership_initialization.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ),
+  );
+  assert.ok(
+    preparationSql(
+      source,
+      digest,
+      false,
+      ownershipInitializationMigrationName,
+    ).endsWith("ROLLBACK;\n"),
+  );
 });

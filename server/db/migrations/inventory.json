@@ -3,6 +3,20 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261008_entity_legacy_ownership_initialization.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_legacy_ownership_initialization.sql",
+      "sha256": "de601b594de70cce19f915c911a9ad4f09ae2dd8d1fefd3786b30eeae47ad337",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit legacy product ownership preparation; one-time source pins only, no grants, identity writes, native conversion or activation. Preserve all metadata/history and existing revision provenance.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/43_legacy_ownership_initialization.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261008_entity_product_authoring_audit.sql",
       "path": "migrations/20261008_entity_product_authoring_audit.sql",
       "sha256": "bbdc9ca008bedbbcaa22165bf17d334a11887bf9b289389dcc456302af77f2d6",

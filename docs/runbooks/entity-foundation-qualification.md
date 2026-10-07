@@ -5,6 +5,46 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Ownership and identity command checkpoint — 2026-10-08
+
+The shared repository now exposes `executeLegacyOwnershipInitialization` and
+`executeLegacyIdentityInstallation`. Both require installed admission/audit ports,
+exact product/draft/actor coordinates, source hash, revision and idempotency key.
+Ownership pins come from installed policy, never client input. Initialization
+advances exactly once and preserves the legacy graph; the typed root and immutable
+command receipt record ownership because legacy JSON does not encode that tuple.
+
+Identity installation additionally requires a serializable transaction and an
+independently resolved named review bound to the complete source/history plan.
+Self-review, revoked review, unknown compatibility, incomplete history and an
+existing unreconciled identity catalogue reject. It allocates reserved identities,
+updates existing field rows, constructs the same validated 2.3 graph and checks
+exact readback. Replay verifies saved bindings and revalidates admission/review.
+Audit failure rolls back allocation, root changes, receipt and snapshots together.
+No new operation or protected-state initialization is included.
+
+DEV schema preparation was rehearsed and installed through the existing migration
+runner: `20261008_entity_legacy_ownership_initialization.sql`, SHA-256
+`de601b594de70cce19f915c911a9ad4f09ae2dd8d1fefd3786b30eeae47ad337`.
+It pins the predecessor constraint/function definitions, retains the native cutover
+block, forbids ownership re-pinning and requires same-transaction revision/history
+proof. Existing metadata/history rows, authorization data and activation heads
+were compared unchanged. No application grants were added. Receipt:
+`~/.athyper/instances/dev/workspace/identity-correspondence-20261008/ownership-schema-installation.json`.
+
+Validation: 814 authoring tests pass, six opt-in exclusions; the explicit canonical
+PostgreSQL enrollment rehearsal passes, including ownership/identity replay,
+audit rollback and revoked/self-review rejection. Twelve migration-runner checks
+pass; migration layout inventories 142 classified files and 134 retained SQL files.
+The PostgreSQL command proof uses fixture authority, not deployed human governance.
+
+**Still open:** install restricted application-role command privileges and runtime
+bindings, resolve the approved descriptor and named historical review, persist and
+consume deployed F9 correspondence/findings, apply actual reference enrollment,
+then native conversion and deployed F6/F8/F9 qualification. Country and State Region
+ownership and identity rows have not changed. The accepted disposition is retained;
+it is not substituted for named-review attribution. UI remains deferred.
+
 ## Active Studio reference-slice execution plan — 2026-10-07
 
 This section governs execution tracking for **Country and State Region Studio
@@ -267,9 +307,9 @@ matches must not be interpreted as 295 incompatible field declarations.
 
 Both current drafts remain revision 2 with verified saved history, allocated
 labels, NULL source kind and no stable field identities. The installed label host
-still excludes ownership/identity commands. The root pending constraint currently
-forbids ownership/schema pins; replacing it requires the corresponding canonical
-ownership initialization and history protocol, not a naked column update.
+still excludes ownership/identity commands. The ownership preparation below now permits a guarded one-time ownership/schema
+initialization; application-role enrollment still requires the installed command
+bindings and trusted descriptor/review resolution.
 The F6/F8 effective-security implementation currently exposes an evidence port;
 no production `withLockedEvidence` adapter was found in host composition. These
 are unfinished implementations, separate from the accepted correspondence disposition and still-required named reviewer attribution.
