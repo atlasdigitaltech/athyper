@@ -150,3 +150,23 @@ export { createProductLabelEnrollment } from "./product-label-enrollment.js";
 export { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
 
 export { createProductLabelHost } from "./product-label-host.js";
+
+export {
+  createProductReferenceEnrollment,
+  type ProductReferenceEnrollmentOptions,
+} from "./product-reference-enrollment.js";
+export { registerProductReferenceEnrollmentRoutes } from "./product-reference-enrollment-routes.js";
+export {
+  createLegacyIdentityReviewResolver,
+  type LegacyIdentityReviewStore,
+  type LegacyIdentityReviewReceipt,
+} from "./legacy-identity-review.js";
+export type {
+  LegacyOwnershipPolicy,
+  LegacyOwnershipInput,
+  LegacyOwnershipResult,
+} from "./legacy-ownership-initialization.js";
+export type {
+  LegacyIdentityInstallationPolicy,
+  LegacyIdentityInstallationResult,
+} from "./legacy-identity-installation.js";

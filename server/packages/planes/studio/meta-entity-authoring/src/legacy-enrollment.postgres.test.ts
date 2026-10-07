@@ -330,8 +330,14 @@ it.skipIf(!enabled)(
             const oldField = randomUUID(),
               oldRelease = randomUUID(),
               oldRevision = randomUUID();
-            const historical = structuredClone(identitySource);
-            historical.fields[0] = { ...historical.fields[0]!, id: oldField };
+            const historical = {
+              ...structuredClone(identitySource),
+              fields: identitySource.fields.map((field, index) =>
+                index === 0
+                  ? { ...field, id: oldField }
+                  : structuredClone(field),
+              ),
+            };
             const historicalJson = JSON.stringify(historical);
             const historicalHash = (
               await sql<{

@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1228,
+    "identities": 1230,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 360,
+    "currentOnly": 362,
     "legacyOccurrences": 898,
-    "currentOccurrences": 426
+    "currentOccurrences": 428
   },
   "routes": [
     {
@@ -15934,6 +15934,36 @@
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-label-enrollment-routes.ts",
           "line": 119,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/enroll-labels",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/initialize-ownership",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/initialize-ownership",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
+          "line": 107,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/initialize-ownership",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/install-identities",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/install-identities",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
+          "line": 113,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
           "kind": "direct"
         }
       ],

@@ -10,8 +10,8 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | ---------------------------------------------------- | ----: |
 | Swagger operations                                   |   125 |
 | Swagger paths                                        |   117 |
-| Backend method/path identities extracted from source |   445 |
-| Source identities absent from Swagger                |   320 |
+| Backend method/path identities extracted from source |   447 |
+| Source identities absent from Swagger                |   322 |
 | studio URL entries (including patterns)              |    70 |
 | neon URL entries (including patterns)                |   146 |
 | mesh URL entries (including patterns)                |    61 |
@@ -32,7 +32,7 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin                          | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | ------------------------------- | ------------------: | ----------------: | ------------------------: | --------------------------: |
-| https://api.dev.athyper.test    |                 447 |               447 |                         0 |                          36 |
+| https://api.dev.athyper.test    |                 449 |               449 |                         0 |                          36 |
 | https://studio.dev.athyper.test |                  74 |                74 |                         0 |                           1 |
 | https://neon.dev.athyper.test   |                 150 |               150 |                         0 |                           1 |
 | https://mesh.dev.athyper.test   |                  65 |                65 |                         0 |                           1 |
@@ -2331,6 +2331,12 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** `/api/platform-control/meta-entity-authoring/change-sets/{id}/graph`  
   Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)
+
+- **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/initialize-ownership`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts)
+
+- **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/install-identities`  
+  Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts)
 
 - **POST** `/api/platform-control/meta-entity-authoring/change-sets/{id}/submit`  
   Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts)

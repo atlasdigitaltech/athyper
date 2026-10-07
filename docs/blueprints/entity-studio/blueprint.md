@@ -3591,6 +3591,15 @@ State the Phase-1 collaboration limit in the composer: one optimistic revision p
 
 #### Executable foundation sub-slice
 
+The optional server reference-command transport binds ownership/identity commands
+to the existing authenticated, serializable product-command path. Request DTOs
+cannot supply actors, reviewers, source ownership or descriptor authority. Named
+identity review uses its own exact-source receipt validator, distinct from
+publication review; installed storage must additionally establish current human
+provenance, independence and revocation. These transport and validator components
+do not themselves provide an approved descriptor, review store or database grants.
+The deployed entrypoint remains label-only until those bindings are qualified.
+
 Ownership/identity checkpoint (8 October 2026): the shared repository implements
 source-bound product ownership initialization and reviewed identity installation,
 with immutable receipts/history, replay and audit rollback. The forward DEV

@@ -48,7 +48,10 @@
     "src/legacy-native-whole-source.test.ts",
     "src/native-schema-qualification.test.ts",
     "src/native-constraint-compatibility.postgres.test.ts",
-    "src/product-command-authority.test.ts"
+    "src/product-command-authority.test.ts",
+    "src/legacy-identity-review.test.ts",
+    "src/product-reference-enrollment.test.ts",
+    "src/product-reference-enrollment-routes.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

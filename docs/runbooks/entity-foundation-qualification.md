@@ -5,6 +5,44 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Reference command transport and review validation — 2026-10-08
+
+The control-plane composition accepts optional shared reference enrollment
+bindings. The two authenticated routes are `initialize-ownership` and
+`install-identities` under the existing change-set API. Closed requests contain
+only entity/draft coordinates, revision, source hash and idempotency key. Actor and
+platform authority scope come from the verified session; reviewer, tenant and
+schema input injection rejects. The transport uses the existing isolated
+issuer/application connections and serializable product-command admission,
+validates the exact admitted entity, resolves current installed policies inside
+the transaction and invokes the canonical repository. It retains distinct conflict,
+denial and committed-but-cleanup-failed responses. UI remains deferred.
+
+`createLegacyIdentityReviewResolver` validates an immutable, exact-source
+`entity.legacy-identity-review/1` receipt with named proposer/reviewer, descriptor
+and complete plan hash. It rejects publication receipts, self-review, changed
+content, cross-scope evidence and invalid principals. The required trusted store
+must independently verify authenticated review provenance, eligibility, revocation
+and resource trust on every call; a content hash is not authority. The writer
+still validates the complete historical plan independently. No chat response or
+role label becomes a named review receipt.
+
+Validation: 826 authoring tests pass (six opt-in exclusions), including 12 new
+transport/review/composition cases. Authoring, explicit native-test and host
+typechecks pass. The explicit installed-role DEV PostgreSQL test also passes:
+label authority remains available and unadmitted/direct ownership writes reject.
+The explicit native-test check found and fixed a readonly-array mutation in the
+previous PostgreSQL fixture; ordinary package test typechecking inherits the
+production test exclusion, so this dedicated check remains necessary.
+
+**Installation boundary:** these optional routes are not enabled by the running
+control entrypoint or gateway. A concrete trusted review store/authorization
+adapter, approved descriptor resolution, restricted ownership/identity role
+privileges and entrypoint configuration remain to be implemented and qualified.
+No DEV rows, grants, deployments or activation changed in this checkpoint. Actual
+reference enrollment, native conversion and deployed F6/F8/F9 remain incomplete.
+This transport is shared framework integration, not evidence of installed authority.
+
 ## Ownership and identity command checkpoint — 2026-10-08
 
 The shared repository now exposes `executeLegacyOwnershipInitialization` and

@@ -1,5 +1,7 @@
 import {
   registerProductLabelEnrollmentRoutes,
+  registerProductReferenceEnrollmentRoutes,
+  type ProductReferenceEnrollmentOptions,
   type createProductLabelEnrollment,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import type { Application } from "express";
@@ -35,6 +37,7 @@ export function registerControlPlane(
     domainSuffix: string;
     /** Installed scoped command resources only; never fall back to the review DB. */
     productLabelEnrollment?: Parameters<typeof createProductLabelEnrollment>[0];
+    productReferenceEnrollment?: ProductReferenceEnrollmentOptions;
   },
 ) {
   registerControlSession(application, options.authenticator, options.authority);
@@ -42,6 +45,13 @@ export function registerControlPlane(
   if (options.productLabelEnrollment) {
     registerProductLabelEnrollmentRoutes(application, {
       ...options.productLabelEnrollment,
+      authenticate: createIamAuthenticationMiddleware(options.authenticator),
+      readContext: readVerifiedRequestContext,
+    });
+  }
+  if (options.productReferenceEnrollment) {
+    registerProductReferenceEnrollmentRoutes(application, {
+      ...options.productReferenceEnrollment,
       authenticate: createIamAuthenticationMiddleware(options.authenticator),
       readContext: readVerifiedRequestContext,
     });
