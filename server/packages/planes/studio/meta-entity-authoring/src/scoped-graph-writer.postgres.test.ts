@@ -546,10 +546,55 @@ it.skipIf(!enabled)(
         ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;`,
         )
         .execute(db);
-      // Closed legacy-reader table inventory; unrelated/new tables are not granted.
-      await sql`GRANT SELECT ON ${sql.join(["metadata.entity", ...Object.keys(BRANCH_COLUMNS).map((table) => `metadata.${table}`)].map((table) => sql.table(table)))} TO command_fixture`.execute(
-        db,
+      // Installation refuses unqualified table security before granting reads.
+      const readerSql = readFileSync(
+        new URL("./product-command-reader.sql", import.meta.url),
+        "utf8",
       );
+      await expect(sql.raw(readerSql).execute(db)).rejects.toThrow(
+        "PRODUCT_COMMAND_READER_FORCED_RLS_REQUIRED",
+      );
+      expect(
+        (
+          await sql<{
+            allowed: boolean;
+          }>`SELECT has_table_privilege('athyper_product_command_app','metadata.entity','SELECT') AS allowed`.execute(
+            db,
+          )
+        ).rows[0]?.allowed,
+      ).toBe(false);
+      // Exercise the real closed read-grant candidate, including restrictive
+      // fences against a deliberately broad pre-existing PUBLIC read policy.
+      for (const table of ["entity", ...Object.keys(BRANCH_COLUMNS)]) {
+        await sql
+          .raw(
+            `ALTER TABLE metadata.${table} ENABLE ROW LEVEL SECURITY;
+          ALTER TABLE metadata.${table} FORCE ROW LEVEL SECURITY;
+          CREATE POLICY fixture_public_read ON metadata.${table} FOR SELECT TO PUBLIC USING(true)`,
+          )
+          .execute(db);
+      }
+      await sql
+        .raw(
+          readFileSync(
+            new URL("./product-command-reader.sql", import.meta.url),
+            "utf8",
+          ),
+        )
+        .execute(db);
+      for (const table of [
+        "metadata.entity_change_set",
+        "metadata.entity_label",
+        "metadata.entity_label_translation",
+        "metadata.entity_authoring_command_receipt",
+        "snapshot.entity_draft_save",
+      ]) {
+        await sql
+          .raw(
+            `CREATE POLICY fixture_public_mutation ON ${table} FOR ALL TO PUBLIC USING(true) WITH CHECK(true)`,
+          )
+          .execute(db);
+      }
       // A second raw installer invocation must fail before changing existing roles.
       await expect(
         sql
@@ -676,6 +721,27 @@ it.skipIf(!enabled)(
                 }>`SELECT current_user AS role`.execute(tx)
               ).rows[0]?.role,
             ).toBe("command_fixture");
+            expect(
+              (
+                await sql`SELECT id FROM metadata.entity_change_set WHERE id<>${scope.changeSetId}::uuid`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toEqual([]);
+            expect(
+              (
+                await sql`SELECT id FROM metadata.entity WHERE id<>${productEntityId}::uuid`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toEqual([]);
+            expect(
+              (
+                await sql`SELECT id FROM metadata.entity_field WHERE change_set_id<>${scope.changeSetId}::uuid`.execute(
+                  tx,
+                )
+              ).rows,
+            ).toEqual([]);
             if (auditFails) throw Error("AUDIT_UNAVAILABLE");
           },
         });
@@ -687,6 +753,19 @@ it.skipIf(!enabled)(
           tenantId: scope.authorityTenantId,
           principalId: scope.actorId,
         } as VerifiedRequestContext;
+        for (const table of ["entity", ...Object.keys(BRANCH_COLUMNS)]) {
+          const rows =
+            await sql`SELECT * FROM ${sql.table(`metadata.${table}`)}`.execute(
+              appDb,
+            );
+          expect(rows.rows, `unadmitted ${table}`).toEqual([]);
+          const privileges = await sql<{
+            write: boolean;
+          }>`SELECT has_table_privilege(current_user,${`metadata.${table}`},'INSERT,UPDATE,DELETE') AS write`.execute(
+            appDb,
+          );
+          expect(privileges.rows[0]?.write, `read-only ${table}`).toBe(false);
+        }
         const run = () =>
           enroll(context, {
             changeSetId: request.changeSetId,
@@ -924,6 +1003,18 @@ it.skipIf(!enabled)(
       } finally {
         await appDb.destroy();
         await issuerDb.destroy();
+        // The hostile PUBLIC policies belong only to this qualification scenario.
+        for (const table of [
+          "metadata.entity_change_set",
+          "metadata.entity_label",
+          "metadata.entity_label_translation",
+          "metadata.entity_authoring_command_receipt",
+          "snapshot.entity_draft_save",
+        ]) {
+          await sql
+            .raw(`DROP POLICY fixture_public_mutation ON ${table}`)
+            .execute(db);
+        }
       }
       const normalized = new KyselyMetaEntityAuthoringRepository(
         db,

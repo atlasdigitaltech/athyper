@@ -226,6 +226,37 @@ where new operations require it.
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
 
+### Closed product-command reader qualification — 8 October 2026
+
+The label-enrollment PostgreSQL rehearsal now uses the uninstalled
+`product-command-reader.sql` companion instead of fixture-wide SELECT grants.
+Its explicit 33-table inventory matches the canonical legacy graph reader;
+new reader tables fail an inventory drift test until reviewed. Installation
+requires forced RLS on every table and fails before granting privileges if a
+required table is unqualified. The script does not enable RLS implicitly or grant
+writes to graph members. Existing label mutations retain their separate bounded
+write grants and receive restrictive admission/actor fences.
+
+The application role sees no graph rows without an admission. During an admitted
+command, unrelated drafts, entity headers and fields remain inaccessible, even
+with deliberately broad pre-existing PUBLIC policies. Relation-target headers,
+class profiles and child materialization mappings follow admitted graph scope.
+The existing HTTP-to-canonical-writer, replay, history and rollback rehearsal
+passes with these policies. Governance/authentication are still fixture-owned;
+no fixture read grant is promoted into installation defaults.
+
+Read-only DEV inspection found all 33 required reader tables already have forced
+RLS and found zero product-command roles installed. No DEV DDL, grants or data
+were changed. The admission and reader candidates still need atomic migration
+packaging, the current governance binding, isolated login provisioning and
+transactional audit/function privilege qualification before deployment. Shared
+composer onboarding, actual Country/State Region enrollment and combined deployed
+acceptance remain incomplete.
+
+Validation: 804 authoring tests pass (six opt-in exclusions); the disposable
+PostgreSQL rehearsal and read-inventory test pass. These are local proofs, not
+installed or published authority.
+
 ### Authenticated label-enrollment transport — 8 October 2026
 
 Track 1 now has an opt-in control-host transport connected to the canonical
