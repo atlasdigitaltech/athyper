@@ -515,9 +515,10 @@ it.skipIf(!enabled)(
       await sql
         .raw(read("migrations/20261006_entity_owned_label_commands.sql"))
         .execute(db);
-      // Separate database login exercises the actual canonical label writer with
-      // scoped grants. Issuer/governance and broad fixture read grants below are
-      // test composition, NOT installed DEV authority or human approval evidence.
+      // Qualify the exact packaged upgrade before fixture login provisioning.
+      const installation = read(
+        "scripts/operations/upgrades/entity-product-command/20261008_entity_product_command_authority.sql",
+      );
       await sql
         .raw(
           `ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY;
@@ -526,45 +527,33 @@ it.skipIf(!enabled)(
         ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;`,
         )
         .execute(db);
-      await sql
-        .raw(
-          readFileSync(
-            new URL("./product-command-authority.sql", import.meta.url),
-            "utf8",
-          ),
-        )
-        .execute(db);
-      await sql
-        .raw(
-          `CREATE ROLE issuer_fixture LOGIN; GRANT athyper_product_command_issuer TO issuer_fixture;
-        CREATE ROLE command_fixture LOGIN; GRANT athyper_product_command_app TO command_fixture;
-
-        ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE metadata.entity_change_set FORCE ROW LEVEL SECURITY;
-        CREATE POLICY fixture_existing_product_read ON metadata.entity_change_set FOR SELECT TO athyperapp USING(tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());
-        ALTER TABLE snapshot.entity_draft_save ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;`,
-        )
-        .execute(db);
-      // Installation refuses unqualified table security before granting reads.
-      const readerSql = readFileSync(
-        new URL("./product-command-reader.sql", import.meta.url),
-        "utf8",
-      );
-      await expect(sql.raw(readerSql).execute(db)).rejects.toThrow(
-        "PRODUCT_COMMAND_READER_FORCED_RLS_REQUIRED",
-      );
-      expect(
-        (
-          await sql<{
-            allowed: boolean;
-          }>`SELECT has_table_privilege('athyper_product_command_app','metadata.entity','SELECT') AS allowed`.execute(
-            db,
-          )
-        ).rows[0]?.allowed,
-      ).toBe(false);
-      // Exercise the real closed read-grant candidate, including restrictive
-      // fences against a deliberately broad pre-existing PUBLIC read policy.
+      await db.connection().execute(async (connection) => {
+        try {
+          await expect(
+            sql.raw(installation).execute(connection),
+          ).rejects.toThrow("PRODUCT_COMMAND_READER_FORCED_RLS_REQUIRED");
+        } finally {
+          await sql`ROLLBACK`.execute(connection);
+        }
+      });
+      const absent = async () => {
+        expect(
+          (
+            await sql`SELECT rolname FROM pg_roles WHERE rolname IN ('athyper_product_command_owner','athyper_product_command_issuer','athyper_product_command_app')`.execute(
+              db,
+            )
+          ).rows,
+        ).toEqual([]);
+        expect(
+          (
+            await sql`SELECT nspname FROM pg_namespace WHERE nspname='entity_command_private'`.execute(
+              db,
+            )
+          ).rows,
+        ).toEqual([]);
+      };
+      await absent();
+      // Deliberately broad existing policies must not widen the installed scope.
       for (const table of ["entity", ...Object.keys(BRANCH_COLUMNS)]) {
         await sql
           .raw(
@@ -575,11 +564,30 @@ it.skipIf(!enabled)(
           .execute(db);
       }
       await sql
+        .raw(installation.replace(/COMMIT;\n$/, "ROLLBACK;\n"))
+        .execute(db);
+      await absent();
+      await sql.raw(installation).execute(db);
+      expect(
+        (
+          await sql`SELECT m.member FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid WHERE r.rolname IN ('athyper_product_command_owner','athyper_product_command_issuer','athyper_product_command_app')`.execute(
+            db,
+          )
+        ).rows,
+      ).toEqual([]);
+      expect(
+        (
+          await sql`SELECT rolname FROM pg_roles WHERE rolname LIKE 'athyper_product_command_%' AND (rolcanlogin OR rolsuper OR rolbypassrls)`.execute(
+            db,
+          )
+        ).rows,
+      ).toEqual([]);
+      // Only this disposable test provisions credential-free fixture logins.
+      await sql
         .raw(
-          readFileSync(
-            new URL("./product-command-reader.sql", import.meta.url),
-            "utf8",
-          ),
+          `CREATE ROLE issuer_fixture LOGIN; GRANT athyper_product_command_issuer TO issuer_fixture;
+        CREATE ROLE command_fixture LOGIN; GRANT athyper_product_command_app TO command_fixture;
+        CREATE POLICY fixture_existing_product_read ON metadata.entity_change_set FOR SELECT TO athyperapp USING(tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());`,
         )
         .execute(db);
       for (const table of [

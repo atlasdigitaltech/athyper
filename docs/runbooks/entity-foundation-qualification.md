@@ -226,6 +226,45 @@ where new operations require it.
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
 
+### Atomic product-command migration package — 8 October 2026
+
+Admission and the closed reader/fences are packaged together in the immutable
+operational upgrade `20261008_entity_product_command_authority.sql`, SHA-256
+`ad99f6d17190f4385d1ace8f97cbdbcc3eefd408f5f4fb87965f8159d92ee657`.
+The inventory resolves its retained source under
+`server/db/scripts/operations/upgrades/entity-product-command`. It is intentionally
+absent from automatic plane manifests. This packages the installation; it does
+not supply governance decisions or qualify a deployment.
+
+The disposable PostgreSQL scenario now executes that exact package. It proves a
+late reader-preflight failure rolls back the earlier roles/schema/policies, an
+explicit successful rehearsal also rolls back, and successful test installation
+creates only NOLOGIN, non-superuser, non-bypass roles with no members. Test-only
+login provisioning follows installation. The existing HTTP/canonical enrollment,
+restricted reads, replay, immutable history and audit rollback checks then run
+against the installed package.
+
+Actual DEV rollback rehearsal completed at `2026-10-07T17:29:26.790Z` through
+`tooling/scripts/verification/rehearse-product-command-installation.dev.mjs`.
+The helper verifies the inventory hash and database identity, sets bounded lock
+and statement timeouts, and has no apply/activation option. Before/after hashes
+of drafts, snapshots, permission grants and activation heads matched
+`50a2aebdaf7a2e21d8c819170a77ae81fbbd9a5f597be788a8ba2d2b2cebfe8d`;
+product roles and the private schema remained absent. No DEV ledger entry was
+created, and no enrollment/publication occurred.
+
+Validation: 805 authoring tests pass (six opt-in exclusions), the packaged
+PostgreSQL scenario passes, and three rollback-helper tests pass. The full
+migration-layout check still reports six existing manifest/inventory mismatches
+for UI catalogue, native snapshot/core-root guards, constraint compatibility,
+typed-row preparation and legacy-nullability preparation; this package adds none.
+These existing discrepancies are not waived or treated as green CI.
+
+Installed governance resolution, runtime login/audit bindings, migration-ledger
+application, shared composer onboarding and actual Country/State Region combined
+acceptance remain open. Bootstrap publication still requires independently
+verified human review; a successful rehearsal does not replace it.
+
 ### Closed product-command reader qualification — 8 October 2026
 
 The label-enrollment PostgreSQL rehearsal now uses the uninstalled

@@ -3,12 +3,22 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261008_entity_product_command_authority.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_command_authority.sql",
+      "sha256": "ad99f6d17190f4385d1ace8f97cbdbcc3eefd408f5f4fb87965f8159d92ee657",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/rehearse-product-command-installation.dev.mjs"
+      ],
+      "reason": "Explicit Studio-only product command transport installation, held out of automatic manifests pending governed runtime binding qualification. Atomic admission and closed reader grants; no login provisioning, actor grants, enrollment or publication.",
+      "canonicalPaths": []
+    },
+    {
       "originalPath": "migrations/20261007_entity_ui_component_catalogue.sql",
       "path": "migrations/20261007_entity_ui_component_catalogue.sql",
       "sha256": "64b3aa01ca5d813bdd95ebb8a337528cdb3ab29e064d71ffc2ea7c48c39d5dbe",
-      "planes": [
-        "studio"
-      ],
+      "planes": ["studio"],
       "disposition": "forward-upgrade",
       "callers": [
         "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
@@ -23,9 +33,7 @@
       "originalPath": "migrations/20261007_entity_native_snapshot_guards.sql",
       "path": "migrations/20261007_entity_native_snapshot_guards.sql",
       "sha256": "6c555f7fc63d11b66b90aa58e02c2ff28327c09ba8519e842093646189942eb4",
-      "planes": [
-        "studio"
-      ],
+      "planes": ["studio"],
       "disposition": "forward-upgrade",
       "callers": [
         "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"

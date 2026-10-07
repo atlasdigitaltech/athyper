@@ -17,3 +17,38 @@ it("keeps the closed SQL read inventory complete as the canonical legacy reader 
   );
   expect(new Set(tables).size).toBe(tables.length);
 });
+
+it("pins the atomic operational package without enrolling it in automatic plane upgrades", async () => {
+  const { createHash } = await import("node:crypto");
+  const root = new URL("../../../../../db/", import.meta.url);
+  const inventory = JSON.parse(
+    readFileSync(new URL("migrations/inventory.json", root), "utf8"),
+  );
+  const name = "20261008_entity_product_command_authority.sql";
+  const entry = inventory.entries.find(
+    (row: { originalPath: string }) =>
+      row.originalPath === `migrations/${name}`,
+  );
+  expect(entry.disposition).toBe("operational-upgrade");
+  expect(entry.planes).toEqual([]);
+  const source = readFileSync(new URL(entry.path, root), "utf8");
+  expect(createHash("sha256").update(source).digest("hex")).toBe(entry.sha256);
+  expect(source.startsWith("BEGIN;\n")).toBe(true);
+  expect(source.endsWith("COMMIT;\n")).toBe(true);
+  for (const file of [
+    "product-command-authority.sql",
+    "product-command-reader.sql",
+  ]) {
+    expect(source).toContain(
+      readFileSync(new URL(file, import.meta.url), "utf8"),
+    );
+  }
+  for (const plane of ["studio", "neon", "mesh"]) {
+    expect(
+      readFileSync(
+        new URL(`migrations/manifests/${plane}.txt`, root),
+        "utf8",
+      ).split("\n"),
+    ).not.toContain(name);
+  }
+});
