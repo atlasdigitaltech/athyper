@@ -45,14 +45,11 @@ source-hash binding; never infer authority from a field-name match.
 overrides, with 24 distinct text values. Group candidates for review by meaning
 and locale context; equal text alone does not imply a shared label identity. The
 two “Record ID” overrides require field/surface/visibility inspection against the
-no-visible-UUID rule; changing a caption is not a UUID exposure fix. State Region
-has an unapplied 15-label/16-command proposal. Neither proposal proves canonical
-allocation or whole-source mapping completeness.
+no-visible-UUID rule; changing a caption is not a UUID exposure fix. The installed checkpoint below now records 48 Country and 15 State Region allocated labels. These allocations do not prove whole-source mapping completeness.
 
 **Next milestone remains M1 + actual canonical enrollment.** Diagnostic reports
 and additional pure fixtures alone cannot complete it. Current implementation
-adds product-command admission below, but the installed product DB path and actual
-enrollment remain unqualified. Draft mutation requires current authenticated
+now includes installed, authenticated DEV label writes. Ownership and field-identity commands and complete canonical enrollment remain unfinished. Draft mutation requires current authenticated
 authoring authority, not a human review receipt; independent review gates publication. No production/cutover
 or host activation is authorized by this status entry. Preserve all history until
 the separate F5 retention decision is approved.
@@ -227,6 +224,60 @@ where new operations require it.
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
 
+### Installed DEV command authority and label enrollment — 8 October 2026
+
+The optional server-only path is now installed. No shared composer UI or UI wiring
+was added. The real Platform Admin browser session authorized enrollment through
+the existing `metadata.entity.author` governance adapter, isolated issuer/app
+connections, canonical repository transaction and audit append. No publication
+review receipt, service-account authorship or direct administrator draft write
+substituted for that authorization.
+
+| Actual checkpoint           | Evidence / remaining boundary                                                                                                                                                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command transport installed | Immutable `20261008_entity_product_command_authority.sql`, SHA `ad99f6d17190f4385d1ace8f97cbdbcc3eefd408f5f4fb87965f8159d92ee657`, recorded in the existing migration ledger                                                                                                                  |
+| Audit contracts installed   | Forward `20261008_entity_product_authoring_audit.sql`, SHA `bbdc9ca008bedbbcaa22165bf17d334a11887bf9b289389dcc456302af77f2d6`; exact enrollment/review contracts, no generic audit bypass                                                                                                     |
+| Installed app-role checks   | Direct draft reads return no rows without admission, ownership UPDATE and forged admission reject; actual IAM lookup and rollback-only transactional audit pass. The isolated role test uses a synthetic request context and does not itself attest browser authentication                    |
+| State Region labels         | Draft `9672c64b-b40f-43ce-8a2f-e0fbebd1154e`, revision 1 → 2, 15 labels, one command receipt; authenticated replay returns the original allocation                                                                                                                                            |
+| Country labels              | Draft `28e155d7-9f18-48fd-9f4d-847ff80f7e87`, revision 1 → 2, 48 distinct labels, one command receipt; original index-only replay exposed snapshot-order mismatch, fixed with explicit original member IDs. Corrected authenticated replay passed twice with the same revision and identities |
+| Immutable history           | Each draft retains revisions 0, 1 and 2; all six graph hashes were recomputed and verified. Country source revision-1 hash `259eb6b00119e4f685d43fa72806d78c8845422c4df79b34acc20dc262d12cae`; State Region `1056cb869b001425762fb5e979f4de91c0f747e824565010bb3018a4a0ead304`                |
+| Still required              | Source ownership initialization, reviewed released-field identity correspondence/allocation, native conversion/application/history, whole-release acceptance and deployed F6/F8/F9. Both drafts still have NULL source kind. No publication/activation or F5 production approval is claimed   |
+
+The reproducible installer is
+`server/db/scripts/operations/authorization/prepare-dev-product-command.mjs`.
+It supports rollback rehearsal and explicit `--apply=DEV-PRODUCT-COMMAND`, with
+hash/ledger validation and strict role preflight. Private outputs go under
+`~/.athyper/instances/dev/secrets/product-command`; evidence and the pre-installation
+backup are under `~/.athyper/instances/dev/workspace/product-command-20261008`.
+No credential belongs in the repository or evidence logs. Configure an explicit
+private label policy (`supportedLocales`, `maxCommands`, `maxBatchBytes`) before
+using `deploy/compose/instance/compose.product-command.yaml` with the existing
+control-api stack. DEV used `en`, 100 commands and 65,536 bytes. The narrow gateway
+route includes `enroll-labels`; DEV's disabled file watching requires a gateway
+restart to load that change.
+
+Runtime grants are a closed inventory: `shared.current_tenant_id_soft()`,
+`shared.current_tenant_id()`, `master.current_principal_id_soft()`, `shared.uuidv7()`,
+`metadata.current_actor_id(uuid)`, the existing revision-advance and
+revision-preserving-root-patch functions, plus schema usage and the exact existing
+17-argument `audit.append_event` signature. There is no broad metadata function
+or audit-table write grant. The initial installed command uncovered the missing
+principal-context function ACL; the installer now supplies that explicit closure.
+
+Label enrollment preserves every source location. Equal captions did not merge
+identities; Country's two existing “Record ID” captions remain source data, not
+approval to display UUIDs. Presentation validation and explicit technical-binding
+disposition remain mandatory before native compilation. Canonical history sorts
+member arrays; the new optional `sourceMemberId` resolves exact original members
+for replay and never rewrites snapshots or infers identity from a name.
+
+Validation: 807 authoring tests and 48 control-plane tests pass; six authoring
+and two control-plane environment-dependent tests skip in the ordinary run.
+The installed-role PostgreSQL test and disposable scoped-save/replay/rollback test pass separately. Real authenticated requests reject forged actor/tenant fields and a stale source hash with HTTP 400; they leave both drafts at revision 2 with one command receipt each. This is bounded label-write
+qualification, not full native product-write or live-read qualification.
+
+Migration-layout validation still reports six pre-existing inventory/manifest disagreements for the 20261007 catalogue/native preparation upgrades. The new audit migration matches its inventory and Studio manifest; full repository CI is not claimed green. Applied migration bytes remain unchanged.
+
 ### Server-only governance/runtime composition — 8 October 2026
 
 Owner scope now defers the shared composer UI and UI wiring. They are not
@@ -259,7 +310,7 @@ partial or unsafe configuration fails startup. The application needs usage of
 no audit-table DML is justified. The immutable packaged transport migration has
 not been changed to imply that those deployed grants already exist.
 
-Actual DEV inspection still finds no product-command roles. Both current drafts
+Historical pre-installation inspection found no product-command roles. Both drafts then
 remain revision 1 with undeclared source kind, locale and native/reference markers:
 Country `28e155d7-9f18-48fd-9f4d-847ff80f7e87`; State Region
 `9672c64b-b40f-43ce-8a2f-e0fbebd1154e`. The control role has SELECT authority for
@@ -267,7 +318,7 @@ the principal/binding and product root checks. This read-only inspection does no
 establish an authenticated command, installed issuer/application logins, canonical
 source/identity enrollment or deployed F6/F8/F9 acceptance. Ownership initialization
 and reviewed historical identity allocation remain engineering work, separate
-from label enrollment and publication review. No persistent DEV mutation occurred.
+from label enrollment and publication review. No persistent DEV mutation occurred at that checkpoint; the installation and enrollment checkpoint below supersedes its deployment status.
 
 **Lifecycle audit disposition:** retain the existing
 `publication.entity_release_link` relationship between Entity source releases

@@ -6,7 +6,7 @@ import {
 } from "./authoring/product.js";
 import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
 import { applyLabelCommands } from "./label-command-reducer.js";
-import { sha256 } from "./deterministic.js";
+import { canonicalJson, sha256 } from "./deterministic.js";
 const policy = {
   supportedLocales: ["en", "fr"],
   maxCommands: 1000,
@@ -164,4 +164,59 @@ it("requires explicit mappings for unlocalized legacy text and rejects stale map
       policy,
     ),
   ).toThrow("LEGACY_LABEL_MAPPING_PATH_INVALID");
+});
+
+it("replays explicit member references across canonical history ordering without guessing from text", () => {
+  const first = {
+    id: "00000000-0000-4000-8000-000000000002",
+    fieldKey: "z",
+    label: "Last",
+  };
+  const second = {
+    id: "00000000-0000-4000-8000-000000000001",
+    fieldKey: "a",
+    label: "First",
+  };
+  const graph = {
+    contractSchema: "athyper.meta-entity-contract/2.1",
+    fields: [first, second],
+  } as unknown as ReturnType<typeof source>;
+  const history = JSON.parse(canonicalJson(graph));
+  expect(history.fields[0].id).not.toBe(first.id);
+  const declaration = {
+    sourcePath: "/fields/0/label",
+    sourceMemberId: first.id,
+    labelKey: "field.last",
+    defaultText: "Last",
+  };
+  const request = { ...input(graph), declarations: [declaration] };
+  expect(prepareLegacyLabelEnrollment(history, request, policy)).toEqual(
+    prepareLegacyLabelEnrollment(graph, request, policy),
+  );
+  expect(() =>
+    prepareLegacyLabelEnrollment(
+      history,
+      {
+        ...request,
+        declarations: [
+          declaration,
+          { ...declaration, sourcePath: "/fields/1/label" },
+        ],
+      },
+      policy,
+    ),
+  ).toThrow("LEGACY_LABEL_MAPPING_PATH_INVALID");
+  for (const sourceMemberId of [
+    second.id,
+    "00000000-0000-4000-8000-000000000003",
+    "invalid",
+  ]) {
+    expect(() =>
+      prepareLegacyLabelEnrollment(
+        history,
+        { ...request, declarations: [{ ...declaration, sourceMemberId }] },
+        policy,
+      ),
+    ).toThrow();
+  }
 });

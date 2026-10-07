@@ -242,7 +242,7 @@ jobs:
         run: pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
       - name: Test Entity DEV preparation runner
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: node --test tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs tooling/scripts/verification/rehearse-product-command-installation.test.mjs
+        run: node --test tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs tooling/scripts/verification/rehearse-product-command-installation.test.mjs server/db/scripts/operations/authorization/prepare-dev-product-command.test.mjs
       - name: Typecheck native Entity tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring typecheck:native-tests

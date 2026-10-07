@@ -147,3 +147,35 @@ it.each([
   expect(r.status).toBe(status);
   expect(await r.json()).toEqual(body);
 });
+
+it("accepts exact source member correspondence and rejects malformed IDs", async () => {
+  const f = await fixture();
+  execute.mockResolvedValue({ revision: 3 });
+  const declarations = [
+    {
+      sourcePath: "/fields/0/label",
+      sourceMemberId: id,
+      labelKey: "title",
+      defaultText: "Reference",
+    },
+  ];
+  expect(
+    (await f.send({ proposal: { ...proposal, declarations } })).status,
+  ).toBe(200);
+  expect(execute).toHaveBeenLastCalledWith(f.context, {
+    changeSetId: id,
+    proposal: { ...proposal, declarations },
+  });
+  execute.mockClear();
+  expect(
+    (
+      await f.send({
+        proposal: {
+          ...proposal,
+          declarations: [{ ...declarations[0], sourceMemberId: "not-a-uuid" }],
+        },
+      })
+    ).status,
+  ).toBe(400);
+  expect(execute).not.toHaveBeenCalled();
+});

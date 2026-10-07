@@ -51,3 +51,5 @@
 20261007_entity_native_root_preparation.sql
 20261007_entity_root_revision_protocol.sql
 20261007_entity_root_revision_provenance.sql
+
+20261008_entity_product_authoring_audit.sql

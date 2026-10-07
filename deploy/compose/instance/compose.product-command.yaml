@@ -1,0 +1,13 @@
+# Opt-in backend enrollment for the isolated DEV control API. No UI wiring.
+# Apply only after the restricted installer and installed-role qualification pass.
+services:
+  control-api:
+    environment:
+      PLATFORM_CONTROL_COMMAND_ISSUER_DATABASE_URL_FILE: /run/product-command/issuer-database-url
+      PLATFORM_CONTROL_COMMAND_APPLICATION_DATABASE_URL_FILE: /run/product-command/application-database-url
+      PLATFORM_CONTROL_COMMAND_APPLICATION_LOGIN: athyper_dev_product_command
+      PLATFORM_CONTROL_COMMAND_LABEL_POLICY_FILE: /run/product-command/label-policy.json
+    volumes:
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT:?set private command credential root}/issuer-database-url:/run/product-command/issuer-database-url:ro
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT}/application-database-url:/run/product-command/application-database-url:ro
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT}/label-policy.json:/run/product-command/label-policy.json:ro

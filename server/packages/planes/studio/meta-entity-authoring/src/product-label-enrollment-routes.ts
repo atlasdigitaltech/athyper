@@ -77,8 +77,15 @@ export function parseProductLabelEnrollmentRequest(
       !p.declarations.every(
         (d) =>
           object(d) &&
-          keys(d, ["sourcePath", "labelKey", "defaultText"], ["values"]) &&
+          keys(
+            d,
+            ["sourcePath", "labelKey", "defaultText"],
+            ["values", "sourceMemberId"],
+          ) &&
           typeof d.sourcePath === "string" &&
+          (d.sourceMemberId === undefined ||
+            (typeof d.sourceMemberId === "string" &&
+              uuid.test(d.sourceMemberId))) &&
           typeof d.labelKey === "string" &&
           typeof d.defaultText === "string" &&
           (d.values === undefined ||

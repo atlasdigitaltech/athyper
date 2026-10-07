@@ -71,7 +71,7 @@ export async function enterProductCommand(
 ): Promise<void> {
   if (sha256({ scope: admission.scope, command }) !== admission.requestHash)
     throw Error("PRODUCT_COMMAND_CONTENT_MISMATCH");
-  await sql`SELECT set_config('app.current_tenant_id',${admission.scope.authorityTenantId},true),
+  await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_actor_type','user',true),set_config('app.current_tenant_id',${admission.scope.authorityTenantId},true),
     set_config('app.current_principal_id',${admission.scope.actorId},true)`.execute(
     tx,
   );

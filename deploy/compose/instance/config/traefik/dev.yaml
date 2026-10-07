@@ -2,7 +2,7 @@ http:
   routers:
     platform-control:
       # Human enrollment only. Do not intercept the separate workload /execute route.
-      rule: 'Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/(activate|replace)$`) || PathRegexp(`^/api/platform-control/meta-entity-authoring/change-sets/[0-9a-fA-F-]{36}/(graph|adopt|submit|approve)$`))'
+      rule: "Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/(activate|replace)$`) || PathRegexp(`^/api/platform-control/meta-entity-authoring/change-sets/[0-9a-fA-F-]{36}/(graph|adopt|submit|approve|enroll-labels)$`))"
       entryPoints: [web]
       service: platform-control
       priority: 200
@@ -54,13 +54,13 @@ http:
     mail:
       { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }
     storage-console:
-      rule: 'Host(`objects.dev.athyper.test`) && (Path(`/console`) || PathPrefix(`/console/`))'
+      rule: "Host(`objects.dev.athyper.test`) && (Path(`/console`) || PathPrefix(`/console/`))"
       entryPoints: [web]
       service: storage-console
       priority: 200
     objects-browser:
       # Only unsigned browser navigation receives HTML; S3 clients keep the API.
-      rule: 'Host(`objects.dev.athyper.test`) && Path(`/`) && Method(`GET`) && HeaderRegexp(`Accept`, `text/html`) && !HeaderRegexp(`Authorization`, `.+`) && !QueryRegexp(`X-Amz-Signature`, `.*`) && !QueryRegexp(`Signature`, `.*`)'
+      rule: "Host(`objects.dev.athyper.test`) && Path(`/`) && Method(`GET`) && HeaderRegexp(`Accept`, `text/html`) && !HeaderRegexp(`Authorization`, `.+`) && !QueryRegexp(`X-Amz-Signature`, `.*`) && !QueryRegexp(`Signature`, `.*`)"
       entryPoints: [web]
       service: objects-browser
       priority: 100

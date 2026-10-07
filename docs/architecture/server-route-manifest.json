@@ -15932,7 +15932,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-label-enrollment-routes.ts",
-          "line": 112,
+          "line": 119,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/enroll-labels",
           "kind": "direct"
         }

@@ -281,5 +281,7 @@ planes/studio/control/14_publication_policy_replacement.sql
 planes/studio/publication/21_coordinated_worker_source_read.sql
 planes/studio/publication/22_coordinated_deployment_recovery.sql
 
+planes/studio/metadata/42_product_authoring_audit.sql
+
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

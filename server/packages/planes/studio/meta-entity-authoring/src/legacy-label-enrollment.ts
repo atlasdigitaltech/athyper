@@ -19,6 +19,8 @@ export function prepareLegacyLabelEnrollment(
     requiredLocales: readonly string[];
     declarations?: readonly {
       sourcePath: string;
+      /** Exact top-level legacy member identity; survives canonical snapshot order. */
+      sourceMemberId?: string;
       labelKey: string;
       defaultText: string;
       values?: Readonly<Record<string, string>>;
@@ -116,6 +118,7 @@ export function prepareLegacyLabelEnrollment(
   }
   visit(source, "");
   const mappedPaths = new Set<string>();
+  const mappedMembers = new Set<string>();
   for (const declaration of input.declarations ?? []) {
     const path = declaration.sourcePath;
     if (
@@ -126,7 +129,40 @@ export function prepareLegacyLabelEnrollment(
       fail("LEGACY_LABEL_MAPPING_PATH_INVALID", path);
     mappedPaths.add(path);
     let value: unknown = source;
-    for (const part of path.slice(1).split("/")) {
+    const parts = path.slice(1).split("/");
+    if (declaration.sourceMemberId !== undefined) {
+      if (
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
+          declaration.sourceMemberId,
+        ) ||
+        parts.length < 3 ||
+        !/^(0|[1-9][0-9]*)$/.test(parts[1]!)
+      )
+        fail("LEGACY_LABEL_MEMBER_REFERENCE_INVALID", path);
+      const family = Reflect.get(source, parts[0]!);
+      if (!Array.isArray(family))
+        fail("LEGACY_LABEL_MEMBER_REFERENCE_INVALID", path);
+      const matches = (family as unknown[]).filter(
+        (row) =>
+          row &&
+          typeof row === "object" &&
+          Reflect.get(row, "id") === declaration.sourceMemberId,
+      );
+      if (matches.length !== 1)
+        fail("LEGACY_LABEL_MEMBER_REFERENCE_INVALID", path);
+      const coordinate = JSON.stringify([
+        parts[0],
+        declaration.sourceMemberId,
+        ...parts.slice(2),
+      ]);
+      if (mappedMembers.has(coordinate))
+        fail("LEGACY_LABEL_MAPPING_PATH_INVALID", path);
+      mappedMembers.add(coordinate);
+      value = matches[0];
+    }
+    for (const part of declaration.sourceMemberId === undefined
+      ? parts
+      : parts.slice(2)) {
       const key = part.replaceAll("~1", "/").replaceAll("~0", "~");
       if (!value || typeof value !== "object" || !Object.hasOwn(value, key))
         fail("LEGACY_LABEL_MAPPING_PATH_INVALID", path);
@@ -186,12 +222,24 @@ export function prepareLegacyLabelEnrollment(
     },
     policy,
   );
+  const memberBindings = (input.declarations ?? [])
+    .filter((d) => d.sourceMemberId !== undefined)
+    .map((d) => ({
+      sourcePath: d.sourcePath,
+      sourceMemberId: d.sourceMemberId!,
+    }));
   return {
+    ...(memberBindings.length ? { memberBindings } : {}),
     sourceHash: input.sourceHash,
     revision: input.revision,
     batch,
     bindings,
-    proposalHash: sha256({ sourceHash: input.sourceHash, batch, bindings }),
+    proposalHash: sha256({
+      sourceHash: input.sourceHash,
+      batch,
+      bindings,
+      ...(memberBindings.length ? { memberBindings } : {}),
+    }),
     authority: "not-established" as const,
   };
 }

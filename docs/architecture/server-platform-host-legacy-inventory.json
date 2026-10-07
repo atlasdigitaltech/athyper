@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 247,
+    "configuration:new": 248,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 373,
+    "operational-scripts:new": 375,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -114,7 +114,8 @@
       "key": "control-api",
       "legacyLocations": [],
       "currentLocations": [
-        "deploy/compose/instance/compose.control-api.yaml"
+        "deploy/compose/instance/compose.control-api.yaml",
+        "deploy/compose/instance/compose.product-command.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6625,6 +6626,18 @@
       "currentLocations": [
         "server/apps/platform-host/src/composition/runtimes/http.ts",
         "server/apps/platform-host/src/diagnostics/telemetry/process-metrics-endpoint.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:product_command_dev_postgres",
+      "category": "configuration",
+      "key": "product_command_dev_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/control-plane/product-command-runtime.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -17318,6 +17331,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/entity-onboarding/prepare-dev-principal-family.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-dev-product-command",
+      "category": "operational-scripts",
+      "key": "prepare-dev-product-command",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/prepare-dev-product-command.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-dev-product-command.test",
+      "category": "operational-scripts",
+      "key": "prepare-dev-product-command.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/prepare-dev-product-command.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

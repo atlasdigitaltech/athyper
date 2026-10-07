@@ -3,13 +3,28 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261008_entity_product_authoring_audit.sql",
+      "path": "migrations/20261008_entity_product_authoring_audit.sql",
+      "sha256": "bbdc9ca008bedbbcaa22165bf17d334a11887bf9b289389dcc456302af77f2d6",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/scripts/operations/authorization/prepare-dev-product-command.mjs"
+      ],
+      "reason": "Exact user-only audit contracts for existing product enrollment and review; no authority or publication transition.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/42_product_authoring_audit.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261008_entity_product_command_authority.sql",
       "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_command_authority.sql",
       "sha256": "ad99f6d17190f4385d1ace8f97cbdbcc3eefd408f5f4fb87965f8159d92ee657",
       "planes": [],
       "disposition": "operational-upgrade",
       "callers": [
-        "tooling/scripts/verification/rehearse-product-command-installation.dev.mjs"
+        "tooling/scripts/verification/rehearse-product-command-installation.dev.mjs",
+        "server/db/scripts/operations/authorization/prepare-dev-product-command.mjs"
       ],
       "reason": "Explicit Studio-only product command transport installation, held out of automatic manifests pending governed runtime binding qualification. Atomic admission and closed reader grants; no login provisioning, actor grants, enrollment or publication.",
       "canonicalPaths": []
