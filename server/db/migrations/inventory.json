@@ -3,6 +3,21 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261007_entity_native_typed_row_preparation.sql",
+      "path": "migrations/20261007_entity_native_typed_row_preparation.sql",
+      "sha256": "a56e79e3fc4353b8a704a9bbadd7ca04abe45ec009b8a9119ac87fd0a04a97f3",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install generated native typed-row validation component and preserve legacy binding presence while relaxing display_config nullability. All pending guards, original rows, authority and activation remain unchanged.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
+        "ddl/planes/studio/metadata/34_binding_nullability_preparation.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261007_entity_native_legacy_nullability_preparation.sql",
       "path": "migrations/20261007_entity_native_legacy_nullability_preparation.sql",
       "sha256": "8d47d91d041cba9dc40ca6e7797a7fcc55236b7513b5758ef103a89f1a7844f0",

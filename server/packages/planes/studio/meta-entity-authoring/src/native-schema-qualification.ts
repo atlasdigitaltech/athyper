@@ -3,6 +3,7 @@ import {
   AuthoringPolicyError,
   requiredReferenceTables,
   nativeAiMembers,
+  nativeRetiredColumns,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
 import { sha256 } from "./deterministic.js";
@@ -86,6 +87,7 @@ export function canonicalNativeSchemaQuery(applicationRole: string) {
   const guards = [
     "metadata.fn_assert_native_authoring_contract(uuid,text)",
     "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
+    "metadata.fn_assert_native_typed_rows(uuid,integer)",
   ];
   return sql<{ evidence: NativeSchemaInspection }>`
     WITH selected AS (SELECT name,to_regclass(name) AS oid FROM unnest(${names}::text[]) AS s(name))
@@ -177,17 +179,18 @@ export function nativeSchemaBlockers(
   for (const signature of [
     "metadata.fn_assert_native_authoring_contract(uuid,text)",
     "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
+    "metadata.fn_assert_native_typed_rows(uuid,integer)",
   ]) {
     const matched = evidence.guards.filter((g) => g.signature === signature);
     if (matched.length !== 1 || !matched[0]!.definition)
       findings.push(`NATIVE_SCHEMA_GUARD_MISSING:${signature}`);
   }
-  const retiredRequired: Record<string, readonly string[]> = {
-    "metadata.entity_field": ["field_key", "type_config"],
-    "metadata.entity_surface": ["title", "layout_config"],
-    "metadata.entity_surface_section": ["layout_config"],
-    "metadata.entity_operation": ["label"],
-  };
+  const retiredRequired = Object.fromEntries(
+    Object.entries(nativeRetiredColumns).map(([table, columns]) => [
+      "metadata." + table,
+      columns,
+    ]),
+  );
   for (const [name, columns] of Object.entries(retiredRequired))
     for (const column of columns)
       if (

@@ -26,3 +26,5 @@ export * from "./native-ai-contract.js";
 export * from "./native-operation-contract.js";
 
 export * from "./native-root-contract.js";
+
+export * from "./native-storage-transition.js";

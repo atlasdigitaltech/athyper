@@ -1,6 +1,7 @@
 import { sql, type Transaction } from "kysely";
 import {
   AuthoringPolicyError,
+  nativeRetiredColumns,
   normalizedCoreMembers,
   normalizedLayoutMembers,
   nativeOperationMember,
@@ -34,30 +35,7 @@ const fail = (code: string): never => {
     "Canonical conversion rows do not match the admitted source inventory.",
   );
 };
-const retire = {
-  entity_field: [
-    "field_key",
-    "type_config",
-    "default_spec",
-    "computation_spec",
-    "validation_spec",
-  ],
-  entity_runtime_profile: [
-    "id_field_key",
-    "tenant_field_key",
-    "record_version_field_key",
-    "soft_delete_field_key",
-  ],
-  entity_surface: ["title", "description", "layout_config"],
-  entity_surface_section: ["title", "layout_config"],
-  entity_surface_field_binding: [
-    "label_override",
-    "help_text",
-    "placeholder",
-    "display_config",
-  ],
-  entity_operation: ["label", "field_keys"],
-} as const;
+const retire = nativeRetiredColumns;
 const unchangedRoots = [
   "classProfiles",
   "fieldIdentities",

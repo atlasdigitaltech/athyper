@@ -7,6 +7,7 @@ import {
   rootMigrationName,
   revisionMigrationName,
   legacyNullabilityMigrationName,
+  typedRowMigrationName,
 } from "./apply-entity-native-resource-preparation.dev.mjs";
 const source = readFileSync(
   new URL(
@@ -16,6 +17,40 @@ const source = readFileSync(
   "utf8",
 );
 const digest = createHash("sha256").update(source).digest("hex");
+test("typed row preparation preserves pending guards, data and legacy binding requiredness", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + typedRowMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const statement = preparationSql(source, digest, true, typedRowMigrationName);
+  assert.match(statement, /NATIVE_ROW_GUARDS_REQUIRE_PENDING_GUARDS/);
+  assert.match(statement, /NATIVE_ROW_GUARDS_ORIGINAL_ROWS_CHANGED/);
+  assert.match(statement, /SECURITY INVOKER/);
+  assert.ok(
+    statement.indexOf("ADD CONSTRAINT entity_binding_legacy_required_ck") <
+      statement.indexOf("ALTER COLUMN display_config DROP NOT NULL"),
+  );
+  assert.doesNotMatch(
+    statement,
+    /DROP CONSTRAINT|SECURITY DEFINER|requires_mfa|\bGRANT\b|\bUPDATE\b|\bDELETE\b/,
+  );
+  const generated = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/33_native_typed_row_guards.generated.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(
+    source.includes(
+      generated.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION"),
+    ),
+  );
+});
 test("keeps dollar-quoted guards intact and records the ledger inside the application transaction", () => {
   const sql = preparationSql(source, digest, true);
   assert.match(sql, /DO \$\$ BEGIN IF EXISTS/);

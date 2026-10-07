@@ -104,6 +104,11 @@ jobs:
           ATHYPER_LEGACY_ENROLLMENT_POSTGRES: "1"
         run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts
 
+      - name: Rehearse generated native row guards on PostgreSQL
+        env:
+          ATHYPER_NATIVE_ROW_GUARDS_POSTGRES: "1"
+        run: pnpm --filter @athyper/server-contract-meta-entity-authoring exec vitest run src/native-row-guards.test.ts
+
       # Independent checks aggregate failures and retain every diagnostic log.
       - name: Static policies (all results)
         id: static-policies

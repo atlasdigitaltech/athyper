@@ -1107,8 +1107,9 @@ copies omit production triggers so these tests isolate constraint semantics;
 this is not product application-role authority or native transaction/history
 qualification. Production member rows are never modified by the probes.
 
-After preparation, actual DEV inspection has nine structural blockers: the
-seven native-pending constraints and both missing native guards. Existing Country
+The original post-preparation inspector reported nine blockers, but missed the
+retired binding display_config NOT NULL column. The shared retired-column
+inventory correction below exposed ten blockers before the follow-up migration. Existing Country
 and State Region product drafts remain unenrolled; no authoring conversion,
 host approval/publication or native activation occurred. Remaining schema guard
 and per-constraint cutover work is engineering, while reviewed host/authority
@@ -1121,3 +1122,63 @@ native-test typechecks, generated-contract checks and changed-file formatting
 checks pass. DEV rollback-only constraint probes pass separately before and after
 application. These proofs do not establish native whole-graph transaction/history
 or deployed F6/F8/F9 qualification.
+
+### Native typed-row validation and binding preparation — 7 October 2026
+
+The canonical conversion writer and schema inspector use the same
+`nativeRetiredColumns` contract. Every retired column has a negative admission
+test, including the previously missed binding display_config. Inspection also
+fingerprints the new typed-row function body, owner and ACL.
+
+`33_native_typed_row_guards.generated.sql` derives structural validation from the
+core/layout/operation descriptors: requiredness cannot pass through SQL UNKNOWN;
+arrays enforce item constraints, dimensionality and lower bounds; member and
+reference ownership includes draft/entity/tenant; field identities must be
+active or reserved by the same draft; retired columns remain NULL. Unsupported
+node representations reject generation. This is an invoker component, not the
+complete-contract guard, resource validator or deferred final-state protocol.
+
+`34_binding_nullability_preparation.sql` preserves legacy display_config presence
+with a CHECK before dropping its NOT NULL constraint. Binding kind remains NULL
+under the retained native-pending guard, so this does not enable native writes.
+The forward migration `20261007_entity_native_typed_row_preparation.sql` has hash
+`a56e79e3fc4353b8a704a9bbadd7ca04abe45ec009b8a9119ac87fd0a04a97f3`. It preserves
+all original metadata/snapshot rows; the runner additionally compares authz and
+activation-head fingerprints. DEV backup, rollback rehearsal, application and
+no-op replay receipts are retained at:
+`~/.athyper/instances/dev/workspace/native-row-guards-20261007T053345Z/`.
+
+The actual post-application schema fingerprint is
+`a79995a4001e9386f0c05dcbd5626515fa7a02e1058167c0e12869b137fa05af`.
+It is an inspection candidate, not an independently approved installed hash.
+There are nine remaining blockers: seven pending constraints and two absent
+complete-contract guards. No Country/State Region draft was enrolled or converted.
+No host/product-write approval, activation or deployed F6/F8/F9 was established.
+
+Verification distinguishes three layers:
+
+- Generated component tests use PostgreSQL with synthetic typed tables and
+  resources. They verify required/null values, physical array constraints,
+  cross-owner references, retired columns and version rejection. CI runs them
+  with `ATHYPER_NATIVE_ROW_GUARDS_POSTGRES=1`. They do not attest canonical RLS.
+- The DEV migration compares original rows and exact applied hashes. Seven
+  preparation-runner tests verify migration selection and protection behavior.
+- `node tooling/scripts/verification/verify-native-typed-row-preparation.mjs
+/tmp/native-row-probes.json` is rollback-only. A temporary canonical binding
+  copy accepts the original legacy row, rejects legacy NULL and native pending
+  mutations, and the installed component rejects legacy markers and unknown
+  versions. These are negative admission proofs, not positive native application.
+
+Remaining cutover engineering includes computation/version-field constraint
+replacement, native section vocabulary/order uniqueness, full root/source and
+final graph validation, deferred enforcement and positive canonical repository
+conversion/history/compiler/reader evidence. Existing projected-write checks
+should remain unless a specific failing native fixture demonstrates otherwise.
+Host/authority and deployed live-read evidence remain separate prerequisites.
+
+Validation for this change: 749 authoring tests pass (five opt-in SQL cases
+excluded), 54 contract tests pass (four opt-in cases excluded), all three
+selected row-guard tests pass with PostgreSQL enabled, and seven preparation
+runner tests pass. Authoring production/test/native-test typechecks, contract
+typechecks and generated-contract drift checks pass. DEV rollback-only probes
+pass against the applied migration. These counts do not attest live-read gates.

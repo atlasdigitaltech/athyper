@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it, vi } from "vitest";
+import { nativeRetiredColumns } from "@athyper/server-contract-meta-entity-authoring";
 
 import {
   inspectCanonicalNativeSchema,
@@ -36,6 +37,7 @@ function fixture() {
     guards: [
       "metadata.fn_assert_native_authoring_contract(uuid,text)",
       "metadata.fn_assert_native_authoring_snapshot(uuid,text,integer)",
+      "metadata.fn_assert_native_typed_rows(uuid,integer)",
     ].map((signature) => ({
       signature,
       definition: "synthetic reviewed definition",
@@ -333,3 +335,37 @@ it("does not qualify a superuser inspection transaction as an application-role w
     await f.db.destroy();
   }
 });
+
+it.each(
+  Object.entries(nativeRetiredColumns).flatMap(([table, columns]) =>
+    columns.map((column) => [table, column] as const),
+  ),
+)(
+  "rejects required retired column %s.%s using the conversion writer's inventory",
+  async (table, column) => {
+    const f = fixture();
+    try {
+      f.evidence.tables
+        .find((t) => t.name === `metadata.${table}`)!
+        .columns.push({
+          name: column,
+          type: "text",
+          nullable: false,
+          default: null,
+        });
+      expect(nativeSchemaBlockers(f.evidence)).toContain(
+        `NATIVE_SCHEMA_LEGACY_REQUIRED:metadata.${table}.${column}`,
+      );
+      await expect(
+        f.db.transaction().execute((tx) =>
+          qualifyCanonicalNativeSchema(tx, {
+            ...f.installed,
+            schemaHash: nativeSchemaFingerprint(f.evidence),
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "NATIVE_SCHEMA_NOT_READY" });
+    } finally {
+      await f.db.destroy();
+    }
+  },
+);

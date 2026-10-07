@@ -6,6 +6,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { migrationSourcePath } from "./migration-source.mjs";
 
+export const typedRowMigrationName =
+  "20261007_entity_native_typed_row_preparation.sql";
 export const migrationName = "20261007_entity_native_resource_preparation.sql";
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 export const legacyNullabilityMigrationName =
@@ -28,6 +30,7 @@ export function preparationSql(
       revisionMigrationName,
       revisionProvenanceMigrationName,
       legacyNullabilityMigrationName,
+      typedRowMigrationName,
     ].includes(selectedMigration),
   );
   assert.match(digest, /^[a-f0-9]{64}$/);
@@ -55,6 +58,7 @@ export function runPreparation(args) {
     "--revision",
     "--revision-provenance",
     "--legacy-nullability",
+    "--typed-row-guards",
   ]);
   let output;
   for (let i = 0; i < args.length; i++) {
@@ -77,18 +81,21 @@ export function runPreparation(args) {
       "--revision",
       "--revision-provenance",
       "--legacy-nullability",
+      "--typed-row-guards",
     ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--legacy-nullability")
-    ? legacyNullabilityMigrationName
-    : !allowed.has("--revision-provenance")
-      ? revisionProvenanceMigrationName
-      : !allowed.has("--revision")
-        ? revisionMigrationName
-        : allowed.has("--root")
-          ? migrationName
-          : rootMigrationName;
+  const selectedMigration = !allowed.has("--typed-row-guards")
+    ? typedRowMigrationName
+    : !allowed.has("--legacy-nullability")
+      ? legacyNullabilityMigrationName
+      : !allowed.has("--revision-provenance")
+        ? revisionProvenanceMigrationName
+        : !allowed.has("--revision")
+          ? revisionMigrationName
+          : allowed.has("--root")
+            ? migrationName
+            : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),
