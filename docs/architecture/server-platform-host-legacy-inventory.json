@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 375,
+    "operational-scripts:new": 376,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -12720,6 +12720,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260922_attachment_workspace.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_legacy_ownership_initialization",
+      "category": "operational-scripts",
+      "key": "20261008_entity_legacy_ownership_initialization",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_legacy_ownership_initialization.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
