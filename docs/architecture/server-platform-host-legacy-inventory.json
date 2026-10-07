@@ -30,7 +30,7 @@
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 143,
+    "routes:new": 144,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -28817,6 +28817,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/notifications/src/notification-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/platform-control/meta-entity-authoring/change-sets/:id/enroll-labels",
+      "category": "routes",
+      "key": "post /api/platform-control/meta-entity-authoring/change-sets/:id/enroll-labels",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/product-label-enrollment-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

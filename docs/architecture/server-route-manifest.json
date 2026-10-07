@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1227,
+    "identities": 1228,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 359,
+    "currentOnly": 360,
     "legacyOccurrences": 898,
-    "currentOccurrences": 425
+    "currentOccurrences": 426
   },
   "routes": [
     {
@@ -15920,6 +15920,21 @@
           "line": 80,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/approve",
           "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/enroll-labels",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/enroll-labels",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/product-label-enrollment-routes.ts",
+          "line": 112,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/enroll-labels",
+          "kind": "direct"
         }
       ],
       "status": "current-only"
