@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 779
+- Cataloged database tables: 780
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 61 |
+| metadata_authority | 62 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -735,6 +735,7 @@ or multiply classified runtime objects.
 | `metadata.entity_target` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.publication_recovery_archive` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.publication_recovery_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.ui_component_contract` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `onboarding.onboarding_case` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
 | `onboarding.onboarding_case_check` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
 | `onboarding.onboarding_case_guest_access` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |

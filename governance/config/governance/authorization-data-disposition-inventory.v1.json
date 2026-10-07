@@ -4,11 +4,11 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 779,
+    "discoveredTables": 780,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 763,
+    "schemaDefaultedTables": 764,
     "byDataClass": {
       "ai_governance_and_runtime": 31,
       "audit_log": 17,
@@ -33,7 +33,7 @@
       "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 61,
+      "metadata_authority": 62,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
@@ -64,7 +64,7 @@
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 31,
       "migrate_published_artifacts_and_release_history": 13,
-      "migrate_published_authority_and_rebuild_projections": 61,
+      "migrate_published_authority_and_rebuild_projections": 62,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
@@ -12264,6 +12264,24 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
           "line": 18
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.ui_component_contract",
+      "schema": "metadata",
+      "table": "ui_component_contract",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/41_ui_component_catalogue.generated.sql",
+          "line": 11
         }
       ],
       "decisionSource": "schema_default",
