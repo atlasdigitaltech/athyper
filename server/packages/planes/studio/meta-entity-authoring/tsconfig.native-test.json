@@ -45,7 +45,8 @@
     "src/legacy-source-enrollment.test.ts",
     "src/legacy-enrollment-application.test.ts",
     "src/legacy-enrollment.postgres.test.ts",
-    "src/legacy-native-whole-source.test.ts"
+    "src/legacy-native-whole-source.test.ts",
+    "src/native-schema-qualification.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

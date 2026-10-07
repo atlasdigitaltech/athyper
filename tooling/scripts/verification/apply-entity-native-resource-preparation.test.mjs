@@ -6,6 +6,7 @@ import {
   preparationSql,
   rootMigrationName,
   revisionMigrationName,
+  legacyNullabilityMigrationName,
 } from "./apply-entity-native-resource-preparation.dev.mjs";
 const source = readFileSync(
   new URL(
@@ -81,4 +82,39 @@ test("revision correction pins known guard bodies and its own immutable receipt"
     /migration_name='20261007_entity_root_revision_protocol.sql'/,
   );
   assert.doesNotMatch(sql, /DROP CONSTRAINT|requires_mfa|GRANT /);
+});
+
+test("nullability preparation installs equivalent legacy checks before relaxing physical nullability", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + legacyNullabilityMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const hash = createHash("sha256").update(source).digest("hex");
+  const statement = preparationSql(
+    source,
+    hash,
+    true,
+    legacyNullabilityMigrationName,
+  );
+  assert.equal((statement.match(/DROP NOT NULL/g) ?? []).length, 6);
+  assert.ok(
+    statement.indexOf("ADD CONSTRAINT entity_field_legacy_required_ck") <
+      statement.indexOf("ALTER COLUMN field_key DROP NOT NULL"),
+  );
+  assert.match(
+    statement,
+    /NATIVE_NULLABILITY_PREPARATION_REQUIRES_PENDING_GUARDS/,
+  );
+  assert.match(statement, /NATIVE_NULLABILITY_ORIGINAL_ROWS_CHANGED/);
+  assert.match(
+    statement,
+    /migration_name='20261007_entity_native_legacy_nullability_preparation.sql'/,
+  );
+  assert.doesNotMatch(
+    statement,
+    /DROP CONSTRAINT|requires_mfa|\bGRANT\b|\bUPDATE\b|\bDELETE\b/,
+  );
 });

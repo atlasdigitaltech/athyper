@@ -8,6 +8,8 @@ import { migrationSourcePath } from "./migration-source.mjs";
 
 export const migrationName = "20261007_entity_native_resource_preparation.sql";
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+export const legacyNullabilityMigrationName =
+  "20261007_entity_native_legacy_nullability_preparation.sql";
 export const rootMigrationName = "20261007_entity_native_root_preparation.sql";
 export const revisionMigrationName =
   "20261007_entity_root_revision_protocol.sql";
@@ -25,6 +27,7 @@ export function preparationSql(
       rootMigrationName,
       revisionMigrationName,
       revisionProvenanceMigrationName,
+      legacyNullabilityMigrationName,
     ].includes(selectedMigration),
   );
   assert.match(digest, /^[a-f0-9]{64}$/);
@@ -51,6 +54,7 @@ export function runPreparation(args) {
     "--root",
     "--revision",
     "--revision-provenance",
+    "--legacy-nullability",
   ]);
   let output;
   for (let i = 0; i < args.length; i++) {
@@ -68,18 +72,23 @@ export function runPreparation(args) {
     "Use --output to retain the exact schema-preparation receipt",
   );
   assert.ok(
-    ["--root", "--revision", "--revision-provenance"].filter(
-      (option) => !allowed.has(option),
-    ).length <= 1,
+    [
+      "--root",
+      "--revision",
+      "--revision-provenance",
+      "--legacy-nullability",
+    ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--revision-provenance")
-    ? revisionProvenanceMigrationName
-    : !allowed.has("--revision")
-      ? revisionMigrationName
-      : allowed.has("--root")
-        ? migrationName
-        : rootMigrationName;
+  const selectedMigration = !allowed.has("--legacy-nullability")
+    ? legacyNullabilityMigrationName
+    : !allowed.has("--revision-provenance")
+      ? revisionProvenanceMigrationName
+      : !allowed.has("--revision")
+        ? revisionMigrationName
+        : allowed.has("--root")
+          ? migrationName
+          : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

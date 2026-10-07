@@ -1051,3 +1051,73 @@ as do generated contract drift checks. The six source/plane fixtures and shared
 adapter regressions are enrolled in foundation CI. These are local conversion,
 compiler and reader evidence; no new canonical PostgreSQL-native or deployed
 qualification receipt is asserted.
+
+### Canonical schema admission and DEV compatibility nullability — 7 October 2026
+
+`native-schema-qualification.ts` provides a production catalogue inspection and
+installed-policy wrapper for the existing atomic converter. The finite physical
+scope comes from the reference manifest, existing graph-storage families, AI
+contracts, command receipts and immutable save table. It captures actual column
+nullability/defaults, domains, all table constraints/indexes, trigger bodies,
+policies, owner/ACL and both native guard definitions. The reviewed fingerprint
+must be independently supplied; capture is not approval. The actual transaction
+role must match the selected non-admin application role. Relation locks and
+reinspection precede the original host/storage/authority qualifier, which remains
+required on application and replay. The wrapper is not installed by default.
+
+The read-only command is:
+
+```sh
+pnpm exec tsx tooling/scripts/verification/inspect-native-authoring-schema.mts --output /tmp/native-schema-inspection.json
+```
+
+Its output is explicitly `qualification=not-established`, `productionEnabled=false`.
+A superuser probe can prepare a physical-schema review candidate but cannot
+qualify a product-writing transaction. Captured role evidence is not an ownership,
+publication, storage-authority or effective-security receipt.
+
+DEV initially had 15 structural blockers: seven native-pending constraints,
+two absent native snapshot/contract guards and six retired legacy NOT NULL
+columns. The immutable forward migration
+`20261007_entity_native_legacy_nullability_preparation.sql` has SHA-256
+`8d47d91d041cba9dc40ca6e7797a7fcc55236b7513b5758ef103a89f1a7844f0`.
+It installs four legacy-presence CHECKs before relaxing the six columns, while
+requiring and retaining all seven native-pending guards. It does not remove the
+legacy computation/default/type-config constraint cluster, initialize ownership
+or protected state, grant authority or enable native values.
+
+Rollback rehearsal and DEV application compare all original metadata/snapshot
+rows; every original row remains exact. The existing runner independently checks
+unchanged authorization and activation-head fingerprints. Full database backup,
+application receipt, replay receipt and schema inspection are retained at:
+`~/.athyper/instances/dev/workspace/native-nullability-20261007T001237Z/`.
+The applied ledger retains the exact migration hash; repeat application is a no-op.
+
+The rollback-only probe command is:
+
+```sh
+node tooling/scripts/verification/verify-native-nullability-preparation.mjs /tmp/native-nullability-rehearsal.json
+```
+
+It runs before or after this exact applied migration. Four temporary copies of
+canonical field/surface/section/operation rows accept unchanged legacy data; six
+attempted legacy NULL mutations reject through the new CHECKs, and four attempted
+native label mutations reject through the retained pending guards. Temporary
+copies omit production triggers so these tests isolate constraint semantics;
+this is not product application-role authority or native transaction/history
+qualification. Production member rows are never modified by the probes.
+
+After preparation, actual DEV inspection has nine structural blockers: the
+seven native-pending constraints and both missing native guards. Existing Country
+and State Region product drafts remain unenrolled; no authoring conversion,
+host approval/publication or native activation occurred. Remaining schema guard
+and per-constraint cutover work is engineering, while reviewed host/authority
+resources and F6/F8/F9 evidence remain independent owner/deployment prerequisites.
+Neither class is reported as completed by this checkpoint.
+
+Verification for this checkpoint: 729 authoring tests pass with five opt-in SQL
+cases excluded; six DEV preparation-runner tests pass. Production/test and focused
+native-test typechecks, generated-contract checks and changed-file formatting
+checks pass. DEV rollback-only constraint probes pass separately before and after
+application. These proofs do not establish native whole-graph transaction/history
+or deployed F6/F8/F9 qualification.

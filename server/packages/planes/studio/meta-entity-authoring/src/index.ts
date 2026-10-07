@@ -137,3 +137,5 @@ export * from "./legacy-source-enrollment.js";
 export * from "./legacy-enrollment-application.js";
 
 export * from "./legacy-native-whole-source.js";
+
+export * from "./native-schema-qualification.js";
