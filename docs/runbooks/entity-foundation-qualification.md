@@ -174,6 +174,107 @@ roles. Actual Country/State Region enrollment, ownership/identity work and
 publication/live-read qualification remain pending. This checkpoint establishes
 application-role canonical writes in a disposable database, not M1 completion.
 
+### Consolidated execution tracks — 7 October 2026 review correction
+
+Following review of the eight-track acceleration draft, execution is tracked as
+three deliverables rather than eight independently managed tracks. The draft's
+weighted percentages are withdrawn from delivery reporting: the weights
+double-counted related work (F3/D27, F2/D24, F4/B0), and file counts do not
+establish completion. Host composition, governed writes and the D01 order boundary are priorities,
+but their share of remaining cost is an unmeasured planning hypothesis.
+A standalone published composer host is not yet qualified; shared framework
+components already exist and must be reused.
+
+**Corrections accepted from review:**
+
+- Governed authority gates actual product draft writes and enrollment, not only
+  activation. Preparation and fixture execution proceed independently; deployment
+  writes do not.
+- Fixture admission is test-only. Production interfaces are reused, but real
+  integration requires authentication, governance resolution, database roles, audit
+  and resource qualification. It is not a callback swap.
+- Any actual storage access must satisfy its applicable authorization requirements
+  when exercised. Synthetic preview may defer live authority; it does not defer
+  authorization for real access.
+- Parallelism applies to preparation. Integration happens against agreed
+  interfaces, because host/bootstrap share resource contracts and conversion and
+  constraint replacement share schema and validation dependencies.
+- Batched constraint changes retain a per-constraint disposition and fixture. No
+  blocker is removed before its replacement validation completes.
+- Label review is grouped by meaning and locale context, never by equal text. Every
+  binding is preserved; equal text does not establish a shared identity.
+
+| Track                            | Immediate deliverable                                                                                                                  | Completion evidence                                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Governed writes and bootstrap | Connect the existing authentication/governance path to the candidate; finalize scoped grants, audit and migration packaging            | An authenticated application-role command commits canonical data; revoked authority, forged scope, audit failure and replay behave correctly |
+| 2. Minimal shared host           | Author the change-set Entity definition; deliver read-only inspection plus saved-fixture preview through the shared renderer           | Explicit identity/navigation and resource bindings; missing metadata rejects; no bespoke page or production fixture admission                |
+| 3. Conversion and enrollment     | Complete source-bound Country/State Region mappings, group identity evidence, integrate conversion, ordering and constraint rehearsals | Whole-source coverage, preserved history, atomic application, compiler/reader compatibility and explicit unsupported-path diagnostics        |
+
+Track 2 demonstrates user-visible progress independently. Track 3 prepares and
+rehearses independently. Actual enrollment joins Track 1 once governed writes
+qualify.
+
+**Execution rules:** freeze unrelated expansion while allowing the contracts and
+mappings these three deliverables require; start the host with inspection and
+synthetic preview rather than wiring every save/import/rename/rebind editor; use
+one integrated Country/State Region acceptance scenario across all tracks instead
+of accumulating isolated component proofs; keep CI remediation parallel; record a
+decision only when it blocks the next concrete action. F5 remains a production
+prerequisite, and protected-state initialization still needs its separate approval
+where new operations require it.
+
+**Next checkpoint — two results only:** a working governed write path, and a
+minimal shared host rendering saved fixture data.
+
+### Entity authoring CI execution correction — 8 October 2026
+
+At the audit baseline, this package has **139 test files**. The former early
+workflow filename lists selected **51 unique files**, leaving **88 outside those
+lists**, not outside all CI. `quality` also invokes `test:workspace` → `turbo test`;
+Turbo selects this package's `vitest run` task, and its `src/**/*.test.ts` discovery
+already enrolls every ordinary test automatically. The actual execution gap was
+that preceding static policies, code generation, lint and typecheck failures could
+prevent the workspace step from running. Enrollment, local results and successful
+remote execution remain distinct evidence.
+
+The dedicated **entity-studio-foundation** job now runs the full contract and
+implementation package suites with `--fail-if-no-match`, generated-contract
+checks, relevant compatibility tests and focused typechecks. It has no dependency
+on `quality` or the older Country/Principal `entity-foundation` job. Required checks
+continue after sibling failures when installation succeeds, and `ci-success`
+requires both foundation jobs. The workspace run is retained for repository-wide
+coverage. Colocated tests are not moved or retired based on tests-per-file ratios.
+
+PostgreSQL execution inventory (separate from ordinary suite discovery):
+
+| Suite                                 | Required environment                                                                                    | CI execution                                                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scoped canonical writer               | `ATHYPER_SCOPED_GRAPH_POSTGRES=1`                                                                       | Separate disposable PostgreSQL step                                                                                                           |
+| Native graph                          | `ATHYPER_NATIVE_GRAPH_POSTGRES=1`                                                                       | Native persistence step                                                                                                                       |
+| Native AI reconciliation              | `ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES=1`                                                           | Native persistence step                                                                                                                       |
+| Legacy enrollment                     | `ATHYPER_LEGACY_ENROLLMENT_POSTGRES=1`                                                                  | Native persistence step                                                                                                                       |
+| Native constraint compatibility       | `ATHYPER_NATIVE_CONSTRAINT_POSTGRES=1`                                                                  | Native persistence step                                                                                                                       |
+| Generated row guards                  | `ATHYPER_NATIVE_ROW_GUARDS_POSTGRES=1`                                                                  | Generated-guards step                                                                                                                         |
+| Contract AI / operation / root tables | `ATHYPER_NATIVE_AI_POSTGRES=1`, `ATHYPER_NATIVE_OPERATION_POSTGRES=1`, `ATHYPER_NATIVE_ROOT_POSTGRES=1` | Contract-table rehearsal step                                                                                                                 |
+| Tenant learning extension             | `ATHYPER_TENANT_EXTENSION_TEST_DATABASE_URL` with its existing schema/actor prerequisites               | **Not configured in CI; remains an explicit qualification gap.** Do not point CI at DEV or replace its prerequisites with invented authority. |
+
+Local verification for this CI change: 790 authoring tests and 57 contract tests
+pass in the ordinary suites (six and four opt-in exclusions respectively). All
+five disposable authoring PostgreSQL tests pass; the three contract-table tests
+pass; generated row-guard tests pass with PostgreSQL enabled (four tests). The
+reader/publication compatibility suites pass (19/47 tests), as do DDL/navigation
+checks (six), preparation-runner checks (11) and CI-entrypoint tests (eight).
+Generated-contract checks, focused native-test typechecking, formatting and the
+CI entrypoint validator pass. This clears the prior missing-`--fail-if-no-match`
+workflow finding; it does not clear the other repository-wide policy failures
+recorded above.
+
+The workflow regression test checks independent scheduling, full package commands,
+required aggregate status and the enrolled PostgreSQL flags. This change improves
+execution reachability; it does not attest a successful GitHub run, deployed
+product-write authority or live-read qualification. Tracks 1–3 above and the
+integrated Country/State Region acceptance checkpoint remain the delivery plan.
+
 ## Pilot and integration points
 
 Country is the system-owned reference/read-only baseline. Principal is a

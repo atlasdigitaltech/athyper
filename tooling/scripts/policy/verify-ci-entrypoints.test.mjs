@@ -109,3 +109,57 @@ test("rejects an empty workflow and removed required jobs", () => {
     /required job missing/,
   );
 });
+
+test("Studio foundation independently runs complete suites and remains required", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { parse } = await import("yaml");
+  const workflow = parse(
+    readFileSync(
+      new URL("../../../.github/workflows/ci.yml", import.meta.url),
+      "utf8",
+    ),
+  );
+  const job = workflow.jobs["entity-studio-foundation"];
+  assert.ok(job);
+  assert.equal(job.needs, undefined);
+  assert.equal(job.if, undefined);
+  assert.equal(job["continue-on-error"], undefined);
+  for (const pkg of [
+    "@athyper/server-contract-meta-entity-authoring",
+    "@athyper/server-plane-studio-meta-entity-authoring",
+  ]) {
+    const step = job.steps.find(
+      (step) => step.run === `pnpm --fail-if-no-match --filter ${pkg} test`,
+    );
+    assert.ok(step, `missing full suite: ${pkg}`);
+    assert.equal(
+      step.if,
+      "${{ !cancelled() && steps.install.outcome == 'success' }}",
+    );
+    assert.equal(step["continue-on-error"], undefined);
+  }
+  assert.ok(
+    workflow.jobs["ci-success"].needs.includes("entity-studio-foundation"),
+  );
+  assert.ok(
+    workflow.jobs["ci-success"].steps.some((step) =>
+      step.run?.includes("needs.entity-studio-foundation.result"),
+    ),
+  );
+  for (const flag of [
+    "ATHYPER_SCOPED_GRAPH_POSTGRES",
+    "ATHYPER_NATIVE_GRAPH_POSTGRES",
+    "ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES",
+    "ATHYPER_LEGACY_ENROLLMENT_POSTGRES",
+    "ATHYPER_NATIVE_CONSTRAINT_POSTGRES",
+    "ATHYPER_NATIVE_ROW_GUARDS_POSTGRES",
+    "ATHYPER_NATIVE_AI_POSTGRES",
+    "ATHYPER_NATIVE_OPERATION_POSTGRES",
+    "ATHYPER_NATIVE_ROOT_POSTGRES",
+  ]) {
+    assert.ok(
+      job.steps.some((step) => step.env?.[flag] === "1"),
+      `missing PostgreSQL rehearsal: ${flag}`,
+    );
+  }
+});

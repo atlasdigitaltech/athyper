@@ -73,43 +73,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify Entity foundation generated contract
-        run: pnpm entity:foundation:check
-      - name: Test reference dictionary DDL evidence generation
-        run: pnpm exec tsx --test tooling/scripts/metadata/reference-ddl-status.test.ts
-      - name: Test Entity foundation contract
-        run: |
-          pnpm --filter @athyper/server-contract-meta-entity-authoring test
-          pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/owned-label-codec.test.ts src/label-command-reducer.test.ts src/native-structural-codec.test.ts src/normalized-core-codec.test.ts src/normalized-layout-codec.test.ts src/native-core-layout-command-reducer.test.ts src/native-core-layout-persistence.test.ts src/native-supplemental-storage.test.ts src/legacy-native-runtime.test.ts src/native-reference-relations.test.ts src/native-reference-capability.test.ts src/native-detail-badges.test.ts src/native-localized-labels.test.ts src/native-presentation-localization.test.ts src/native-conversion-application.test.ts src/native-conversion-plans.test.ts src/native-operation-compilation.test.ts src/native-release-compilation.test.ts src/native-field-reference-compilation.test.ts src/legacy-source-enrollment.test.ts src/legacy-enrollment-application.test.ts src/legacy-native-whole-source.test.ts src/native-schema-qualification.test.ts src/native-graph-conversion.test.ts src/legacy-native-core-adapters.test.ts src/legacy-native-layout-adapters.test.ts src/native-list-view.test.ts src/native-field-choices.test.ts src/native-detail-navigation.test.ts src/native-list-settings.test.ts src/native-ai.test.ts src/native-ai-storage.test.ts src/native-ai-reconciliation.test.ts src/native-authorization.test.ts src/native-operation-storage.test.ts src/native-operation-reconciliation.test.ts src/native-supplemental-save.test.ts src/legacy-native-resources-adapter.test.ts src/native-detail-sections.test.ts src/native-surface-identity.test.ts src/legacy-native-navigation-adapter.test.ts
-          pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
-      - name: Test Entity DEV preparation runner
-        run: node --test tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs
-      - name: Typecheck native Entity tests
-        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring typecheck:native-tests
-      - name: Test Entity release source pin compatibility
-        run: |
-          pnpm --filter @athyper/server-platform-metadata exec vitest run src/__tests__/compiled-runtime-contract.test.ts src/live-read-descriptor.test.ts src/compiled-runtime-provenance-storage.test.ts
-          pnpm --filter @athyper/server-service-publication exec vitest run src/__tests__/compiled-runtime-worker.test.ts src/__tests__/compiled-runtime-publication.test.ts
-      - name: Test scoped Entity persistence
-        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/graph-reconciliation.test.ts src/normalized-reconciliation.test.ts src/scoped-graph-writer.test.ts src/operation-protected-state.test.ts src/operation-protected-save.test.ts
-      - name: Rehearse scoped Entity persistence on PostgreSQL
-        env:
-          ATHYPER_SCOPED_GRAPH_POSTGRES: "1"
-        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/scoped-graph-writer.postgres.test.ts
-
-      - name: Rehearse native Entity persistence on PostgreSQL
-        env:
-          ATHYPER_NATIVE_GRAPH_POSTGRES: "1"
-          ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES: "1"
-          ATHYPER_LEGACY_ENROLLMENT_POSTGRES: "1"
-          ATHYPER_NATIVE_CONSTRAINT_POSTGRES: "1"
-        run: pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts src/native-constraint-compatibility.postgres.test.ts
-
-      - name: Rehearse generated native row guards on PostgreSQL
-        env:
-          ATHYPER_NATIVE_ROW_GUARDS_POSTGRES: "1"
-        run: pnpm --filter @athyper/server-contract-meta-entity-authoring exec vitest run src/native-row-guards.test.ts
-
       # Independent checks aggregate failures and retain every diagnostic log.
       - name: Static policies (all results)
         id: static-policies
@@ -242,6 +205,77 @@ jobs:
       - name: Verify no legacy DDL schema references (Gate 3 — advisory)
         continue-on-error: true
         run: pnpm policy:no-legacy-schema-refs
+
+  # Studio reference authoring is independent of the older Country/Principal pilot
+  # and unrelated quality failures. Each check remains required after installation.
+  entity-studio-foundation:
+    name: Entity Studio reference foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        id: install
+        run: pnpm install --frozen-lockfile
+      - name: Verify Entity foundation generated contract
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm entity:foundation:check
+      - name: Test reference dictionary DDL evidence generation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm exec tsx --test tooling/scripts/metadata/reference-ddl-status.test.ts
+      - name: Test complete Entity authoring contract suite
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --fail-if-no-match --filter @athyper/server-contract-meta-entity-authoring test
+      - name: Test complete Entity authoring implementation suite
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring test
+      - name: Test shared detail navigation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm exec tsx --test packages/contracts/platform/entity-runtime/src/detail-navigation.test.ts
+      - name: Test Entity DEV preparation runner
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node --test tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs
+      - name: Typecheck native Entity tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring typecheck:native-tests
+      - name: Test Entity release source pin compatibility
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          pnpm --fail-if-no-match --filter @athyper/server-platform-metadata exec vitest run src/__tests__/compiled-runtime-contract.test.ts src/live-read-descriptor.test.ts src/compiled-runtime-provenance-storage.test.ts
+          pnpm --fail-if-no-match --filter @athyper/server-service-publication exec vitest run src/__tests__/compiled-runtime-worker.test.ts src/__tests__/compiled-runtime-publication.test.ts
+      - name: Rehearse scoped Entity persistence on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          ATHYPER_SCOPED_GRAPH_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/scoped-graph-writer.postgres.test.ts
+
+      - name: Rehearse native Entity persistence on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          ATHYPER_NATIVE_GRAPH_POSTGRES: "1"
+          ATHYPER_NATIVE_AI_RECONCILIATION_POSTGRES: "1"
+          ATHYPER_LEGACY_ENROLLMENT_POSTGRES: "1"
+          ATHYPER_NATIVE_CONSTRAINT_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts src/native-constraint-compatibility.postgres.test.ts
+
+      - name: Rehearse generated native row guards on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          ATHYPER_NATIVE_ROW_GUARDS_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-contract-meta-entity-authoring exec vitest run src/native-row-guards.test.ts
+
+      - name: Rehearse native contract tables on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          ATHYPER_NATIVE_AI_POSTGRES: "1"
+          ATHYPER_NATIVE_OPERATION_POSTGRES: "1"
+          ATHYPER_NATIVE_ROOT_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-contract-meta-entity-authoring exec vitest run src/native-ai.postgres.test.ts src/native-operation.postgres.test.ts src/native-root.postgres.test.ts
 
   # Run framework security evidence independently of unrelated static-policy failures.
   entity-foundation:
@@ -525,11 +559,16 @@ jobs:
         three-plane-verify,
         iam-live,
         entity-foundation,
+        entity-studio-foundation,
       ]
     if: always()
     steps:
       - name: Evaluate results
         run: |
+          if [[ "${{ needs.entity-studio-foundation.result }}" != "success" ]]; then
+            echo "Entity Studio reference foundation failed"
+            exit 1
+          fi
           if [[ "${{ needs.entity-foundation.result }}" != "success" ]]; then
             echo "Entity Framework qualification failed"
             exit 1
