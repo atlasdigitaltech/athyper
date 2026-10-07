@@ -1408,3 +1408,42 @@ actual Country/State Region enrollment/application/history; approved product-wri
 and protected-state initialization provenance; deployed F6/F8/F9 evidence. Component
 slots, capability-binding and overlay resource dictionaries are not implemented by
 this checkpoint. No approval or resource identity has been fabricated.
+
+### Actual reference-source and saved-history inspection — 2026-10-07
+
+`inspectLegacyEnrollmentEvidence` loads the actual source through the existing
+Kysely authoring repository. It requires a read-only repeatable-read/serializable
+transaction, exact draft UUID, bounded source/history size and bounded history
+rows. It validates the legacy graph and uses canonical stored labels/identities
+for an enrollment proof only when those dependencies already exist. It never
+allocates resources or writes history. This operator diagnostic provides no
+application admission, product-write grant, independent review or host approval.
+
+Executed against DEV with a 32 MiB source/aggregate-history limit, 1,000-history-row
+limit and 30-second statement timeout. Evidence is retained privately at
+`~/.athyper/instances/dev/workspace/enrollment-inspection-20261007/sources.json`.
+
+| Source | Draft | Actual repository source hash | Saved history |
+| --- | --- | --- | --- |
+| Country | `28e155d7-9f18-48fd-9f4d-847ff80f7e87` | `259eb6b00119e4f685d43fa72806d78c8845422c4df79b34acc20dc262d12cae` | Two snapshots; checksums valid; current revision 1 matches |
+| State Region | `9672c64b-b40f-43ce-8a2f-e0fbebd1154e` | `1056cb869b001425762fb5e979f4de91c0f747e824565010bb3018a4a0ead304` | Two snapshots; checksums valid; current revision 1 matches |
+
+Both actual graphs pass legacy validation. Both report exactly these enrollment
+blockers: `LEGACY_ENROLLMENT_LABELS_NOT_ENROLLED`,
+`LEGACY_ENROLLMENT_IDENTITIES_NOT_ENROLLED` and
+`LEGACY_ENROLLMENT_SOURCE_OWNERSHIP_UNDECLARED`. No target enrollment hash is
+reported while these are unresolved. A valid historical checksum does not attest
+historical author/reviewer authority or authorize restoration of protected state.
+
+Seven focused tests cover valid/missing history, bad checksums, duplicate/future/
+fractional revisions, tenant mismatch, a rehashed current-source substitution and
+rejection of writable diagnostic transactions before source access. Authoring
+production/test typechecks pass. This is actual source/history inspection, not
+actual enrollment, native application, conversion-history proof or deployed
+F6/F8/F9 qualification. Pending cutover guards remain; no DB mutation occurred.
+
+Reproduce with exact scoped coordinates (codes are not runtime dispatch):
+
+```sh
+pnpm exec tsx tooling/scripts/verification/inspect-legacy-enrollment.dev.mts --output /tmp/enrollment-evidence.json 28e155d7-9f18-48fd-9f4d-847ff80f7e87 9672c64b-b40f-43ce-8a2f-e0fbebd1154e
+```
