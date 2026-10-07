@@ -1,3 +1,6 @@
+import express from "express";
+import type { AddressInfo } from "node:net";
+import { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
 import { BRANCH_COLUMNS } from "./graph-storage-columns.js";
 import { createProductLabelEnrollment } from "./product-label-enrollment.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -647,28 +650,37 @@ it.skipIf(!enabled)(
           },
         };
         let auditFails = true;
+        const enrollmentOptions = (selectedAuthority = authority) => ({
+          database: appDb,
+          authority: selectedAuthority,
+          labels: {
+            supportedLocales: ["en"],
+            maxCommands: 20,
+            maxBatchBytes: 16000,
+          },
+          host,
+          async audit(
+            tx: Parameters<
+              Parameters<typeof createProductLabelEnrollment>[0]["audit"]
+            >[0],
+            _context: VerifiedRequestContext,
+            input: Parameters<
+              Parameters<typeof createProductLabelEnrollment>[0]["audit"]
+            >[2],
+          ) {
+            expect(input.actorId).toBe(scope.actorId);
+            expect(
+              (
+                await sql<{
+                  role: string;
+                }>`SELECT current_user AS role`.execute(tx)
+              ).rows[0]?.role,
+            ).toBe("command_fixture");
+            if (auditFails) throw Error("AUDIT_UNAVAILABLE");
+          },
+        });
         const enrollment = (selectedAuthority = authority) =>
-          createProductLabelEnrollment({
-            database: appDb,
-            authority: selectedAuthority,
-            labels: {
-              supportedLocales: ["en"],
-              maxCommands: 20,
-              maxBatchBytes: 16000,
-            },
-            host,
-            async audit(tx, _context, input) {
-              expect(input.actorId).toBe(scope.actorId);
-              expect(
-                (
-                  await sql<{
-                    role: string;
-                  }>`SELECT current_user AS role`.execute(tx)
-                ).rows[0]?.role,
-              ).toBe("command_fixture");
-              if (auditFails) throw Error("AUDIT_UNAVAILABLE");
-            },
-          });
+          createProductLabelEnrollment(enrollmentOptions(selectedAuthority));
         const enroll = enrollment();
         // Authentication/governance is deliberately fixture-owned in this rehearsal.
         const context = {
@@ -729,7 +741,37 @@ it.skipIf(!enabled)(
           revision + 1,
         );
         // Fresh governance with the SAME canonical identity recovers the result.
-        const first = await run();
+        const app = express();
+        registerProductLabelEnrollmentRoutes(app, {
+          ...enrollmentOptions(),
+          authenticate(req, res, next) {
+            if (req.headers.authorization !== "Bearer fixture-human") {
+              res.sendStatus(401);
+              return;
+            }
+            next();
+          },
+          readContext: () => context,
+        });
+        const server = app.listen(0);
+        await new Promise<void>((resolve) => server.once("listening", resolve));
+        const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/platform-control/meta-entity-authoring/change-sets/${scope.changeSetId}/enroll-labels`;
+        let first: Awaited<ReturnType<typeof enroll>>;
+        try {
+          expect((await fetch(url, { method: "POST" })).status).toBe(401);
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              authorization: "Bearer fixture-human",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ proposal: request.proposal }),
+          });
+          expect(response.status).toBe(200);
+          first = (await response.json()) as Awaited<ReturnType<typeof enroll>>;
+        } finally {
+          await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
         expect(first.revision).toBe(revision + 1);
         expect(await run()).toEqual(first);
         expect(

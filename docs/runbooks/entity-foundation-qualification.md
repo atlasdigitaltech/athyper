@@ -226,6 +226,32 @@ where new operations require it.
 **Next checkpoint — two results only:** a working governed write path, and a
 minimal shared host rendering saved fixture data.
 
+### Authenticated label-enrollment transport — 8 October 2026
+
+Track 1 now has an opt-in control-host transport connected to the canonical
+`createProductLabelEnrollment` executor. The host uses its existing IAM middleware
+and verified context; actor/tenant overrides, unknown proposal keys, query scope,
+unpinned source hashes/revisions and oversized bodies reject. Conflict and revoked
+policy responses remain distinct from cleanup failures; a committed transaction
+with failed revocation is reported as committed, with recovery through fresh
+authorization and the same idempotency key.
+
+The control-plane registration requires explicit command resources. It does not
+reuse the review connection or install grants. The deployed entrypoint supplies
+no such resources yet, so the route remains absent there. No host definition,
+initializer, authority decision, migration, DEV enrollment or activation was
+manufactured.
+
+Evidence: all 803 authoring tests pass (six opt-in exclusions), including 13
+transport tests; 24 existing control-host tests pass. Authoring production/test
+typechecks pass. The disposable PostgreSQL application-role
+rehearsal now enters through HTTP, executes the canonical label writer, and proves
+exact replay through the service. Existing unauthorized DML, admission, audit
+rollback and history assertions remain. Authentication and governance in this
+rehearsal are explicitly fixtures. This is transport/application integration, not
+M1 completion or the combined Country/State Region acceptance scenario. Track 2's
+published shared composer host and Track 3's actual enrollment remain open.
+
 ### Entity authoring CI execution correction — 8 October 2026
 
 At the audit baseline, this package has **139 test files**. The former early

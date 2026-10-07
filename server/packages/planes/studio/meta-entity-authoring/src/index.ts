@@ -146,3 +146,5 @@ export {
   type ProductCommandScope,
 } from "./product-command-authority.js";
 export { createProductLabelEnrollment } from "./product-label-enrollment.js";
+
+export { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
