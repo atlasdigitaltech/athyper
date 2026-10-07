@@ -102,7 +102,7 @@ export function createProductReferenceResourcePolicies(options: {
         audit,
         async resolveReview(transaction, command, source) {
           const pins = (
-            await sql<InstalledReferenceResourcePin>`SELECT r.release_key AS "publicationKey",r.id AS "releaseId",c.unsigned_hash AS "unsignedHash",a.content_hash AS "artifactHash",a.artifact_kind AS kind FROM publication.release r JOIN publication.artifact a ON a.publication_release_id=r.id AND a.plane_code='studio' JOIN publication.artifact_compilation c ON c.publication_release_id=r.id AND c.artifact_kind=a.artifact_kind AND c.plane_code='studio' JOIN runtime_meta.applied_release installed ON installed.source_release_id=r.id AND installed.artifact_hash=a.content_hash JOIN runtime_meta.release_activation_head h ON h.applied_release_id=installed.id WHERE r.tenant_id=${config.authorityTenantId}::uuid AND r.status='published' AND a.status='signed' AND a.artifact_kind='entity_identity_review' AND installed.status='active' AND c.unsigned_document#>>'{envelope,payload,entityId}'=${command.entityId} AND c.unsigned_document#>>'{envelope,payload,changeSetId}'=${command.changeSetId} AND c.unsigned_document#>>'{envelope,payload,sourceHash}'=${command.expectedSourceHash} LIMIT 2 FOR SHARE OF r,a,c,installed,h`.execute(
+            await sql<InstalledReferenceResourcePin>`SELECT * FROM entity_command_private.find_identity_review(${command.changeSetId}::uuid,${command.entityId}::uuid,${command.expectedSourceHash})`.execute(
               transaction,
             )
           ).rows;

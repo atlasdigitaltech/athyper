@@ -5,6 +5,46 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Approved-source adapter and scoped resource reads — 2026-10-08
+
+The publication service now provides a concrete approved-source adapter over the
+existing release ledger and an owning-store snapshot reader. The complete source
+coordinates/payload hash must equal `publication.release.release_hash`; status,
+plane-kind declaration and independent author/reviewer attribution must agree.
+Current review eligibility and semantic resource qualification remain mandatory
+host ports at compile/sign/dispatch. The bounded read-only file adapter rejects
+path traversal, symbolic links, writable mounts and oversized files. It supplies
+source content, not approval; no file can declare itself trusted.
+
+Installed DEV `20261008_entity_reference_resource_reads.sql`, SHA-256
+`05f6e0e487433366c04a7dd0e6a3f3055a1db726590d91fdbdf8145ae1d491c1`,
+after rollback rehearsal. Two SECURITY DEFINER functions expose only installed
+descriptor/identity-review evidence under a live transaction/backend/login/actor/
+tenant-bound command admission. Identity reads additionally match the admitted
+draft and entity. Functions use a fixed search path, revoke PUBLIC execution and
+grant only execution to the command role; no publication/runtime table SELECT is
+granted. The canonical reader uses these functions and retains signature/hash and
+current review checks. Existing metadata/snapshots/authorization rows and heads
+were unchanged. Private receipt: `identity-correspondence-20261008/resource-reads-installed.json`.
+
+The rollback PostgreSQL role test rejects unadmitted and forged-scope calls,
+asserts no broad underlying table reads, and checks an admitted missing resource
+returns no evidence. Its admission is a fixture; it does not prove retrieval of a
+real approved resource. Host configuration now validates exact pins and bounded
+budgets, excludes approval claims, and checks installed function privileges before
+composing reference policies.
+
+DEV inspection found **zero** descriptor/identity-review resource releases.
+Consequently no actual approved resource, ownership or identity installation is
+claimed. Remaining engineering is the producer/review workflow integration and
+entrypoint binding of current eligibility/semantic qualification to these adapters;
+real independently approved source resources and their exact pins are then needed.
+The optional command binding remains disabled. Deployed F6/F8/F9 remains unqualified.
+
+Validation: publication suite 464 passing tests (two explicit PostgreSQL opt-ins);
+focused host configuration/runtime and resource reader tests; source and host
+typechecks; explicit DEV restricted-role rollback test and migration rehearsal.
+
 ## Resource publication and host composition — 2026-10-08
 
 The shared publication contract now carries Studio-only `entity_authoring_descriptor`

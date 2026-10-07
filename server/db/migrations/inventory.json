@@ -1874,6 +1874,20 @@
       "canonicalPaths": [
         "ddl/common/runtime_meta/13_authoring_resource_projection.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_reference_resource_reads.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_reference_resource_reads.sql",
+      "sha256": "05f6e0e487433366c04a7dd0e6a3f3055a1db726590d91fdbdf8145ae1d491c1",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Admission-bound installed resource reads only; no publication/runtime table grants, graph writes or approvals.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/45_reference_resource_reads.sql"
+      ]
     }
   ]
 }

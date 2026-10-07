@@ -1,3 +1,4 @@
+import { parseReferenceResourceConfiguration } from "./reference-resource-configuration.js";
 import { sql, type Kysely } from "kysely";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-entity-authoring";
@@ -142,12 +143,27 @@ export async function createControlProductCommandRuntime(options: {
       options.authority.tenantId
     )
       throw Error("PRODUCT_REFERENCE_AUTHORITY_MISMATCH");
+    const resourceConfig = parseReferenceResourceConfiguration({
+      descriptorPin: options.referenceResources.descriptorPin,
+      descriptorHash: options.referenceResources.descriptorHash,
+      maximumBytes: options.referenceResources.maximumBytes,
+      maximumReleases: options.referenceResources.maximumReleases,
+      supportedLocales: options.referenceResources.supportedLocales,
+    });
+    const reads = await sql<{ allowed: boolean }>`SELECT
+      has_function_privilege(current_user,'entity_command_private.read_reference_resource(uuid,text,text,text,text,integer)','EXECUTE') AND
+      has_function_privilege(current_user,'entity_command_private.find_identity_review(uuid,uuid,text)','EXECUTE') AS allowed`.execute(
+      options.commandDatabase,
+    );
+    if (reads.rows.length !== 1 || reads.rows[0]?.allowed !== true)
+      throw Error("PRODUCT_REFERENCE_RESOURCE_READ_PRIVILEGE_REQUIRED");
     runtime.referenceEnrollment = {
       database: runtime.database,
       authority: runtime.authority,
-      resolvePolicies: createProductReferenceResourcePolicies(
-        options.referenceResources,
-      ),
+      resolvePolicies: createProductReferenceResourcePolicies({
+        ...options.referenceResources,
+        ...resourceConfig,
+      }),
     };
   }
   return runtime;

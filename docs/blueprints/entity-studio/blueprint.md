@@ -3115,6 +3115,12 @@ and exact approved source/hash coordinates. Shape validation, signatures and loc
 activation do not substitute for current independent human-review eligibility.
 Host command composition resolves the installed descriptor and exact draft/source
 review within the canonical transaction; missing or ambiguous evidence rejects.
+Approved generated resource snapshots bind their complete coordinates and payload
+to the existing publication release hash; a snapshot mount is not review authority.
+Command-role resource reads use admission-bound functions rather than general
+publication/runtime table privileges. Descriptor access requires a live command
+admission; identity-review access additionally matches that admitted draft/entity.
+Current signature trust and independent review eligibility remain consumer checks.
 The implemented optional bindings and DEV forward projection migration are recorded
 in the qualification runbook; neither declares actual enrollment or F6/F8/F9 passed.
 

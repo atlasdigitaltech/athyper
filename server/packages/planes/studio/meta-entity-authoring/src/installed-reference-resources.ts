@@ -67,18 +67,9 @@ export function createInstalledReferenceResourceReader(options: {
     )
       denied();
     const rows = (
-      await sql<ResourceRow>`SELECT c.unsigned_document AS document,c.unsigned_hash,a.signature,a.signature_algorithm AS algorithm,a.signing_key_id AS key_id,
-   r.release_no,r.created_by AS author_id,r.approved_by AS reviewer_id
-   FROM publication.release r JOIN publication.artifact a ON a.publication_release_id=r.id AND a.plane_code='studio'
-   JOIN publication.artifact_compilation c ON c.publication_release_id=r.id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind
-   JOIN runtime_meta.applied_release installed ON installed.source_release_id=r.id AND installed.publication_key=r.release_key AND installed.artifact_hash=a.content_hash
-   JOIN runtime_meta.release_activation_head h ON h.applied_release_id=installed.id AND h.publication_key=installed.publication_key AND h.artifact_hash=installed.artifact_hash AND h.source_release_no=installed.source_release_no
-   WHERE r.id=${pin.releaseId}::uuid AND r.tenant_id=${options.authorityTenantId}::uuid AND r.release_key=${pin.publicationKey}
-   AND r.status='published' AND r.approved_at IS NOT NULL AND r.approved_by IS NOT NULL AND r.created_by<>r.approved_by
-   AND a.artifact_kind=${pin.kind} AND a.content_hash=${pin.artifactHash} AND a.status='signed' AND a.validated_at IS NOT NULL
-   AND c.unsigned_hash=${pin.unsignedHash} AND octet_length(c.unsigned_document::text)<=${options.maximumBytes}
-   AND installed.status='active' AND installed.verified_at IS NOT NULL AND installed.source_release_no=r.release_no
-   FOR SHARE OF r,a,c,installed,h`.execute(tx)
+      await sql<ResourceRow>`SELECT * FROM entity_command_private.read_reference_resource(${pin.releaseId}::uuid,${pin.publicationKey},${pin.unsignedHash},${pin.artifactHash},${pin.kind},${options.maximumBytes})`.execute(
+        tx,
+      )
     ).rows;
     if (rows.length !== 1) return denied();
     const row = rows[0]!;

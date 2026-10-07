@@ -25,7 +25,7 @@ const appRole = {
   application: true,
   owner: false,
 };
-function database(row: unknown, auditAllowed = true) {
+function database(row: unknown, auditAllowed = true, resourceAllowed = true) {
   return new Kysely<Record<string, never>>({
     dialect: new PostgresDialect({
       pool: {
@@ -34,7 +34,9 @@ function database(row: unknown, auditAllowed = true) {
             rows: [
               query.includes("has_schema_privilege")
                 ? { allowed: auditAllowed }
-                : row,
+                : query.includes("has_function_privilege")
+                  ? { allowed: resourceAllowed }
+                  : row,
             ],
             rowCount: 1,
           }),
@@ -165,6 +167,45 @@ it("rejects a command connection without the transactional audit privilege", asy
         commandDatabase: denied,
       }),
     ).rejects.toThrow("AUDIT_PRIVILEGE_REQUIRED");
+  } finally {
+    await denied.destroy();
+    await f.close();
+  }
+});
+
+it("binds reference policies only with exact configuration and restricted read privileges", async () => {
+  const f = await fixture(),
+    denied = database(appRole, true, false);
+  const referenceResources = {
+    authorityTenantId: authority.tenantId,
+    descriptorPin: {
+      kind: "entity_authoring_descriptor" as const,
+      publicationKey: "fixture.descriptor",
+      releaseId: "00000000-0000-4000-8000-000000000001",
+      unsignedHash: "a".repeat(64),
+      artifactHash: "b".repeat(64),
+    },
+    descriptorHash: "c".repeat(64),
+    maximumBytes: 10000,
+    maximumReleases: 20,
+    supportedLocales: ["en"],
+    verifier: { verify: async () => true },
+    authorizeReview: async () => {},
+    audit: async () => {},
+  };
+  try {
+    const runtime = await createControlProductCommandRuntime({
+      ...f.options,
+      referenceResources,
+    });
+    expect(runtime.referenceEnrollment?.database).toBe(f.commandDatabase);
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        commandDatabase: denied,
+        referenceResources,
+      }),
+    ).rejects.toThrow("RESOURCE_READ_PRIVILEGE_REQUIRED");
   } finally {
     await denied.destroy();
     await f.close();
