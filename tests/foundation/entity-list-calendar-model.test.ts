@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EntityListDescriptorV1, EntityListRowV1, ListCalendarDateFieldV1, ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
 import {
-  calendarPageState,
   agendaByDay,
-  calendarWindow,
-  entriesByDay,
   mergeRows,
   openEndedFilters,
   placeEntries,
   trayFilters,
-  weekLayout,
   windowFilters,
+} from "../../packages/platform/entity/runtime/list-view/src/date-range/date-range-model";
+import {
+  calendarPageState,
+  calendarWindow,
+  entriesByDay,
+  weekLayout,
 } from "../../packages/platform/entity/runtime/list-view/src/calendar/calendar-model";
 
 const dateField: ListCalendarDateFieldV1 = { start: "starts_on", end: "ends_on", label: "Starts on", kind: "date", unscheduled: true };

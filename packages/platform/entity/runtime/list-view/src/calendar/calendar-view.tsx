@@ -17,21 +17,23 @@ import { Button, Dialog, DialogContent, SegmentedControl } from "@athyper/platfo
 import { resolveCardLayout } from "../card-content";
 import type { ListWidthTier } from "../presentation-tier";
 import { EntityRecordCard } from "../record-card";
-import { useCalendarPages } from "./calendar-data";
+import { useDateRangePages } from "../date-range/date-range-data";
 import {
   agendaByDay,
-  calendarQueryState,
-  calendarSelection,
-  calendarWindow,
-  entriesByDay,
+  dateRangeQueryState,
   mergeRows,
   openEndedFilters,
   placeEntries,
-  CALENDAR_LANES_PER_WEEK,
   trayFilters,
-  weekLayout,
   windowFilters,
-  type CalendarEntry,
+  type DatedEntry,
+} from "../date-range/date-range-model";
+import {
+  calendarSelection,
+  calendarWindow,
+  entriesByDay,
+  CALENDAR_LANES_PER_WEEK,
+  weekLayout,
   type WeekBar,
 } from "./calendar-model";
 
@@ -86,12 +88,12 @@ export function EntityCalendar({
   const view = narrow ? "agenda" : selection.view;
   const { field, anchor } = selection;
   const window = calendarWindow(anchor, view, weekStart);
-  const windowQuery = calendarQueryState(state, descriptor, field, windowFilters(field, window, timeZone));
+  const windowQuery = dateRangeQueryState(state, descriptor, field, windowFilters(field, window, timeZone));
   const openEnded = openEndedFilters(field, window, timeZone);
   const tray = trayFilters(field);
-  const more = useCalendarPages({ client, descriptor, query: windowQuery, scope, refreshKey, firstCursor: pageCurrent && page?.pagination.hasNext ? (page.pagination.nextCursor ?? null) : null });
-  const open = useCalendarPages({ client, descriptor, query: openEnded ? calendarQueryState(state, descriptor, field, openEnded) : undefined, scope, refreshKey });
-  const unscheduled = useCalendarPages({ client, descriptor, query: tray ? calendarQueryState(state, descriptor, field, tray) : undefined, scope, refreshKey });
+  const more = useDateRangePages({ client, descriptor, query: windowQuery, scope, refreshKey, firstCursor: pageCurrent && page?.pagination.hasNext ? (page.pagination.nextCursor ?? null) : null });
+  const open = useDateRangePages({ client, descriptor, query: openEnded ? dateRangeQueryState(state, descriptor, field, openEnded) : undefined, scope, refreshKey });
+  const unscheduled = useDateRangePages({ client, descriptor, query: tray ? dateRangeQueryState(state, descriptor, field, tray) : undefined, scope, refreshKey });
   const rows = pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows) : [];
   // Cheap pure derivations over at most one page per stream; recomputed per render.
   const entries = placeEntries(rows, field, window, timeZone);
@@ -112,7 +114,7 @@ export function EntityCalendar({
     <EntityRecordCard key={row.id} descriptor={descriptor} layout={layout} row={row} query={state.query} note={note}
       href={recordHref(row)} actions={renderActions(row)} onOpenRecord={onOpenRecord} headingLevel={3} intl={intl} />
   );
-  const entryCard = (entry: CalendarEntry) => card(entry.row, <When entry={entry} field={field} intl={intl} timeZone={timeZone} />);
+  const entryCard = (entry: DatedEntry) => card(entry.row, <When entry={entry} field={field} intl={intl} timeZone={timeZone} />);
   const fieldName = field.label;
 
   return (
@@ -198,14 +200,14 @@ function endLabel(intl: EntityIntl, value: unknown, field: ListCalendarDateField
   return field.kind === "date" ? formatDay(intl, text.slice(0, 10), { day: "numeric", month: "short", year: "numeric" }) : intl.date(text, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function entryTone(entry: CalendarEntry, field: ListCalendarDateFieldV1): string {
+function entryTone(entry: DatedEntry, field: ListCalendarDateFieldV1): string {
   return (field.tone ? field.tone.tones[String(entry.row.values[field.tone.field] ?? "")] : undefined) ?? "neutral";
 }
 
 /** When an entry happens, as the card's note: a day, a range, an open-ended
  * start, or an instant with the person's time zone. */
 function When({ entry, field, intl, timeZone }: {
-  readonly entry: CalendarEntry;
+  readonly entry: DatedEntry;
   readonly field: ListCalendarDateFieldV1;
   readonly intl: EntityIntl;
   readonly timeZone: string;
@@ -225,8 +227,8 @@ function MonthGrid({ window, anchor, today, entries, byDay, field, complete, int
   readonly window: { readonly start: string; readonly end: string };
   readonly anchor: string;
   readonly today: string;
-  readonly entries: readonly CalendarEntry[];
-  readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
+  readonly entries: readonly DatedEntry[];
+  readonly byDay: ReadonlyMap<string, readonly DatedEntry[]>;
   readonly field: ListCalendarDateFieldV1;
   readonly complete: boolean;
   readonly intl: EntityIntl;
@@ -339,11 +341,11 @@ function Bar({ bar, field, intl, timeZone, text, href }: {
 }
 
 function Agenda({ byDay, today, complete, intl, card, loadMore, loading }: {
-  readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
+  readonly byDay: ReadonlyMap<string, readonly DatedEntry[]>;
   readonly today: string;
   readonly complete: boolean;
   readonly intl: EntityIntl;
-  readonly card: (entry: CalendarEntry) => ReactNode;
+  readonly card: (entry: DatedEntry) => ReactNode;
   readonly loadMore?: () => void;
   readonly loading: boolean;
 }) {

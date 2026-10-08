@@ -11,7 +11,7 @@ import type {
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
 
-export interface CalendarPages {
+export interface DateRangePages {
   readonly rows: readonly EntityListRowV1[];
   readonly loading: boolean;
   readonly failed: boolean;
@@ -25,14 +25,14 @@ export interface CalendarPages {
  * keep its filters and sort constant across pages: the server binds the
  * cursor to both. When `firstCursor` is given, the first page was already
  * fetched elsewhere (the list's own page query) and only later pages load. */
-export function useCalendarPages(input: {
+export function useDateRangePages(input: {
   readonly client: HttpClient;
   readonly descriptor: EntityListDescriptorV1;
   readonly query: ListLocationStateV1 | undefined;
   readonly scope?: EntityListScopeCoordinateV1;
   readonly refreshKey: string;
   readonly firstCursor?: string | null;
-}): CalendarPages {
+}): DateRangePages {
   const { client, query, refreshKey, firstCursor } = input;
   const continuation = firstCursor !== undefined;
   const [rows, setRows] = useState<readonly EntityListRowV1[]>([]);
