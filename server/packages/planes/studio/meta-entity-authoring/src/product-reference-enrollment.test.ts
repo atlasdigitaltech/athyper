@@ -6,6 +6,7 @@ const {
   ownership,
   identities,
   conversion,
+  bootstrap,
   constructed,
   qualify,
   database,
@@ -15,6 +16,7 @@ const {
   ownership: vi.fn(),
   identities: vi.fn(),
   conversion: vi.fn(),
+  bootstrap: vi.fn(),
   constructed: vi.fn(),
   qualify: vi.fn(),
   database: { isTransaction: true },
@@ -29,12 +31,14 @@ vi.mock("./kysely-authoring-repository.js", () => ({
       constructed(...args);
     }
     executeNativeConversion = conversion;
+    executeNativeBootstrap = bootstrap;
     executeLegacyOwnershipInitialization = ownership;
     executeLegacyIdentityInstallation = identities;
   },
 }));
 vi.mock("./native-schema-qualification.js", () => ({
   withCanonicalNativeSchemaQualification: qualify,
+  qualifyCanonicalNativeSchema: qualify,
 }));
 vi.mock("kysely", () => ({ sql: () => ({ execute: query }) }));
 import { createProductReferenceEnrollment } from "./product-reference-enrollment.js";
@@ -205,4 +209,85 @@ it("propagates audit failure inside the transaction and rejects absent schema be
   await expect(f.service.convertNative(context, command)).rejects.toThrow(
     "audit unavailable",
   );
+});
+
+it("native bootstrap requires entity-bound creation admission and qualifies schema on replay", async () => {
+  const policy = {
+    host: {},
+    qualify: vi.fn(),
+    prepare: vi.fn(),
+    audit: vi.fn(),
+  };
+  const schema = { schemaHash: "a".repeat(64) };
+  const resolve = vi.fn(async () => ({ policy, schema }));
+  const service = createProductReferenceEnrollment({
+    database,
+    authority: {},
+    resolvePolicies: vi.fn(),
+    nativeBootstrap: { resolve },
+  } as unknown as ProductReferenceEnrollmentOptions);
+  const input = {
+    changeSetId: "draft",
+    entityId: "entity",
+    proposalHash: "a".repeat(64),
+    idempotencyKey: "bootstrap-command-001",
+  };
+  query.mockResolvedValue({ rows: [{ allowed: true }] });
+  bootstrap.mockImplementation(async (coordinate) => {
+    await constructed.mock.calls.at(-1)![10].qualify(database, coordinate);
+    return { revision: 1, replay: true };
+  });
+  expect(await service.bootstrapNative(context, input)).toEqual({
+    revision: 1,
+    replay: true,
+  });
+  expect(transport.mock.calls[0]![0].scope).toEqual({
+    authorityTenantId: "platform",
+    actorId: "actor",
+    changeSetId: "draft",
+    creationEntityId: "entity",
+  });
+  expect(qualify).toHaveBeenCalledWith(database, schema);
+  expect(policy.qualify).toHaveBeenCalledWith(database, {
+    ...input,
+    actorId: "actor",
+    tenantId: null,
+  });
+  qualify.mockRejectedValueOnce(new Error("NATIVE_SCHEMA_NOT_READY"));
+  await expect(service.bootstrapNative(context, input)).rejects.toThrow(
+    "NATIVE_SCHEMA_NOT_READY",
+  );
+  query.mockResolvedValue({ rows: [{ allowed: false }] });
+  resolve.mockClear();
+  await expect(service.bootstrapNative(context, input)).rejects.toMatchObject({
+    code: "PRODUCT_REFERENCE_ADMISSION_REQUIRED",
+  });
+  expect(resolve).not.toHaveBeenCalled();
+});
+it("native bootstrap rejects missing installation and caller authority injection", async () => {
+  const input = {
+    changeSetId: "draft",
+    entityId: "entity",
+    proposalHash: "a".repeat(64),
+    idempotencyKey: "bootstrap-command-001",
+  };
+  await expect(
+    fixture().service.bootstrapNative(context, input),
+  ).rejects.toMatchObject({ code: "NATIVE_BOOTSTRAP_HOST_NOT_CONFIGURED" });
+  const service = createProductReferenceEnrollment({
+    database,
+    authority: {},
+    resolvePolicies: vi.fn(),
+    nativeBootstrap: { resolve: vi.fn() },
+  } as unknown as ProductReferenceEnrollmentOptions);
+  for (const extra of [
+    { actorId: "other" },
+    { tenantId: "other" },
+    { policy: {} },
+    { schema: {} },
+  ])
+    await expect(
+      service.bootstrapNative(context, { ...input, ...extra }),
+    ).rejects.toMatchObject({ code: "PRODUCT_REFERENCE_INPUT_INVALID" });
+  expect(transport).not.toHaveBeenCalled();
 });

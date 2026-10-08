@@ -16,6 +16,7 @@ import { ProductCommandCleanupError } from "./product-command-authority.js";
 import {
   createProductReferenceEnrollment,
   type ProductReferenceCommand,
+  type ProductNativeBootstrapCommand,
   type ProductReferenceEnrollmentOptions,
 } from "./product-reference-enrollment.js";
 
@@ -55,6 +56,37 @@ export function parseProductReferenceEnrollmentRequest(
     idempotencyKey: value.idempotencyKey,
   };
 }
+export function parseProductNativeBootstrapRequest(
+  id: string,
+  body: unknown,
+): ProductNativeBootstrapCommand {
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    throw new FoundationContractError(
+      "PRODUCT_REFERENCE_INPUT_INVALID",
+      "/request",
+    );
+  const value = body as Record<string, unknown>;
+  if (
+    Object.keys(value).sort().join() !==
+      "entityId,idempotencyKey,proposalHash" ||
+    typeof value.proposalHash !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.proposalHash) ||
+    typeof value.idempotencyKey !== "string" ||
+    !parseIdempotencyKey(value.idempotencyKey).ok
+  )
+    throw new FoundationContractError(
+      "PRODUCT_REFERENCE_INPUT_INVALID",
+      "/request",
+    );
+  validateFoundationNode(referenceUuid, id, "/changeSetId");
+  validateFoundationNode(referenceUuid, value.entityId, "/entityId");
+  return {
+    changeSetId: id,
+    entityId: value.entityId as string,
+    proposalHash: value.proposalHash,
+    idempotencyKey: value.idempotencyKey,
+  };
+}
 /** Optional control-plane routes. Trusted resource resolution and restricted
  * database grants are prerequisites; route registration grants no authority. */
 export function registerProductReferenceEnrollmentRoutes(
@@ -66,7 +98,13 @@ export function registerProductReferenceEnrollmentRoutes(
 ) {
   const service = createProductReferenceEnrollment(options);
   const handler =
-    (execute: typeof service.initializeOwnership): RequestHandler =>
+    <T>(
+      execute: (
+        context: VerifiedRequestContext,
+        command: T,
+      ) => Promise<unknown>,
+      parse: (id: string, body: unknown) => T,
+    ): RequestHandler =>
     async (req, res, next) => {
       res.setHeader("Cache-Control", "private, no-store");
       try {
@@ -79,10 +117,7 @@ export function registerProductReferenceEnrollmentRoutes(
             "PRODUCT_REFERENCE_INPUT_INVALID",
             "/query",
           );
-        const command = parseProductReferenceEnrollmentRequest(
-          String(req.params.id),
-          req.body,
-        );
+        const command = parse(String(req.params.id), req.body);
         res.json(await execute(options.readContext(res), command));
       } catch (error) {
         if (error instanceof FoundationContractError) {
@@ -104,23 +139,33 @@ export function registerProductReferenceEnrollmentRoutes(
         next(error);
       }
     };
+  if (options.nativeBootstrap)
+    app.post(
+      "/api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
+      options.authenticate,
+      express.json({ limit: 4096 }),
+      handler(service.bootstrapNative, parseProductNativeBootstrapRequest),
+    );
   if (options.nativeConversion)
     app.post(
       "/api/platform-control/meta-entity-authoring/change-sets/:id/convert-native",
       options.authenticate,
       express.json({ limit: 4096 }),
-      handler(service.convertNative),
+      handler(service.convertNative, parseProductReferenceEnrollmentRequest),
     );
   app.post(
     "/api/platform-control/meta-entity-authoring/change-sets/:id/initialize-ownership",
     options.authenticate,
     express.json({ limit: 4096 }),
-    handler(service.initializeOwnership),
+    handler(
+      service.initializeOwnership,
+      parseProductReferenceEnrollmentRequest,
+    ),
   );
   app.post(
     "/api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
     options.authenticate,
     express.json({ limit: 4096 }),
-    handler(service.installIdentities),
+    handler(service.installIdentities, parseProductReferenceEnrollmentRequest),
   );
 }

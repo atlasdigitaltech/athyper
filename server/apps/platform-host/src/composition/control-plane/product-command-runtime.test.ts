@@ -194,11 +194,14 @@ it("binds reference policies only with exact configuration and restricted read p
     audit: async () => {},
   };
   try {
+    const nativeBootstrap = { resolve: vi.fn() };
     const runtime = await createControlProductCommandRuntime({
       ...f.options,
       referenceResources,
+      nativeBootstrap,
       nativeConversion: { resolve: vi.fn() },
     });
+    expect(runtime.referenceEnrollment?.nativeBootstrap).toBe(nativeBootstrap);
     const conversion = runtime.referenceEnrollment!.nativeConversion!;
     await conversion.audit(
       f.commandDatabase as never,
@@ -236,6 +239,20 @@ it("does not enable native conversion without installed reference resource confi
       createControlProductCommandRuntime({
         ...f.options,
         nativeConversion: { resolve: vi.fn() },
+      }),
+    ).rejects.toThrow("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
+  } finally {
+    await f.close();
+  }
+});
+
+it("does not enable native bootstrap without installed reference resources", async () => {
+  const f = await fixture();
+  try {
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        nativeBootstrap: { resolve: vi.fn() },
       }),
     ).rejects.toThrow("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
   } finally {

@@ -20,8 +20,18 @@ import type {
 } from "./native-conversion-application.js";
 import {
   withCanonicalNativeSchemaQualification,
+  qualifyCanonicalNativeSchema,
   type InstalledNativeSchemaEvidence,
 } from "./native-schema-qualification.js";
+
+import type {
+  NativeBootstrapInput,
+  NativeBootstrapPolicy,
+} from "./native-bootstrap-application.js";
+export type ProductNativeBootstrapCommand = Omit<
+  NativeBootstrapInput,
+  "actorId" | "tenantId"
+>;
 
 type Database = Kysely<Record<string, never>>;
 type Tx = Transaction<Record<string, never>>;
@@ -34,6 +44,16 @@ export interface ProductReferenceEnrollmentOptions {
   authority: ReturnType<
     typeof createProductCommandAuthority<VerifiedRequestContext>
   >;
+  nativeBootstrap?: {
+    resolve(
+      tx: Tx,
+      context: VerifiedRequestContext,
+      command: NativeBootstrapInput,
+    ): Promise<{
+      policy: NativeBootstrapPolicy;
+      schema: InstalledNativeSchemaEvidence;
+    }>;
+  };
   /** Optional installed composition, never request-supplied. Schema qualification
    * is mandatory here, including replay; authoring admission alone is insufficient. */
   nativeConversion?: {
@@ -192,7 +212,92 @@ export function createProductReferenceEnrollment(
       },
     });
   }
+  async function bootstrapNative(
+    context: VerifiedRequestContext,
+    input: ProductNativeBootstrapCommand,
+  ) {
+    if (!options.nativeBootstrap?.resolve)
+      throw new AuthoringPolicyError(
+        "NATIVE_BOOTSTRAP_HOST_NOT_CONFIGURED",
+        "Installed bootstrap resources are required.",
+      );
+    if (
+      !input ||
+      Object.keys(input).sort().join() !==
+        "changeSetId,entityId,idempotencyKey,proposalHash"
+    )
+      throw new AuthoringPolicyError(
+        "PRODUCT_REFERENCE_INPUT_INVALID",
+        "Only canonical bootstrap coordinates are accepted.",
+      );
+    const capturedContext = structuredClone(context);
+    const command: NativeBootstrapInput = {
+      ...structuredClone(input),
+      actorId: capturedContext.principalId,
+      tenantId: null,
+    };
+    return withProductCommandAuthority({
+      authority: options.authority,
+      database: options.database,
+      context: capturedContext,
+      scope: {
+        authorityTenantId: capturedContext.tenantId,
+        actorId: capturedContext.principalId,
+        changeSetId: command.changeSetId,
+        creationEntityId: command.entityId,
+      },
+      command: { kind: "native-bootstrap", input: command },
+      async execute(database, admitted) {
+        const tx = database as Tx;
+        const row =
+          await sql`SELECT entity_command_private.admitted_creation(${admitted.input.changeSetId}::uuid,${admitted.input.entityId}::uuid) AS allowed`.execute(
+            tx,
+          );
+        if (
+          row.rows.length !== 1 ||
+          (row.rows[0] as { allowed?: boolean }).allowed !== true
+        )
+          throw new AuthoringPolicyError(
+            "PRODUCT_REFERENCE_ADMISSION_REQUIRED",
+            "An exact product creation admission is required.",
+          );
+        const resolved = await options.nativeBootstrap!.resolve(
+          tx,
+          structuredClone(capturedContext),
+          structuredClone(admitted.input),
+        );
+        if (!resolved?.policy || !resolved.schema)
+          throw new AuthoringPolicyError(
+            "NATIVE_BOOTSTRAP_HOST_NOT_CONFIGURED",
+            "Installed bootstrap and schema evidence are required.",
+          );
+        const installedSchema = structuredClone(resolved.schema);
+        const policy: NativeBootstrapPolicy = {
+          ...resolved.policy,
+          async qualify(transaction, coordinate) {
+            await qualifyCanonicalNativeSchema(transaction, installedSchema);
+            await resolved.policy.qualify(transaction, coordinate);
+          },
+        };
+        const repository = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          undefined,
+          undefined,
+          policy.host,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          policy,
+        );
+        return repository.executeNativeBootstrap(admitted.input);
+      },
+    });
+  }
   return {
+    bootstrapNative,
     convertNative: (
       context: VerifiedRequestContext,
       input: ProductReferenceCommand,

@@ -189,6 +189,26 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native bootstrap control boundary — 8 October
+
+The existing product reference command service and control host now accept an optional
+installed native bootstrap resolver. The authenticated `bootstrap-native` endpoint accepts
+only the target draft, entity, proposal hash and idempotency key. It issues entity-bound
+creation admission, verifies `admitted_creation` in the application transaction and resolves
+the proposal through trusted host composition. The canonical schema qualifier wraps the
+repository policy on every execution, including replay; request-supplied graph, actor,
+tenant, initializer and schema evidence reject. Audit remains inside the repository's
+atomic bootstrap policy. Unconfigured routes remain absent.
+
+This closes the service/route composition gap, not the deployed resource resolver.
+DEV inspection still reports all seven native pending constraints. No constraint was
+dropped, replacement draft created, release published or activation changed. Whole-graph
+canonical PostgreSQL rehearsal, installed proposal preparation and deployed F6/F8/F9
+remain required before this endpoint can be enabled in DEV. Focused service/HTTP tests
+pass, covering creation scope, failed admission, schema rejection on replay, authentication,
+closed request validation and missing bindings. These tests use mocked database transport;
+they are not canonical database or live-read evidence.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`

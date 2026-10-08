@@ -22,6 +22,7 @@ export async function createControlProductCommandRuntime(options: {
   authority: PlatformAuthority;
   labels: NormalizedAuthoringPolicy;
   audit: AuditRecorder<Database>;
+  nativeBootstrap?: ProductReferenceEnrollmentOptions["nativeBootstrap"];
   nativeConversion?: Pick<
     NonNullable<ProductReferenceEnrollmentOptions["nativeConversion"]>,
     "resolve"
@@ -141,7 +142,10 @@ export async function createControlProductCommandRuntime(options: {
         throw Error("PRODUCT_COMMAND_AUDIT_REQUIRED");
     },
   };
-  if (options.nativeConversion && !options.referenceResources)
+  if (
+    (options.nativeConversion || options.nativeBootstrap) &&
+    !options.referenceResources
+  )
     throw Error("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
   if (options.referenceResources) {
     if (
@@ -166,6 +170,7 @@ export async function createControlProductCommandRuntime(options: {
     runtime.referenceEnrollment = {
       database: runtime.database,
       authority: runtime.authority,
+      nativeBootstrap: options.nativeBootstrap,
       ...(options.nativeConversion
         ? {
             nativeConversion: {

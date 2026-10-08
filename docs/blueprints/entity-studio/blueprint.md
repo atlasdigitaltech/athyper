@@ -3016,6 +3016,16 @@ Every dictionary scalar maps to the camelCase service DTO member and SQL column;
 
 Save returns draft identity, new revision and validation findings even when P completeness is unfinished. Preview requires a valid model and reports missing selections instead of selecting a component, tab or identity. Submit/publication also validates dependency installation and exact source hashes. A usable component control requires all its typed options and slot mappings to be supported; unsupported options cannot be stored in a fallback bag.
 
+The fresh native product bootstrap uses the existing control-plane authoring command
+boundary: `POST /api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native`.
+The closed request contains only `entityId`, `idempotencyKey` and `proposalHash`.
+Authenticated governance supplies the actor and exact entity-bound creation admission;
+installed composition resolves the graph, initializer and schema evidence. Canonical
+schema qualification runs inside the admitted application transaction, including replay.
+The repository owns atomic whole-graph persistence, saved snapshots, compiler/reader
+verification and transactional audit. The route is absent without its installed binding;
+registration alone is neither cutover evidence nor deployed live-read qualification.
+
 ### 7.1.1 Incremental shared authoring contract
 
 Use the Entity adapter first, backed by the existing authoring services and repository. This contract describes shared capabilities without imposing identical tables or lifecycle details on unrelated resources.

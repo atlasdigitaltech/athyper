@@ -8,16 +8,18 @@ import {
   AuthoringPolicyError,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { ProductCommandCleanupError } from "./product-command-authority.js";
-const { ownership, identities, conversion } = vi.hoisted(() => ({
+const { ownership, identities, conversion, bootstrap } = vi.hoisted(() => ({
   ownership: vi.fn(),
   identities: vi.fn(),
   conversion: vi.fn(),
+  bootstrap: vi.fn(),
 }));
 vi.mock("./product-reference-enrollment.js", () => ({
   createProductReferenceEnrollment: () => ({
     initializeOwnership: ownership,
     installIdentities: identities,
     convertNative: conversion,
+    bootstrapNative: bootstrap,
   }),
 }));
 import { registerProductReferenceEnrollmentRoutes } from "./product-reference-enrollment-routes.js";
@@ -45,7 +47,10 @@ async function fixture(native = false) {
     authority: {} as never,
     resolvePolicies: vi.fn(),
     ...(native
-      ? { nativeConversion: { resolve: vi.fn(), audit: vi.fn() } }
+      ? {
+          nativeConversion: { resolve: vi.fn(), audit: vi.fn() },
+          nativeBootstrap: { resolve: vi.fn() },
+        }
       : {}),
     authenticate: (req, res, next) => {
       if (!req.headers.authorization) {
@@ -154,6 +159,42 @@ it("authenticates native conversion and rejects request-supplied evidence", asyn
   expect((await f.send("convert-native")).status).toBe(200);
   expect(conversion).toHaveBeenCalledExactlyOnceWith(f.context, {
     ...body,
+    changeSetId: id,
+  });
+});
+
+it("keeps native bootstrap absent without installed composition", async () => {
+  const f = await fixture();
+  expect((await f.send("bootstrap-native")).status).toBe(404);
+  expect(bootstrap).not.toHaveBeenCalled();
+});
+it("accepts only authenticated native proposal coordinates", async () => {
+  const f = await fixture(true);
+  const proposal = {
+    entityId: id,
+    proposalHash: "a".repeat(64),
+    idempotencyKey: "native-bootstrap-001",
+  };
+  expect((await f.send("bootstrap-native", proposal, false)).status).toBe(401);
+  for (const extra of [
+    { actorId: id },
+    { tenantId: id },
+    { graph: {} },
+    { requiresMfa: false },
+    { schemaHash: "a".repeat(64) },
+    { proposalHash: "invalid" },
+  ])
+    expect(
+      (await f.send("bootstrap-native", { ...proposal, ...extra })).status,
+    ).toBe(400);
+  expect(
+    (await f.send("bootstrap-native?tenantId=other", proposal)).status,
+  ).toBe(400);
+  expect(bootstrap).not.toHaveBeenCalled();
+  bootstrap.mockResolvedValue({ revision: 1, replay: false });
+  expect((await f.send("bootstrap-native", proposal)).status).toBe(200);
+  expect(bootstrap).toHaveBeenCalledExactlyOnceWith(f.context, {
+    ...proposal,
     changeSetId: id,
   });
 });
