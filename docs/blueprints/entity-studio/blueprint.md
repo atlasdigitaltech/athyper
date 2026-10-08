@@ -107,6 +107,13 @@ deprecated or unsupported scope bindings reject. This bounded profile admits onl
 existing list/read callables and tenant-context scope semantics. Its implementation
 fingerprint is compatibility evidence, not a permission grant, current policy approval,
 protected-state initializer or F8 deployment receipt.
+Native bootstrap retains AI declarations and resolves insight-provider content through the
+same manifest resolver used by publication and the registered tool factories. Navigation
+and presentation references use the existing versioned publication vocabulary. Field keys
+come from installed identities; summary/search/reference eligibility comes from the exact
+authored field-access, search and relation rows. These compiler bindings do not install
+tools, authorize execution or attest live-resource readiness. Unknown capabilities,
+unsupported versions, masked/UUID summaries and broken references reject.
 Publication lowering preserves supported single-target, read-only foreign-key/logical
 references through the shared key-reference representation. It verifies source/compiled
 relation membership and full field-mapping coverage; unsupported mutation, polymorphic,

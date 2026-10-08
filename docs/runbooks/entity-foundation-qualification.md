@@ -189,6 +189,38 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Complete AI declaration resource assembly — 9 October
+
+The native bootstrap wrapper now replaces caller-supplied AI context with
+`resolveNativeBootstrapAi`. It resolves insight-provider identities through the production
+`resolveAtlasEntityToolManifest` used by publication and the tool factories. Navigation and
+presentation bindings share the existing metadata publication vocabulary; these hashes are
+content identities, not installation receipts or execution grants. Field access, search
+membership and relation linkage are checked against the selected native graph and its
+resolved authorization roster. Nonempty declarations cannot silently become absent.
+
+Executed checks:
+
+```sh
+pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/native-bootstrap-ai.test.ts src/composition/control-plane/product-command-runtime.test.ts
+pnpm --filter @athyper/server-platform-host exec tsc -p tsconfig.json --noEmit
+pnpm --filter @athyper/server-contract-metadata exec vitest run src/__tests__/entity-ai.test.ts src/entity-ai-manifest.test.ts
+pnpm --filter @athyper/server-contract-metadata exec tsc -p tsconfig.json --noEmit
+```
+
+Results: 23 host tests and 51 metadata-contract tests passed; both production typechecks
+passed. The two actual reference definitions preserve their full AI declarations with
+real manifest hashes in these tests; their surrounding graph identities/authority are
+still synthetic. This does not establish complete native DEV proposals or bootstrap.
+The inspected private canonical rehearsal likewise uses a reduced three-field synthetic
+graph and fixture authority, and cannot serve as complete two-entity acceptance evidence.
+
+Status: **implemented and tested; not installed or executed as DEV bootstrap**.
+No database writes, replacement drafts, publication or activation occurred. Complete
+proposal construction, base compiler/schema/initializer/component assembly and startup
+wiring remain unfinished; the composition-boundary acceptance and actual commit/replay
+milestone have not passed. Deployed F6/F8/F9 remains separate outstanding integration.
+
 ### Native authorization assembly — 9 October
 
 `resolveNativeBootstrapAuthorization` now assembles compiler authorization from the

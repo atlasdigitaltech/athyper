@@ -1,3 +1,4 @@
+import { resolveNativeBootstrapAi } from "./native-bootstrap-ai.js";
 import { resolveNativeBootstrapAuthorization } from "./native-bootstrap-authorization.js";
 import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
 import { createNativeBootstrapResourceComposition } from "./native-bootstrap-resources.js";
@@ -129,6 +130,7 @@ export async function createControlProductCommandRuntime(options: {
               ...resources.preparation.compiler,
               listProviders,
               authorization,
+              ai: resolveNativeBootstrapAi(args[3].graph, authorization),
               core: {
                 ...resources.preparation.compiler.core,
                 identities,

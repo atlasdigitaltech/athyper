@@ -126,6 +126,25 @@ const profiles = Object.freeze({
   comparison: "manage",
 } as const);
 
+/** Publication vocabulary only; does not install a tool or authorize execution. */
+export function entityAiPresentationCapability(
+  kind: "action" | "presentation_profile",
+  key: string,
+  version: number,
+) {
+  if (version !== 1) return undefined;
+  if (kind === "action" && key === "open_record")
+    return Object.freeze({ kind, key, version: 1, operationKey: "read" });
+  if (kind === "presentation_profile" && Object.hasOwn(profiles, key))
+    return Object.freeze({
+      kind,
+      key,
+      version: 1,
+      contextKind: profiles[key as keyof typeof profiles],
+    });
+  return undefined;
+}
+
 export function parseEntityAiDescriptor(
   value: unknown,
   context: EntityAiReferenceContext,
@@ -226,7 +245,7 @@ export function parseEntityAiDescriptor(
     const ref = reference(action, "ai.actions");
     // Only navigation is in the initial catalogue. Case submission remains the
     // separate existing governed tool, never inferred from an entity operation.
-    if (ref.id !== "open_record")
+    if (!entityAiPresentationCapability("action", ref.id, ref.version))
       invalid("ai.actions", `unregistered action ${ref.id}`);
     const operationKey = code(action.operationKey, "ai.actions.operationKey");
     if (
@@ -248,7 +267,13 @@ export function parseEntityAiDescriptor(
     item.presentationProfiles,
     "ai.presentationProfiles",
   ).map((ref) => {
-    if (!Object.hasOwn(profiles, ref.id))
+    if (
+      !entityAiPresentationCapability(
+        "presentation_profile",
+        ref.id,
+        ref.version,
+      )
+    )
       invalid("ai.presentationProfiles", `unregistered profile ${ref.id}`);
     if (!contextKinds.includes(profiles[ref.id as keyof typeof profiles]))
       invalid("ai.presentationProfiles", "profile context is not enabled");
