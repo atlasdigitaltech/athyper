@@ -94,6 +94,14 @@ import {
 import { boardSummaryState } from "./board/board-model";
 import { EntityBoard } from "./board/board-view";
 import { calendarRange } from "./calendar/calendar-model";
+import {
+  GroupedTree,
+  type GroupedTreeSource,
+  type TreeCommand,
+} from "./tree/grouped-tree";
+import { handleTreeKeyDown } from "./tree/tree-keyboard";
+import { groupedPageState } from "./tree/grouped-tree-model";
+import { TreeStrip } from "./tree/tree-parts";
 import { ganttRange } from "./gantt/gantt-model";
 import { EntityGantt } from "./gantt/gantt-view";
 import { dateRangePageState } from "./date-range/date-range-model";
@@ -1132,13 +1140,19 @@ function EntityCollectionRuntime({
       .request(entityListOperation, {
         params: { entityCode },
         query: entityListQuery(
-          dateRangePageState(
-            boardSummaryState(state, descriptor),
-            descriptor,
-            calendarRange(state, descriptor, localization) ??
-              ganttRange(state, descriptor, localization),
-            localization.timeZone,
-          ),
+          listModeTraits(state.mode).ownGrouping
+            ? dateRangePageState(
+                boardSummaryState(state, descriptor),
+                descriptor,
+                calendarRange(state, descriptor, localization) ??
+                  ganttRange(state, descriptor, localization),
+                localization.timeZone,
+              )
+            : // Grouped Table and Cards: level-1 groups only, under exact counts.
+              groupedPageState(
+                state,
+                descriptor.limits.countMode === "exact",
+              ),
           descriptor,
           scopeCoordinate,
         ),
@@ -1901,6 +1915,13 @@ function EntityCollectionRuntime({
                   }
                   sort={pageState?.sort ?? state.sort}
                   groups={(pageState ?? state).groups}
+                  groupedSource={{
+                    client,
+                    scope: scopeCoordinate,
+                    refreshKey: `${authorityKey}:${refreshAttempt}`,
+                    query: pageState ?? state,
+                    exact: descriptor.limits.countMode === "exact",
+                  }}
                   query={(pageState ?? state).query}
                   filtered={(pageState?.filters ?? state.filters).length > 0}
                   loading={loading || (!error && !resultsCurrent)}
@@ -1959,7 +1980,9 @@ function EntityCollectionRuntime({
                 />
               </>
             ) : null}
-            {page && !listModeTraits(state.mode).ownPaging ? (
+            {page &&
+            !listModeTraits(state.mode).ownPaging &&
+            !state.groups?.length ? (
               <EntityListPagination
                 hideSinglePageControls={Boolean(section)}
                 descriptor={descriptor}
@@ -4323,6 +4346,7 @@ function EntityRows({
   onBookmark,
   onSelectionChange,
   onSort,
+  groupedSource,
 }: {
   readonly emptyContent?: EntityDirectoryEmbedding["emptyContent"];
   readonly emptyAction?: React.ReactNode;
@@ -4350,8 +4374,20 @@ function EntityRows({
   readonly onBookmark: (row: EntityListRowV1, favourite: boolean) => void;
   readonly onSelectionChange: (ids: ReadonlySet<string>) => void;
   readonly onSort: (field: string, additive: boolean) => void;
+  /** With grouping levels, groups load their own content through this
+   * source (Tree blueprint section 7.1) instead of grouping one page. */
+  readonly groupedSource?: GroupedTreeSource;
 }) {
   const group = groups?.[0];
+  const grouped = Boolean(groups?.length && groupedSource);
+  const [treeCommand, setTreeCommand] = useState<TreeCommand>();
+  const sendTreeCommand = (
+    command:
+      | { readonly kind: "expandAll" }
+      | { readonly kind: "collapseAll" }
+      | { readonly kind: "level"; readonly level: number },
+  ) =>
+    setTreeCommand((previous) => ({ ...command, seq: (previous?.seq ?? 0) + 1 }));
   const recordClick =
     (row: EntityListRowV1) => (event: React.MouseEvent<HTMLAnchorElement>) => {
       if (
@@ -4402,7 +4438,12 @@ function EntityRows({
       {item.count !== undefined ? <span>{intl.number(item.count)}</span> : null}
     </button>
   );
-  if (!page.rows.length) {
+  const empty = grouped
+    ? groupedSource!.exact
+      ? !page.groups?.length
+      : !page.rows.length
+    : !page.rows.length;
+  if (empty) {
     const constrained = Boolean(query?.trim()) || filtered;
     return (
       <Card className="a-entity-list__state a-entity-list__state--empty">
@@ -4490,6 +4531,41 @@ function EntityRows({
     );
   const rendererKind = listRendererKind(mode, widthTier);
   if (!rendererKind) return null;
+  const treeControls = grouped ? (
+    <div className="a-entity-tree">
+      <TreeStrip
+        levels={groups!.length}
+        expandAllLabel={intl.message("list.tree.expandAll")}
+        collapseAllLabel={intl.message("list.tree.collapseAll")}
+        levelLabel={intl.message("list.tree.showToLevel")}
+        onExpandAll={() => sendTreeCommand({ kind: "expandAll" })}
+        onCollapseAll={() => sendTreeCommand({ kind: "collapseAll" })}
+        onLevel={(level) => sendTreeCommand({ kind: "level", level })}
+      />
+      {groupedSource!.exact ? null : (
+        <p className="a-entity-tree__caption">
+          {intl.message("list.group.uncounted")}
+        </p>
+      )}
+    </div>
+  ) : null;
+  if (rendererKind === "cards" && grouped)
+    return (
+      <div className="a-entity-list__groups a-entity-tree">
+        {treeControls}
+        <GroupedTree
+          descriptor={descriptor}
+          groups={groups!}
+          levelOne={page.groups}
+          source={groupedSource!}
+          variant="cards"
+          columnCount={1}
+          intl={intl}
+          command={treeCommand}
+          renderRecords={(rows) => cards(rows, 3)}
+        />
+      </div>
+    );
   if (rendererKind === "cards")
     return group ? (
       <div className="a-entity-list__groups">
@@ -4511,7 +4587,8 @@ function EntityRows({
     const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
     if (href) navigate(href);
   };
-  const tableRows = (rows: readonly EntityListRowV1[]) =>
+  // `level` places record rows inside the grouped tree grid.
+  const tableRows = (rows: readonly EntityListRowV1[], level?: number) =>
     rows.map((row) => {
       const href = chooser ? recordLink?.(row) : recordHref(descriptor, row),
         identity = formatFieldValue(
@@ -4523,6 +4600,8 @@ function EntityRows({
         <tr
           key={row.id}
           tabIndex={href ? 0 : undefined}
+          aria-level={level}
+          data-tree-key={level ? row.id : undefined}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" &&
@@ -4615,8 +4694,15 @@ function EntityRows({
     });
   const columnCount = fields.length + 2 + Number(selectionEnabled);
   return (
+    <>
+    {treeControls}
     <StickyListTable sticky={!chooser} aria-busy={loading}>
-      <table className="a-entity-list__table">
+      <table
+        className="a-entity-list__table"
+        {...(grouped
+          ? { role: "treegrid", onKeyDown: handleTreeKeyDown }
+          : {})}
+      >
         <caption className="a-visually-hidden">
           {descriptor.surface.title}
         </caption>
@@ -4720,7 +4806,19 @@ function EntityRows({
           </tr>
         </thead>
         <tbody>
-          {group
+          {grouped ? (
+            <GroupedTree
+              descriptor={descriptor}
+              groups={groups!}
+              levelOne={page.groups}
+              source={groupedSource!}
+              variant="table"
+              columnCount={columnCount}
+              intl={intl}
+              command={treeCommand}
+              renderRecords={(rows, level) => tableRows(rows, level)}
+            />
+          ) : group
             ? pageGroups.flatMap((item) => [
                 <tr
                   className="a-entity-list__group-row"
@@ -4736,6 +4834,7 @@ function EntityRows({
         </tbody>
       </table>
     </StickyListTable>
+    </>
   );
 }
 
