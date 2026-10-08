@@ -1,4 +1,9 @@
 import { parseEntityKeyReference } from "@athyper/server-contract-metadata";
+import {
+  validateEntityLiveReadContractV1,
+  type EntityLiveReadContractV1,
+  type EntitySourceIdentityV1,
+} from "@athyper/server-contract-metadata";
 import { compileEntityIntakeSurfaces } from "./intake-surface-projection.js";
 import { compileEntityIntakeFlows } from "./intake-projection.js";
 import { createHash } from "node:crypto";
@@ -170,8 +175,32 @@ export function compileNativeRuntimeProjection(input: {
   native: Readonly<Record<string, unknown>>;
   registration: NativeProjectionRegistration;
   permissions: readonly { code: string; scopeKinds: readonly string[] }[];
+  /** Trusted publication composition only. Pins do not attest installation or
+   * permission; the existing publication qualifier must establish that evidence.
+   * Expected coordinates come from the immutable release, separately from pins. */
+  liveRead?: {
+    source: EntitySourceIdentityV1;
+    contract: EntityLiveReadContractV1;
+  };
 }) {
   const { native, registration } = input;
+  if (
+    input.liveRead !== undefined &&
+    (!input.liveRead || typeof input.liveRead !== "object")
+  )
+    throw Error("NATIVE_PROJECTION_LIVE_SOURCE_MISMATCH");
+  const liveRead = input.liveRead && structuredClone(input.liveRead);
+  if (liveRead) {
+    validateEntityLiveReadContractV1(liveRead.contract);
+    for (const key of [
+      "entityId",
+      "releaseId",
+      "contractHash",
+      "tenantId",
+    ] as const)
+      if (liveRead.source[key] !== liveRead.contract.source[key])
+        throw Error("NATIVE_PROJECTION_LIVE_SOURCE_MISMATCH");
+  }
   const commonReference =
     native.referenceCapability === COMMON_REFERENCE_VIEW_PERMISSION ||
     (Array.isArray(native.operationPermissions) &&
@@ -306,7 +335,10 @@ export function compileNativeRuntimeProjection(input: {
     ...(commonReference
       ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION }
       : {}),
-    schema: "athyper.entity-runtime-descriptor/1.0",
+    schema: liveRead
+      ? "athyper.entity-runtime-descriptor/1.1"
+      : "athyper.entity-runtime-descriptor/1.0",
+    ...(liveRead ? { liveReadContract: liveRead.contract } : {}),
     entityCode: registration.entityCode,
     planeKey: registration.plane,
     storage: registration.storage,
@@ -507,9 +539,10 @@ export function compileNativeRuntimeProjection(input: {
   parseEntityRuntimeDescriptor({
     entity_code: registration.entityCode,
     plane_code: registration.plane,
-    release_id: "00000000-0000-4000-8000-000000000001",
+    release_id:
+      liveRead?.source.releaseId ?? "00000000-0000-4000-8000-000000000001",
     release_no: 1,
-    entity_contract_hash: compiledHash,
+    entity_contract_hash: liveRead?.source.contractHash ?? compiledHash,
     compiled_hash: compiledHash,
     compiled_json: descriptor,
   });

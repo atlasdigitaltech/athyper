@@ -7,6 +7,18 @@ working-tree metadata draft, or onboard additional entities.
 
 ## Live-read resource publication transport — 2026-10-08
 
+Follow-up: the shared native runtime projection and publication lowering now support
+explicit version-1.1 live-read contracts. Source coordinates are checked against the
+immutable publication source, then validated by the real runtime parser. Historical
+version-1.0 output remains unchanged. A native compiler/reader fixture covers exact
+pin preservation, source mismatches, malformed hashes and immutable output. This is
+projection implementation, not a qualified security/storage resource producer or
+installed runtime evidence adapter. No DEV mutation or activation occurred in this
+follow-up. Native conversion and deployed F6/F8/F9 remain incomplete.
+
+Follow-up validation: 11 native compilation tests, 194 metadata tests (2 skipped),
+474 publication tests (5 skipped); authoring, metadata and publication typechecks.
+
 The shared publication pipeline now accepts closed `entity_security_manifest` and
 `entity_storage_authority` resources. They reuse `publication.release`, independent
 resource review, signing, dispatch and local payload activation. The resource's

@@ -3140,6 +3140,13 @@ Live-read security and storage-authority resources use the same reviewed publica
 ledger and signed envelope, with explicit `entity_security_manifest` and
 `entity_storage_authority` kinds. Their content selects the target plane and tenant
 scope; descriptor/identity-review resources retain their existing Studio restriction.
+The shared native runtime projection can produce descriptor version 1.1 only with
+an explicit live-read contract from trusted publication composition. Publication
+lowering compares its entity/release/contract/tenant coordinates with the immutable
+source; the real descriptor parser validates the resulting output. Historical
+projection without that contract remains version 1.0. This mapping does not attest
+installed security/storage coverage: existing publication qualification and consuming
+runtime evidence gates remain mandatory, with no implicit pins or authority.
 Consumers verify the content pin and local scope, require semantic qualification,
 and retain the original signed document in the immutable derived payload projection
 for request-time key-trust verification. Signature verification alone does not

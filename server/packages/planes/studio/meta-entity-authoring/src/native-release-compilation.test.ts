@@ -1,3 +1,4 @@
+import { lowerNativeRuntimePublication } from "../../../../services/publication/src/compilation/native-runtime.js";
 import { compileNativeRuntimeProjection } from "../../../../platform/metadata/src/native-runtime-projection.js";
 import { expect, it, vi } from "vitest";
 import type { Transaction } from "kysely";
@@ -620,3 +621,128 @@ it.each([false, true])(
     });
   },
 );
+
+it("projects explicit live-read pins through the native compiler and versioned reader", () => {
+  const f = fixture(),
+    artifact = f.run();
+  const source = {
+    entityId: f.graph.authoringSource.entityId,
+    releaseId: id(900),
+    contractHash: artifact.contractHash,
+    tenantId: f.graph.authoringSource.tenantId,
+  };
+  const pin = {
+    owner: "synthetic-tests",
+    namespace: "entity",
+    key: "security",
+    version: 1,
+    hash: "a".repeat(64),
+  };
+  const contract = {
+    schema: "entity.live-read/1" as const,
+    source,
+    security: pin,
+    storageAuthority: { ...pin, key: "storage", hash: "b".repeat(64) },
+  };
+  const input = {
+    native: artifact.descriptor,
+    registration: {
+      entityCode: f.graph.entity.entityCode,
+      plane: "studio" as const,
+      storage: {
+        schema: "shared",
+        object: "synthetic_reference",
+        idField: "id",
+      },
+      columns: ["id", "code", "name"],
+    },
+    permissions: [],
+  };
+  const legacy = compileNativeRuntimeProjection(input);
+  const projected = compileNativeRuntimeProjection({
+    ...input,
+    liveRead: { source, contract },
+  });
+  expect(projected.schema).toBe("athyper.entity-runtime-descriptor/1.1");
+  expect(projected.liveReadContract).toEqual(contract);
+  const publicationSource = {
+    releaseId: source.releaseId,
+    releaseNo: 1,
+    publicationKey: "metadata.reference.synthetic",
+    plane: "studio" as const,
+    tenantId: source.tenantId,
+    entityCode: f.graph.entity.entityCode,
+    revisionId: id(904),
+    sourceEntityId: source.entityId,
+    sourceReleaseHash: "c".repeat(64),
+    sourceContractHash: source.contractHash,
+    sourceDescriptorHash: artifact.descriptorHash,
+    generatedAt: "2026-10-08T00:00:00.000Z",
+    native: artifact.descriptor,
+    contract: f.graph as unknown as Record<string, unknown>,
+  };
+  expect(() =>
+    compileNativeRuntimeProjection({
+      ...input,
+      liveRead: null as unknown as NonNullable<
+        Parameters<typeof compileNativeRuntimeProjection>[0]["liveRead"]
+      >,
+    }),
+  ).toThrow("NATIVE_PROJECTION_LIVE_SOURCE_MISMATCH");
+  expect(() =>
+    lowerNativeRuntimePublication(publicationSource, {
+      registration: input.registration,
+      permissions: [],
+      liveReadContract: null as unknown as typeof contract,
+    }),
+  ).toThrow("ENTITY_LIVE_READ_CONTRACT_INVALID");
+  const lowered = lowerNativeRuntimePublication(publicationSource, {
+    registration: input.registration,
+    permissions: [],
+    liveReadContract: contract,
+  });
+  expect(lowered.runtimeContracts?.[f.graph.entity.entityCode]).toMatchObject({
+    schema: "athyper.entity-runtime-descriptor/1.1",
+    liveReadContract: contract,
+  });
+  expect(() =>
+    lowerNativeRuntimePublication(
+      { ...publicationSource, sourceEntityId: id(999) },
+      {
+        registration: input.registration,
+        permissions: [],
+        liveReadContract: contract,
+      },
+    ),
+  ).toThrow("NATIVE_PROJECTION_LIVE_SOURCE_MISMATCH");
+
+  const { liveReadContract: _pins, schema: _schema, ...rest } = projected;
+  const { schema: _legacySchema, ...legacyRest } = legacy;
+  expect(rest).toEqual(legacyRest);
+  expect(legacy.schema).toBe("athyper.entity-runtime-descriptor/1.0");
+  expect(legacy).not.toHaveProperty("liveReadContract");
+  contract.security.key = "changed-after-compilation";
+  expect(projected.liveReadContract!.security.key).toBe("security");
+  for (const mismatch of [
+    { entityId: id(901) },
+    { releaseId: id(902) },
+    { contractHash: "f".repeat(64) },
+    { tenantId: id(903) },
+  ]) {
+    expect(() =>
+      compileNativeRuntimeProjection({
+        ...input,
+        liveRead: { source: { ...source, ...mismatch }, contract },
+      }),
+    ).toThrow("NATIVE_PROJECTION_LIVE_SOURCE_MISMATCH");
+  }
+  expect(() =>
+    compileNativeRuntimeProjection({
+      ...input,
+      liveRead: {
+        source,
+        contract: { ...contract, security: { ...pin, hash: "invalid" } },
+      },
+    }),
+  ).toThrow("ENTITY_LIVE_READ_CONTRACT_INVALID");
+});
