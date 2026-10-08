@@ -51,3 +51,15 @@ Board and Cards share one card resolution, in this precedence:
 
 1. **Published `cardContent.fields`.** This is the compiled projection of the surface's `binding_kind = summary` placements, authored in the existing "Cards and summaries" editor. Fields appear in placement order, with each placement's qualified display component as `rendererKey`. When present, it defines the card body exactly, and `cardPriority` is ignored for that surface.
 2. **Otherwise, today's behaviour:** `recordCardLayout()` over the user's visible columns, ordered by `cardPriority`. This is explicit list metadata (columns and card priority), not inference.
+
+## 5. Count mode in list chrome (added after the move, under Calendar decision 1)
+
+**Rule.** A count shown in list chrome requires exact counts (`limits.countMode = "exact"`). Without exact counts, the chrome never shows a number that could be wrong. Its wording relies on `hasNext` instead, for example "More records than fit in this period. Showing the first N."
+
+**How each layout applies it.**
+
+- **Board** shows lane counts and a distribution summary as part of its chrome, so it requires exact counts. Without them, Board is unavailable with `LIST_BOARD_COUNTS_UNAVAILABLE` (Board blueprint, section 6).
+- **Calendar** shows no count in its chrome, so it does not require exact counts. The Unscheduled tray count, any per-period summary, and the "N of M" wording appear only under exact counts. Otherwise the overflow notice uses `hasNext` (Calendar blueprint, section 7).
+- **Table and Cards** keep their existing record-count display, which already reports the list's count mode.
+
+**Why the layouts differ.** A layout whose chrome is made of counts needs real totals. A layout without count chrome would only exclude large tables, for no benefit, if it required them. The difference is this rule applied to different chrome, not an inconsistency to correct.
