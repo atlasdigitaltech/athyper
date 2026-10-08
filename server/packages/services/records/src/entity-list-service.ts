@@ -1071,6 +1071,7 @@ export function createEntityListService(options: {
           filters: query.filters ?? [],
           sort: query.sort ?? [],
           group: query.group ?? null,
+          groupsOnly: query.groupsOnly === true,
           search: query.search ?? null,
           countMode: query.countMode ?? "none",
         }),
@@ -1379,7 +1380,7 @@ export function compileEntityListDescriptor(
         ? configuredFilterOperators(field)
         : Object.freeze([]),
       sortable: field.sortable === true,
-      groupable: field.list?.groupable === true,
+      groupable: groupableForViewer(field, masked, options.length),
       aggregations: Object.freeze(field.list?.aggregations ?? []),
     });
   });
@@ -1890,6 +1891,23 @@ async function effectiveDataOperations(
       draftOnly: config?.draftOnly ?? descriptor.planeKey === "studio",
     }),
   });
+}
+
+/** Grouping eligibility by class (Tree blueprint section 2.1): published as
+ * groupable, unmasked, filterable with `eq` (and `is_null` when the field can
+ * be empty), and bounded: a boolean, or a field with an authorized choice list
+ * of at most 50 entries. The choice list also labels the group headings, so
+ * unbounded fields (free text, dates, large references) never group. */
+export const LIST_GROUP_CHOICE_LIMIT = 50;
+function groupableForViewer(
+  field: EntityFieldDescriptor,
+  masked: boolean,
+  choiceCount: number,
+): boolean {
+  if (field.list?.groupable !== true || masked || !field.filterable) return false;
+  const operators = configuredFilterOperators(field);
+  if (!operators.includes("eq") || (!field.required && !operators.includes("is_null"))) return false;
+  return field.type === "boolean" || (choiceCount > 0 && choiceCount <= LIST_GROUP_CHOICE_LIMIT);
 }
 
 function filterOptions(

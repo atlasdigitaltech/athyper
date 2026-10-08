@@ -19,6 +19,7 @@ import {
   ENTITY_LIST_MAX_FILTERS,
   ENTITY_LIST_MAX_SEARCH_LENGTH,
   ENTITY_LIST_MAX_SORT_LEVELS,
+  ENTITY_LIST_MAX_GROUP_LEVELS,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
 } from "./types";
 import type {
@@ -893,11 +894,19 @@ function parseState(
     ? requestedMode
     : (rules.defaultMode ?? rules.supportedModes.values().next().value);
   if (!mode) throw new TypeError("list state has no supported mode");
-  const groupCandidate = optionalCode(record.group, "group");
-  const group =
-    groupCandidate && rules.fields.get(groupCandidate)?.groupable
-      ? groupCandidate
-      : undefined;
+  // Grouping levels: `groups`, or a legacy single `group` read as one level.
+  // Fields that no longer qualify are dropped and the rest move up.
+  const groupCandidates = Array.isArray(record.groups)
+    ? record.groups
+    : record.group === undefined
+      ? []
+      : [record.group];
+  const groups: string[] = [];
+  for (const [index, candidate] of groupCandidates.entries()) {
+    const key = optionalCode(candidate, `groups[${index}]`);
+    if (key && rules.fields.get(key)?.groupable && !groups.includes(key) && groups.length < ENTITY_LIST_MAX_GROUP_LEVELS)
+      groups.push(key);
+  }
   const spreadsheet =
     record.spreadsheet === undefined
       ? undefined
@@ -925,7 +934,7 @@ function parseState(
       : {}),
     filters: Object.freeze(filters),
     sort: Object.freeze(sort),
-    ...(group ? { group } : {}),
+    ...(groups.length ? { groups: Object.freeze(groups) } : {}),
     columns: Object.freeze(columns),
     density: oneOf(record.density, DENSITIES, "density") as ListDensity,
     mode,

@@ -32,8 +32,10 @@ describe("stored list views apply exactly as saved or not at all", () => {
     assert.throws(() => parseStoredListState(saved([{ field: "due_on", operator: "gte", value: "2026-10-01T00:00:00" }]), descriptor), /YYYY-MM-DD/);
   });
 
-  it("refuses a view whose sort or group no longer applies", () => {
+  it("refuses a view whose sort no longer applies, and drops grouping fields that no longer qualify", () => {
     assert.throws(() => parseStoredListState(saved([], { sort: [{ field: "retired_field", direction: "asc" }] }), descriptor), /no longer applies/);
-    assert.throws(() => parseStoredListState(saved([], { group: "code" }), descriptor), /no longer applies/);
+    // Grouping is display state: an ineligible field is dropped and the rest
+    // move up (Tree blueprint section 5.1), never retiring the view.
+    assert.equal(parseStoredListState(saved([], { group: "code" }), descriptor).groups, undefined);
   });
 });

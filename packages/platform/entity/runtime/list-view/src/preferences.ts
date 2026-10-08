@@ -39,7 +39,7 @@ export function saveableViewState(
       : {}),
     filters: state.filters,
     sort: state.sort,
-    ...(state.group ? { group: state.group } : {}),
+    ...(state.groups?.length ? { groups: state.groups } : {}),
     columns: state.columns,
     density: state.density,
     mode: state.mode,
@@ -128,8 +128,7 @@ export function parseStoredListState(
   const length = (items: unknown) => (Array.isArray(items) ? items.length : 0);
   if (
     length(value.filters) !== parsed.filters.length ||
-    length(value.sort) !== parsed.sort.length ||
-    (value.group !== undefined && value.group !== parsed.group)
+    length(value.sort) !== parsed.sort.length
   )
     throw new TypeError("Saved view no longer applies exactly as saved");
   return parsed;

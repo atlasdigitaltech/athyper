@@ -200,6 +200,8 @@ export interface RecordRepositoryListInput {
   readonly filters: ListRecordsQuery["filters"];
   readonly sort: ListRecordsQuery["sort"];
   readonly group?: string;
+  /** Skip the row query and return only the group buckets. */
+  readonly groupsOnly?: boolean;
   readonly search?: string;
   readonly countMode: ListRecordsQuery["countMode"];
   readonly projection: readonly string[];

@@ -1183,6 +1183,7 @@ export const entityRuntimeMessages = {
   ],
   "list.notice.text": ["{text}", "{text}", "{text}"],
   "list.group.allRecords": ["All records", "Semua rekod", "كل السجلات"],
+  "list.group.thenBy": ["Then by", "Kemudian mengikut", "ثم حسب"],
   "list.loadingRecords": [
     "Loading records",
     "Memuatkan rekod",

@@ -115,7 +115,7 @@ describe("calendar windows and wire format", () => {
       sort: [{ field: "code", direction: "desc" }],
       columns: [],
       density: "comfortable",
-      group: "stage",
+      groups: ["stage"],
       pageSize: 10,
     } as unknown as ListLocationStateV1;
     const context = { timeZone: "UTC", weekStart: 1 };
@@ -127,7 +127,7 @@ describe("calendar windows and wire format", () => {
     );
     assert.deepEqual(page.sort, [{ field: "starts_on", direction: "asc" }]);
     assert.equal(page.pageSize, 50);
-    assert.equal(page.group, undefined);
+    assert.equal(page.groups, undefined);
     assert.deepEqual(page.filters[0], {
       field: "stage",
       operator: "eq",

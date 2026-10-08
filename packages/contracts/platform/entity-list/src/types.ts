@@ -52,6 +52,8 @@ export type JsonValue = JsonPrimitive | JsonArray | JsonObject;
  * cannot create requests that the records API will reject or URLs that proxies
  * cannot safely carry. */
 export const ENTITY_LIST_MAX_VISIBLE_COLUMNS = 100;
+/** Grouping levels (Tree blueprint decision 4). */
+export const ENTITY_LIST_MAX_GROUP_LEVELS = 3;
 export const ENTITY_LIST_MAX_FILTERS = 20;
 export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
 export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
@@ -167,7 +169,9 @@ export interface SaveableListStateV1 {
   readonly query?: string;
   readonly filters: readonly ListFilterV1[];
   readonly sort: readonly ListSortV1[];
-  readonly group?: string;
+  /** Grouping fields, level 1 first (Tree blueprint section 5.1): 1–3, ordered,
+   * unique. A legacy single `group` reads as one level. */
+  readonly groups?: readonly string[];
   readonly columns: readonly string[];
   readonly density: ListDensity;
   readonly mode: ListViewMode;

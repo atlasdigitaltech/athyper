@@ -448,7 +448,7 @@ export function overviewListState(
     filters: [],
     query: undefined,
     standardViewKey: undefined,
-    group: undefined,
+    groups: undefined,
     columns: [
       ...new Set([
         descriptor.entity.identityField,

@@ -572,9 +572,11 @@ export function adaptEntityCollection(
     query = "",
     filters,
     sort,
-    group,
+    groups,
     density,
   } = descriptor.surface.defaultState;
+  // Collections group by one field: the list's first grouping level.
+  const group = groups?.[0];
   return parseCollectionConfiguration(
     {
       schema: COLLECTION_SCHEMA,

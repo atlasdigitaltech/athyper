@@ -23,7 +23,8 @@ export async function executeAuthorizedAggregate<Transaction>(input: {
   const ids: string[] = [],
     seen = new Set<string>(),
     cursors = new Set<string>();
-  const { cursor: _cursor, group: _group, ...base } = query;
+  // Identity enumeration reads rows, so it never runs groups-only.
+  const { cursor: _cursor, group: _group, groupsOnly: _groupsOnly, ...base } = query;
   const deadline = Date.now() + 5000;
   const withinBudget = () => {
     if (Date.now() > deadline)

@@ -47,6 +47,9 @@ export interface ListRecordsQuery {
   /** Requested readable response fields. The server adds identity and query-internal fields as required. */
   readonly fields?: readonly string[];
   readonly group?: string;
+  /** Groups only, no rows (Tree blueprint section 5.1). Valid only with
+   * `group` and exact counts and no cursor. */
+  readonly groupsOnly?: boolean;
   readonly search?: string;
   readonly countMode?: RecordCountMode;
   readonly hydrateReferences?: boolean;

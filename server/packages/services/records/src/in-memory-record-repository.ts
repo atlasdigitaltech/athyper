@@ -38,6 +38,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const total = rows.length;
       // Group counts only under exact counts (layout foundation section 5).
       const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group) : undefined;
+      if (input.groupsOnly && groups)
+        return { data: [], groups, pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       const cursor = decodeRecordCursor(input);
       if (cursor) rows = rows.filter((row) => afterCursor(row, input.descriptor, input.sort ?? [], cursor));
       const candidates = rows.slice(0, input.limit + 1);

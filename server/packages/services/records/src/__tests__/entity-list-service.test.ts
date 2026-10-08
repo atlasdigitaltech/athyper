@@ -324,6 +324,9 @@ describe("safe entity list service", () => {
           writableOn: [],
           filterable: true,
           sortable: true,
+          // A groupable enum publishes its choices: grouping is bounded by
+          // the choice list (Tree blueprint section 2.1).
+          validation: { options: ["open", "won"] },
           list: { groupable: true },
         },
       ],
@@ -704,6 +707,33 @@ describe("safe entity list service", () => {
       }),
     );
     expect(uncounted.groups).toBeUndefined();
+  });
+
+  it("offers a field for grouping only when it is bounded by class", async () => {
+    const field = (key: string, type: string, extra: Record<string, unknown> = {}) => ({
+      key, storagePath: key, type, required: false, writableOn: [], filterable: true, list: { groupable: true }, ...extra,
+    });
+    const many = Array.from({ length: 51 }, (_, index) => `v${index}`);
+    const presented = {
+      ...descriptor,
+      fields: [
+        ...descriptor.fields,
+        field("flag", "boolean"),
+        field("stage", "enum", { validation: { options: ["open", "won"] } }),
+        field("bucket", "enum", { validation: { options: many } }),
+        field("loose", "enum"),
+        field("note", "string"),
+        field("due", "date"),
+        field("hidden", "enum", { validation: { options: ["a"] }, list: { groupable: false } }),
+      ],
+    } as EntityRuntimeDescriptor;
+    const compiled = parseEntityListDescriptor(
+      await createTestListService({ metadata: { getEntityDescriptor: async () => presented }, descriptor: presented, authorizer: allowReadOnly() })
+        .descriptor(context, presented.entityCode),
+    );
+    const groupable = Object.fromEntries(compiled.fields.map((item) => [item.key, item.groupable]));
+    // A boolean, or a choice list of at most 50 entries; nothing unbounded.
+    expect(groupable).toMatchObject({ flag: true, stage: true, bucket: false, loose: false, note: false, due: false, hidden: false });
   });
 
   it("never labels a reference group with its raw value", async () => {

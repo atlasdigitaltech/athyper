@@ -800,7 +800,7 @@ function EntityCollectionRuntime({
           query: state.query ?? null,
           filters: state.filters,
           sort: state.sort,
-          group: state.group ?? null,
+          groups: state.groups ?? null,
           columns: state.columns,
           cursor: state.cursor ?? null,
           pageSize: state.pageSize ?? null,
@@ -1265,7 +1265,7 @@ function EntityCollectionRuntime({
               ? state.query.trim()
               : undefined,
           sort: state.sort,
-          group: state.group,
+          group: state.groups?.[0],
           fields: state.columns.length ? state.columns : undefined,
           selectedIds: [...selectedIds],
           visibleIds:
@@ -1879,7 +1879,7 @@ function EntityCollectionRuntime({
             ) : page ? (
               <>
                 <EntityRows
-                  key={`${authorityKey}:${state.group ?? ""}`}
+                  key={`${authorityKey}:${state.groups?.join(",") ?? ""}`}
                   descriptor={descriptor}
                   page={page}
                   fields={fields}
@@ -1900,7 +1900,7 @@ function EntityCollectionRuntime({
                     )
                   }
                   sort={pageState?.sort ?? state.sort}
-                  group={(pageState ?? state).group}
+                  groups={(pageState ?? state).groups}
                   query={(pageState ?? state).query}
                   filtered={(pageState?.filters ?? state.filters).length > 0}
                   loading={loading || (!error && !resultsCurrent)}
@@ -2221,9 +2221,13 @@ function ListChrome({
     (page
       ? `${entityIntl.number(page.rows.length)}${page.pagination.hasNext ? "+" : ""}`
       : undefined);
-  const groupLabel = state.group
-    ? (descriptor.fields.find((field) => field.key === state.group)?.label ??
-      state.group)
+  const groupLabel = state.groups?.length
+    ? state.groups
+        .map(
+          (key) =>
+            descriptor.fields.find((field) => field.key === key)?.label ?? key,
+        )
+        .join(" › ")
     : "None";
   const scopeLabel = descriptor.scope.labels.at(-1);
   const customized =
@@ -2234,7 +2238,7 @@ function ListChrome({
     onChange(
       {
         standardViewKey: undefined,
-        group: undefined,
+        groups: undefined,
         spreadsheet: undefined,
         ...descriptor.surface.defaultState,
         query: state.query,
@@ -2396,7 +2400,7 @@ function ListChrome({
                 onChange(
                   {
                     standardViewKey: undefined,
-                    group: undefined,
+                    groups: undefined,
                     spreadsheet: undefined,
                     ...view.state,
                     query: state.query,
@@ -2736,8 +2740,8 @@ function ListChrome({
                 open
                 onOpenChange={finish}
                 descriptor={descriptor}
-                group={state.group}
-                onApply={(group) => onChange({ group }, "push")}
+                groups={state.groups}
+                onApply={(groups) => onChange({ groups }, "push")}
               />
             ),
             display: (
@@ -3874,7 +3878,7 @@ function SavedViewsDialog({
   const apply = (view?: SavedListView) => {
     onApply({
       standardViewKey: undefined,
-      group: undefined,
+      groups: undefined,
       spreadsheet: undefined,
       ...descriptor.surface.defaultState,
       ...view?.state,
@@ -4308,7 +4312,7 @@ function EntityRows({
   filters,
   onFilters,
   sort,
-  group,
+  groups,
   query,
   filtered,
   loading,
@@ -4335,7 +4339,7 @@ function EntityRows({
   readonly filters: readonly ListFilterV1[];
   readonly onFilters: (field: string, filters: readonly ListFilterV1[]) => void;
   readonly sort: readonly ListSortV1[];
-  readonly group?: string;
+  readonly groups?: readonly string[];
   readonly query?: string;
   readonly filtered: boolean;
   readonly loading: boolean;
@@ -4347,6 +4351,7 @@ function EntityRows({
   readonly onSelectionChange: (ids: ReadonlySet<string>) => void;
   readonly onSort: (field: string, additive: boolean) => void;
 }) {
+  const group = groups?.[0];
   const recordClick =
     (row: EntityListRowV1) => (event: React.MouseEvent<HTMLAnchorElement>) => {
       if (
@@ -4437,7 +4442,7 @@ function EntityRows({
   };
   const pageSelected =
     page.rows.length > 0 && page.rows.every((row) => selectedIds.has(row.id));
-  const groups = groupedRows(page, group, descriptor, intl),
+  const pageGroups = groupedRows(page, group, descriptor, intl),
     layout = recordCardLayout(descriptor, fields),
     cards = (rows: readonly EntityListRowV1[], headingLevel: 2 | 3 = 2) => (
       <div className="a-entity-list__cards" aria-busy={loading}>
@@ -4488,7 +4493,7 @@ function EntityRows({
   if (rendererKind === "cards")
     return group ? (
       <div className="a-entity-list__groups">
-        {groups.map((item) => (
+        {pageGroups.map((item) => (
           <section key={item.key}>
             <h2>{groupHeading(item)}</h2>
             {collapsedGroups.has(item.key) ? null : cards(item.rows, 3)}
@@ -4716,7 +4721,7 @@ function EntityRows({
         </thead>
         <tbody>
           {group
-            ? groups.flatMap((item) => [
+            ? pageGroups.flatMap((item) => [
                 <tr
                   className="a-entity-list__group-row"
                   key={`group-${item.key}`}

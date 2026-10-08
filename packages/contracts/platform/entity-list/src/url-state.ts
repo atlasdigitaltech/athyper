@@ -104,13 +104,16 @@ export function decodeListLocationState(
   if (parameters.has("standardView"))
     apply({ standardViewKey: parameters.get("standardView") || undefined });
   if (parameters.has("q")) apply({ query: parameters.get("q") || undefined });
-  if (parameters.has("group") || parameters.get("group.clear") === "1")
+  // `groups=a,b,c`; a legacy `group=x` reads as one level.
+  if (parameters.has("groups") || parameters.has("group") || parameters.get("group.clear") === "1")
     apply({
       ...(parameters.get("group.clear") === "1"
-        ? { group: undefined }
-        : parameters.get("group")
-          ? { group: parameters.get("group")! }
-          : {}),
+        ? { groups: undefined }
+        : parameters.get("groups")
+          ? { groups: parameters.get("groups")!.split(",").filter(Boolean) }
+          : parameters.get("group")
+            ? { groups: [parameters.get("group")!] }
+            : {}),
     });
   if (
     parameters.has("cols") ||
@@ -231,8 +234,8 @@ export function encodeListLocationState(
         ? normalized.sort.map(formatSort).join(",")
         : "none",
     );
-  if (normalized.group !== base.group) {
-    if (normalized.group) parameters.set("group", normalized.group);
+  if ((normalized.groups ?? []).join(",") !== (base.groups ?? []).join(",")) {
+    if (normalized.groups?.length) parameters.set("groups", normalized.groups.join(","));
     else parameters.set("group.clear", "1");
   }
   encodeColumns(parameters, normalized.columns, base.columns);
@@ -287,7 +290,7 @@ export function toSaveableListState(
     ...(state.query ? { query: state.query } : {}),
     filters: state.filters,
     sort: state.sort,
-    ...(state.group ? { group: state.group } : {}),
+    ...(state.groups?.length ? { groups: state.groups } : {}),
     columns: state.columns,
     density: state.density,
     mode: state.mode,

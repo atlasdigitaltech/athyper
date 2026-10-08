@@ -140,7 +140,7 @@ export function dateRangeQueryState(
     ...state,
     filters: [...state.filters, ...filters],
     sort: [{ field: field.start, direction: "asc" }],
-    group: undefined,
+    groups: undefined,
     cursor: undefined,
     pageIndex: undefined,
     pageSize: Math.max(...descriptor.limits.allowedPageSizes),

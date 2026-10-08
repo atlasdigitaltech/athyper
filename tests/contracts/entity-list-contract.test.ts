@@ -668,6 +668,26 @@ describe("entity list browser contract", () => {
     assert.equal(ranged.surface.calendar?.dateFields[0]?.endNullable, false);
   });
 
+  it("reads grouping levels from groups, keeps a legacy group as one level, and saves only groups", () => {
+    const fields = [
+      ...descriptorPayload.fields,
+      { key: "region", label: "Region", valueKind: "enum", defaultVisible: false, defaultOrder: 4, filterOperators: ["eq", "is_null"], sortable: false, groupable: true, aggregations: [] },
+      { key: "tier", label: "Tier", valueKind: "enum", defaultVisible: false, defaultOrder: 5, filterOperators: ["eq", "is_null"], sortable: false, groupable: true, aggregations: [] },
+      { key: "owner", label: "Owner", valueKind: "enum", defaultVisible: false, defaultOrder: 6, filterOperators: ["eq", "is_null"], sortable: false, groupable: true, aggregations: [] },
+    ];
+    const descriptor = parseEntityListDescriptor({ ...descriptorPayload, fields });
+    // Old to new, exactly: a legacy group= link reads as one level.
+    assert.deepEqual(decodeListLocationState("?group=status", descriptor).groups, ["status"]);
+    // Ordered, deduplicated, capped at 3; a field that cannot group is dropped and the rest move up.
+    assert.deepEqual(decodeListLocationState("?groups=region,code,region,status,tier,owner", descriptor).groups, ["region", "status", "tier"]);
+    const state = decodeListLocationState("?groups=region,status", descriptor);
+    assert.equal(encodeListLocationState(state, descriptor).get("groups"), "region,status");
+    const saved = toSaveableListState(state);
+    assert.deepEqual(saved.groups, ["region", "status"]);
+    assert.equal("group" in saved, false); // no dual write
+    assert.equal(decodeListLocationState("?groups=region&group.clear=1", descriptor).groups, undefined);
+  });
+
   it("parses a viewer's Gantt, normalizes its state and keeps the anchor out of saved state", () => {
     const fields = [
       ...descriptorPayload.fields,

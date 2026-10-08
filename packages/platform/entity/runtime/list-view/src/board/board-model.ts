@@ -1,3 +1,4 @@
+import type { EntityListQueryState } from "@athyper/platform-api-client";
 import {
   ENTITY_LIST_MAX_FILTERS,
   resolveEntityText,
@@ -94,7 +95,7 @@ export function laneFilterFits(state: Pick<ListLocationStateV1, "filters">): boo
 export function boardSummaryState(
   state: ListLocationStateV1,
   descriptor: EntityListDescriptorV1,
-): ListLocationStateV1 {
+): ListLocationStateV1 & EntityListQueryState {
   if (state.mode !== "board" || !state.board) return state;
   return {
     ...state,

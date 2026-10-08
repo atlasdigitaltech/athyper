@@ -45,6 +45,11 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
         conditions.push(filterCondition(input.descriptor, filter));
       }
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));
+      if (input.groupsOnly) {
+        // Groups only (Tree blueprint section 5.1): no row query, no cursor.
+        const buckets = await groupBuckets(input, conditions, executor);
+        return { data: [], groups: buckets, pagination: { pageSize: 0, hasMore: false, total: buckets.reduce((sum, bucket) => sum + bucket.count, 0), countMode: "exact" as const } };
+      }
       const order = orderBy(input);
       const cursor = decodeRecordCursor(input);
       const pageConditions = cursor ? [...conditions, cursorCondition(input, cursor)] : conditions;

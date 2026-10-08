@@ -73,7 +73,17 @@ export const downloadRecordExportOperation:Operation<{readonly url:string}>=Obje
 
 export interface RecordImportPreviewReceipt { readonly sessionId: string; readonly validCount: number; readonly invalidCount: number; readonly rows: readonly { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[] }[]; }
 
-export function entityListQuery(state: Pick<ListLocationStateV1, "standardViewKey" | "query" | "filters" | "sort" | "group" | "columns" | "cursor" | "pageSize">, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
+/** One list request. `group`, `groupsOnly` and `hierarchy` are per request, not
+ * saved state: the grouped tree and the Tree layout set them for each level
+ * (Tree blueprint sections 5.1 and 5.3). */
+export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" | "query" | "filters" | "sort" | "columns" | "cursor" | "pageSize"> & {
+  readonly group?: string;
+  /** Groups only, no rows; valid only with `group` and exact counts. */
+  readonly groupsOnly?: boolean;
+  readonly hierarchy?: "nodes" | "orphans";
+};
+
+export function entityListQuery(state: EntityListQueryState, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
   const query = state.query?.trim();
   return Object.freeze({
     ...(state.standardViewKey?{standardView:state.standardViewKey}:{}),
@@ -82,6 +92,8 @@ export function entityListQuery(state: Pick<ListLocationStateV1, "standardViewKe
     ...(query && query.length >= descriptor.surface.search.minimumQueryLength ? { search: query } : {}),
     ...(state.columns.length ? { fields: Object.freeze([...state.columns]) } : {}),
     ...(state.group ? { group: state.group } : {}),
+    ...(state.groupsOnly ? { groupsOnly: "true" } : {}),
+    ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),
     ...(state.filters.length ? { filter: Object.freeze(state.filters.map((filter) => JSON.stringify(filter))) } : {}),
     ...(state.sort.length ? { sort: Object.freeze(state.sort.map((sort) => [sort.field, sort.direction, sort.nulls].filter(Boolean).join(":"))) } : {}),
     countMode: descriptor.limits.countMode,

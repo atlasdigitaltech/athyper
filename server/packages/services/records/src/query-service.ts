@@ -327,6 +327,7 @@ export function createRecordListExecutor<Transaction = unknown>(
                   ? { recordIds: Object.freeze([...new Set(query.recordIds)]) }
                   : {}),
                 ...(query.group ? { group: query.group } : {}),
+                ...(query.groupsOnly ? { groupsOnly: true } : {}),
                 ...(query.cursor ? { cursor: query.cursor } : {}),
                 ...(query.search ? { search: query.search } : {}),
               };
