@@ -39,6 +39,16 @@ import type { ListWidthTier } from "../presentation-tier";
 import { EntityRecordCard } from "../record-card";
 import { useDateRangePages } from "../date-range/date-range-data";
 import {
+  DatedAgenda,
+  DatedEntryNote,
+  NothingScheduled,
+  UnscheduledTray,
+  datedRowLabel,
+  datedTone,
+  formatDay,
+  type EntityIntl,
+} from "../date-range/date-range-parts";
+import {
   agendaByDay,
   dateRangeQueryState,
   mergeRows,
@@ -57,19 +67,6 @@ import {
   type WeekBar,
 } from "./calendar-model";
 
-type EntityIntl = ReturnType<typeof useEntityI18n>;
-
-/** Formats a calendar day without a time zone (UTC midnight, UTC zone). */
-function formatDay(
-  intl: EntityIntl,
-  day: string,
-  options: Intl.DateTimeFormatOptions,
-): string {
-  return intl.date(`${day}T00:00:00Z`, { ...options, timeZone: "UTC" });
-}
-
-/** The Calendar list view mode: Month and Agenda over a date window, an
- * open-ended stream and an Unscheduled tray, all through the list query. */
 export function EntityCalendar({
   client,
   descriptor,
@@ -172,7 +169,7 @@ export function EntityCalendar({
   const total =
     page?.pagination.countMode === "exact" ? page.pagination.total : undefined;
   const [openDay, setOpenDay] = useState<string>();
-  const label = (row: EntityListRowV1) => chipLabel(row, descriptor);
+  const label = (row: EntityListRowV1) => datedRowLabel(row, descriptor);
   const navigate = (next: string) => onCalendarChange({ calendarAnchor: next });
   const setState = (patch: Partial<ListCalendarStateV1>) =>
     onCalendarChange({
@@ -200,17 +197,21 @@ export function EntityCalendar({
   const entryCard = (entry: DatedEntry) =>
     card(
       entry.row,
-      <When entry={entry} field={field} intl={intl} timeZone={timeZone} />,
+      <DatedEntryNote
+        entry={entry}
+        field={field}
+        intl={intl}
+        timeZone={timeZone}
+      />,
     );
-  const fieldName = field.label;
 
   return (
-    <div className="a-entity-calendar">
-      <div className="a-entity-calendar__toolbar">
-        <h2 className="a-entity-calendar__period" aria-live="polite">
+    <div className="a-entity-calendar a-entity-dated">
+      <div className="a-entity-dated__toolbar">
+        <h2 className="a-entity-dated__period" aria-live="polite">
           {period}
         </h2>
-        <div className="a-entity-calendar__nav">
+        <div className="a-entity-dated__nav">
           <Button
             variant="secondary"
             size="small"
@@ -221,7 +222,7 @@ export function EntityCalendar({
           <Button
             variant="secondary"
             size="small"
-            className="a-entity-calendar__step"
+            className="a-entity-dated__step"
             aria-label={intl.message("list.calendar.previous")}
             onClick={() => navigate(addMonths(anchor, -1))}
           >
@@ -230,14 +231,14 @@ export function EntityCalendar({
           <Button
             variant="secondary"
             size="small"
-            className="a-entity-calendar__step"
+            className="a-entity-dated__step"
             aria-label={intl.message("list.calendar.next")}
             onClick={() => navigate(addMonths(anchor, 1))}
           >
             <span aria-hidden="true">›</span>
           </Button>
         </div>
-        <div className="a-entity-calendar__choices">
+        <div className="a-entity-dated__choices">
           {calendar.dateFields.length > 1 ? (
             <SegmentedControl
               label={intl.message("list.calendar.datesBy")}
@@ -268,7 +269,7 @@ export function EntityCalendar({
         </div>
       </div>
       {overflow ? (
-        <div className="a-entity-calendar__notice" role="status">
+        <div className="a-entity-dated__notice" role="status">
           <span>
             {total !== undefined
               ? intl.message("list.calendar.overflowOf", {
@@ -289,21 +290,13 @@ export function EntityCalendar({
         </div>
       ) : null}
       {pageCurrent && page && !entries.length ? (
-        <div className="a-entity-calendar__nothing">
-          <strong>{intl.message("list.calendar.empty", { period })}</strong>
-          <span>
-            {state.query?.trim()
-              ? intl.message("list.calendar.emptySearch", {
-                  query: state.query.trim(),
-                })
-              : intl.message("list.calendar.emptyField", { field: fieldName })}
-          </span>
-          {unscheduled.rows.length ? (
-            <span>
-              {intl.message("list.calendar.emptyTray", { field: fieldName })}
-            </span>
-          ) : null}
-        </div>
+        <NothingScheduled
+          period={period}
+          query={state.query}
+          field={field}
+          trayHasRows={unscheduled.rows.length > 0}
+          intl={intl}
+        />
       ) : view === "month" ? (
         <MonthGrid
           window={window}
@@ -321,7 +314,7 @@ export function EntityCalendar({
           onNavigate={navigate}
         />
       ) : (
-        <Agenda
+        <DatedAgenda
           byDay={agendaByDay(entries, window)}
           today={today}
           complete={complete}
@@ -339,51 +332,12 @@ export function EntityCalendar({
         />
       )}
       {tray ? (
-        <details className="a-entity-calendar__tray">
-          <summary>
-            <span>{intl.message("list.calendar.unscheduled")}</span>
-            {unscheduled.total !== undefined ? (
-              <span className="a-entity-calendar__count">
-                {intl.number(unscheduled.total)}
-              </span>
-            ) : null}
-          </summary>
-          <p className="a-entity-calendar__caption">
-            {intl.message("list.calendar.trayCaption", { field: fieldName })}
-          </p>
-          {unscheduled.rows.length ? (
-            <div className="a-entity-calendar__cards">
-              {unscheduled.rows.map((row) =>
-                card(
-                  row,
-                  field.end && row.values[field.end] ? (
-                    <strong>
-                      {intl.message("list.calendar.endsOn", {
-                        date: endLabel(intl, row.values[field.end], field),
-                      })}
-                    </strong>
-                  ) : (
-                    <strong>{intl.message("list.calendar.noDates")}</strong>
-                  ),
-                ),
-              )}
-            </div>
-          ) : (
-            <p className="a-entity-calendar__caption">
-              {intl.message("list.calendar.trayEmpty")}
-            </p>
-          )}
-          {unscheduled.hasNext ? (
-            <Button
-              variant="secondary"
-              size="small"
-              loading={unscheduled.loading}
-              onClick={unscheduled.loadMore}
-            >
-              {intl.message("list.calendar.loadMore")}
-            </Button>
-          ) : null}
-        </details>
+        <UnscheduledTray
+          field={field}
+          pages={unscheduled}
+          card={card}
+          intl={intl}
+        />
       ) : null}
       {openDay ? (
         <Dialog open onOpenChange={(value) => !value && setOpenDay(undefined)}>
@@ -396,120 +350,13 @@ export function EntityCalendar({
             })}
             closeLabel={intl.message("list.calendar.close")}
           >
-            <div className="a-entity-calendar__cards">
+            <div className="a-entity-dated__cards">
               {(byDay.get(openDay) ?? []).map(entryCard)}
             </div>
           </DialogContent>
         </Dialog>
       ) : null}
     </div>
-  );
-}
-
-function chipLabel(
-  row: EntityListRowV1,
-  descriptor: EntityListDescriptorV1,
-): string {
-  const title = descriptor.fields.find(
-    (item) =>
-      item.semanticRole === "title" &&
-      item.key !== descriptor.entity.identityField,
-  );
-  const value =
-    (title
-      ? (row.displayValues?.[title.key] ?? row.values[title.key])
-      : undefined) ??
-    row.displayValues?.[descriptor.entity.identityField] ??
-    row.values[descriptor.entity.identityField];
-  return value === undefined || value === null ? "" : String(value);
-}
-
-function endLabel(
-  intl: EntityIntl,
-  value: unknown,
-  field: ListCalendarDateFieldV1,
-): string {
-  const text = String(value);
-  return field.kind === "date"
-    ? formatDay(intl, text.slice(0, 10), {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : intl.date(text, { dateStyle: "medium", timeStyle: "short" });
-}
-
-function entryTone(entry: DatedEntry, field: ListCalendarDateFieldV1): string {
-  return (
-    (field.tone
-      ? field.tone.tones[String(entry.row.values[field.tone.field] ?? "")]
-      : undefined) ?? "neutral"
-  );
-}
-
-/** When an entry happens, as the card's note: a day, a range, an open-ended
- * start, or an instant with the person's time zone. */
-function When({
-  entry,
-  field,
-  intl,
-  timeZone,
-}: {
-  readonly entry: DatedEntry;
-  readonly field: ListCalendarDateFieldV1;
-  readonly intl: EntityIntl;
-  readonly timeZone: string;
-}) {
-  const short = (day: string) =>
-    formatDay(intl, day, { day: "numeric", month: "short" });
-  if (entry.openEnded) {
-    const from = entry.startsAt
-      ? intl.date(entry.startsAt, {
-          day: "numeric",
-          month: "short",
-          hour: "numeric",
-          minute: "2-digit",
-          timeZone,
-        })
-      : short(entry.firstDay);
-    return (
-      <>
-        <strong>{intl.message("list.calendar.from", { date: from })}</strong>
-        <span>
-          {intl.message("list.calendar.openEnded")}{" "}
-          <span className="a-entity-calendar__arrow" aria-hidden="true">
-            →
-          </span>
-        </span>
-      </>
-    );
-  }
-  if (entry.multiDay)
-    return (
-      <strong>
-        {short(entry.firstDay)} – {short(entry.lastDay)}
-      </strong>
-    );
-  if (field.kind === "datetime" && entry.startsAt)
-    return (
-      <>
-        <strong>
-          {intl.date(entry.startsAt, {
-            day: "numeric",
-            month: "short",
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone,
-          })}
-        </strong>
-        <span>{timeZone.replace(/_/g, " ")}</span>
-      </>
-    );
-  return (
-    <>
-      <strong>{short(entry.firstDay)}</strong>
-      <span>{intl.message("list.calendar.allDay")}</span>
-    </>
   );
 }
 
@@ -726,7 +573,7 @@ function Bar({
       {time ? <time>{time}</time> : null}
       <span className="a-entity-calendar__label">{text}</span>
       {ends ? (
-        <span className="a-entity-calendar__arrow" aria-hidden="true">
+        <span className="a-entity-dated__arrow" aria-hidden="true">
           →
         </span>
       ) : null}
@@ -741,7 +588,7 @@ function Bar({
     ]
       .filter(Boolean)
       .join(", "),
-    "data-tone": entryTone(entry, field),
+    "data-tone": datedTone(entry.row, field),
     "data-continues-before": bar.continuesBefore || undefined,
     "data-continues-after": bar.continuesAfter || undefined,
     "data-open-ended": entry.openEnded || undefined,
@@ -757,68 +604,5 @@ function Bar({
     </a>
   ) : (
     <span {...props}>{content}</span>
-  );
-}
-
-function Agenda({
-  byDay,
-  today,
-  complete,
-  intl,
-  card,
-  loadMore,
-  loading,
-}: {
-  readonly byDay: ReadonlyMap<string, readonly DatedEntry[]>;
-  readonly today: string;
-  readonly complete: boolean;
-  readonly intl: EntityIntl;
-  readonly card: (entry: DatedEntry) => ReactNode;
-  readonly loadMore?: () => void;
-  readonly loading: boolean;
-}) {
-  const days = [...byDay.keys()].sort();
-  return (
-    <div className="a-entity-calendar__agenda">
-      {days.map((day) => {
-        const name = formatDay(intl, day, {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        });
-        return (
-          <section key={day} aria-label={name}>
-            <h3>
-              <span>{name}</span>
-              {day === today ? (
-                <span className="a-entity-calendar__today">
-                  {intl.message("list.calendar.today")}
-                </span>
-              ) : null}
-              {complete ? (
-                <small>
-                  {intl.message("list.calendar.dayRecords", {
-                    count: byDay.get(day)!.length,
-                  })}
-                </small>
-              ) : null}
-            </h3>
-            <div className="a-entity-calendar__cards">
-              {byDay.get(day)!.map(card)}
-            </div>
-          </section>
-        );
-      })}
-      {loadMore ? (
-        <Button
-          variant="secondary"
-          size="small"
-          loading={loading}
-          onClick={loadMore}
-        >
-          {intl.message("list.calendar.loadMore")}
-        </Button>
-      ) : null}
-    </div>
   );
 }

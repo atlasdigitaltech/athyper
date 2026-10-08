@@ -125,7 +125,7 @@ test("date ranges, open-ended records, +N more and the Unscheduled tray", async 
   const dialog = page.getByRole("dialog", { name: /October 14, 2026/ });
   await expect(dialog.locator(".a-entity-list__card")).toHaveCount(6);
   await page.keyboard.press("Escape");
-  const tray = page.locator(".a-entity-calendar__tray");
+  const tray = page.locator(".a-entity-dated__tray");
   await tray.locator("summary").click();
   await expect(tray).toContainText("Backlog grooming");
   await expect(tray).toContainText("Ends Oct 30, 2026");
@@ -142,7 +142,7 @@ test("Agenda pages the window and reports overflow without inventing a total", a
   await expect(page.getByRole("region", { name: /Thursday, October 22/ }).locator(".a-entity-list__card")).toHaveCount(30);
   // An open-ended record appears once, on its first visible day, not on every day.
   await expect(page.getByRole("region", { name: /Thursday, October 1/ })).toContainText("Vendor contract");
-  await expect(page.locator(".a-entity-calendar__agenda").getByText("Vendor contract")).toHaveCount(1);
+  await expect(page.locator(".a-entity-dated__agenda").getByText("Vendor contract")).toHaveCount(1);
   await expect.poll(() => new URL(page.url()).searchParams.get("cal.view")).toBe("agenda");
   await expect(page.getByRole("region", { name: /Thursday, October 1/ }).locator(".a-entity-list__card-note")).toContainText("open-ended");
   await page.evaluate(() => window.scrollTo(0, 0)); // sticky day headings render in place

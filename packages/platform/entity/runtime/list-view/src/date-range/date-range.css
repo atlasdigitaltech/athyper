@@ -1,0 +1,215 @@
+/* Parts shared by the date layouts (Calendar, Gantt): toolbar, notices, the
+   empty state, the dated agenda, cards and the Unscheduled tray. Tone comes
+   from published choice tones via data-tone; every colour is a design-system
+   token. */
+.a-entity-dated > * {
+  min-width: 0;
+}
+.a-entity-dated [data-tone] {
+  --dated-tone: var(--a-muted-foreground);
+  --dated-tone-soft: var(--a-muted);
+  --dated-tone-text: var(--a-foreground);
+}
+.a-entity-dated [data-tone="success"] {
+  --dated-tone: var(--a-success);
+  --dated-tone-soft: var(--a-success-subtle);
+  --dated-tone-text: var(--a-success-subtle-foreground);
+}
+.a-entity-dated [data-tone="warning"] {
+  --dated-tone: var(--a-warning);
+  --dated-tone-soft: var(--a-warning-subtle);
+  --dated-tone-text: var(--a-warning-subtle-foreground);
+}
+.a-entity-dated [data-tone="danger"] {
+  --dated-tone: var(--a-danger);
+  --dated-tone-soft: var(--a-danger-subtle);
+  --dated-tone-text: var(--a-danger-subtle-foreground);
+}
+
+.a-entity-dated__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-space-2) var(--a-space-4);
+}
+.a-entity-dated__period {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--a-font-size-title);
+  font-weight: var(--a-font-weight-strong);
+  letter-spacing: var(--a-tracking-tighter);
+  line-height: 1.15;
+}
+.a-entity-dated__nav,
+.a-entity-dated__choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-space-2);
+}
+.a-entity-dated__step {
+  min-width: var(--a-density-control-height-small);
+  padding-inline: 0;
+  font-size: var(--a-font-size-md);
+}
+/* ‹ and › are bidi-mirrored glyphs, so right-to-left text flips them already;
+   → is not, so the arrow is flipped explicitly. */
+[dir="rtl"] .a-entity-dated__arrow {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+.a-entity-dated__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-space-2) var(--a-space-3);
+  margin: 0;
+  padding: var(--a-space-2) var(--a-space-3);
+  border-radius: var(--a-radius-md);
+  background: var(--a-warning-subtle);
+  color: var(--a-warning-subtle-foreground);
+  font-weight: var(--a-font-weight-regular);
+}
+.a-entity-dated__notice > span {
+  flex: 1 1 16rem;
+}
+.a-entity-dated__nothing {
+  display: grid;
+  justify-items: center;
+  gap: var(--a-space-1);
+  padding: var(--a-space-10) var(--a-space-4);
+  color: var(--a-muted-foreground);
+  text-align: center;
+}
+.a-entity-dated__nothing > strong {
+  color: var(--a-foreground);
+  font-size: var(--a-font-size-lg);
+  letter-spacing: var(--a-tracking-tight);
+}
+.a-entity-dated__caption {
+  margin: 0;
+  color: var(--a-muted-foreground);
+  font-size: var(--a-font-size-xs);
+}
+.a-entity-dated__arrow {
+  color: var(--dated-tone, var(--a-muted-foreground));
+  font-weight: var(--a-font-weight-strong);
+}
+.a-entity-dated__agenda {
+  display: grid;
+  gap: var(--a-space-4);
+}
+.a-entity-dated__agenda > section {
+  display: grid;
+  gap: var(--a-space-3);
+}
+.a-entity-dated__agenda h3 {
+  position: sticky;
+  z-index: 2;
+  inset-block-start: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--a-space-2);
+  margin: 0;
+  padding: var(--a-space-3) 0 var(--a-space-2);
+  border-block-end: var(--a-border-width) solid var(--a-border);
+  background: var(--a-surface);
+  font-size: var(--a-font-size-body);
+  font-weight: var(--a-font-weight-strong);
+  letter-spacing: var(--a-tracking-tight);
+}
+.a-entity-dated__agenda h3 small {
+  color: var(--a-muted-foreground);
+  font-size: var(--a-font-size-xs);
+  font-weight: var(--a-font-weight-regular);
+  letter-spacing: 0;
+}
+.a-entity-dated__today {
+  padding: 0 var(--a-space-2);
+  border-radius: var(--a-radius-round);
+  background: var(--a-primary);
+  color: var(--a-primary-foreground);
+  font-size: var(--a-font-size-2xs);
+  font-weight: var(--a-font-weight-medium);
+  letter-spacing: 0;
+}
+.a-entity-dated__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+  gap: var(--a-space-3);
+}
+.a-entity-dated__cards > .a-entity-list__card {
+  transition:
+    transform var(--a-motion-fast) var(--a-easing),
+    box-shadow var(--a-motion-fast) var(--a-easing);
+}
+.a-entity-dated__cards > .a-entity-list__card:hover,
+.a-entity-dated__cards > .a-entity-list__card:focus-within {
+  transform: translateY(-1px);
+  box-shadow: var(--a-shadow-md);
+}
+.a-entity-dated__tray {
+  display: grid;
+  gap: var(--a-space-3);
+  padding: var(--a-space-1) var(--a-space-3);
+  border: var(--a-border-width) dashed var(--a-border);
+  border-radius: var(--a-radius-lg);
+  background: var(--a-surface);
+}
+.a-entity-dated__tray[open] {
+  padding-block-end: var(--a-space-3);
+}
+.a-entity-dated__tray > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  min-height: calc(var(--a-density-control-height-small) + var(--a-space-2));
+  font-weight: var(--a-font-weight-strong);
+  cursor: pointer;
+  list-style: none;
+}
+.a-entity-dated__tray > summary::-webkit-details-marker {
+  display: none;
+}
+.a-entity-dated__tray > summary::before {
+  content: "\25B8";
+  color: var(--a-muted-foreground);
+  font-size: var(--a-font-size-xs);
+}
+.a-entity-dated__tray[open] > summary::before {
+  content: "\25BE";
+}
+[dir="rtl"] .a-entity-dated__tray:not([open]) > summary::before {
+  transform: scaleX(-1);
+}
+.a-entity-dated__tray > summary:focus-visible {
+  outline: var(--a-focus-width) solid var(--a-focus);
+  outline-offset: 2px;
+  border-radius: var(--a-radius-sm);
+}
+.a-entity-dated__count {
+  padding: 0 var(--a-space-2);
+  border-radius: var(--a-radius-round);
+  background: var(--a-muted);
+  color: var(--a-muted-foreground);
+  font-family: var(--a-font-mono);
+  font-size: var(--a-font-size-xs);
+  font-weight: var(--a-font-weight-regular);
+}
+.a-entity-dated__cards > .a-entity-list__card {
+  transition: none;
+}
+.a-entity-dated__cards > .a-entity-list__card:hover {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a-entity-dated__cards > .a-entity-list__card {
+    transition: none;
+  }
+  .a-entity-dated__cards > .a-entity-list__card:hover {
+    transform: none;
+  }
+}
