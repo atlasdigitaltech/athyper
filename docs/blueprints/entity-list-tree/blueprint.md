@@ -1,6 +1,6 @@
 # Entity list Tree — blueprint
 
-**Status:** proposed, revision 2 (9 October 2026). Not implementation authority. Owner decisions are listed in section 14; none is approved yet. Revision 2 closes the first review of revision 1 (section 16).
+**Status:** approved, revision 2 (9 October 2026). The project owner (nchandravel-atlas) approved all eleven decisions in section 14 on 9 October 2026, restating each decision and then: "All approved... updated the document for final review". Sections 5.1–5.3 (the grouping state, the hierarchy declaration, the `tree` mode and browser projection, the `groupsOnly` flag and `hasChildren`) are implementation authority for phases A1, P-T1 and B1. Phases B2–B5, A2 and A3 each need their own approval. Authoring storage (decision 9) is approved but built behind the metadata-cleanup gate.
 
 **Scope and authority.**
 
@@ -254,7 +254,7 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | B4        | Reparent                                                                   | Cycle, depth and leaf-parent guards reject with their codes; audit and idempotency as for any update                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Authoring | Section 9, 10                                                              | Behind the metadata-cleanup gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
-**Verification method (as for Board, Calendar and Gantt).** Each phase is verified on synthetic fixtures shaped like a Chart of Accounts (summary and posting accounts, 5 levels) and a project breakdown, through the real shared runtime and browser specs, until real Entities are onboarded. When the owner approves this blueprint, AGENTS.md gains a pointer worded like the other layouts', linking this blueprint and the foundation by their stable paths.
+**Verification method (as for Board, Calendar and Gantt).** Each phase is verified on synthetic fixtures shaped like a Chart of Accounts (summary and posting accounts, 5 levels) and a project breakdown, through the real shared runtime and browser specs, until real Entities are onboarded. With the owner's approval (9 October 2026), AGENTS.md carries a pointer worded like the other layouts', linking this blueprint and the foundation by their stable paths.
 
 **Fixture boundary.** Synthetic fixtures are test data. Chart of Accounts, Cost Center, Project Task and Budget pilots are Entity onboarding with their own approval; each then needs only its hierarchy declaration.
 
@@ -271,17 +271,17 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 
 ## 14. Decisions required (project owner)
 
-1. **Scope.** Part A upgrades Group by in Table and Cards; Part B adds the `tree` Layout for record hierarchies; both share one tree grid (P-T1).
-2. **Saved-state change for grouping** (section 5.1): `groups: string[]` with `group=` still read as one level; the new-to-old behaviour (opens ungrouped) accepted; no dual write.
-3. **Count rule at every level:** counts only under exact counts, on three surfaces under the one foundation section 5 rule: group headings, child counts and rollups.
-4. **Three grouping levels.**
-5. **Grouping eligibility by class** (section 2.1): booleans, or fields with an authorized choice list of at most 50 entries.
-6. **Grouped-tree loading and request budget** (section 7.1), including group order and the reason "sort by group" is not the design.
-7. **Hierarchy declaration** (section 5.2) as an Entity-level property: parent field, optional order field, optional node kind with branch values, maximum depth, optional rollups from published aggregations.
-8. **Tree browsing** (section 7.2): the list query by parent; `hasChildren` meaning visible children only; orphans as their own group after the roots, sorted by identity; the 500-node ceiling. With Part A's `groupsOnly` request flag (section 7.1), these are the two list contract additions.
-9. **Authoring storage for the hierarchy declaration:** **recommendation:** one row per Entity in a new `entity_hierarchy` table (parent, order and node-kind field bindings, maximum depth) plus `entity_hierarchy_rollup` rows, with the parent-field index check (section 2.2) attached to the same declaration so the DDL rehearsal reports it; built behind the metadata-cleanup gate.
-10. **Phases:** A1, P-T1 and B1 first; B2 (search with context), B3 (rollups), B4 (reparent), B5 (pickers and breadcrumb), A2 and A3 each need their own approval.
-11. **Gantt alignment:** Gantt Phase 2b uses this Part B.
+1. **Approved 9 October 2026 (owner wording in the status line).** **Scope.** Part A upgrades Group by in Table and Cards; Part B adds the `tree` Layout for record hierarchies; both share one tree grid (P-T1).
+2. **Approved 9 October 2026 (owner wording in the status line).** **Saved-state change for grouping** (section 5.1): `groups: string[]` with `group=` still read as one level; the new-to-old behaviour (opens ungrouped) accepted; no dual write.
+3. **Approved 9 October 2026 (owner wording in the status line).** **Count rule at every level:** counts only under exact counts, on three surfaces under the one foundation section 5 rule: group headings, child counts and rollups.
+4. **Approved 9 October 2026 (owner wording in the status line).** **Three grouping levels.**
+5. **Approved 9 October 2026 (owner wording in the status line).** **Grouping eligibility by class** (section 2.1): booleans, or fields with an authorized choice list of at most 50 entries.
+6. **Approved 9 October 2026 (owner wording in the status line).** **Grouped-tree loading and request budget** (section 7.1), including group order and the reason "sort by group" is not the design.
+7. **Approved 9 October 2026 (owner wording in the status line).** **Hierarchy declaration** (section 5.2) as an Entity-level property: parent field, optional order field, optional node kind with branch values, maximum depth, optional rollups from published aggregations.
+8. **Approved 9 October 2026 (owner wording in the status line).** **Tree browsing** (section 7.2): the list query by parent; `hasChildren` meaning visible children only; orphans as their own group after the roots, sorted by identity; the 500-node ceiling. With Part A's `groupsOnly` request flag (section 7.1), these are the two list contract additions.
+9. **Approved 9 October 2026 (owner wording in the status line).** **Authoring storage for the hierarchy declaration:** **recommendation:** one row per Entity in a new `entity_hierarchy` table (parent, order and node-kind field bindings, maximum depth) plus `entity_hierarchy_rollup` rows, with the parent-field index check (section 2.2) attached to the same declaration so the DDL rehearsal reports it; built behind the metadata-cleanup gate.
+10. **Approved 9 October 2026 (owner wording in the status line).** **Phases:** A1, P-T1 and B1 first; B2 (search with context), B3 (rollups), B4 (reparent), B5 (pickers and breadcrumb), A2 and A3 each need their own approval.
+11. **Approved 9 October 2026 (owner wording in the status line).** **Gantt alignment:** Gantt Phase 2b uses this Part B.
 
 ## 15. Rejected options
 

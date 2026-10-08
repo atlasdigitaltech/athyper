@@ -88,6 +88,24 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
   both documents together where they meet.
 
+## Entity list Tree (grouped tree and record hierarchy)
+
+- The active design is the
+  [Entity list Tree blueprint](docs/blueprints/entity-list-tree/blueprint.md).
+  Read it before implementing Group by levels, the `tree` Layout or record
+  hierarchies, and update it in place. Implement only contract properties and
+  phases the project owner has approved.
+- Rules shared by every list Layout live in the
+  [shared list layout foundation](docs/blueprints/entity-list-layouts/foundation.md),
+  also updated in place.
+- Hierarchies are declared per Entity in governed, published Meta Entity
+  properties (parent field, order, node kind, depth, rollups). Do not infer a
+  hierarchy from field names, and do not create a tree page, finance explorer,
+  provider stack or entity-specific tree.
+- Its authoring storage, codec, compiler and composer work must conform to the
+  [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
+  both documents together where they meet.
+
 ## Entity list identity and record navigation
 
 - Define navigation groups, section behavior, visible columns and readable
