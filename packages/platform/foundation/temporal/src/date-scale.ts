@@ -1,4 +1,4 @@
-/** Calendar maths shared by calendar views and date pickers. Calendar days
+/** Date scales shared by list layouts (Calendar, Gantt) and date pickers. Calendar days
  * are `YYYY-MM-DD` strings and never pass through a time zone; instants are
  * converted only at the edges, in an explicit IANA time zone. */
 
@@ -73,6 +73,52 @@ export function monthGridWindow(anchor: string, weekStart: number): CalendarWind
 /** The window an agenda shows: the anchor's month. */
 export function monthWindow(anchor: string): CalendarWindow {
   return { start: startOfMonth(anchor), end: addMonths(anchor, 1) };
+}
+
+/** First day of the calendar quarter containing `day`. */
+export function startOfQuarter(day: string): string {
+  const [year, month] = parts(day);
+  return `${String(year).padStart(4, "0")}-${String(month - ((month - 1) % 3)).padStart(2, "0")}-01`;
+}
+
+/** The calendar quarter (1–4) containing `day`. */
+export function quarterOf(day: string): number {
+  return Math.floor((parts(day)[1] - 1) / 3) + 1;
+}
+
+/** First day of the calendar year containing `day`. */
+export function startOfYear(day: string): string {
+  return `${day.slice(0, 4)}-01-01`;
+}
+
+/** Whole days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return utcDays(to) - utcDays(from);
+}
+
+/** The periods list layouts navigate by. `month-grid` is the whole weeks
+ * covering a month; `quarter-weeks` the whole weeks covering a quarter. */
+export type DatePeriod = "month-grid" | "month" | "quarter-weeks" | "year";
+
+/** The window a period shows around `anchor`. */
+export function periodWindow(anchor: string, period: DatePeriod, weekStart: number): CalendarWindow {
+  switch (period) {
+    case "month-grid":
+      return monthGridWindow(anchor, weekStart);
+    case "month":
+      return monthWindow(anchor);
+    case "quarter-weeks": {
+      const first = startOfQuarter(anchor);
+      return {
+        start: startOfWeek(first, weekStart),
+        end: addDays(startOfWeek(addDays(addMonths(first, 3), -1), weekStart), 7),
+      };
+    }
+    case "year": {
+      const first = startOfYear(anchor);
+      return { start: first, end: addMonths(first, 12) };
+    }
+  }
 }
 
 /** The days of a window grouped into weeks of seven. */

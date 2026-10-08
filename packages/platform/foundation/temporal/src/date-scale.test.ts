@@ -4,9 +4,13 @@ import test from "node:test";
 import {
   addDays,
   addMonths,
+  daysBetween,
   monthGridWindow,
   monthWindow,
+  periodWindow,
+  quarterOf,
   shiftMonths,
+  startOfQuarter,
   startOfWeek,
   weekRows,
   zonedDay,
@@ -36,6 +40,26 @@ test("a month grid covers whole weeks and an agenda covers the month", () => {
   assert.equal(weekRows(grid).length, 5);
   assert.ok(weekRows(grid).every((row) => row.length === 7));
   assert.deepEqual(monthWindow("2026-10-08"), { start: "2026-10-01", end: "2026-11-01" });
+});
+
+test("periods cover a month, a quarter in whole weeks, and a year", () => {
+  assert.deepEqual(periodWindow("2026-10-08", "month-grid", 1), monthGridWindow("2026-10-08", 1));
+  assert.deepEqual(periodWindow("2026-10-08", "month", 1), monthWindow("2026-10-08"));
+  // Q4 2026 runs 1 October (Thursday) to 31 December (Thursday); Monday weeks widen it.
+  assert.deepEqual(periodWindow("2026-11-15", "quarter-weeks", 1), { start: "2026-09-28", end: "2027-01-04" });
+  assert.deepEqual(periodWindow("2026-11-15", "quarter-weeks", 0), { start: "2026-09-27", end: "2027-01-03" });
+  assert.deepEqual(periodWindow("2028-02-29", "year", 1), { start: "2028-01-01", end: "2029-01-01" });
+  assert.equal(startOfQuarter("2026-02-28"), "2026-01-01");
+  assert.equal(startOfQuarter("2026-12-31"), "2026-10-01");
+  assert.equal(quarterOf("2026-07-01"), 3);
+});
+
+test("day offsets ignore daylight saving and count leap days", () => {
+  assert.equal(daysBetween("2026-03-28", "2026-03-30"), 2); // across London's spring-forward
+  assert.equal(daysBetween("2028-02-28", "2028-03-01"), 2); // 29 February 2028
+  assert.equal(daysBetween("2026-01-01", "2027-01-01"), 365);
+  assert.equal(daysBetween("2028-01-01", "2029-01-01"), 366);
+  assert.equal(daysBetween("2026-10-08", "2026-10-01"), -7);
 });
 
 test("local midnight is resolved per day, including daylight-saving changes", () => {
