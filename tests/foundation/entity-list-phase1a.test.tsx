@@ -1038,7 +1038,9 @@ for (const mode of ["table", "compact"] as const)
       await act(async () => button().click());
       assert.equal(button().getAttribute("aria-expanded"), "false");
       assert.equal(record(), null);
-      assert.match(button().textContent ?? "", /Active.*1/);
+      // Count mode is none, so the heading shows no count: rows on this page
+      // never stand in for a group total (layout foundation section 5).
+      assert.equal(button().textContent, "Active");
       await act(async () => button().click());
       assert.equal(button().getAttribute("aria-expanded"), "true");
       assert.ok(record());

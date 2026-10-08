@@ -70,6 +70,8 @@ Board and Cards share one card resolution, in this precedence:
 
 - **Rejected: summing the streams.** The browser could add the window total, the open-ended total and the tray total, since the streams are disjoint by construction and `mergeRows` deduplicates. A title number is not worth a three-term sum whose correctness depends on that disjointness holding forever, and it would still disagree with the Gantt rows drawn at the ceiling.
 
+**Group headings (added 9 October 2026; applies this section's approved rule).** Group by in Table and Cards follows the same rule at every level: a group heading shows a count only under exact counts, where the server runs its full-set group query. Under any other count mode the server does not run that query and the heading shows no number; the rows loaded on the current page never stand in for a group total.
+
 ## 6. Comparing drafts and states (approved 8 October 2026)
 
 **Approval.** The project owner (nchandravel-atlas) approved this section on 8 October 2026: "Foundation section 6 (draft-comparison rule): approved".

@@ -680,6 +680,7 @@ describe("safe entity list service", () => {
         fields: ["code"],
         group: "status",
         sort: [{ field: "name", direction: "asc" }],
+        countMode: "exact",
       }),
     );
     expect(page.rows.map((row) => row.values)).toEqual([
@@ -692,6 +693,17 @@ describe("safe entity list service", () => {
       { value: "active", label: "active", count: 2 },
       { value: "draft", label: "draft", count: 1 },
     ]);
+    // Group counts follow the count-mode rule: none without exact counts.
+    const uncounted = parseEntityListResult(
+      await lists.list({
+        context,
+        entityCode: presented.entityCode,
+        fields: ["code"],
+        group: "status",
+        sort: [{ field: "name", direction: "asc" }],
+      }),
+    );
+    expect(uncounted.groups).toBeUndefined();
   });
 
   it("binds field authorization to tenant, entity, operation, and field coordinates", async () => {

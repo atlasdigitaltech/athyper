@@ -31,5 +31,6 @@ test("grouping keeps missing, null and empty values distinct and preserves row o
   const output = groupedRows(page([undefined, null, "", null]), "created_at", descriptor, intl("en"));
   assert.equal(new Set(output.map(group => group.key)).size, 3);
   assert.deepEqual(output.map(group => group.label), ["—", "—", "—"]);
-  assert.deepEqual(output.map(group => group.count), [1, 2, 1]);
+  // No server buckets (counts not exact): no group count, never a page count.
+  assert.deepEqual(output.map(group => group.count), [undefined, undefined, undefined]);
 });

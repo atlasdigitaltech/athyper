@@ -36,7 +36,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       if (input.search) { const needle = input.search.toLowerCase(); const fields = input.descriptor.fields.filter((field) => field.searchable); rows = rows.filter((row) => fields.some((field) => String(row[field.storagePath] ?? "").toLowerCase().includes(needle))); }
       rows.sort((a, b) => compareRows(a, b, input.descriptor, input.sort ?? []));
       const total = rows.length;
-      const groups = input.group ? groupBuckets(rows, input.descriptor, input.group) : undefined;
+      // Group counts only under exact counts (layout foundation section 5).
+      const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group) : undefined;
       const cursor = decodeRecordCursor(input);
       if (cursor) rows = rows.filter((row) => afterCursor(row, input.descriptor, input.sort ?? [], cursor));
       const candidates = rows.slice(0, input.limit + 1);

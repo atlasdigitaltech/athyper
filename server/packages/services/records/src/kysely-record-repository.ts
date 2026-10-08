@@ -55,7 +55,9 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       `.execute(executor);
       const hasMore = result.rows.length > input.limit;
       const rows = result.rows.slice(0, input.limit);
-      const groups = input.group ? await groupBuckets(input, conditions, executor) : undefined;
+      // Group counts follow the count-mode rule (layout foundation section 5): the
+      // full-set GROUP BY runs only under exact counts.
+      const groups = input.group && input.countMode === "exact" ? await groupBuckets(input, conditions, executor) : undefined;
       let total: number | undefined;
       if (input.countMode === "exact" && groups) {
         total = groups.reduce((sum, bucket) => sum + bucket.count, 0);

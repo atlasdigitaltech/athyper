@@ -8,12 +8,15 @@ export function groupedRows(
   group: string | undefined,
   descriptor: EntityListDescriptorV1,
   intl: IntlRuntime,
-): readonly { key: string; label: string; count: number; rows: readonly EntityListRowV1[] }[] {
-  if (!group) return [{ key: "all", label: intl.message("list.group.allRecords"), count: page.rows.length, rows: page.rows }];
+): readonly { key: string; label: string; count?: number; rows: readonly EntityListRowV1[] }[] {
+  if (!group) return [{ key: "all", label: intl.message("list.group.allRecords"), rows: page.rows }];
   const field = descriptor.fields.find(candidate => candidate.key === group);
   const keyFor = (value: unknown) => JSON.stringify([group, value === undefined ? "missing" : "value", value]);
   const buckets = new Map<string, { key: string; label: string; count?: number; rows: EntityListRowV1[] }>();
-  // Map insertion order preserves the server's typed ordering, including direction.
+  // Server buckets (exact counts only) come first in the server's order: the
+  // raw stored value, ascending. That order ignores the person's sort direction
+  // and published choice order; groups seen only on this page follow in the
+  // order their first row appears.
   for (const bucket of page.groups ?? []) {
     const key = keyFor(bucket.value);
     buckets.set(key, { key, label: formatFieldValue(bucket.value, field, intl), count: bucket.count, rows: [] });
@@ -25,6 +28,7 @@ export function groupedRows(
     bucket.rows.push(row);
     buckets.set(key, bucket);
   }
-  return [...buckets.values()].filter(bucket => bucket.rows.length > 0)
-    .map(bucket => ({ ...bucket, count: bucket.count ?? bucket.rows.length }));
+  // A count is the server's full-set count under exact counts, or absent; the
+  // rows on this page never stand in for a group total (foundation section 5).
+  return [...buckets.values()].filter(bucket => bucket.rows.length > 0);
 }

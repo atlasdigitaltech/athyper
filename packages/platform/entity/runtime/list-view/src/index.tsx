@@ -4367,17 +4367,18 @@ function EntityRows({
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
-  const toggleGroup = (label: string) =>
+  // Groups are tracked by their stable field-and-value key, never by label.
+  const toggleGroup = (key: string) =>
     setCollapsedGroups((current) => {
       const next = new Set(current);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   const groupHeading = (item: {
     key: string;
     label: string;
-    count: number;
+    count?: number;
   }) => (
     <button
       type="button"
@@ -4393,7 +4394,7 @@ function EntityRows({
     >
       <ChevronDownIcon size={16} />
       <strong>{item.label}</strong>
-      <span>{item.count}</span>
+      {item.count !== undefined ? <span>{intl.number(item.count)}</span> : null}
     </button>
   );
   if (!page.rows.length) {
