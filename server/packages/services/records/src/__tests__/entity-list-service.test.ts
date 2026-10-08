@@ -73,6 +73,26 @@ describe("safe entity list service", () => {
     expect(compiled.limits).toMatchObject({ defaultPageSize: 10, allowedPageSizes: [10, 25], maxSortLevels: 3 });
   });
 
+  it("reports declared modes it cannot render instead of silently dropping them", async () => {
+    const presented: EntityRuntimeDescriptor = {
+      ...descriptor,
+      listPresentation: { identityField: "code", title: "Business Partners", defaultColumns: ["code", "name"], supportedModes: ["table", "board", "compact", "dashboard"] },
+    };
+    const lists = createTestListService({ metadata: { getEntityDescriptor: async () => presented }, descriptor: presented, authorizer: allowReadOnly() });
+    const compiled = parseEntityListDescriptor(await lists.descriptor(context, presented.entityCode));
+    expect(compiled.surface.supportedModes).toEqual(["table", "compact"]);
+    expect(compiled.surface.unavailableModes).toEqual([
+      { mode: "board", code: "LIST_MODE_UNSUPPORTED" },
+      { mode: "dashboard", code: "LIST_MODE_UNSUPPORTED" },
+    ]);
+  });
+
+  it("omits unavailable modes when every declared mode is renderable", async () => {
+    const lists = createTestListService({ authorizer: allowReadOnly() });
+    const compiled = parseEntityListDescriptor(await lists.descriptor(context, descriptor.entityCode));
+    expect(compiled.surface).not.toHaveProperty("unavailableModes");
+  });
+
   it("derives the record-card title role from the published record title and passes card priority", async () => {
     const presented: EntityRuntimeDescriptor = {
       ...descriptor,

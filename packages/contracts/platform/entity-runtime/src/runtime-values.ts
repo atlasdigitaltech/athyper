@@ -14,11 +14,12 @@ export type EntityStatusTone = "neutral" | "success" | "warning" | "danger";
 export function entityStatusTone(value: unknown): EntityStatusTone {
   return value === "success" || value === "warning" || value === "danger" ? value : "neutral";
 }
-/** Tone vocabulary belongs to the entity's compiled surface, not shared chrome. */
+/** Tone vocabulary belongs to the entity's compiled surface, not shared chrome.
+ * Tones are keyed by the exact published choice value, and only own keys
+ * count, so case variants and inherited names never borrow a tone. */
 export function resolveEntityStatusTone(status: unknown, tones: unknown): EntityStatusTone {
   if (typeof status !== "string" || !tones || typeof tones !== "object" || Array.isArray(tones)) return "neutral";
-  const key = status.toLowerCase();
-  return Object.hasOwn(tones, key) ? entityStatusTone((tones as Record<string, unknown>)[key]) : "neutral";
+  return Object.hasOwn(tones, status) ? entityStatusTone((tones as Record<string, unknown>)[status]) : "neutral";
 }
 
 /** Normalize legacy published providers at the boundary; tab keys remain unchanged. */

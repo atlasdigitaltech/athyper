@@ -46,6 +46,7 @@ import type {
   ListFilterOperator,
   ListFilterV1,
   ListSortV1,
+  ListUnavailableModeV1,
   ListViewMode,
 } from "@athyper/contract-platform-entity-list";
 import type {
@@ -1057,7 +1058,9 @@ export function compileEntityListDescriptor(
             : "All permitted tenant records",
         },
       ];
-  const modes = normalizeModes(descriptor.listPresentation?.supportedModes);
+  const { supported: modes, unavailable: unavailableModes } = resolveModes(
+    descriptor.listPresentation?.supportedModes,
+  );
   const configuredLimits = descriptor.listPresentation?.limits;
   const pageSizes = normalizePageSizes(
     configuredLimits?.allowedPageSizes ??
@@ -1105,6 +1108,7 @@ export function compileEntityListDescriptor(
     defaultFilters,
     defaultGroup,
     defaultMode,
+    ...(unavailableModes.length ? { unavailableModes } : {}),
     minimumQueryLength,
     filterPresentation,
     experience: descriptor.listPresentation?.experience,
@@ -1152,6 +1156,7 @@ export function compileEntityListDescriptor(
         mode: defaultMode,
       }),
       supportedModes: modes,
+      ...(unavailableModes.length ? { unavailableModes } : {}),
       search: Object.freeze({
         ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey
           ? { profileKey: descriptor.listPresentation.search.profileKey }
@@ -1441,16 +1446,23 @@ function filterOptions(
   return Object.freeze(options);
 }
 
-function normalizeModes(
-  value: readonly ListViewMode[] | undefined,
-): readonly ListViewMode[] {
-  const allowed = new Set<ListViewMode>(ENTITY_LIST_RENDERABLE_MODES);
-  const modes = [
-    ...new Set(
-      (value ?? ENTITY_LIST_RENDERABLE_MODES).filter((mode) => allowed.has(mode)),
+/** Splits declared modes into those this service can project and those it
+ * cannot. Unrenderable declarations are reported, never silently dropped. */
+function resolveModes(value: readonly ListViewMode[] | undefined): {
+  readonly supported: readonly ListViewMode[];
+  readonly unavailable: readonly ListUnavailableModeV1[];
+} {
+  const renderable = new Set<ListViewMode>(ENTITY_LIST_RENDERABLE_MODES);
+  const declared = [...new Set(value ?? ENTITY_LIST_RENDERABLE_MODES)];
+  const supported = declared.filter((mode) => renderable.has(mode));
+  return Object.freeze({
+    supported: Object.freeze(supported.length ? supported : ["table" as const]),
+    unavailable: Object.freeze(
+      declared
+        .filter((mode) => !renderable.has(mode))
+        .map((mode) => Object.freeze({ mode, code: "LIST_MODE_UNSUPPORTED" })),
     ),
-  ];
-  return Object.freeze(modes.length ? modes : ["table"]);
+  });
 }
 function normalizePageSizes(
   value: readonly number[] | undefined,

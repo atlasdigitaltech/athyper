@@ -42,6 +42,14 @@ export function portableListHref(state: ListLocationStateV1, descriptor: EntityL
   return new URL(relative, window.location.origin).href;
 }
 
+/** True when a shared link or the selected saved view asks for a layout this
+ * viewer cannot use; the decoded state then keeps the surface default. */
+export function requestedLayoutUnavailable(descriptor: EntityListDescriptorV1, search = window.location.search): boolean {
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get("view") ?? savedViewBase(parameters.get("vid"), descriptor)?.mode;
+  return requested !== undefined && requested !== null && !descriptor.surface.supportedModes.some((mode) => mode === requested);
+}
+
 function savedViewBase(id: string | null | undefined, descriptor: EntityListDescriptorV1): SaveableListStateV1 | undefined {
   if (!id) return undefined;
   return readSavedViews(savedViewStorageKey(descriptor), descriptor).find((view) => view.id === id)?.state;

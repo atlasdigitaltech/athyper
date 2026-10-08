@@ -19,6 +19,7 @@ export function SegmentedControl<V extends string>({
   onValueChange,
   disabled = false,
   className,
+  describedBy,
 }: {
   readonly label?: string;
   readonly labelledBy?: string;
@@ -27,6 +28,10 @@ export function SegmentedControl<V extends string>({
   readonly onValueChange: (value: V) => void;
   readonly disabled?: boolean;
   readonly className?: string;
+  /** Id of text that explains the group, such as why some options are
+   * unavailable. Disabled options are not focusable, so the reason belongs to
+   * the group rather than to an option. */
+  readonly describedBy?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const enabled = options.filter((option) => !disabled && !option.disabled);
@@ -43,6 +48,7 @@ export function SegmentedControl<V extends string>({
       role="radiogroup"
       aria-label={label}
       aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       aria-disabled={disabled || undefined}
       className={className ? `a-segmented ${className}` : "a-segmented"}
     >

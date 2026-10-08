@@ -54,7 +54,9 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
   if (parameters.has("group") || parameters.get("group.clear") === "1") apply({ ...(parameters.get("group.clear") === "1" ? { group: undefined } : parameters.get("group") ? { group: parameters.get("group")! } : {}) });
   if (parameters.has("cols") || parameters.has("col.rm") || parameters.has("col.at")) apply({ columns: decodeColumns(parameters, state.columns) });
   if (parameters.has("density")) apply({ density: parameters.get("density") as ListLocationStateV1["density"] });
-  if (parameters.has("view")) apply({ mode: parameters.get("view") as ListLocationStateV1["mode"] });
+  const view = parameters.get("view");
+  // Only a layout this viewer can use is applied; anything else keeps the base layout.
+  if (view !== null) { const mode = descriptor.surface.supportedModes.find((supported) => supported === view); if (mode) apply({ mode }); }
   if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
   else if (parameters.get("sheet") === "custom" || parameters.has("pinned") || [...parameters.keys()].some((key) => key.startsWith("width."))) apply({ spreadsheet: decodeSpreadsheet(parameters, state.spreadsheet) });
   if (parameters.get("vid")) apply({ savedViewId: parameters.get("vid")! });

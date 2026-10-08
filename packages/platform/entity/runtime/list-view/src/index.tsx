@@ -70,7 +70,7 @@ import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platfor
 import { formatFieldValue } from "./field-format";
 import { highlightText, renderFieldValue } from "./field-value";
 import { EntityRecordCard } from "./record-card";
-import { listRendererKind } from "./mode-renderers";
+import { LIST_MODE_RENDERER_MISSING, listRendererKind, withRenderableModes } from "./mode-renderers";
 import {
   fallbackQuickFields,
   resolveEntityText,
@@ -215,6 +215,7 @@ import {
 import {
   portableListHref,
   readListLocation,
+  requestedLayoutUnavailable,
   writeListLocation,
 } from "./location";
 import { useListQueryState } from "./query-state";
@@ -851,6 +852,7 @@ function EntityCollectionRuntime({
           );
         }
         if (controller.signal.aborted) return;
+        next = withRenderableModes(next);
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
         const effectiveSearch = entityLocationSearch(
@@ -909,6 +911,8 @@ function EntityCollectionRuntime({
           nextState.savedViewId === "system"
         )
           setActionNotice(listNotice("list.notice.viewUnavailableSystem"));
+        else if (!embedding && requestedLayoutUnavailable(next, effectiveSearch))
+          setActionNotice(listNotice("list.notice.layoutUnavailable"));
         const parameters = new URLSearchParams(effectiveSearch),
           preferences = readDisplayPreferences(
             next.plane,
@@ -3630,6 +3634,8 @@ function DisplaySettingsDialog({
   readonly widthTier?: ListWidthTier;
 }) {
   const displayIntl = useEntityI18n();
+  const unavailableId = useId();
+  const unavailableModes = descriptor.surface.unavailableModes ?? [];
   const effectivePreferences = () => {
     const saved = readDisplayPreferences(descriptor.plane, preferenceNamespace);
     return configuration
@@ -3775,12 +3781,39 @@ function DisplaySettingsDialog({
               label={displayIntl.message("list.display.layout")}
               value={mode}
               disabled={Boolean(configuration && !configuration.userOverrides.includes("layout"))}
-              options={descriptor.surface.supportedModes.map((item) => ({
-                value: item,
-                label: displayIntl.message(`list.mode.${item}`),
-              }))}
+              options={[
+                ...descriptor.surface.supportedModes.map((item) => ({
+                  value: item,
+                  label: displayIntl.message(`list.mode.${item}`),
+                })),
+                ...unavailableModes.map(({ mode: item }) => ({
+                  value: item,
+                  disabled: true,
+                  label: (
+                    <>
+                      {displayIntl.message(`list.mode.${item}`)}
+                      <span className="a-visually-hidden">
+                        {displayIntl.message("list.display.unavailableSuffix")}
+                      </span>
+                    </>
+                  ),
+                })),
+              ]}
+              describedBy={unavailableModes.length ? unavailableId : undefined}
               onValueChange={setMode}
             />
+            {unavailableModes.length ? (
+              <ul id={unavailableId} className="a-entity-list__mode-unavailable">
+                {unavailableModes.map(({ mode: item, code }) => (
+                  <li key={item}>
+                    {displayIntl.message("list.display.modeUnavailable", {
+                      mode: displayIntl.message(`list.mode.${item}`),
+                      reason: displayIntl.message(modeUnavailableReasonKey(code)),
+                    })}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         )}
       </CollectionDensitySettings>
@@ -3958,7 +3991,9 @@ function EntityRows({
         ))}
       </div>
     );
-  if (listRendererKind(mode, widthTier) === "cards")
+  const rendererKind = listRendererKind(mode, widthTier);
+  if (!rendererKind) return null;
+  if (rendererKind === "cards")
     return group ? (
       <div className="a-entity-list__groups">
         {groups.map((item) => (
@@ -4674,6 +4709,11 @@ function searchHint(descriptor: EntityListDescriptorV1): string {
         .toLocaleLowerCase(),
     )
     .join(", ");
+}
+/** Catalogue key for the reason a declared layout is unavailable. Unknown
+ * codes use the generic "not supported" reason rather than the raw code. */
+function modeUnavailableReasonKey(code: string): string {
+  return code === LIST_MODE_RENDERER_MISSING ? "list.mode.reason.rendererMissing" : "list.mode.reason.unsupported";
 }
 function listCountLabel(page: EntityListResultV1 | undefined, intl: ReturnType<typeof useEntityI18n>): string | undefined {
   const count = page?.pagination.total;

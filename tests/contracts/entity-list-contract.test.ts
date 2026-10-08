@@ -236,6 +236,26 @@ describe("entity list browser contract", () => {
     assert.equal(state.pageSize, 50);
   });
 
+  it("applies a shared-link layout only when this viewer can use it", () => {
+    const descriptor = parseEntityListDescriptor(descriptorPayload);
+    assert.equal(decodeListLocationState("?view=compact", descriptor).mode, "compact");
+    assert.equal(decodeListLocationState("?view=dashboard", descriptor).mode, descriptor.surface.defaultState.mode);
+    assert.equal(decodeListLocationState("?view=not-a-mode", descriptor).mode, descriptor.surface.defaultState.mode);
+  });
+
+  it("parses declared-but-unusable modes and rejects contradictory entries", () => {
+    const withUnavailable = (unavailableModes: unknown) => ({
+      ...descriptorPayload,
+      surface: { ...descriptorPayload.surface, unavailableModes },
+    });
+    const parsed = parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }]));
+    assert.deepEqual(parsed.surface.unavailableModes, [{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }]);
+    assert.equal(parseEntityListDescriptor(descriptorPayload).surface.unavailableModes, undefined);
+    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "table", code: "LIST_MODE_UNSUPPORTED" }])));
+    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }, { mode: "board", code: "LIST_MODE_UNSUPPORTED" }])));
+    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "not a code" }])));
+  });
+
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);

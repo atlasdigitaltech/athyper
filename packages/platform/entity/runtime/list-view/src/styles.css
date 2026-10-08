@@ -657,3 +657,5 @@ button.a-entity-pulse__favourite-star{cursor:pointer}.a-entity-pulse__favourite-
 .a-entity-list__panel[data-presentation=section] .a-management-toolbar.a-entity-list__query-row{background:transparent}
 .a-entity-list__panel[data-presentation=section]>.a-entity-list__table-wrap,.a-entity-list__panel[data-presentation=section]>.a-entity-list__state{border-radius:0 0 var(--a-radius-lg) var(--a-radius-lg)}
 .a-entity-list__panel[data-presentation=section]>.a-entity-list__pagination{padding-inline:var(--a-space-4)}
+.a-entity-list__mode-unavailable{display:grid;gap:var(--a-space-1);margin:var(--a-space-2) 0 0;padding:0;list-style:none;color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
+.a-entity-list__status--danger>span{background:var(--a-danger)}

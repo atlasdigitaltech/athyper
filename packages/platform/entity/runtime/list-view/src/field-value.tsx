@@ -4,6 +4,7 @@ import type {
   ListFieldDescriptorV1,
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { resolveEntityStatusTone } from "@athyper/contract-platform-entity-runtime";
 import { formatFieldValue } from "./field-format";
 
 export function renderFieldValue(
@@ -16,10 +17,9 @@ export function renderFieldValue(
   const display = displayLabel ?? formatFieldValue(value, field, intl),
     highlighted = highlightText(display, query);
   if (field.semanticRole === "status") {
-    const normalized = String(value ?? "").toLowerCase();
     return (
       <span
-        className={`a-entity-list__status a-entity-list__status--${field.statusTones?.[normalized] ?? "neutral"}`}
+        className={`a-entity-list__status a-entity-list__status--${resolveEntityStatusTone(value, field.statusTones)}`}
       >
         <span aria-hidden="true" />
         {highlighted}

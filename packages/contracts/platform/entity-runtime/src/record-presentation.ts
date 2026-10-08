@@ -2,6 +2,7 @@ import { parseEntityRelationships, type EntityRelationshipV1 } from "./entity-re
 import { parseEntitySectionComponent, readableEntitySectionComponent, type EntitySectionComponentV1 } from "./section-component";
 import type { EntityAccessDecisionV1 } from "./access-decision";
 import { isObjectRecord, isBoundedNonBlankText } from "./validation/values";
+import { resolveEntityStatusTone } from "./runtime-values";
 import { readablePresentationLocalization, parsePresentationLocalization, type EntityPresentationLocalizationV1 } from "./presentation-localization";
 import { parseEntityRuntimeLocalizedText, type EntityRuntimeLocalizedTextV1 } from "./runtime-resource";
 import { parseEntityDetailNavigation, type EntityDetailNavigationV1 } from "./detail-navigation";
@@ -360,7 +361,7 @@ export function resolveRecordHeader(
         ? [
             {
               label: item.label ? `${item.label}: ${options.choiceLabels?.[item.field]?.[value] ?? value}` : (options.choiceLabels?.[item.field]?.[value] ?? value),
-              tone: item.tones[value] ?? "neutral",
+              tone: resolveEntityStatusTone(value, item.tones),
             },
           ]
         : [];

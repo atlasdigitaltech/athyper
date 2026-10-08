@@ -23,9 +23,12 @@ test("navigation compatibility does not widen section or surface key syntax", ()
   assert.equal(isEntityRuntimeUuid("11111111-1111-4111-8111-111111111111/"), false);
 });
 
-test("status tone is declared by each entity and handles capitalized values safely", () => {
-  assert.equal(resolveEntityStatusTone("Published", {published: "success"}), "success");
-  assert.equal(resolveEntityStatusTone("ACTIVE", {active: "success"}), "success");
+test("status tone is keyed by the exact published choice value and only by own keys", () => {
+  assert.equal(resolveEntityStatusTone("published", {published: "success"}), "success");
+  assert.equal(resolveEntityStatusTone("Published", {Published: "warning", published: "success"}), "warning");
+  assert.equal(resolveEntityStatusTone("ACTIVE", {active: "success"}), "neutral");
+  assert.equal(resolveEntityStatusTone("constructor", {active: "success"}), "neutral");
+  assert.equal(resolveEntityStatusTone("toString", Object.create({toString: "danger"})), "neutral");
   assert.equal(resolveEntityStatusTone("active", {}), "neutral");
   assert.equal(resolveEntityStatusTone("active", {active: "invalid"}), "neutral");
   assert.equal(resolveEntityStatusTone(null, {active: "success"}), "neutral");

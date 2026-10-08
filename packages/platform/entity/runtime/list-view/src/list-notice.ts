@@ -10,6 +10,7 @@ export interface ListNotice {
 /** Notices that stay visible instead of being announced only to assistive tech. */
 const VISIBLE_NOTICE_KEYS: ReadonlySet<string> = new Set([
   "list.notice.viewUnavailableSystem",
+  "list.notice.layoutUnavailable",
 ]);
 
 export function isVisibleListNotice(notice: ListNotice | undefined): boolean {

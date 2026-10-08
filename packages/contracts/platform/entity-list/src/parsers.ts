@@ -33,6 +33,7 @@ import type {
   ListLocationStateV1,
   ListSortV1,
   ListViewMode,
+  ListUnavailableModeV1,
   SaveableListStateV1,
 } from "./types";
 import { ENTITY_LIST_VIEW_MODES } from "./view-modes";
@@ -181,6 +182,10 @@ export function parseEntityListDescriptor(
   );
   if (!supportedModes.length)
     throw new TypeError("surface.supportedModes must not be empty");
+  const unavailableModes = parseUnavailableModes(
+    surfaceRecord.unavailableModes,
+    new Set(supportedModes),
+  );
   const defaultState = parseState(surfaceRecord.defaultState, {
     fields: fieldByKey,
     identityField,
@@ -273,6 +278,7 @@ export function parseEntityListDescriptor(
         : {}),
       defaultState,
       supportedModes,
+      ...(unavailableModes.length ? { unavailableModes } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")
           ? {
@@ -698,6 +704,7 @@ function stateRules(
     fields: new Map(descriptor.fields.map((field) => [field.key, field])),
     identityField: descriptor.entity.identityField,
     supportedModes: new Set(descriptor.surface.supportedModes),
+    defaultMode: descriptor.surface.defaultState.mode,
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -709,6 +716,8 @@ interface StateRules {
   readonly fields: ReadonlyMap<string, ListFieldDescriptorV1>;
   readonly identityField: string;
   readonly supportedModes: ReadonlySet<ListViewMode>;
+  /** Surface default used when saved or shared state names an unusable mode. */
+  readonly defaultMode?: ListViewMode;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -779,7 +788,7 @@ function parseState(
   const requestedMode = oneOf(record.mode, MODES, "mode");
   const mode = rules.supportedModes.has(requestedMode)
     ? requestedMode
-    : rules.supportedModes.values().next().value;
+    : (rules.defaultMode ?? rules.supportedModes.values().next().value);
   if (!mode) throw new TypeError("list state has no supported mode");
   const groupCandidate = optionalCode(record.group, "group");
   const group =
@@ -1197,6 +1206,26 @@ function code(value: unknown, name: string): string {
 }
 function optionalCode(value: unknown, name: string): string | undefined {
   return value === undefined ? undefined : code(value, name);
+}
+/** Declared-but-unusable modes. Each names a reserved mode that is not also
+ * supported, once, with a reason code. */
+function parseUnavailableModes(
+  value: unknown,
+  supported: ReadonlySet<ListViewMode>,
+): readonly ListUnavailableModeV1[] {
+  if (value === undefined) return Object.freeze([]);
+  const seen = new Set<ListViewMode>();
+  return Object.freeze(
+    array(value, "surface.unavailableModes").map((item, index) => {
+      const name = `surface.unavailableModes[${index}]`;
+      const entry = object(item, name);
+      const mode = oneOf(entry.mode, MODES, `${name}.mode`);
+      if (supported.has(mode) || seen.has(mode))
+        throw new TypeError(`${name}.mode must be a declared, unsupported mode listed once`);
+      seen.add(mode);
+      return Object.freeze({ mode, code: reasonCode(entry.code, `${name}.code`) });
+    }),
+  );
 }
 function reasonCode(value: unknown, name: string): string {
   const result = text(value, name);

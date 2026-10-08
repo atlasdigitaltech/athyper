@@ -2,6 +2,10 @@ import type { EffectiveEntitySectionV1 } from "./experience";
 import type { ENTITY_LIST_VIEW_MODES } from "./view-modes";
 export type ListPlane = "neon" | "mesh" | "studio";
 export type ListViewMode = (typeof ENTITY_LIST_VIEW_MODES)[number];
+export interface ListUnavailableModeV1 {
+  readonly mode: ListViewMode;
+  readonly code: string;
+}
 export type ListDensity = "compact" | "comfortable" | "spacious";
 /** Metadata ordering hint for narrow record cards. It orders fields the user
  * can already see; it never widens the authorized list projection. */
@@ -280,6 +284,9 @@ export interface EntityListDescriptorV1 {
     readonly description?: string;
     readonly defaultState: SaveableListStateV1;
     readonly supportedModes: readonly ListViewMode[];
+    /** Declared modes this viewer cannot use, with a reason code. They are
+     * shown as unavailable and never rendered through another layout. */
+    readonly unavailableModes?: readonly ListUnavailableModeV1[];
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;

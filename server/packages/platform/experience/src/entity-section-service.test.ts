@@ -47,9 +47,12 @@ describe("entity runtime resource service", () => {
   it("projects header tone from the pinned entity surface", async () => {
     const publishedSurface = artifact("presentation_surface", surface.artifactKey, {...surface.content, header: {titleField: "name", statusField: "status", statusTones: {published: "success"}}});
     const reader = {surfaceModel: async () => ({release: {release: {releaseId: "release", releaseHash: `sha256:${"a".repeat(64)}`}}, core, surface: publishedSurface}), operation: async () => operation};
-    const service = createEntityRuntimeResourceService({reader: reader as any, headers: {readHeader: async () => ({revision: "1", values: {name: "Example", status: "Published", statusTone: "danger"}})}, sections: {get: vi.fn()}});
+    const service = createEntityRuntimeResourceService({reader: reader as any, headers: {readHeader: async () => ({revision: "1", values: {name: "Example", status: "published", statusTone: "danger"}})}, sections: {get: vi.fn()}});
     const result = await service.bootstrap({context, entityCode: "business_partner", recordId: "record", surfaceKey: "detail"});
     expect(result?.header.values.statusTone).toBe("success");
+    const mismatched = createEntityRuntimeResourceService({reader: reader as any, headers: {readHeader: async () => ({revision: "1", values: {name: "Example", status: "Published"}})}, sections: {get: vi.fn()}} as any);
+    const caseVariant = await mismatched.bootstrap({context, entityCode: "business_partner", recordId: "record", surfaceKey: "detail"});
+    expect(caseVariant?.header.values.statusTone).toBe("neutral");
   });
   it("evaluates child visibility using each row, including an empty field projection", async () => {
     const fields = ["organization", "person"].map(category => ({key: category, dynamicFacets: [{facet: "visibility", engine: "jsonlogic.v1", expression: {"==": [{var: "record.category"}, category]}, valueWhenTrue: "visible", valueWhenFalse: "hidden"}]}));
