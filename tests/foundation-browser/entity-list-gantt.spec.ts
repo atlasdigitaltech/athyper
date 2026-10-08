@@ -323,3 +323,15 @@ test("phones show the dated list; rows move by keyboard; right to left mirrors t
     path: "tooling/config/test-results/entity-list-gantt-rtl.png",
   });
 });
+
+test("the list title carries no record count in Gantt, under either count mode; Table keeps it", async ({ page }) => {
+  // The page query is only the window stream: a count would omit open-ended
+  // and Unscheduled records and rows past the ceiling.
+  for (const exact of [false, true]) {
+    await mount(page, 1440, { defaultMode: "gantt", exact });
+    await expect(page.getByRole("grid", { name: "Q4 2026 Gantt chart" })).toBeVisible();
+    await expect(page.locator(".a-entity-list__header").first()).not.toContainText(/\d+ records?/);
+  }
+  await mount(page, 1440, { defaultMode: "table", exact: true });
+  await expect(page.locator(".a-entity-list__header").first()).toContainText(/\d+ records/);
+});

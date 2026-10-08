@@ -66,6 +66,10 @@ Board and Cards share one card resolution, in this precedence:
 
 **Why the layouts differ.** A layout whose chrome is made of counts needs real totals. A layout without count chrome would only exclude large tables, for no benefit, if it required them. The difference is this rule applied to different chrome, not an inconsistency to correct.
 
+**The list title in date layouts (added 9 October 2026, approved by the project owner: "go ahead").** Calendar and Gantt show no record count in the list title, under either count mode. Their page query is only the date-window stream, so its count omits open-ended records (a second stream), Unscheduled records (the tray) and, in Gantt, rows past the row ceiling; under non-exact counts the fallback counts only that stream's single page. Each layout reports what it can stand behind in its own chrome: "Showing N of M", the Unscheduled count and Gantt group counts, all under this rule. Table and Cards keep their title count, which is accurate for them.
+
+- **Rejected: summing the streams.** The browser could add the window total, the open-ended total and the tray total, since the streams are disjoint by construction and `mergeRows` deduplicates. A title number is not worth a three-term sum whose correctness depends on that disjointness holding forever, and it would still disagree with the Gantt rows drawn at the ceiling.
+
 ## 6. Comparing drafts and states (approved 8 October 2026)
 
 **Approval.** The project owner (nchandravel-atlas) approved this section on 8 October 2026: "Foundation section 6 (draft-comparison rule): approved".

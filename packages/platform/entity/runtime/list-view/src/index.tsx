@@ -1367,8 +1367,16 @@ function EntityCollectionRuntime({
     if (pending !== resultSetKey && panelElement && !embedding)
       revealListStart(panelElement);
   }, [resultsCurrent, resultSetKey, state, panelElement, embedding]);
+  // Date layouts (Calendar, Gantt) show no record count in the list title: the
+  // page query is only their window stream, so its count would omit
+  // open-ended and Unscheduled records and rows past the Gantt ceiling. Each
+  // layout reports its own counts under the count-mode rule.
+  const dateLayout = state?.mode === "calendar" || state?.mode === "gantt";
   const availableCount =
-    !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
+    !dateLayout &&
+    !loading &&
+    !error &&
+    pageContextKey === `${authorityKey}:${serverQueryKey}`
       ? (listCountLabel(page, entityIntl) ??
         (page &&
         !page.pagination.hasNext &&
