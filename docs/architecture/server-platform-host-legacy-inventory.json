@@ -114,6 +114,7 @@
       "key": "control-api",
       "legacyLocations": [],
       "currentLocations": [
+        "deploy/compose/instance/compose.component-review.yaml",
         "deploy/compose/instance/compose.control-api.yaml",
         "deploy/compose/instance/compose.product-command.yaml",
         "deploy/compose/instance/compose.reference-enrollment.yaml",
