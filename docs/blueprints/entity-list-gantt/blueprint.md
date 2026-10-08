@@ -273,7 +273,7 @@ This costs nothing new: `placeEntries` already distinguishes "covers one day" fr
 
 **Chart.**
 
-- A label column (12rem) with the readable identity and, when declared, the title; the label opens the record, and the row menu sits beside it. When a tone is declared, the label carries a tone dot and visually hidden status text (the tone choice's label), because bars carry no text and tone is never the only signal. The column header names the active date range.
+- A label column (16rem in list containers of 64rem and wider, 12rem below; amended 9 October 2026, approved by the project owner: "go ahead") with the readable identity and, when declared, the title; the label opens the record, and the row menu sits beside it. A label that does not fit is truncated visually only: the row's accessible name carries the full identity and title, a `title` tooltip supplements it for pointers, and when the row has keyboard focus the label wraps to show the full text. When a tone is declared, the label carries a tone dot and visually hidden status text (the tone choice's label), because bars carry no text and tone is never the only signal. The column header names the active date range.
 - A two-tier time scale, by zoom:
 
   | Zoom      | Upper tier         | Lower tier (columns)               | Period title   |
@@ -285,7 +285,16 @@ This costs nothing new: `placeEntries` already distinguishes "covers one day" fr
   The Quarter window is widened to whole weeks, so it can show days of the neighbouring quarters; it is still titled by its quarter, and rows that fall only in the widened days belong to the window.
 
 - Bars in tone colour with a progress fill; milestones as diamonds; a today line; muted out-of-window context is not drawn.
-- The chart fits the width at every zoom, so the page never scrolls sideways. The arithmetic: the chart appears only at list container widths of 40rem and above (narrower containers show the phone list, section 8), the label column is 12rem, so the time axis has about 26rem. Month gives 31 day columns of about 0.85rem, Quarter up to 14 week columns of about 1.9rem, and Year 12 month columns of about 2.2rem. Bars carry no text in Phase 1 (the label is in the label column), so a day column of 0.75rem or more holds a legible bar and a milestone. The minimum column width is 0.75rem; if a container ever leaves less, the time axis scrolls inside its own region with the label column fixed, and the page still never scrolls sideways.
+- The chart fits the width at every zoom, so the page never scrolls sideways. The chart appears only at list container widths of 40rem and above (narrower containers show the phone list, section 8). The arithmetic depends on the tier:
+
+  | Container | Label column | Time axis | Month (31 days) | Quarter (≤14 weeks) | Year (12 months) |
+  | --------- | ------------ | --------- | --------------- | ------------------- | ---------------- |
+  | 40rem     | 12rem        | ~26rem    | ~0.85rem        | ~1.9rem             | ~2.2rem          |
+  | 48rem     | 12rem        | ~36rem    | ~1.15rem        | ~2.6rem             | ~3rem            |
+  | 64rem     | 16rem        | ~48rem    | ~1.55rem        | ~3.4rem             | ~4rem            |
+
+  Bars carry no text in Phase 1 (the label is in the label column), so a day column of 0.75rem or more holds a legible bar and a milestone. The minimum column width is 0.75rem; if a container ever leaves less, the time axis scrolls inside its own region with the label column fixed, and the page still never scrolls sideways.
+
 - Rows follow the list density (comfortable or compact).
 - Weekend shading is not inferred, as in Calendar.
 
@@ -325,7 +334,7 @@ The same nine steps as Calendar section 10, for `entity_surface_gantt` and the d
 | `tests/foundation/entity-list-gantt-model.test.ts`                        | model tests                                                                             |
 | `tests/foundation-browser/entity-list-gantt.spec.ts`                      | browser spec, registered beside the Calendar spec                                       |
 
-Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colours, spacing and type use design-system tokens only. The breakpoint scale governs container tiers, not every internal dimension: the chart has three local layout constants, the 12rem label column, the 0.75rem minimum column and the 0.375rem minimum bar width, declared once as custom properties in `gantt.css` (`--gantt-label-width`, `--gantt-min-column`, `--gantt-min-bar`), because no design-system token covers them.
+Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colours, spacing and type use design-system tokens only. The breakpoint scale governs container tiers, not every internal dimension: the chart has three local layout constants, the label column (16rem, overridden to 12rem by the `(width < 64rem)` container tier), the 0.75rem minimum column and the 0.375rem minimum bar width, declared once as custom properties in `gantt.css` (`--gantt-label-width`, `--gantt-min-column`, `--gantt-min-bar`), because no design-system token covers them.
 
 ## 12. Delivery phases and acceptance
 

@@ -756,11 +756,14 @@ function GanttRow({
             href={href}
             onClick={open}
             tabIndex={-1}
+            title={label}
           >
             {label}
           </a>
         ) : (
-          <span className="a-entity-gantt__name">{label}</span>
+          <span className="a-entity-gantt__name" title={label}>
+            {label}
+          </span>
         )}
         {status ? (
           <span className="a-entity-gantt__status">{status}</span>

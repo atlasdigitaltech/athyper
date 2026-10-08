@@ -1,9 +1,10 @@
 /* Gantt list view mode. Shared toolbar, notices, agenda and tray come from
    date-range.css; tone comes from published choice tones via data-tone; every
    colour is a design-system token. Three local layout constants have no
-   design-system token (Gantt blueprint section 11). */
+   design-system token (Gantt blueprint section 11). The label column is 16rem
+   in wide lists and 12rem below the 64rem tier. */
 .a-entity-gantt {
-  --gantt-label-width: 12rem;
+  --gantt-label-width: 16rem;
   --gantt-min-column: 0.75rem;
   --gantt-min-bar: 0.375rem;
   --gantt-row: 2.375rem;
@@ -208,6 +209,15 @@
 a.a-entity-gantt__name:hover {
   text-decoration: underline;
 }
+/* A keyboard user sees the full label a pointer user gets from the tooltip:
+   the focused row's label wraps instead of truncating. */
+.a-entity-gantt__row:focus-within .a-entity-gantt__name {
+  overflow: visible;
+  padding-block: var(--a-space-1);
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 /* Visually hidden: tone is never the only status signal (blueprint section 8). */
 .a-entity-gantt__status {
   position: absolute;
@@ -280,6 +290,11 @@ a.a-entity-gantt__name:hover {
   transform: translate(50%, -50%) rotate(45deg);
 }
 
+@container entity-list (width < 64rem) {
+  .a-entity-gantt {
+    --gantt-label-width: 12rem;
+  }
+}
 @container entity-list (width < 40rem) {
   .a-entity-gantt {
     padding: var(--a-space-2);
