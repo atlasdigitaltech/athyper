@@ -95,11 +95,25 @@ Sort and column comparisons must stay order-sensitive. Normalizing them would hi
 
 Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now also carries each renderer's traits: what the layout takes over from the shared list chrome. A new layout declares its traits in the registry; the list reads `listModeTraits(mode)` and never compares mode names for these decisions. The trait record is required for every renderer kind, so a new layout cannot be registered without declaring them, and a mode without a renderer gets no traits.
 
-| Trait              | When true                                                                                                                                       | Table | Cards | Board | Calendar | Gantt |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----- | ----- | -------- | ----- |
-| `adaptsWhenNarrow` | The layout adapts itself at narrow widths instead of becoming cards                                                                             | no    | no    | yes   | yes      | yes   |
-| `ownPaging`        | The list pagination is hidden; the layout pages its own rows                                                                                    | no    | no    | yes   | yes      | yes   |
-| `ownGrouping`      | The Group drawer is hidden; a saved group stays for Table and Cards                                                                             | no    | no    | yes   | yes      | yes   |
-| `ownCounts`        | The list title shows no record count, because the page query is only one of the layout's streams; the layout reports its counts under section 5 | no    | no    | no    | yes      | yes   |
+| Trait              | When true                                                                                                                                       | Table | Cards | Board | Calendar | Gantt | Tree |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----- | ----- | -------- | ----- | ---- |
+| `adaptsWhenNarrow` | The layout adapts itself at narrow widths instead of becoming cards                                                                             | no    | no    | yes   | yes      | yes   | yes  |
+| `ownPaging`        | The list pagination is hidden; the layout pages its own rows                                                                                    | no    | no    | yes   | yes      | yes   | yes  |
+| `ownGrouping`      | The Group drawer is hidden; a saved group stays for Table and Cards                                                                             | no    | no    | yes   | yes      | yes   | yes  |
+| `ownCounts`        | The list title shows no record count, because the page query is only one of the layout's streams; the layout reports its counts under section 5 | no    | no    | no    | yes      | yes   | yes  |
 
 `ownCounts` is where the section 5 title rule lives in code (`7314e12cd`, `9eb1ae1b6`). Layout-specific code that is not policy stays per layout: each layout's own page-query inputs and the choice of its component.
+
+`tree` was registered with all four traits on 9 October 2026 (Tree blueprint B1, `c3cbd5d9f`); the column above records it.
+
+## 8. Record-scoped layouts (approved 9 October 2026)
+
+**Approval.** The project owner (nchandravel-atlas) approved this rule as T3 of the [Entity list Tree blueprint](../entity-list-tree/blueprint.md) revision 3, to be decided once for every layout: "pilot 1, T1, T2, T3 and the B2 design entry as per recommendation... approved all five with with T2 and B4 amend below".
+
+Today every layout other than Table and Cards is switched off in every embedded host (`withRenderableModes(…, { board: !embedding, calendar: !embedding, gantt: !embedding, tree: !embedding })`). The rule:
+
+1. **Record-section hosts may offer a layout; record pickers may not.** An embedded list shown as a section of a record (a record-scoped collection) may offer Board, Calendar, Gantt and Tree when its descriptor supports them. A list embedded to choose records keeps Table and Cards only.
+2. **The scope comes only from the section's locked record scope,** resolved and enforced on the server exactly as embedded lists already are. A layout never takes its scope from a filter the browser supplies, so a caller cannot widen it.
+3. **Fail closed.** A layout that needs a scope (Tree with a `scopeField`) is unavailable in a section whose locked scope does not bind that field, with its reason code, never drawn over the wider set.
+4. **Each layout adopts the rule in its own build step.** Tree adopts it as T3 (Tree blueprint section 12); Board, Calendar and Gantt adopt it when each needs an embedded variant, with no further decision on the rule itself.
+

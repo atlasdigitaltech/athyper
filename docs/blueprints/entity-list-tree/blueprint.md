@@ -1,6 +1,6 @@
 # Entity list Tree — blueprint
 
-**Status:** approved, revision 2 (9 October 2026). The project owner (nchandravel-atlas) approved all eleven decisions in section 14 on 9 October 2026, restating each decision and then: "All approved... updated the document for final review". Sections 5.1–5.3 (the grouping state, the hierarchy declaration, the `tree` mode and browser projection, and the list contract additions declared there: the `groupsOnly` flag, the `hierarchy` parameter and the `hasChildren` and `parentOutsideView` row fields; their shapes were written into section 5 after approval, at the final review, with no change of intent) are implementation authority for phases A1, P-T1 and B1. Phases B2–B5, A2 and A3 each need their own approval. Authoring storage (decision 9) is approved but built behind the metadata-cleanup gate.
+**Status:** approved, revision 2 (9 October 2026). The project owner (nchandravel-atlas) approved all eleven decisions in section 14 on 9 October 2026, restating each decision and then: "All approved... updated the document for final review". Sections 5.1–5.3 (the grouping state, the hierarchy declaration, the `tree` mode and browser projection, and the list contract additions declared there: the `groupsOnly` flag, the `hierarchy` parameter and the `hasChildren` and `parentOutsideView` row fields; their shapes were written into section 5 after approval, at the final review, with no change of intent) are implementation authority for phases A1, P-T1 and B1. Phases B2–B5, A2 and A3 each need their own approval. Authoring storage (decision 9) is approved but built behind the metadata-cleanup gate. **Revision 3 (9 October 2026), approved:** after the post-build audit checked the Neon DDL, the project owner approved pilot 1, T1, T2, T3 and the B2 design entry "as per recommendation", with the auditor's amendments to T2 and B4, in these words: "pilot 1, T1, T2, T3 and the B2 design entry as per recommendation... approved all five with with T2 and B4 amend below". Revision 3 adds: the hierarchy shapes found in the DDL (section 2.3); T1 `scopeField` and T2 the discriminated node kind (sections 2.2, 5.2, 5.3, 7.2), which are implementation authority; T3 record-scoped layouts, decided once for every layout in the [shared list layout foundation](../entity-list-layouts/foundation.md) section 8; the onboarding checklist T5 (section 2.4); pilot 1, Commodity Category (section 12.1); the B2 design (sections 5.5 and 7.3), which is a design approval, not build approval; and the B4 integrity split (section 7.5), a design direction that still needs build approval.
 
 **Scope and authority.**
 
@@ -17,7 +17,7 @@
 ## Contents
 
 1. Principles
-2. Eligibility for any Entity
+2. Eligibility for any Entity (2.3 hierarchy shapes in the DDL, 2.4 onboarding checklist)
 3. Current-state facts this design relies on
 4. Prerequisites
 5. Contract properties
@@ -68,14 +68,40 @@ An Entity may declare a hierarchy when all of the following hold. Studio validat
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
 | A **parent field**: a `reference` field whose published `referenceTargetEntity` is this same Entity, nullable (records without a parent are roots)                                                                                                                                                                 | entity field metadata                            |
 | The parent field is readable, unmasked and filterable with `eq`, `in` and `is_null` for the viewer †                                                                                                                                                                                                               | per-viewer field projection                      |
+| An optional **scope field** (T1): a `reference` field naming the owning record (a chart, a company code, a project) when the parent's foreign key includes that owner, as in `(tenant_id, project_id, parent_wbs_id)`. Required when the parent key is composite (section 2.3). The parent and every child share its value † |
 | An optional **sibling order field**: an `integer` field; without it, siblings follow the surface's published default sort                                                                                                                                                                                          | entity field metadata                            |
-| An optional **node kind field**: an entity-owned enum, with each choice declared as `branch` (may have children, for example a summary account) or `leaf` (may not, for example a posting account), and published choice tones                                                                                     | entity field metadata, choice rows               |
+| An optional **node kind** (T2, discriminated): either a **choice** field (an entity-owned enum, with the choices that may have children listed as branch values, for example a summary account, and published choice tones) or a **boolean** field with the value that means "may have children" (`branchWhen`, for example `false` for `is_postable`). It must express the database's own leaf rule, not a correlated field (section 2.4)                                                                                     | entity field metadata, choice rows               |
 | A **maximum depth** between 1 and 16                                                                                                                                                                                                                                                                               | hierarchy declaration                            |
 | Optional **rollups**: up to 5, each a numeric (`integer`, `decimal`, `money`) field with an aggregate (`sum` or `count`) the field already publishes in its `aggregations`. `minimum` and `maximum` are excluded: over the visible subset they are not the node's minimum or maximum, and no wording makes them so | entity field metadata, `field.list.aggregations` |
-| The parent field is indexed with the tenant column (an onboarding check, reported by the DDL rehearsal)                                                                                                                                                                                                            | Entity onboarding                                |
+| The parent field is indexed with the tenant column, and with the scope column first when a scope field is declared (an onboarding check, reported by the DDL rehearsal)                                                                                                                                                                                                            | Entity onboarding                                |
 | `tree` in `supported_modes` and a hierarchy declaration require each other †                                                                                                                                                                                                                                       | cross-row check                                  |
 
 **Count mode** is not required to browse. Child counts and rollups show only under exact counts.
+
+### 2.3 Hierarchy shapes in the Neon DDL (revision 3)
+
+Verified against `server/db/ddl/planes/neon/master` (`03_tables.sql`, `05_constraints.sql`, `06_indexes.sql`, `07_functions.sql`, `08_triggers.sql`) on 9 October 2026. Every table below also has `UNIQUE (tenant_id, id)`, so "parent = this ID" always resolves to one row; the scope matters for index use, for showing one tree rather than a forest, and for keeping B2 and B4 inside one owner.
+
+| Shape | Tables | Parent key | Readable code unique | Order field | Parent index | Database guards |
+| --- | --- | --- | --- | --- | --- | --- |
+| **1. Parent ID, no scope** (fits B1 as built) | `commodity_category`, `asset_class`, `legal_entity`, `operating_organization`, `org_unit` | `(tenant_id, parent_id)` | per tenant | `sort_order` on `commodity_category` (integer), `asset_class` (smallint), `org_unit` | `(tenant_id, parent_id)`; `org_unit` adds `sort_order` | cycle guard on every table (`trg_guard_organization_hierarchy_cycle`, or `trg_validate_commodity_category_parent`); `operating_organization` also limits depth to 12 |
+| **2. Parent ID within an owner** (needs T1) | `gl_account` (chart), `cost_center` and `profit_center` (company code), `project_wbs` (project) | `(tenant_id, owner_id, parent_id)` | per owner | `sort_order` | `(tenant_id, owner_id, parent_id[, sort_order])` | cycle guard; `project_wbs` also refuses a postable parent, a parent in another project, and reparenting a node that has children (`trg_validate_project_wbs`); `gl_account` allows 32 levels |
+| **3. Parent by code within a scheme** (deferred, T4) | `shared.industry_code`, `shared.commodity_code` | `parent_code` text within `domain_code` | per scheme | — | — | no self-parent check; already onboarded, shared-reference products (Board 14.8) |
+
+Leaf rules found: `project_wbs.is_postable` (boolean; `project_wbs_postable_chk` allows a postable control account, so `wbs_type` is not the leaf rule), `gl_account.node_type` (choice), `cost_center.is_posting_allowed` (meaning to confirm at its onboarding), `industry_code.is_leaf` (boolean). No master-data hierarchy carries a numeric field to total (section 7.4).
+
+### 2.4 Onboarding checklist for a hierarchy (T5)
+
+Each pilot runs this checklist and records the result in its onboarding evidence; pilot 1 writes it down as the template the later pilots follow.
+
+1. **Parent:** a self-reference, nullable, with a database foreign key. When the key includes an owner column, `scopeField` names it (`TREE_SCOPE_FIELD_REQUIRED` otherwise).
+2. **Index:** a parent index leading with the tenant, then the scope when declared, then the parent.
+3. **Identity:** the readable identity is unique within the scope by a database constraint. When it is unique only per scope, Tree needs one scope value (T1) and the list's identity guidance says so.
+4. **Depth:** `maxDepth` is at most 16, at least any depth limit the database declares (`trg_guard_organization_hierarchy_cycle`'s depth argument), and at least the deepest path in the onboarding data, measured during the DDL rehearsal (`TREE_DEPTH_BELOW_DATA`). Otherwise the tree truncates with a depth marker where the author expected leaves.
+5. **Node kind:** the declared node kind is the database's own leaf rule (for example `is_postable`), not a field that merely correlates with it.
+6. **Order:** the order field is an integer (`smallint` or `integer`), preferably in the parent index.
+7. **Integrity:** the database guards cycles for this table (a trigger). Without one, B4 is not offered for the Entity.
+8. **Publication:** the list's catalogue row (`metadata.ui_component_contract.supported_modes`) includes `tree`, and the declaration goes through Platform Admin proposal and Platform Owner approval.
 
 ## 3. Current-state facts this design relies on
 
@@ -94,6 +120,8 @@ Verified against the repository on 9 October 2026.
 | The registry declares per-layout list policy as traits                                                              | foundation section 7                                              | `tree` declares its traits; no mode comparisons are added                                                           |
 | `tree` is not a reserved mode and no `tree` URL key exists                                                          | `view-modes.ts`, `url-state.ts`                                   | Reserving it is a contract change                                                                                   |
 | Country and State Region publish no per-field list settings                                                         | Board decision 14.8                                               | Neither can group today; pilots use synthetic fixtures (section 12)                                                 |
+| The hierarchies the named use cases need are scoped by an owner, and their databases already guard cycles | section 2.3 (revision 3) | T1 adds the scope; B4 relies on the database for cycles (section 7.5) |
+| Tree, like Board, Calendar and Gantt, is switched off in every embedded host today | `withRenderableModes(…, { tree: !embedding })` (`index.tsx`) | T3 decides record-scoped hosts once for all layouts (foundation section 8) |
 
 ## 4. Prerequisites
 
@@ -134,11 +162,11 @@ The hierarchy is a property of the Entity, not of one list surface, because the 
 ```ts
 hierarchy?: {
   parentField: string;                 // reference to this Entity, nullable
+  scopeField?: string;                 // T1: reference to the owning record; parent and children share it
   orderField?: string;                 // integer
-  nodeKind?: {
-    field: string;                     // entity-owned enum
-    branchValues: readonly string[];   // choices that may have children; others are leaves
-  };
+  nodeKind?:                           // T2: discriminated, so the declaration is reviewable
+    | { kind: "choice"; field: string; branchValues: readonly string[] }  // entity-owned enum
+    | { kind: "boolean"; field: string; branchWhen: boolean };            // e.g. branchWhen: false for is_postable
   maxDepth: number;                    // 1–16
   rollups?: readonly {
     field: string;                     // integer, decimal or money
@@ -147,13 +175,15 @@ hierarchy?: {
 };
 ```
 
+**T1 and T2 (revision 3).** No hierarchy is published yet (only fixtures declare one), so `nodeKind` changes shape without a compatibility reader: the parser requires `kind`. A wrong node kind cannot hide children, because whether a node expands comes from the server's `hasChildren`; it can only draw the wrong marker and, later, make B4 refuse or allow the wrong move, which is why it must state the database's leaf rule.
+
 ### 5.3 Part B: list mode and browser projection
 
 | Property                 | Shape                                                                                                                                    | Consequence                                                                                                 |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `ENTITY_LIST_VIEW_MODES` | adds `"tree"`                                                                                                                            | Offered only through its per-viewer resolver, like Board, Calendar and Gantt                                |
 | Renderer traits          | `tree`: adapts when narrow, own paging, own grouping, own counts                                                                         | The list's pagination, Group drawer and title count are off in Tree                                         |
-| `surface.tree`           | `{ parentField, orderField?, nodeKind?: { field, branchValues, tones }, maxDepth, rollups?: { field, aggregate, label }[] }`, per viewer | A masked rollup or node-kind field is omitted for that viewer; a masked parent field makes Tree unavailable |
+| `surface.tree`           | `{ parentField, scopeField?, orderField?, nodeKind?: { kind: "choice", field, branchValues, tones? } \| { kind: "boolean", field, branchWhen }, maxDepth, rollups?: { field, aggregate, label }[] }`, per viewer | A masked rollup or node-kind field is omitted for that viewer; a masked parent or scope field makes Tree unavailable |
 | Saved state              | none beyond `mode = tree`                                                                                                                | Expanded nodes are session state                                                                            |
 | URL                      | `view=tree`; `tree.node=<record>` selects and reveals a node (location only)                                                             | Deep links open with the path to that node expanded                                                         |
 | Component catalogue data | the list host declares `tree`                                                                                                            | A publication gate, as for Calendar and Gantt                                                               |
@@ -165,7 +195,7 @@ hierarchy?: {
 | Parameter                     | `hierarchy`, a string enum: `"nodes"` or `"orphans"`; absent means a flat list request. Declared in the list operation's route schema                                                                                                                                                       |
 | `hierarchy=nodes`             | Used for the roots query (`parentField is_null`) and each children query (`parentField eq <node>`). The filters are the list's ordinary filters; the parameter only adds the row fields below                                                                                               |
 | `hierarchy=orphans`           | The server selects visible records whose parent field is set but whose parent is not in the viewer's visible set (computed inside the visible set, never by reading hidden records), sorted by readable identity, paged with a cursor                                                       |
-| Accepted only when            | The surface publishes a hierarchy and the viewer can use its parent field (`eq`, `in`, `is_null`); otherwise 400 `LIST_TREE_PARENT_FIELD_UNAVAILABLE`, the same reason code the Layout availability uses                                                                                    |
+| Accepted only when            | The surface publishes a hierarchy and the viewer can use its parent field (`eq`, `in`, `is_null`); otherwise 400 `LIST_TREE_PARENT_FIELD_UNAVAILABLE`, the same reason code the Layout availability uses. With a `scopeField` (T1), the request must also name exactly one scope value, by one `scopeField eq` filter or by the locked record scope of an embedded section (T3); otherwise 400 `LIST_TREE_SCOPE_REQUIRED` |
 | Row field `hasChildren`       | `readonly hasChildren?: boolean` on `EntityListRowV1`. **Present on every row of a `hierarchy` response and absent from every other response**, so flat lists and the other layouts are byte-for-byte unchanged. True when the row has at least one child the viewer can read (section 7.2) |
 | Row field `parentOutsideView` | `readonly parentOutsideView?: true` on `EntityListRowV1`, present only on rows of a `hierarchy=orphans` response. It carries no information about the hidden parent                                                                                                                         |
 | Child counts                  | Not on rows. A numeric child count, when shown under exact counts, comes from the children query's own `total` once a node is expanded                                                                                                                                                      |
@@ -176,22 +206,36 @@ hierarchy?: {
 
 | Phase                     | Addition                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------- |
-| B2 Search with context    | A tree query returning matches plus their ancestors (section 7.3)                                     |
+| B2 Search with context    | Design approved in revision 3 (sections 5.5 and 7.3); build needs approval                           |
 | B3 Rollups                | Rollup values per node (section 7.4)                                                                  |
-| B4 Reparent               | Moving a node through the existing update operation, with cycle and depth guards on the server        |
+| B4 Reparent               | Moving a node through the existing update operation; integrity split in section 7.5 (database: cycles and owner; framework: depth and, where the database does not, the leaf rule) |
 | B5 Pickers and breadcrumb | A tree record picker for references to hierarchical Entities; an ancestor breadcrumb on record detail |
 | A2 Group aggregates       | Per-group totals from published `aggregations`, under exact counts                                    |
 | A3 Date grouping          | Grouping a date field by month or quarter                                                             |
+
+### 5.5 Phase B2 contract: search with ancestor context (design approved in revision 3; build needs approval)
+
+| Aspect | Shape |
+| --- | --- |
+| Request | The existing list operation with `hierarchy=matches`. Requires a search or at least one filter other than the parent and scope filters; otherwise 400 `LIST_TREE_MATCHES_UNCONSTRAINED`. With a `scopeField`, exactly one scope value (T1), otherwise 400 `LIST_TREE_SCOPE_REQUIRED`. Not combinable with `group`, `groupsOnly`, `recordIds` or a cursor |
+| Matches | Visible records that meet the list's filters, search, standard view and scope, sorted by readable identity, at most 500 |
+| Context | The ancestors needed to reach each match, walked upwards inside the visible set and inside the match's scope, never further than `maxDepth − 1` steps. Ancestors are not filtered by the search or filters: they are shown for context only |
+| Row fields | `treeRole: "match" \| "context"` on every row of a `matches` response; `hasChildren` as in `nodes`; `parentOutsideView` on the top row of a path whose next ancestor the viewer cannot read |
+| Result fields | `matchesTruncated?: true` when more than 500 records match; `matchesBeyondDepth?: number` for matches whose path does not reach a root within `maxDepth` (they are not drawn) |
+| Counts | `pagination.total` counts matches only, under exact counts only (foundation section 5) |
+| Authorization | Same as `hierarchy=nodes`: fail closed with `LIST_TREE_RECORD_AUTHORIZATION_UNSUPPORTED` when record authorization is not covered by SQL; field masking and projection as for any row |
+| Hashes | `matches` is bound into the `queryHash` like the other `hierarchy` values |
+| Absent elsewhere | `treeRole` and the two result fields appear only on `matches` responses, asserted by server tests as for B1 |
 
 ## 6. Validation, availability and finding codes
 
 | Layer                       | Behaviour                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Studio validation           | `TREE_PARENT_FIELD_REQUIRED`, `TREE_PARENT_FIELD_NOT_SELF_REFERENCE`, `TREE_PARENT_FIELD_NOT_NULLABLE`, `TREE_ORDER_FIELD_INELIGIBLE`, `TREE_NODE_KIND_INELIGIBLE`, `TREE_DEPTH_OUT_OF_RANGE`, `TREE_ROLLUP_INELIGIBLE` (type, or the aggregate is not in the field's published `aggregations`), `TREE_ROLLUP_LIMIT`, `LIST_MODE_UNSUPPORTED` |
+| Studio validation           | `TREE_PARENT_FIELD_REQUIRED`, `TREE_PARENT_FIELD_NOT_SELF_REFERENCE`, `TREE_PARENT_FIELD_NOT_NULLABLE`, `TREE_SCOPE_FIELD_REQUIRED` (the parent key includes an owner column), `TREE_SCOPE_FIELD_INELIGIBLE` (not a non-null reference, or not part of the parent key), `TREE_ORDER_FIELD_INELIGIBLE`, `TREE_NODE_KIND_INELIGIBLE` (a choice kind on a non-enum field, a boolean kind on a non-boolean field, or branch values outside the choices), `TREE_DEPTH_BELOW_DATA` (onboarding, section 2.4), `TREE_DEPTH_OUT_OF_RANGE`, `TREE_ROLLUP_INELIGIBLE` (type, or the aggregate is not in the field's published `aggregations`), `TREE_ROLLUP_LIMIT`, `LIST_MODE_UNSUPPORTED` |
 | Published-descriptor parser | A structurally invalid `hierarchy` rejects the descriptor at load; `tree` ⇔ a hierarchy declaration                                                                                                                                                                                                                                           |
-| List service (per viewer)   | Tree moves to `unavailableModes` with `LIST_TREE_PARENT_FIELD_UNAVAILABLE` when the parent field is masked, unreadable or lacks `eq`, `in` or `is_null`. Grouping fields that fail section 2.1 are not offered; a saved one is dropped with the notice                                                                                        |
+| List service (per viewer)   | Tree moves to `unavailableModes` with `LIST_TREE_PARENT_FIELD_UNAVAILABLE` when the parent field is masked, unreadable or lacks `eq`, `in` or `is_null`, and with `LIST_TREE_SCOPE_FIELD_UNAVAILABLE` when a declared scope field is masked, unreadable or lacks `eq`. Grouping fields that fail section 2.1 are not offered; a saved one is dropped with the notice                                                                                        |
 | Browser                     | The foundation behaviour: a disabled Layout option with its reason; fallback with notice; no fall-through                                                                                                                                                                                                                                     |
-| Write (Phase B4)            | `HIERARCHY_CYCLE` and `HIERARCHY_DEPTH_EXCEEDED` (409) from the update operation; `HIERARCHY_LEAF_PARENT` when the new parent's node kind is a leaf                                                                                                                                                                                           |
+| Write (Phase B4)            | Framework checks before the write: `HIERARCHY_DEPTH_EXCEEDED` and, where the database does not enforce it, `HIERARCHY_LEAF_PARENT` (409). Database refusals of the parent change map to `HIERARCHY_REJECTED`, and a foreign-key refusal of the parent key to `HIERARCHY_PARENT_OUTSIDE_SCOPE` (section 7.5) |
 
 ## 7. Query semantics
 
@@ -215,10 +259,18 @@ hierarchy?: {
 - **Orphans:** a visible record whose parent is not visible to the viewer is marked `parentOutsideView`, is never hidden and never shows the hidden parent's identity. Orphans form **their own group after the roots**, headed "Records whose parent is outside your view", fetched by a separate `hierarchy=orphans` query (section 5.3) and **sorted by readable identity**, not by the order field: an order value is meaningful only among real siblings, so mixing orphans into the root order would scatter or cluster them arbitrarily. Each orphan's own children browse normally. The orphan group's query uses the visible set and the parent field only, so it reveals nothing about the hidden parents.
 - **Depth:** nothing deeper than `maxDepth` is requested.
 - **Ceiling:** at most 500 loaded nodes, the Gantt rule (reached and truncated, with the same notice semantics).
+- **Scope (T1).** With a `scopeField`, Tree draws only when the list names exactly one scope value: one `scopeField eq` filter in the list state, or the locked record scope of an embedded section (T3). The roots, children and orphans queries then carry that scope, and the child-existence and orphan checks compare the scope column as well as the parent (`__tree_child.scope = __tree_row.scope`), matching the composite foreign key and its index. Without one scope value, Tree shows a prompt (section 8) and sends no roots, children or orphans request; the list's own page query is then the ordinary list query, whose rows only decide the empty state. A deep link to a record in a scoped hierarchy sets the scope filter to that record's scope before revealing it.
 
-### 7.3 Part B, Phase B2: search and filters in a tree
+### 7.3 Part B, Phase B2: search and filters in a tree (design approved in revision 3; build needs approval)
 
-With a search or filter, the tree shows each matching record with its ancestor path, so a match is seen in context (for example account 6100 under Expenses › Operating). The server returns the matches and the ancestors needed to reach them, each ancestor marked as context rather than a match, computed with a depth-bounded recursive query **inside the visible set**. Matches are capped at the node ceiling and say so. This is a new server operation and needs its own approval.
+With a search or filter, the tree shows each matching record with its ancestor path, so a match is seen in context (for example account 6100 under Expenses › Operating). The contract is section 5.5.
+
+1. **Matches first.** The server selects the matches inside the visible set with the list's filters, search, standard view and scope, ordered by readable identity, limited to 501 so it can say whether more exist.
+2. **Then the ancestors, inside the visible set and the scope.** A depth-bounded `WITH RECURSIVE` walk starts from the matches' parents. Every step re-applies the visible-set conditions (tenant, record predicates, collection scope) and requires the ancestor's scope to equal the match's scope, so a path can never pass through a hidden record or another owner's node, even if a parent value pointed there. The walk stops at a root, at a parent the viewer cannot read, or after `maxDepth − 1` steps. It follows the "visible set first, then recurse, depth-bounded" pattern already used by `comment-descendants.ts`.
+3. **Placement.** A path that reaches a root is drawn under the roots. A path stopped by an unreadable parent is drawn in the "Records whose parent is outside your view" group, its top row marked `parentOutsideView`, with nothing about the hidden parent. A match whose path does not reach a root within `maxDepth` is not drawn and is counted in a notice ("N matches sit deeper than this tree shows; open Table to see them").
+4. **Cost.** At most 500 matches times `maxDepth − 1` steps, each step an indexed parent lookup (section 2.4 requires the index), so B2 does not need exact counts; only the match total waits for them.
+5. **In the browser.** When search or filters are active and B2 is available, Tree switches to the matches view: matches are drawn normally, context rows are muted with a "Shown for context" label (also as hidden text), every context row is expanded, and expanding further from a match loads its children normally. The level-by-level caption is removed. Clearing the search returns to browsing. Each match keeps its record link and deep link.
+6. **Acceptance (section 12).** A match under a non-matching parent is reachable; ancestors are marked as context; a hidden ancestor is never shown and the path moves to the outside-your-view group; on a fixture with two scopes sharing codes, no path ever mixes scopes; the 500 cap and the beyond-depth notice appear only when true; no UUID in the DOM.
 
 ### 7.4 Part B, Phase B3: rollups
 
@@ -227,6 +279,22 @@ A rollup is the declared aggregate (`sum` or `count`) of a declared field over a
 - **It is deliberately partial.** Hidden descendants contribute nothing, so a summary node's rollup can understate the full total. It is always labelled "Total of records you can see" (and "Records you can see" for `count`), and is never presented as the node's balance or full total.
 - **Count stays benign** because it counts visible records only: it reflects what the viewer can already open, not records they cannot.
 - **Minimum and maximum are excluded** (section 2.2): over a visible subset they are not the node's minimum or maximum. Financial balances that come from transactions (for example a ledger balance per account) are not rollups of an account field: they belong to a domain read model onboarded as its own Entity, and its tree reuses Part B.
+
+### 7.5 Part B, Phase B4: reparent integrity (design direction in revision 3; build needs approval)
+
+The database already guards the hierarchies onboarding will use (section 2.3), so B4 does not re-implement them. One authority per rule:
+
+| Rule | Authority | Reason |
+| --- | --- | --- |
+| No cycles | **Database**: `trg_guard_organization_hierarchy_cycle`, `trg_validate_commodity_category_parent`, `trg_validate_project_wbs` | Every candidate table has a cycle guard; a second walk in the framework would be a parallel authority |
+| Parent in the same owner | **Database**: the composite foreign key, and `trg_validate_project_wbs` | Declared in the DDL for every scoped table |
+| No children under a leaf | **Database** where it enforces it (`project_wbs` refuses a postable parent); otherwise the **framework**, from the declared node kind | Only some tables enforce it |
+| Maximum depth | **Framework**, from the declared `maxDepth` (the moved subtree's height plus the new parent's depth) | The database does not know the tree's `maxDepth`. Where the database has its own limit (`operating_organization`: 12), its refusal still stands |
+
+- **The database is the final authority.** Framework checks run before the write to give a precise message; a database refusal always wins.
+- **Narrow error mapping.** A foreign-key refusal on the declared parent key maps to `HIERARCHY_PARENT_OUTSIDE_SCOPE`. A `check_violation` raised while changing the parent field maps to `HIERARCHY_REJECTED`, shown as "This move breaks the hierarchy's rules", without the database message text. The existing constraint and trigger messages are not changed: altering shared enforcement objects for presentation is not justified.
+- **Entities without a cycle guard** do not offer B4 (checklist item 7, section 2.4).
+- **In the browser,** dropping a node onto itself or onto one of its loaded descendants is refused before any request, as a presentation guard only.
 
 ## 8. Views and interaction
 
@@ -244,15 +312,19 @@ A rollup is the declared aggregate (`sum` or `count`) of a declared field over a
 
 **Narrow widths:** an indented list with the label and expand control; other columns move into the record card. The narrow Tree offers no selection checkboxes, by design: the indentation and expand controls take the width, and selection stays available at wider tiers.
 
+**Scope prompt (T1).** When a scoped hierarchy has no single scope value, Tree shows, in place of the tree, "Choose {field} to see the tree" with the scope field's **published label** (never a word chosen by the framework) and an action that opens the existing filter control for that field. No tree request is sent until one value is chosen.
+
+**Node kind (T2).** A choice kind draws its published tone; a boolean kind draws a neutral marker. Either way the shape is round for "may have children" and a diamond for a leaf, with the kind as hidden text (the choice label, or the field label and its yes/no value).
+
 **Empty states:** "No records at the top level" with the active filters, and an expand control that reports "No children you can see" when a node's children are all hidden.
 
 ## 9. Studio authoring and composer homes
 
-The hierarchy declaration is authored on the Entity (not on a list surface) in the existing Entity composer, after the metadata cleanup. Every property has a database location (section 5.2), a typed API, a save and load mapping, validation (section 6) and a compiler mapping, per the Entity Studio blueprint. Grouping needs no new authoring: it uses each field's published `groupable` setting and choice list.
+The hierarchy declaration is authored on the Entity (not on a list surface) in the existing Entity composer, after the metadata cleanup. Every property has a database location (section 5.2), a typed API, a save and load mapping, validation (section 6) and a compiler mapping, per the Entity Studio blueprint. Grouping needs no new authoring: it uses each field's published `groupable` setting and choice list. Revision 3 adds two members to the same declaration: the scope field binding (T1) and the node kind's discriminator with either its branch choices or its `branchWhen` value (T2).
 
 ## 10. Registration inventory for new authoring members
 
-The same nine steps as Calendar section 10, for the hierarchy declaration storage (decision 9): the Studio dictionary section, contract members, generated output, hand-written guards (self-reference, depth range, rollup eligibility), reconciliation, storage and qualification sites, generated types, a forward upgrade, and no change for existing drafts.
+The same nine steps as Calendar section 10, for the hierarchy declaration storage (decision 9): the Studio dictionary section, contract members, generated output, hand-written guards (self-reference, scope field part of the parent key, node kind matching its field type, depth range, rollup eligibility), reconciliation, storage and qualification sites, generated types, a forward upgrade, and no change for existing drafts.
 
 ## 11. Folder structure and test registration
 
@@ -274,7 +346,9 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | A1        | Grouped tree in Table and Cards                                            | Synthetic fixtures: (a) `group=x` links and saved views read as one level; a stored `groups` with an ineligible field drops it with the notice; (b) each expansion sends one request with the ancestor filters, and in-flight requests abort on state change; (c) group order is published choice order, then No value, then Unmapped values; (d) counts at every level only under exact counts; (e) a last-level group's loaded total matches its rows; (f) no raw identifier in any heading; (g) tree-grid keyboard and ARIA; (h) "expand all loaded" sends no request |
 | P-T1      | Shared tree grid                                                           | Table's current grouping moves onto it with no visible regression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | B1        | Tree layout: roots, children, child existence, orphans, deep link, ceiling | Synthetic hierarchical fixtures shaped like a Chart of Accounts (summary and posting accounts, 5 levels) and a project breakdown: (a) leaves show no expand control; (b) an orphan appears at the top with the marker and never the hidden parent's identity; (c) nothing deeper than `maxDepth` is requested; (d) a masked parent field makes Tree unavailable with its reason; (e) a deep link reveals its node; (f) RTL, narrow, keyboard; (g) no UUID in the DOM                                                                                                     |
-| B2        | Search with ancestor context                                               | Matches show their path; ancestors are marked as context; hidden records never appear as ancestors                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| T1, T2    | Scope field and discriminated node kind (revision 3)                      | Synthetic fixture with two scopes sharing codes: the tree never mixes them; without one scope value Tree shows the prompt with the field's published label and sends no tree request; a hierarchy request without one scope is 400 `LIST_TREE_SCOPE_REQUIRED`; a deep link sets the scope filter; child existence and orphans compare the scope; a boolean node kind with `branchWhen: false` draws leaves for `true`; a node kind cannot hide children |
+| T3        | Record-scoped Tree (foundation section 8)                                 | An embedded section whose locked scope binds `scopeField` draws Tree; a caller cannot widen the scope by filters; a section whose scope does not bind the declared scope field reports Tree unavailable |
+| B2        | Search with ancestor context                                               | Section 7.3 item 6. Matches show their path; ancestors are marked as context; hidden records never appear as ancestors                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | B3        | Rollups                                                                    | On fixtures with hidden records: a sum equals the sum over visible descendants and a count the number of visible descendants, both deliberately partial and labelled "of records you can see"; never labelled as a balance; shown only under exact counts                                                                                                                                                                                                                                                                                                                |
 | B4        | Reparent                                                                   | Cycle, depth and leaf-parent guards reject with their codes; audit and idempotency as for any update                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Authoring | Section 9, 10                                                              | Behind the metadata-cleanup gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -282,6 +356,20 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 **Verification method (as for Board, Calendar and Gantt).** Each phase is verified on synthetic fixtures shaped like a Chart of Accounts (summary and posting accounts, 5 levels) and a project breakdown, through the real shared runtime and browser specs, until real Entities are onboarded. With the owner's approval (9 October 2026), AGENTS.md carries a pointer worded like the other layouts', linking this blueprint and the foundation by their stable paths.
 
 **Fixture boundary.** Synthetic fixtures are test data. Chart of Accounts, Cost Center, Project Task and Budget pilots are Entity onboarding with their own approval; each then needs only its hierarchy declaration.
+
+### 12.1 Pilots (revision 3)
+
+| Order | Pilot | Proves | Needs |
+| --- | --- | --- | --- |
+| 1 (approved) | **Commodity Category** (`master.commodity_category`, shape 1) | Tree on real data with no contract change: tenant-unique codes, integer `sort_order`, a parent index, a database cycle guard, real permissions and orphans, deep links, no UUIDs. It also writes the section 2.4 checklist down as the template | Full Entity onboarding (it has no metadata yet), the catalogue row, publication review; after the metadata cleanup |
+| 2 | **Chart of Accounts** (`gl_account`) | A scope (one chart, by filter until T3), a choice node kind (`node_type`), deep paths | T1, onboarding approval |
+| 3 | **Cost Center, then Profit Center** | Company-code scope | T1, onboarding approval |
+| 4 | **Project WBS** (`project_wbs`) | A boolean node kind (`is_postable`), the embedded tree on the Project record | T1, T2, T3, onboarding approval |
+| Separate stream | **Project, then Project Task** | Not Tree work: real data for Calendar, Gantt and Board (`project_task` has planned dates, `completion_pct`, `task_type`, `status` and assignees) | Onboarding approval; no contract change |
+
+**What pilot 1 does not prove.** Commodity categories are shallow in practice, so pilot 1 shows the tree renders on real data but is not evidence for the depth marker, the 500-node ceiling or the lazy-loading request budget. Those need pilot 2 or 4.
+
+**Order of work.** (1) T1 and T2 contract, server and runtime on fixtures, and the T3 foundation rule; these do not depend on the cleanup. (2) The metadata cleanup lands. (3) One forward migration adds `calendar`, `gantt` and `tree` to the list's row in `metadata.ui_component_contract.supported_modes`. (4) Pilot 1 onboarding with the checklist, then manual testing. (5) B2 build when approved. Pilots 2–4 follow with their own onboarding approvals.
 
 **Delivery status (9 October 2026).** Implementation, not publication: no real entity publishes a hierarchy or the `tree` mode yet.
 
@@ -295,6 +383,7 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
   - Narrow widths: an indented list with the label, expand control, row menu and the other columns as label–value details.
   - The result parser accepts `hasChildren` and `parentOutsideView` on any response; the server emits them only on `hierarchy` responses. Rejecting them elsewhere (section 5.3, last row) is not built.
 - Post-build review follow-up (9 October 2026): `tree.node` kept in the location (above); Group by selection fixed. Under exact counts a grouped page has no rows, so the header checkbox selected nothing and records ticked inside groups never reached the selection bar's actions; each loaded group now reports its records, the header checkbox ("Select loaded records") selects every loaded record, and the list says that selection covers loaded records only. Server tests assert the tree row fields appear only on `hierarchy` responses (section 5.3 amended). The seven foundation test files failing in the full suite also fail on a clean checkout of `2f56f8502`, for the same reasons (missing provisioning files, the app loader, Atlas, header and public sign-in), so they predate B1 part 2.
+- Revision 3 (9 October 2026): documents only; T1, T2 and T3 are approved and not built; the B2 design is approved and its build is not.
 - Not landed: the component catalogue row for the list host (a publication gate, as for Calendar and Gantt); authoring storage (decision 9, behind the metadata-cleanup gate); B2–B5, A2 and A3 (each needs its own approval).
 
 ## 13. Dependencies and risks
@@ -302,7 +391,9 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | Dependency or risk                       | Consequence                                   | Handling                                                                                                                                                             |
 | ---------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Metadata cleanup                         | Hierarchy authoring and real publication wait | Runtime proceeds on fixtures, as for Calendar and Gantt                                                                                                              |
-| Large trees (tens of thousands of nodes) | Recursive queries cost more at depth          | Browse needs no recursion; B2 and B3 are depth-bounded and run only under exact counts. A domain-maintained path column is a later option if measurements require it |
+| Large trees (tens of thousands of nodes) | Recursive queries cost more at depth          | Browse needs no recursion; B2 is bounded by 500 matches and `maxDepth`, with only its total waiting for exact counts (revision 3); B3 runs only under exact counts. A domain-maintained path column is a later option if measurements require it |
+| A shallow first pilot | Depth, ceiling and request budget unproven on real data | Pilot 2 or 4 is the evidence for them (section 12.1) |
+| Database and framework disagree on depth | A move allowed by one is refused by the other | The database stays the final authority; the checklist aligns `maxDepth` with any database limit (section 2.4) |
 | Missing parent index                     | Slow children queries                         | An onboarding check in the DDL rehearsal (section 2.2)                                                                                                               |
 | Orphans from authorization               | A partial tree                                | Shown at the top with a marker (principle 4)                                                                                                                         |
 | Shared-reference products (Board 14.8)   | Country and State Region cannot group         | Unchanged until 14.8 lands                                                                                                                                           |
@@ -321,6 +412,13 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 9. **Approved 9 October 2026 (owner wording in the status line).** **Authoring storage for the hierarchy declaration:** **recommendation:** one row per Entity in a new `entity_hierarchy` table (parent, order and node-kind field bindings, maximum depth) plus `entity_hierarchy_rollup` rows, with the parent-field index check (section 2.2) attached to the same declaration so the DDL rehearsal reports it; built behind the metadata-cleanup gate.
 10. **Approved 9 October 2026 (owner wording in the status line).** **Phases:** A1, P-T1 and B1 first; B2 (search with context), B3 (rollups), B4 (reparent), B5 (pickers and breadcrumb), A2 and A3 each need their own approval.
 11. **Approved 9 October 2026 (owner wording in the status line).** **Gantt alignment:** Gantt Phase 2b uses this Part B.
+12. **Approved 9 October 2026, revision 3 (owner wording in the status line).** **Pilot 1:** Commodity Category (section 12.1), with the section 2.4 checklist written down as the template.
+13. **Approved 9 October 2026, revision 3.** **T1 `scopeField`:** an optional owner reference in the hierarchy declaration; Tree needs exactly one scope value, from one `scopeField eq` filter or a locked record scope; the prompt uses the field's published label (sections 5.2, 7.2, 8).
+14. **Approved 9 October 2026, revision 3, as amended.** **T2 node kind:** a discriminated declaration, `{ kind: "choice", field, branchValues }` or `{ kind: "boolean", field, branchWhen }`, replacing the proposed mixed value array.
+15. **Approved 9 October 2026, revision 3.** **T3 record-scoped layouts:** decided once for every layout in foundation section 8, with the scope taken only from the section's server-enforced locked record scope and the layout failing closed when that scope does not bind the declared scope field.
+16. **Approved 9 October 2026, revision 3.** **B2 design entry** (sections 5.5 and 7.3). Building B2 needs its own approval.
+17. **Amended 9 October 2026, revision 3 (design direction; build needs approval).** **B4 integrity split** (section 7.5): the database guards cycles and owner scope; the framework checks depth and, where the database does not, the leaf rule; a narrow mapping of database refusals; no change to database error text.
+18. **Recorded, not yet decided.** T4 (parent by code within a scheme) is deferred. B3 stays on hold: no master-data hierarchy carries a numeric field, and finance totals over a hierarchy are a related-entity rollup that needs its own design.
 
 ## 15. Rejected options
 
@@ -334,6 +432,12 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 - **Rollups over all records regardless of access.** It would disclose hidden records' values; rollups cover visible records only.
 - **Treating ledger balances as field rollups.** Balances come from transactions and belong to a domain read model.
 - **Saving expanded nodes in views.** Expanded state is session state, as in Gantt.
+- **Scope headings over the roots** (revision 3). A tenant can have hundreds of projects or charts, beyond the 50-group bound, and a reference field cannot group.
+- **Filtering the scope in the browser** (revision 3). It would put hierarchy rules in presentation code and duplicate the server's job.
+- **Making owner-scoped codes tenant-unique** (revision 3). It changes a business key to suit a query and removes per-project code reuse the DDL allows.
+- **A mixed `branchValues: (string | boolean)[]`** (revision 3). The field's kind would be inferred from array contents at runtime; the discriminated declaration is reviewable.
+- **A framework cycle walk for B4** (revision 3). The database already guards cycles on every candidate table.
+- **Adding hints or new messages to database guards for B4's errors** (revision 3). Altering shared enforcement objects for presentation is more invasive than a narrow mapping.
 
 ## 16. Review disposition
 
@@ -358,3 +462,4 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | Review 3: the placeholder key's catalogue; deleted versus unreadable                                                                           | The key sits beside `entity.value.yes` and `entity.value.no` in the same catalogue, so it is consistent; the non-distinction is now stated as deliberate (principle 6)                                                                                                                                                                 |
 | Review 3: verification and the AGENTS.md pointer are not decisions                                                                             | Moved to section 12 as the standing method; section 14 keeps the eleven contract decisions                                                                                                                                                                                                                                             |
 | Final review: `groupsOnly` and `hasChildren` were named only in section 7                                                                      | Shapes declared in the contract sections: `groupsOnly` in section 5.1 (parameter, allowed combinations, response, hashes) and the `hierarchy` parameter with `hasChildren` and `parentOutsideView` in section 5.3 (when present, cursor binding, parser rule). The orphans query, previously unspecified, is `hierarchy=orphans`       |
+| Post-build DDL audit (revision 3): scoped hierarchies, WBS node kind, Class 1 guards, pilot choice | Accepted with corrections both ways: `cost_center` is owner-scoped (section 2.3); the WBS leaf rule is `is_postable`, not `wbs_type` (T2); every candidate table guards cycles in the database (section 7.5); scope matters for index use, one tree and B2/B4 containment, not for ID ambiguity; pilot 1 is Commodity Category |
