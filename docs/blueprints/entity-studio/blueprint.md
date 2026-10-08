@@ -1261,6 +1261,10 @@ the existing localized formatter and semantic time/reference elements. UUID, JSO
 numeric kinds remain outside this bounded declaration. Code-level support does not
 expand an installed component contract: a successor declaration and exact deployed
 conformance evidence must qualify any newly selected data types before publication.
+Studio DEV now has reviewed and activated `shared.entity.detail-text` version 2 for
+string, boolean, enum, date and datetime. Its exact pins and replay/acknowledgement
+evidence are recorded in the qualification runbook. This resource does not attest
+complete native bootstrap or F6/F8/F9 qualification.
 
 **Fresh bootstrap component assembly:** explicit surface, section and field component
 selections resolve through configured exact catalogue/manifest/release pins and the

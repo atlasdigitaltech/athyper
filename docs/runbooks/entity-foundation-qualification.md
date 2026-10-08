@@ -189,6 +189,39 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Expanded detail component deployed and activated — 8 October
+
+`shared.entity.detail-text` version 2 is now published and active in Studio. Platform
+Admin `df0159b0-2bdc-55e8-944b-efaa9ed9b8e5` proposed and distinct Platform Owner
+`41bf4855-6aa1-5e43-bc11-ee2cfa647693` approved through authenticated control API
+requests (both HTTP 200). The existing worker performed publication/activation; no
+manual ledger inserts or RLS changes were used.
+
+- Source release: `0aa96821-1995-4b99-abd5-2cc215d15265`.
+- Deployment: `01a11bf6-ae32-7ed9-9d67-9b42f0bda004` (one acknowledgement).
+- Applied release: `01a11bf6-b410-7364-ac59-1df052a06766`.
+- Catalogue ID: `7e441d1f-44ea-4963-8fee-d2f404480f87`.
+- Source hash: `d922c59d76812953a880eda7ac688bf23411dc44a2a131c30f38148307a03af0`.
+- Manifest hash: `dc8861bef417251ed120edf7fa92bd06e3dc37361ceaf1469c33812e6dff9847`.
+- Deployment-bundle hash: `a802a9187de2d563d45a0ec4a70f19041cd0abc0e5edd22071de5208093d4126`.
+
+Evidence resides in `~/.athyper/instances/dev/workspace/component-scalar-candidate-20261008`:
+proposal/approval responses, delivery/replay logs, exact native component pin and HTTPS
+chunk evidence. All 1,634 bundle files passed integrity qualification; 22 conformance
+tests passed. Studio `/readyz` and control API `/livez` returned HTTP 200. HTTPS chunk
+`2aru9tyeetpsy.js` exactly matched build SHA-256
+`84ab1d64d5df1fc80f38ea65bd899e6172fe8f4f2af8b8041d8e9430dccb8995`.
+The source-compose worker and deployed control API use the new bundle evidence; existing
+component declarations remain included. Worker delivery was executed twice with
+`publish-dev-reviewed-resources` and the exact `delivery-request.json`; both runs returned
+the same compilation, deployment and applied-release IDs.
+
+This closes the expanded detail component delivery, not native entity bootstrap. Both
+original drafts remain revision 4. Complete native proposal files, production resource
+bindings and actual bootstrap/replay remain unimplemented; no new Country/State Region
+publication, activation or deployed F6/F8/F9 acceptance is claimed. The manual QA
+handover remains unavailable.
+
 ### Complete-graph display prerequisite — 8 October
 
 The checked-in Country definition includes boolean, enum and datetime fields; State
