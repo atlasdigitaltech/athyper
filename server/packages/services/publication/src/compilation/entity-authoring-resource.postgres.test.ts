@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 // Explicit DEV rollback rehearsal. Synthetic verification evidence demonstrates
 // database projection semantics only, not authentication or publication approval.
 it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
-  "stages, verifies and activates both payload resources without retaining any fixture",
+  "stages, verifies and activates all four payload resources without retaining any fixture",
   () => {
     const container = JSON.parse(
       execFileSync("docker", ["inspect", "athyper-dev-db-1"], {
@@ -39,7 +39,7 @@ it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
     );
     const forward = readFileSync(
       new URL(
-        "../../../../../db/ddl/common/runtime_meta/13_authoring_resource_projection.sql",
+        "../../../../../db/ddl/common/runtime_meta/14_live_read_resource_projection.sql",
         import.meta.url,
       ),
       "utf8",
@@ -51,6 +51,8 @@ it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
     for (const kind of [
       "entity_authoring_descriptor",
       "entity_identity_review",
+      "entity_security_manifest",
+      "entity_storage_authority",
     ]) {
       const release = randomUUID(),
         deployment = randomUUID(),

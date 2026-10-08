@@ -140,7 +140,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     releaseId: string,
   ): Promise<{ readonly compilationIds: readonly string[] }> {
     const resources = (
-      await sql<Row>`SELECT id,release_key,release_no,created_by,approved_by,status,metadata->>'artifactKind' AS kind FROM publication.release WHERE id=${releaseId}::uuid AND metadata->>'artifactKind' IN ('entity_authoring_descriptor','entity_identity_review')`.execute(
+      await sql<Row>`SELECT id,release_key,release_no,created_by,approved_by,status,metadata->>'artifactKind' AS kind FROM publication.release WHERE id=${releaseId}::uuid AND metadata->>'artifactKind' IN ('entity_authoring_descriptor','entity_identity_review','entity_security_manifest','entity_storage_authority')`.execute(
         this.options.database,
       )
     ).rows;
@@ -172,15 +172,16 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       const hash = this.options.canonicalizer.sha256(
         this.options.canonicalizer.canonicalBytes(unsigned),
       );
+      const targetPlane = unsigned.envelope.targetPlane;
       const id = stableUuid(
-        `publication-compilation:${releaseId}:studio:${source.kind}`,
+        `publication-compilation:${releaseId}:${targetPlane}:${source.kind}`,
       );
       await sql`INSERT INTO publication.artifact_compilation(id,publication_release_id,plane_code,artifact_kind,unsigned_document,unsigned_hash,compiler_name,compiler_version,created_by)
-       VALUES(${id}::uuid,${releaseId}::uuid,'studio',${source.kind},${JSON.stringify(unsigned)}::jsonb,${hash},'entity-authoring-resource','1.0.0',${r.created_by}::uuid) ON CONFLICT(publication_release_id,plane_code,artifact_kind) DO NOTHING`.execute(
+       VALUES(${id}::uuid,${releaseId}::uuid,${targetPlane},${source.kind},${JSON.stringify(unsigned)}::jsonb,${hash},'entity-authoring-resource','1.0.0',${r.created_by}::uuid) ON CONFLICT(publication_release_id,plane_code,artifact_kind) DO NOTHING`.execute(
         this.options.database,
       );
       const saved = (
-        await sql<Row>`SELECT id,unsigned_hash FROM publication.artifact_compilation WHERE publication_release_id=${releaseId}::uuid AND plane_code='studio' AND artifact_kind=${source.kind}`.execute(
+        await sql<Row>`SELECT id,unsigned_hash FROM publication.artifact_compilation WHERE publication_release_id=${releaseId}::uuid AND plane_code=${targetPlane} AND artifact_kind=${source.kind}`.execute(
           this.options.database,
         )
       ).rows;
@@ -733,7 +734,9 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
     if (
       artifactKind === "entity_authoring_descriptor" ||
-      artifactKind === "entity_identity_review"
+      artifactKind === "entity_identity_review" ||
+      artifactKind === "entity_security_manifest" ||
+      artifactKind === "entity_storage_authority"
     ) {
       if (!this.options.authoringResourcePublication)
         throw permanent("AUTHORING_RESOURCE_ADAPTER_REQUIRED");
@@ -897,7 +900,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
 
   private async assertActivationApproved(deploymentId: string): Promise<void> {
     const resource = (
-      await sql<Row>`SELECT c.unsigned_document,c.unsigned_hash FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.artifact_compilation c ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind WHERE d.id=${deploymentId}::uuid AND a.artifact_kind IN ('entity_authoring_descriptor','entity_identity_review')`.execute(
+      await sql<Row>`SELECT c.unsigned_document,c.unsigned_hash FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.artifact_compilation c ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind WHERE d.id=${deploymentId}::uuid AND a.artifact_kind IN ('entity_authoring_descriptor','entity_identity_review','entity_security_manifest','entity_storage_authority')`.execute(
         this.options.database,
       )
     ).rows;
@@ -1241,7 +1244,9 @@ function artifactKindValue(
     value !== "compiled_entity_runtime" &&
     value !== "business_partner_definition_bundle" &&
     value !== "entity_authoring_descriptor" &&
-    value !== "entity_identity_review"
+    value !== "entity_identity_review" &&
+    value !== "entity_security_manifest" &&
+    value !== "entity_storage_authority"
   )
     throw permanent("PUBLICATION_ARTIFACT_KIND_INVALID");
   return value;

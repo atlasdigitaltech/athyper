@@ -1,4 +1,8 @@
 import {
+  parseEntityLiveReadResource,
+  type EntityLiveReadResource,
+} from "./entity-live-read-resource.js";
+import {
   parseEntityAuthoringResource,
   type AuthoringDescriptorResource,
   type IdentityReviewResource,
@@ -32,7 +36,9 @@ export type PublicationArtifactKind =
   | "compiled_entity_runtime"
   | "business_partner_definition_bundle"
   | "entity_authoring_descriptor"
-  | "entity_identity_review";
+  | "entity_identity_review"
+  | "entity_security_manifest"
+  | "entity_storage_authority";
 
 /**
  * Content artifact contract for the split compiled-entity runtime. This is separate
@@ -153,6 +159,14 @@ export type PublicationArtifactEnvelopeV1 =
   | (PublicationArtifactEnvelopeBaseV1 & {
       readonly artifactKind: "entity_identity_review";
       readonly payload: IdentityReviewResource;
+    })
+  | (PublicationArtifactEnvelopeBaseV1 & {
+      readonly artifactKind: "entity_security_manifest";
+      readonly payload: EntityLiveReadResource;
+    })
+  | (PublicationArtifactEnvelopeBaseV1 & {
+      readonly artifactKind: "entity_storage_authority";
+      readonly payload: EntityLiveReadResource;
     });
 
 export interface PublicationArtifactManifestV1 {
@@ -1075,6 +1089,19 @@ export function parsePublicationArtifactEnvelope(
         "Compiled entity runtime payload is required",
       );
     }
+  } else if (
+    value.artifactKind === "entity_security_manifest" ||
+    value.artifactKind === "entity_storage_authority"
+  ) {
+    const resource = parseEntityLiveReadResource(
+      value.artifactKind,
+      value.payload,
+    );
+    if (resource.content.plane !== value.targetPlane)
+      throw new PublicationContractError(
+        "ARTIFACT_PLANE_INVALID",
+        "Live-read resource plane mismatch",
+      );
   } else if (
     value.artifactKind === "entity_authoring_descriptor" ||
     value.artifactKind === "entity_identity_review"

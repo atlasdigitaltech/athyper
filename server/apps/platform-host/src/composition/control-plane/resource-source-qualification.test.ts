@@ -90,3 +90,43 @@ it("qualifies exact current saved source and complete historical plan, rejecting
   query.mockResolvedValueOnce({ rows: [{ graph, graphHash: "0".repeat(64) }] });
   await expect(qualify(tx, source)).rejects.toThrow("SOURCE_CHANGED");
 });
+
+it("does not reuse descriptor/identity authority to qualify live-read resources", async () => {
+  const qualify = createResourceSourceQualification(descriptorHash, {
+    canonicalBytes,
+    sha256,
+  });
+  const content = {
+    schema: "entity.effective-security-manifest/1",
+    entityCode: "fixture",
+    plane: "studio",
+    source: {
+      entityId: base.releaseId,
+      releaseId: base.releaseId,
+      contractHash: hash,
+      tenantId: null,
+    },
+    scope: { contract: "tenant.record.v1", tenantId: base.releaseId },
+    operations: [],
+    fields: [],
+    unsupportedControls: [],
+  };
+  await expect(
+    qualify(tx, {
+      ...base,
+      kind: "entity_security_manifest",
+      payload: {
+        schema: "entity.installed-live-read-resource/1",
+        pin: {
+          owner: "platform",
+          namespace: "entity",
+          key: "security",
+          version: 1,
+          hash: sha256(canonicalBytes(content)),
+        },
+        content,
+      },
+    }),
+  ).rejects.toThrow("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
+  expect(query).not.toHaveBeenCalled();
+});

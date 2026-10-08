@@ -3136,6 +3136,16 @@ source/hash checks at each phase. Resource consumers use explicitly pinned publi
 verification keys through the existing trust resolver, without receiving signing
 capability. Database bigint coordinates are decoded with safe-integer validation.
 
+Live-read security and storage-authority resources use the same reviewed publication
+ledger and signed envelope, with explicit `entity_security_manifest` and
+`entity_storage_authority` kinds. Their content selects the target plane and tenant
+scope; descriptor/identity-review resources retain their existing Studio restriction.
+Consumers verify the content pin and local scope, require semantic qualification,
+and retain the original signed document in the immutable derived payload projection
+for request-time key-trust verification. Signature verification alone does not
+establish installed authority, current-security coverage or F9 correspondence; the
+record reader still requires its transaction-bound evidence adapter and head locks.
+
 The 8 October DEV checkpoint now includes independent authenticated Owner review,
 published/activated/acknowledged resource releases and actual Admin-command ownership
 and identity enrollment: Country 22 fields, State Region nine, both revision 4.

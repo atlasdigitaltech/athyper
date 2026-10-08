@@ -2028,6 +2028,34 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/32_authoring_identity_policy_validation.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_live_read_resource_review.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_live_read_resource_review.sql",
+      "sha256": "f6d6a5094eb97d812a12233422d3996c8728d78ac97e603434541525d1236c28",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Extend independent reviewed-resource lifecycle to typed live-read security and storage resources; no authority evidence or activation installed.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/33_live_read_resource_review.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_live_read_resource_projection.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_live_read_resource_projection.sql",
+      "sha256": "9f6ea1f5d650fc13e3464439b959d1258cb0bf69c6ad7108f794d965fef5744d",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Extend existing payload verification to typed live-read resources without native cutover or installed authority.",
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/14_live_read_resource_projection.sql"
+      ]
     }
   ]
 }

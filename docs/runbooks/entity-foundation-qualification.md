@@ -5,6 +5,54 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Live-read resource publication transport — 2026-10-08
+
+The shared publication pipeline now accepts closed `entity_security_manifest` and
+`entity_storage_authority` resources. They reuse `publication.release`, independent
+resource review, signing, dispatch and local payload activation. The resource's
+explicit plane determines compilation coordinates; the loader rejects a different
+plane, changed content hash or missing semantic-qualification adapter. Tenant-scoped
+resource payloads retain that tenant in the local projection. Existing descriptor
+and identity-review resources remain Studio-only.
+
+Local live-read projections retain the original signed document as derived immutable
+verification input. `verifyLocalLiveReadResource` checks exact release coordinates,
+artifact/payload/content hashes, resource pin, tenant, plane and current signing-key
+trust. A cached successful signature flag is insufficient. This verifier is **not**
+the locked database evidence adapter: its caller must still hold the active-head
+locks and establish local installation, current security, provider and identity
+coverage. The existing descriptor/identity qualifier explicitly refuses to qualify
+live-read resources using its narrower evidence.
+
+Two forward migrations were rehearsed and applied to DEV Studio, preserving prior
+migration hashes, authoring/snapshot rows, authorization and activation heads:
+
+| Migration                                           | SHA-256                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------ |
+| `20261008_entity_live_read_resource_review.sql`     | `f6d6a5094eb97d812a12233422d3996c8728d78ac97e603434541525d1236c28` |
+| `20261008_entity_live_read_resource_projection.sql` | `9f6ea1f5d650fc13e3464439b959d1258cb0bf69c6ad7108f794d965fef5744d` |
+
+Private migration receipts are in the existing
+`resource-review-candidates-20261008/` workspace directory. PostgreSQL rehearsals
+prove proposal/review separation and immutable sources for the three tested kinds,
+and stage/verify/activate for all four resource kinds, with every fixture rolled
+back. These rehearsals use synthetic evidence; they do not attest human approval
+or installed live-read authority. Signed-resource tests cover all three planes,
+changed-source rejection, missing adapters, tenant isolation and key revocation.
+
+Validation: publication contracts 233 tests passed; publication service 474 passed,
+5 environment-dependent tests skipped; focused host 6 passed; migration runner
+14 passed. The separate DEV PostgreSQL runs passed three review scenarios and one
+projection scenario, all rolled back. Contract, service, authoring and host
+typechecks passed. Migration-layout verification reports 157 classified files and
+149 retained SQL files. These are local test results, not a deployed live-read pass.
+
+**Not completed:** installed whole-source conversion resources, restricted native
+writer grants, canonical conversion/history, version-1.1 descriptor production and
+the deployed F6/F8/F9 evidence adapter. No new resource release or native conversion
+was published/applied. Both reference drafts remain at revision 4 and native cutover
+stays disabled. No MFA or UI work is included.
+
 ## Native conversion command bridge — 2026-10-08
 
 The existing product-reference command service now supports native conversion through

@@ -47,3 +47,5 @@ export * from "./activity-collections.js";
 export * from "./change-request-binding.js";
 
 export * from "./entity-authoring-resource.js";
+
+export * from "./entity-live-read-resource.js";

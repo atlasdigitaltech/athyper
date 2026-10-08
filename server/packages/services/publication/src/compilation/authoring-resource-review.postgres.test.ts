@@ -1,9 +1,15 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
-  "qualifies narrow resource proposal/review and immutable source under the control role with rollback",
-  () => {
+it
+  .skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")
+  .each([
+    "entity_authoring_descriptor",
+    "entity_security_manifest",
+    "entity_storage_authority",
+  ])(
+  "qualifies %s proposal/review and immutable source under the control role with rollback",
+  (kind) => {
     const info = JSON.parse(
       execFileSync("docker", ["inspect", "athyper-dev-db-1"], {
         encoding: "utf8",
@@ -26,9 +32,31 @@ it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
       ),
       "utf8",
     );
+    const live = readFileSync(
+      new URL(
+        "../../../../../db/ddl/planes/studio/publication/33_live_read_resource_review.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const payload =
+      kind === "entity_authoring_descriptor"
+        ? { fixture: true }
+        : {
+            schema: "entity.installed-live-read-resource/1",
+            pin: { hash: "b".repeat(64) },
+            content: {
+              schema:
+                kind === "entity_security_manifest"
+                  ? "entity.effective-security-manifest/1"
+                  : "entity.storage-authority/1",
+              plane: "studio",
+            },
+          }; // SQL lifecycle fixture only: the production parser rejects this incomplete content.
     const body = `BEGIN;SET LOCAL lock_timeout='2s';SET LOCAL statement_timeout='15s';SET LOCAL app.database_plane='studio';
  ${ddl.replaceAll("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION").replace("CREATE TRIGGER authoring_resource_source_immutable", "DROP TRIGGER IF EXISTS authoring_resource_source_immutable ON publication.release; CREATE TRIGGER authoring_resource_source_immutable")}
  ${history.replaceAll("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION")}
+ ${live}
  DO $$ DECLARE actors uuid[]; tenant uuid; BEGIN
  SELECT p.tenant_id,array_agg(DISTINCT p.id) INTO tenant,actors FROM master.principal p JOIN master.principal_identity_binding b ON b.principal_id=p.id AND b.tenant_id=p.tenant_id WHERE p.principal_type='user' AND p.status='active' AND b.status='active' AND b.realm_key='platform-control' GROUP BY p.tenant_id HAVING count(DISTINCT p.id)>=2 LIMIT 1;
  IF actors IS NULL THEN RAISE EXCEPTION 'FIXTURE_HUMANS_UNAVAILABLE'; END IF;
@@ -38,7 +66,7 @@ it.skipIf(process.env.ENTITY_RESOURCE_DEV_POSTGRES !== "1")(
  SET SESSION AUTHORIZATION athyper_control_api;
  DO $$ DECLARE s jsonb; r jsonb; id uuid:=current_setting('test.release')::uuid; BEGIN
  PERFORM * FROM publication.read_authoring_resource_history(current_setting('test.draft')::uuid,current_setting('test.entity')::uuid);
- s:=jsonb_build_object('releaseId',id,'publicationKey','fixture.review.'||replace(id::text,'-',''),'releaseNo',1,'generatedAt','2026-10-08T00:00:00Z','kind','entity_authoring_descriptor','payload',jsonb_build_object('fixture',true));
+ s:=jsonb_build_object('releaseId',id,'publicationKey','fixture.review.'||replace(id::text,'-',''),'releaseNo',1,'generatedAt','2026-10-08T00:00:00Z','kind','${kind}','payload','${JSON.stringify(payload)}'::jsonb);
  r:=publication.propose_authoring_resource(s,repeat('a',64));
  IF r->>'status'<>'preparing' THEN RAISE EXCEPTION 'PROPOSAL_FAILED'; END IF;
  PERFORM publication.propose_authoring_resource(s,repeat('a',64));

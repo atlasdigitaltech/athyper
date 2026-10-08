@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  liveReadResourceReviewMigrationName,
   ownershipInitializationMigrationName,
   referencePrivilegesMigrationName,
   snapshotMigrationName,
@@ -363,5 +364,45 @@ test("reference grants remain bounded and migration replay is ledger-owned", () 
       false,
       referencePrivilegesMigrationName,
     ).endsWith("ROLLBACK;\n"),
+  );
+});
+
+test("live-read lifecycle upgrade is forward-only and rehearses without changing authoring or activation", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        liveReadResourceReviewMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  const rollback = preparationSql(
+    source,
+    digest,
+    false,
+    liveReadResourceReviewMigrationName,
+  );
+  const apply = preparationSql(
+    source,
+    digest,
+    true,
+    liveReadResourceReviewMigrationName,
+  );
+  assert.match(rollback, /ROLLBACK;/);
+  assert.match(apply, /20261008_entity_live_read_resource_review.sql/);
+  assert.match(source, /OWNERSHIP_PREPARATION_CHANGED_DATA/);
+  assert.match(source, /RESOURCE_REVIEW_CONFLICT/);
+  assert.doesNotMatch(
+    source,
+    /DROP CONSTRAINT|requires_mfa|UPDATE metadata\.|INSERT INTO metadata\.|fn_activate_release/,
+  );
+  assert.throws(() =>
+    preparationSql(
+      source,
+      "0".repeat(64),
+      true,
+      liveReadResourceReviewMigrationName,
+    ),
   );
 });

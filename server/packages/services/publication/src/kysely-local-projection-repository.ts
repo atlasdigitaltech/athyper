@@ -377,7 +377,9 @@ function assertArtifactCoordinates(
       ? envelope.payload.entityDescriptor.plane
       : envelope.artifactKind === "compiled_entity_runtime" ||
           envelope.artifactKind === "entity_authoring_descriptor" ||
-          envelope.artifactKind === "entity_identity_review"
+          envelope.artifactKind === "entity_identity_review" ||
+          envelope.artifactKind === "entity_security_manifest" ||
+          envelope.artifactKind === "entity_storage_authority"
         ? envelope.targetPlane
         : envelope.payload.plane;
   if (
@@ -411,12 +413,21 @@ export function projectionJson(artifact: PublicationArtifactDocumentV1) {
   const envelope = artifact.envelope;
   if (
     envelope.artifactKind === "entity_authoring_descriptor" ||
-    envelope.artifactKind === "entity_identity_review"
+    envelope.artifactKind === "entity_identity_review" ||
+    envelope.artifactKind === "entity_security_manifest" ||
+    envelope.artifactKind === "entity_storage_authority"
   ) {
     return {
       applied_release_payload: {
         id: envelope.releaseId,
-        tenant_id: null,
+        tenant_id:
+          envelope.artifactKind === "entity_security_manifest" ||
+          envelope.artifactKind === "entity_storage_authority"
+            ? envelope.payload.content.schema ===
+              "entity.effective-security-manifest/1"
+              ? envelope.payload.content.scope.tenantId
+              : envelope.payload.content.tenantId
+            : null,
         artifact_kind: envelope.artifactKind,
         payload_schema_version: "1.0",
         payload_hash: artifact.manifest.payloadSha256,
@@ -426,6 +437,12 @@ export function projectionJson(artifact: PublicationArtifactDocumentV1) {
           release_no: envelope.releaseNo,
           publication_key: envelope.publicationKey,
           plane_code: envelope.targetPlane,
+          // Derived immutable signature input supports request-time trust/key
+          // revocation checks without depending on the central Studio database.
+          ...(envelope.artifactKind === "entity_security_manifest" ||
+          envelope.artifactKind === "entity_storage_authority"
+            ? { signed_document: artifact }
+            : {}),
         },
         generated_at: envelope.generatedAt,
       },

@@ -36,6 +36,17 @@ export interface PublicationArtifactLoaderOptions {
   readonly verifier: PublicationVerifier;
   readonly canonicalizer: PublicationCanonicalizer;
   readonly runtimeVersion: string;
+  /** Exact local dependency/coverage qualification, not signature-only admission. */
+  readonly liveReadResources?: {
+    qualify(
+      envelope: Extract<
+        import("@athyper/server-contract-publication").PublicationArtifactEnvelopeV1,
+        {
+          artifactKind: "entity_security_manifest" | "entity_storage_authority";
+        }
+      >,
+    ): Promise<void>;
+  };
   readonly authoringResources?: {
     qualify(
       kind: "entity_authoring_descriptor" | "entity_identity_review",
@@ -121,6 +132,20 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         envelope.artifactKind,
         envelope.payload,
       );
+    }
+    if (
+      envelope.artifactKind === "entity_security_manifest" ||
+      envelope.artifactKind === "entity_storage_authority"
+    ) {
+      if (!this.options.liveReadResources)
+        throw failure("RUNTIME_INCOMPATIBLE");
+      if (
+        this.options.canonicalizer.sha256(
+          this.options.canonicalizer.canonicalBytes(envelope.payload.content),
+        ) !== envelope.payload.pin.hash
+      )
+        throw failure("PROJECTION_HASH_MISMATCH");
+      await this.options.liveReadResources.qualify(structuredClone(envelope));
     }
     if (envelope.artifactKind === "business_partner_definition_bundle") {
       const payload = envelope.payload;
@@ -501,7 +526,9 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
           }
         : envelope.artifactKind === "compiled_entity_runtime" ||
             envelope.artifactKind === "entity_authoring_descriptor" ||
-            envelope.artifactKind === "entity_identity_review"
+            envelope.artifactKind === "entity_identity_review" ||
+            envelope.artifactKind === "entity_security_manifest" ||
+            envelope.artifactKind === "entity_storage_authority"
           ? {
               payloadHash: manifest.payloadSha256,
               payloadSchemaVersion:

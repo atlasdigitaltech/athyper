@@ -1,6 +1,13 @@
+import {
+  parseEntityLiveReadResource,
+  type EntityLiveReadResource,
+  type EntityLiveReadResourceKind,
+} from "./entity-live-read-resource.js";
 import { PublicationContractError } from "./errors.js";
 export type EntityAuthoringResourceKind =
-  "entity_authoring_descriptor" | "entity_identity_review";
+  | "entity_authoring_descriptor"
+  | "entity_identity_review"
+  | EntityLiveReadResourceKind;
 export interface AuthoringDescriptorResource {
   readonly schema: "entity.installed-authoring-descriptor/1";
   readonly schemaVersion: number;
@@ -26,7 +33,7 @@ export interface IdentityReviewResource {
   }[];
 }
 export type EntityAuthoringResource =
-  AuthoringDescriptorResource | IdentityReviewResource;
+  AuthoringDescriptorResource | IdentityReviewResource | EntityLiveReadResource;
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const hash = (v: unknown) => typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
@@ -47,6 +54,11 @@ export function parseEntityAuthoringResource(
   kind: EntityAuthoringResourceKind,
   value: unknown,
 ): EntityAuthoringResource {
+  if (
+    kind === "entity_security_manifest" ||
+    kind === "entity_storage_authority"
+  )
+    return parseEntityLiveReadResource(kind, value);
   if (!object(value)) return fail();
   if (kind === "entity_authoring_descriptor") {
     if (

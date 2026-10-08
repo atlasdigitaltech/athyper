@@ -52,6 +52,19 @@ export async function compileEntityAuthoringResource(
       "ARTIFACT_HASH_MISMATCH",
       "Descriptor hash mismatch",
     );
+  if (
+    payload.schema === "entity.installed-live-read-resource/1" &&
+    canonical.sha256(canonical.canonicalBytes(payload.content)) !==
+      payload.pin.hash
+  )
+    throw new PublicationContractError(
+      "ARTIFACT_HASH_MISMATCH",
+      "Live-read resource content hash mismatch",
+    );
+  const targetPlane =
+    payload.schema === "entity.installed-live-read-resource/1"
+      ? payload.content.plane
+      : "studio";
   await policy.qualify(structuredClone(captured), "compile");
   const envelope = parsePublicationArtifactEnvelope({
     schema: PUBLICATION_ARTIFACT_SCHEMA_V1,
@@ -59,7 +72,7 @@ export async function compileEntityAuthoringResource(
     releaseId: captured.releaseId,
     releaseNo: captured.releaseNo,
     releaseKind: "publish",
-    targetPlane: "studio",
+    targetPlane,
     artifactKind: captured.kind,
     generatedAt: captured.generatedAt,
     compatibilityLevel: "breaking",
@@ -73,7 +86,7 @@ export async function compileEntityAuthoringResource(
       publicationKey: captured.publicationKey,
       releaseId: captured.releaseId,
       releaseNo: captured.releaseNo,
-      targetPlane: "studio",
+      targetPlane,
       artifactKind: captured.kind,
       payloadSha256: canonical.sha256(canonical.canonicalBytes(payload)),
       compiler: { name: "entity-authoring-resource", version: "1.0.0" },
@@ -94,7 +107,9 @@ export async function qualifyEntityAuthoringResource(
   const envelope = parsePublicationArtifactEnvelope(document.envelope);
   if (
     envelope.artifactKind !== "entity_authoring_descriptor" &&
-    envelope.artifactKind !== "entity_identity_review"
+    envelope.artifactKind !== "entity_identity_review" &&
+    envelope.artifactKind !== "entity_security_manifest" &&
+    envelope.artifactKind !== "entity_storage_authority"
   )
     throw new PublicationContractError(
       "ARTIFACT_KIND_UNSUPPORTED",
@@ -106,13 +121,23 @@ export async function qualifyEntityAuthoringResource(
     m.releaseId !== envelope.releaseId ||
     m.releaseNo !== envelope.releaseNo ||
     m.publicationKey !== envelope.publicationKey ||
-    m.targetPlane !== "studio" ||
+    m.targetPlane !== envelope.targetPlane ||
     m.payloadSha256 !==
       canonical.sha256(canonical.canonicalBytes(envelope.payload))
   )
     throw new PublicationContractError(
       "ARTIFACT_MANIFEST_INVALID",
       "Resource manifest mismatch",
+    );
+  if (
+    (envelope.artifactKind === "entity_security_manifest" ||
+      envelope.artifactKind === "entity_storage_authority") &&
+    canonical.sha256(canonical.canonicalBytes(envelope.payload.content)) !==
+      envelope.payload.pin.hash
+  )
+    throw new PublicationContractError(
+      "ARTIFACT_HASH_MISMATCH",
+      "Live-read resource content hash mismatch",
     );
   const source = await policy.load(envelope.releaseId);
   if (

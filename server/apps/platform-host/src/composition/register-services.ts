@@ -5930,7 +5930,9 @@ function registerPublication(
                 const hash =
                   resource.schema === "entity.installed-authoring-descriptor/1"
                     ? resource.descriptorHash
-                    : resource.authoringSchemaHash;
+                    : resource.schema === "entity.legacy-identity-review/1"
+                      ? resource.authoringSchemaHash
+                      : null;
                 if (hash !== resourceConfiguration.descriptorHash)
                   throw Error("RESOURCE_DESCRIPTOR_CHANGED");
               },
