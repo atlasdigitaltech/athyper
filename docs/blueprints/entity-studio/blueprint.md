@@ -640,6 +640,14 @@ constraint and enabled deferred snapshot guard. Existing duplicate identities bl
 installation; the migration does not rewrite data or remove pending cutover checks.
 These constraints do not independently attest whole-graph or runtime qualification.
 
+**Fresh native write ordering:** The shared bootstrap persists navigation groups before
+sections, sections before field bindings, and dependent reference members (including
+view fields and predicates) after those bindings. View rows precede their view-field
+rows. Operations retain their approved-source initialization before operation references.
+No foreign key is disabled or removed to accommodate descriptor-family iteration order.
+A successful ordered insert is not whole-graph qualification: aggregate validation,
+exact readback, compilation and resource authorization remain required.
+
 ### `metadata.entity_field_identity_adoption`
 
 Server-owned evidence for explicit reserved-identity reuse by a fresh native product

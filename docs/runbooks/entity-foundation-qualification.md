@@ -251,6 +251,30 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Native bootstrap dependency ordering corrected — 8 October
+
+`native-bootstrap-plans.ts` now separates navigation groups from the remaining reference
+families: groups precede layout sections/bindings, then views, view fields and predicates
+follow. The canonical scoped writer and all foreign keys remain unchanged. Operations
+still use the existing approved-source initializer before their dependent rows. This is
+shared family ordering, with no entity-specific branch or new persistence path.
+
+A regression executes the bootstrap writer and asserts both bindings and views are
+inserted before view fields. The restored canonical DEV rehearsal under the application
+role now passes `entity_surface_view_field_field_binding_id_fk` and reaches aggregate
+validation. Its next error is `42501: permission denied for table ui_component_contract`
+inside `fn_assert_native_typed_rows`. Installed catalogue read scope must be resolved;
+no broad grant, synthetic catalogue resource or validation bypass was added to DEV.
+
+The disposable rehearsal still uses synthetic host/admission/resources and removes the
+seven pending checks only in its restored copy. It rolls back; it does not attest actual
+DEV enrollment, installed proposal resolution or F6/F8/F9. No DEV migration, replacement
+draft, publication or activation occurred. Both actual drafts remain revision 4 and
+all seven pending checks remain installed.
+
+Validation: 866 authoring tests passed, nine opt-in tests skipped; native-test typecheck
+passed. The restored canonical PostgreSQL rehearsal ran separately as described above.
+
 ### Native field-key uniqueness installed — 8 October
 
 Forward migration `20261008_entity_native_field_key_uniqueness.sql` replaces the legacy

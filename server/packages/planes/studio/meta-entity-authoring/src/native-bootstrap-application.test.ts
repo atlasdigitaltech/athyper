@@ -363,3 +363,20 @@ it.each(["audit", "reader"])(
     }
   },
 );
+
+it("writes layout bindings before dependent view fields through the canonical bootstrap writer", async () => {
+  const f = fixture();
+  await f.run();
+  const statements = f.query.mock.calls.map(([text]) => text);
+  const insert = (table: string) =>
+    statements.findIndex((text) =>
+      text.startsWith(`INSERT INTO "metadata"."${table}"`),
+    );
+  const binding = insert("entity_surface_field_binding");
+  const view = insert("entity_surface_view");
+  const viewField = insert("entity_surface_view_field");
+  expect(binding).toBeGreaterThan(-1);
+  expect(view).toBeGreaterThan(-1);
+  expect(viewField).toBeGreaterThan(binding);
+  expect(viewField).toBeGreaterThan(view);
+});
