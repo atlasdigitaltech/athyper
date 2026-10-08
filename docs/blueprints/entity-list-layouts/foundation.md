@@ -63,3 +63,16 @@ Board and Cards share one card resolution, in this precedence:
 - **Table and Cards** keep their existing record-count display, which already reports the list's count mode.
 
 **Why the layouts differ.** A layout whose chrome is made of counts needs real totals. A layout without count chrome would only exclude large tables, for no benefit, if it required them. The difference is this rule applied to different chrome, not an inconsistency to correct.
+
+## 6. Comparing drafts and states (proposed 8 October 2026; awaiting owner confirmation)
+
+**Proposed rule.** A "modified" or "unsaved changes" comparison is order-normalized only where the underlying request is order-insensitive. This rule describes current behaviour; it changes nothing.
+
+| Comparison                                                          | Order meaningful?                                              | Current comparator                              |
+| ------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| Saved view vs the active view or default state (toolbar "modified") | No; both sides are normalized through `parseSaveableListState` | normalized state                                |
+| Filter editor draft vs applied filters                              | No; filters are ANDed                                          | `filterDraftFingerprint` vs `filterFingerprint` |
+| Sort editor draft vs applied sort                                   | **Yes**; sort levels are applied in order                      | exact, order-sensitive                          |
+| Columns editor draft vs visible columns                             | **Yes**; column order is displayed                             | exact, order-sensitive                          |
+
+Sort and column comparisons must stay order-sensitive. Normalizing them would hide a reorder that changes the request or the display.
