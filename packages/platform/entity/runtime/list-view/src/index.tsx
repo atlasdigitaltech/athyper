@@ -92,7 +92,8 @@ import {
 } from "./mode-renderers";
 import { boardSummaryState } from "./board/board-model";
 import { EntityBoard } from "./board/board-view";
-import { calendarPageState } from "./calendar/calendar-model";
+import { calendarRange } from "./calendar/calendar-model";
+import { dateRangePageState } from "./date-range/date-range-model";
 import { EntityCalendar } from "./calendar/calendar-view";
 import {
   parseSaveableListState,
@@ -1104,10 +1105,12 @@ function EntityCollectionRuntime({
       .request(entityListOperation, {
         params: { entityCode },
         query: entityListQuery(
-          calendarPageState(boardSummaryState(state, descriptor), descriptor, {
-            timeZone: localization.timeZone,
-            weekStart: localization.weekStart,
-          }),
+          dateRangePageState(
+            boardSummaryState(state, descriptor),
+            descriptor,
+            calendarRange(state, descriptor, localization),
+            localization.timeZone,
+          ),
           descriptor,
           scopeCoordinate,
         ),

@@ -1,24 +1,63 @@
 import type {
   EntityListDescriptorV1,
   EntityListRowV1,
-  ListCalendarDateFieldV1,
+  ListDateRangeFieldV1,
   ListFilterV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
-import { addDays, zonedDay, zonedDayStart, type CalendarWindow } from "@athyper/platform-temporal";
+import { addDays, zonedDay, zonedDayStart, zonedToday, type CalendarWindow } from "@athyper/platform-temporal";
 
 // Date-range helpers shared by the list layouts that place records on dates
 // (Calendar, Gantt): window and open-ended queries, the Unscheduled tray,
 // row merging and day placement.
 
+export interface DateRangeContext {
+  readonly timeZone: string;
+  readonly weekStart: number;
+  /** Today in the person's time zone; injectable for tests. */
+  readonly today?: string;
+}
+
+/** The anchor and date range a layout's state resolves to: the chosen date
+ * field when it is still offered, otherwise the first; the anchor from the
+ * location, otherwise today. */
+export function dateRangeSelection(
+  dateFields: readonly ListDateRangeFieldV1[],
+  chosen: string | undefined,
+  anchor: string | undefined,
+  context: DateRangeContext,
+): { readonly anchor: string; readonly field: ListDateRangeFieldV1 } {
+  return {
+    anchor: anchor ?? context.today ?? zonedToday(context.timeZone),
+    field: dateFields.find((item) => item.start === chosen) ?? dateFields[0]!,
+  };
+}
+
+/** The active date layout's field and window, when the list is in one. */
+export interface DateRangeView {
+  readonly field: ListDateRangeFieldV1;
+  readonly window: CalendarWindow;
+}
+
+/** The list's page query in a date layout becomes that layout's window query,
+ * so the list's own authority and error handling cover it. */
+export function dateRangePageState(
+  state: ListLocationStateV1,
+  descriptor: EntityListDescriptorV1,
+  view: DateRangeView | undefined,
+  timeZone: string,
+): ListLocationStateV1 {
+  return view ? dateRangeQueryState(state, descriptor, view.field, windowFilters(view.field, view.window, timeZone)) : state;
+}
+
 /** A window edge on the wire: a calendar day for date fields, an instant with
  * an explicit offset (local midnight in the person's zone) for datetime fields. */
-export function windowEdge(day: string, field: ListCalendarDateFieldV1, timeZone: string): string {
+export function windowEdge(day: string, field: ListDateRangeFieldV1, timeZone: string): string {
   return field.kind === "date" ? day : zonedDayStart(day, timeZone);
 }
 
 /** The window query's own filters (ANDed with the list's filters). */
-export function windowFilters(field: ListCalendarDateFieldV1, window: CalendarWindow, timeZone: string): readonly ListFilterV1[] {
+export function windowFilters(field: ListDateRangeFieldV1, window: CalendarWindow, timeZone: string): readonly ListFilterV1[] {
   const start = windowEdge(window.start, field, timeZone), end = windowEdge(window.end, field, timeZone);
   if (field.end === undefined)
     return [{ field: field.start, operator: "gte", value: start }, { field: field.start, operator: "lt", value: end }];
@@ -33,22 +72,22 @@ export function windowFilters(field: ListCalendarDateFieldV1, window: CalendarWi
 
 /** The open-ended query's filters: started before the window ends, no end.
  * Not sent when the end field is required, since no record can match. */
-export function openEndedFilters(field: ListCalendarDateFieldV1, window: CalendarWindow, timeZone: string): readonly ListFilterV1[] | undefined {
+export function openEndedFilters(field: ListDateRangeFieldV1, window: CalendarWindow, timeZone: string): readonly ListFilterV1[] | undefined {
   if (field.end === undefined || field.endNullable === false) return undefined;
   return [{ field: field.start, operator: "lt", value: windowEdge(window.end, field, timeZone) }, { field: field.end, operator: "is_null" }];
 }
 
 /** The Unscheduled tray's filters: no start date, independent of the window. */
-export function trayFilters(field: ListCalendarDateFieldV1): readonly ListFilterV1[] | undefined {
+export function trayFilters(field: ListDateRangeFieldV1): readonly ListFilterV1[] | undefined {
   return field.unscheduled ? [{ field: field.start, operator: "is_null" }] : undefined;
 }
 
-/** Calendar queries carry an explicit start-ascending sort and the largest
+/** Date-range queries carry an explicit start-ascending sort and the largest
  * allowed page size, and keep both across pages (the cursor is bound to them). */
 export function dateRangeQueryState(
   state: ListLocationStateV1,
   descriptor: EntityListDescriptorV1,
-  field: ListCalendarDateFieldV1,
+  field: ListDateRangeFieldV1,
   filters: readonly ListFilterV1[],
 ): ListLocationStateV1 {
   return {
@@ -86,7 +125,7 @@ function text(value: unknown): string | undefined {
  * inclusive and a datetime end exclusive; a null end runs to the window end. */
 export function placeEntries(
   rows: readonly EntityListRowV1[],
-  field: ListCalendarDateFieldV1,
+  field: ListDateRangeFieldV1,
   window: CalendarWindow,
   timeZone: string,
 ): readonly DatedEntry[] {

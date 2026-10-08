@@ -1,55 +1,45 @@
 import type {
   EntityListDescriptorV1,
-  ListCalendarDateFieldV1,
   ListCalendarView,
+  ListDateRangeFieldV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
+import { addDays, periodWindow, type CalendarWindow, type DatePeriod } from "@athyper/platform-temporal";
 import {
-  addDays,
-  monthGridWindow,
-  monthWindow,
-  zonedToday,
-  type CalendarWindow,
-} from "@athyper/platform-temporal";
-import { compareWithinDay, dateRangeQueryState, windowFilters, type DatedEntry } from "../date-range/date-range-model";
+  compareWithinDay,
+  dateRangeSelection,
+  type DateRangeContext,
+  type DateRangeView,
+  type DatedEntry,
+} from "../date-range/date-range-model";
 
-export interface CalendarContext {
-  readonly timeZone: string;
-  readonly weekStart: number;
-  /** Today in the person's time zone; injectable for tests. */
-  readonly today?: string;
+/** The date-scale period a Calendar view shows. */
+export function calendarPeriod(view: ListCalendarView): DatePeriod {
+  return view === "month" ? "month-grid" : "month";
 }
 
-/** The anchor, date field and view a calendar state resolves to. */
+/** Calendar's selection: the shared date-range selection plus its view. */
 export function calendarSelection(
   state: ListLocationStateV1,
   descriptor: EntityListDescriptorV1,
-  context: CalendarContext,
-): { readonly anchor: string; readonly field: ListCalendarDateFieldV1; readonly view: ListCalendarView } {
+  context: DateRangeContext,
+): { readonly anchor: string; readonly field: ListDateRangeFieldV1; readonly view: ListCalendarView } {
   const calendar = descriptor.surface.calendar!;
-  const field = calendar.dateFields.find((item) => item.start === state.calendar?.dateField) ?? calendar.dateFields[0]!;
   return {
-    anchor: state.calendarAnchor ?? context.today ?? zonedToday(context.timeZone),
-    field,
+    ...dateRangeSelection(calendar.dateFields, state.calendar?.dateField, state.calendarAnchor, context),
     view: state.calendar?.view ?? calendar.defaultView,
   };
 }
 
-/** The window of calendar days a view shows. */
-export function calendarWindow(anchor: string, view: ListCalendarView, weekStart: number): CalendarWindow {
-  return view === "month" ? monthGridWindow(anchor, weekStart) : monthWindow(anchor);
-}
-
-/** The list's page query in Calendar mode becomes the window query, so the
- * list's own authority and error handling cover it. */
-export function calendarPageState(
+/** Calendar's field and window when the list is in Calendar mode. */
+export function calendarRange(
   state: ListLocationStateV1,
   descriptor: EntityListDescriptorV1,
-  context: CalendarContext,
-): ListLocationStateV1 {
-  if (state.mode !== "calendar" || !descriptor.surface.calendar) return state;
+  context: DateRangeContext,
+): DateRangeView | undefined {
+  if (state.mode !== "calendar" || !descriptor.surface.calendar) return undefined;
   const { anchor, field, view } = calendarSelection(state, descriptor, context);
-  return dateRangeQueryState(state, descriptor, field, windowFilters(field, calendarWindow(anchor, view, context.weekStart), context.timeZone));
+  return { field, window: periodWindow(anchor, calendarPeriod(view), context.weekStart) };
 }
 
 /** The entries on each day of the window, in within-day order. */

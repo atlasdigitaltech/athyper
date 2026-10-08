@@ -11,7 +11,7 @@ import type {
   ListFieldDescriptorV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
-import { addDays, addMonths, shiftMonths, startOfMonth, weekRows, zonedToday } from "@athyper/platform-temporal";
+import { addDays, addMonths, periodWindow, shiftMonths, startOfMonth, weekRows, zonedToday } from "@athyper/platform-temporal";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Button, Dialog, DialogContent, SegmentedControl } from "@athyper/platform-ui";
 import { resolveCardLayout } from "../card-content";
@@ -29,8 +29,8 @@ import {
   type DatedEntry,
 } from "../date-range/date-range-model";
 import {
+  calendarPeriod,
   calendarSelection,
-  calendarWindow,
   entriesByDay,
   CALENDAR_LANES_PER_WEEK,
   weekLayout,
@@ -87,7 +87,7 @@ export function EntityCalendar({
   const narrow = widthTier === "narrow";
   const view = narrow ? "agenda" : selection.view;
   const { field, anchor } = selection;
-  const window = calendarWindow(anchor, view, weekStart);
+  const window = periodWindow(anchor, calendarPeriod(view), weekStart);
   const windowQuery = dateRangeQueryState(state, descriptor, field, windowFilters(field, window, timeZone));
   const openEnded = openEndedFilters(field, window, timeZone);
   const tray = trayFilters(field);

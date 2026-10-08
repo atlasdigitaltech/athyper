@@ -5,8 +5,9 @@ export type ListCalendarTone = "neutral" | "success" | "warning" | "danger";
 
 export const LIST_CALENDAR_MAX_DATE_FIELDS = 3;
 
-/** A declared date field this viewer can use. */
-export interface ListCalendarDateFieldV1 {
+/** A declared date range this viewer can use, shared by the date layouts
+ * (Calendar, Gantt). */
+export interface ListDateRangeFieldV1 {
   readonly start: string;
   /** Same kind as `start`; a null end means open-ended. */
   readonly end?: string;
@@ -21,6 +22,9 @@ export interface ListCalendarDateFieldV1 {
   readonly unscheduled: boolean;
   readonly tone?: { readonly field: string; readonly tones: Readonly<Record<string, ListCalendarTone>> };
 }
+
+/** Calendar's name for the shared date-range shape. */
+export type ListCalendarDateFieldV1 = ListDateRangeFieldV1;
 
 export interface ListCalendarV1 {
   readonly defaultView: ListCalendarView;

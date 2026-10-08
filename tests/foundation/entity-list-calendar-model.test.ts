@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { periodWindow } from "@athyper/platform-temporal";
 import type { EntityListDescriptorV1, EntityListRowV1, ListCalendarDateFieldV1, ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
 import {
   agendaByDay,
+  dateRangePageState,
   mergeRows,
   openEndedFilters,
   placeEntries,
@@ -10,8 +12,8 @@ import {
   windowFilters,
 } from "../../packages/platform/entity/runtime/list-view/src/date-range/date-range-model";
 import {
-  calendarPageState,
-  calendarWindow,
+  calendarPeriod,
+  calendarRange,
   entriesByDay,
   weekLayout,
 } from "../../packages/platform/entity/runtime/list-view/src/calendar/calendar-model";
@@ -22,27 +24,27 @@ const row = (id: string, values: EntityListRowV1["values"]): EntityListRowV1 => 
 
 describe("calendar windows and wire format", () => {
   it("sends date edges as calendar days and datetime edges as offset instants at local midnight", () => {
-    const window = calendarWindow("2026-10-08", "month", 1);
+    const window = periodWindow("2026-10-08", calendarPeriod("month"), 1);
     assert.deepEqual(window, { start: "2026-09-28", end: "2026-11-02" });
     assert.deepEqual(windowFilters(dateField, window, "Asia/Kuala_Lumpur"), [
       { field: "starts_on", operator: "lt", value: "2026-11-02" },
       { field: "ends_on", operator: "gte", value: "2026-09-28" },
       { field: "ends_on", operator: "is_not_null" },
     ]);
-    assert.deepEqual(windowFilters(instantField, calendarWindow("2026-10-08", "agenda", 1), "Asia/Kuala_Lumpur"), [
+    assert.deepEqual(windowFilters(instantField, periodWindow("2026-10-08", calendarPeriod("agenda"), 1), "Asia/Kuala_Lumpur"), [
       { field: "updated_at", operator: "gte", value: "2026-09-30T16:00:00.000Z" },
       { field: "updated_at", operator: "lt", value: "2026-10-31T16:00:00.000Z" },
     ]);
   });
 
   it("computes datetime edges per day across a daylight-saving change", () => {
-    const [from, to] = windowFilters(instantField, calendarWindow("2026-11-01", "agenda", 0), "America/New_York");
+    const [from, to] = windowFilters(instantField, periodWindow("2026-11-01", calendarPeriod("agenda"), 0), "America/New_York");
     assert.equal(from?.value, "2026-11-01T04:00:00.000Z"); // EDT midnight
     assert.equal(to?.value, "2026-12-01T05:00:00.000Z"); // EST midnight
   });
 
   it("runs the open-ended query only with an end field and the tray only for a nullable start", () => {
-    const window = calendarWindow("2026-10-08", "agenda", 1);
+    const window = periodWindow("2026-10-08", calendarPeriod("agenda"), 1);
     assert.deepEqual(openEndedFilters(dateField, window, "UTC"), [
       { field: "starts_on", operator: "lt", value: "2026-11-01" },
       { field: "ends_on", operator: "is_null" },
@@ -62,19 +64,21 @@ describe("calendar windows and wire format", () => {
       limits: { allowedPageSizes: [10, 50, 25] },
     } as unknown as EntityListDescriptorV1;
     const state = { mode: "calendar", calendarAnchor: "2026-10-08", filters: [{ field: "stage", operator: "eq", value: "open" }], sort: [{ field: "code", direction: "desc" }], columns: [], density: "comfortable", group: "stage", pageSize: 10 } as unknown as ListLocationStateV1;
-    const page = calendarPageState(state, descriptor, { timeZone: "UTC", weekStart: 1 });
+    const context = { timeZone: "UTC", weekStart: 1 };
+    const page = dateRangePageState(state, descriptor, calendarRange(state, descriptor, context), "UTC");
     assert.deepEqual(page.sort, [{ field: "starts_on", direction: "asc" }]);
     assert.equal(page.pageSize, 50);
     assert.equal(page.group, undefined);
     assert.deepEqual(page.filters[0], { field: "stage", operator: "eq", value: "open" });
     assert.equal(page.filters.length, 4);
     const table = { ...state, mode: "table" } as ListLocationStateV1;
-    assert.equal(calendarPageState(table, descriptor, { timeZone: "UTC", weekStart: 1 }), table);
+    assert.equal(calendarRange(table, descriptor, context), undefined);
+    assert.equal(dateRangePageState(table, descriptor, undefined, "UTC"), table);
   });
 });
 
 describe("calendar placement", () => {
-  const window = calendarWindow("2026-10-08", "month", 1);
+  const window = periodWindow("2026-10-08", calendarPeriod("month"), 1);
 
   it("treats a date end as inclusive, a datetime end as exclusive, and a null end as open-ended", () => {
     const [range, single, open] = placeEntries([
