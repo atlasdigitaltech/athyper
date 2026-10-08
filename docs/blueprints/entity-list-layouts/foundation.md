@@ -52,7 +52,9 @@ Board and Cards share one card resolution, in this precedence:
 1. **Published `cardContent.fields`.** This is the compiled projection of the surface's `binding_kind = summary` placements, authored in the existing "Cards and summaries" editor. Fields appear in placement order, with each placement's qualified display component as `rendererKey`. When present, it defines the card body exactly, and `cardPriority` is ignored for that surface.
 2. **Otherwise, today's behaviour:** `recordCardLayout()` over the user's visible columns, ordered by `cardPriority`. This is explicit list metadata (columns and card priority), not inference.
 
-## 5. Count mode in list chrome (added after the move, under Calendar decision 1)
+## 5. Count mode in list chrome (approved under Calendar decision 1, 8 October 2026)
+
+**Approval.** The project owner (nchandravel-atlas) approved Calendar decision 1 on 8 October 2026: "Approve decisions 1, 3 and 4 of the Calendar blueprint". Decision 1's approved text names this rule as P1's final step, added in its own commit after the move; it landed as `84e8a5b0c`. The move sections (1–4) carry Board revision 4's approval; this section carries decision 1's.
 
 **Rule.** A count shown in list chrome requires exact counts (`limits.countMode = "exact"`). Without exact counts, the chrome never shows a number that could be wrong. Its wording relies on `hasNext` instead, for example "More records than fit in this period. Showing the first N."
 
@@ -64,9 +66,11 @@ Board and Cards share one card resolution, in this precedence:
 
 **Why the layouts differ.** A layout whose chrome is made of counts needs real totals. A layout without count chrome would only exclude large tables, for no benefit, if it required them. The difference is this rule applied to different chrome, not an inconsistency to correct.
 
-## 6. Comparing drafts and states (proposed 8 October 2026; awaiting owner confirmation)
+## 6. Comparing drafts and states (approved 8 October 2026)
 
-**Proposed rule.** A "modified" or "unsaved changes" comparison is order-normalized only where the underlying request is order-insensitive. This rule describes current behaviour; it changes nothing.
+**Approval.** The project owner (nchandravel-atlas) approved this section on 8 October 2026: "Foundation section 6 (draft-comparison rule): approved".
+
+**Rule.** A "modified" or "unsaved changes" comparison is order-normalized only where the underlying request is order-insensitive. This rule describes current behaviour; it changes nothing.
 
 | Comparison                                                          | Order meaningful?                                              | Current comparator                              |
 | ------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
@@ -75,4 +79,6 @@ Board and Cards share one card resolution, in this precedence:
 | Sort editor draft vs applied sort                                   | **Yes**; sort levels are applied in order                      | exact, order-sensitive                          |
 | Columns editor draft vs visible columns                             | **Yes**; column order is displayed                             | exact, order-sensitive                          |
 
-Sort and column comparisons must stay order-sensitive. Normalizing them would hide a reorder that changes the request or the display.
+Sort and column comparisons must stay order-sensitive. Normalizing them would hide a reorder that changes the request or the display. The test `tests/foundation/entity-list-draft-comparison.test.ts` (`69b12937b`) locks this against the comparators in `draft-comparison.ts`.
+
+**Clarification (8 October 2026, after approval).** "Normalized" in the table means shape and value normalization, not order. `parseSaveableListState` and `filterInputValue` put values into one form, but neither reorders filters. So today all four comparisons are order-sensitive in practice. For filters this errs safe: reordering filters alone can show "modified", but a real change is never hidden. The rule permits order normalization for filters and saved-view state; it does not require it. This corrects the table's description and changes neither the rule nor the code.
