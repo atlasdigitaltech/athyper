@@ -57,14 +57,16 @@ export function windowFilters(field: ListCalendarDateFieldV1, window: CalendarWi
   return [
     { field: field.start, operator: "lt", value: end },
     { field: field.end, operator: field.kind === "date" ? "gte" : "gt", value: start },
-    // Explicit, so this query never relies on how SQL compares with null.
-    { field: field.end, operator: "is_not_null" },
+    // Explicit when the end can be null, so this query never relies on how SQL
+    // compares with null. A required end has no null to exclude.
+    ...(field.endNullable === false ? [] : [{ field: field.end, operator: "is_not_null" } as const]),
   ];
 }
 
-/** The open-ended query's filters: started before the window ends, no end. */
+/** The open-ended query's filters: started before the window ends, no end.
+ * Not sent when the end field is required, since no record can match. */
 export function openEndedFilters(field: ListCalendarDateFieldV1, window: CalendarWindow, timeZone: string): readonly ListFilterV1[] | undefined {
-  if (field.end === undefined) return undefined;
+  if (field.end === undefined || field.endNullable === false) return undefined;
   return [{ field: field.start, operator: "lt", value: windowEdge(window.end, field, timeZone) }, { field: field.end, operator: "is_null" }];
 }
 

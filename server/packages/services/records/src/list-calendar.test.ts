@@ -20,7 +20,7 @@ const resolve = (overrides: Partial<Parameters<typeof resolveListCalendar>[0]> =
 describe("per-viewer calendar resolution", () => {
   it("offers a usable date field with its kind, tray flag and tone", () => {
     expect(resolve()).toEqual({ calendar: { defaultView: "month", dateFields: [{
-      start: "starts_on", end: "ends_on", label: "Starts on", kind: "date", unscheduled: true,
+      start: "starts_on", end: "ends_on", endNullable: true, label: "Starts on", kind: "date", unscheduled: true,
       tone: { field: "stage", tones: { open: "warning" } },
     }] } });
   });
@@ -38,6 +38,14 @@ describe("per-viewer calendar resolution", () => {
     ["the end field is masked", { masked: (key: string) => key === "ends_on" }],
   ])("is unavailable when %s", (_, overrides) => {
     expect(resolve(overrides)).toEqual({ unavailable: LIST_CALENDAR_DATE_FIELD_UNAVAILABLE });
+  });
+
+  it("publishes a required end as not nullable and needs no is_not_null for it", () => {
+    const result = resolve({
+      entityFields: [entityFields[0]!, entityField("ends_on", "date", true), entityFields[2]!],
+      fields: [fields[0]!, listField("ends_on", "date", { filterOperators: ["gte"] }), fields[2]!],
+    });
+    expect("calendar" in result && result.calendar.dateFields[0]?.endNullable).toBe(false);
   });
 
   it("requires no count mode", () => {

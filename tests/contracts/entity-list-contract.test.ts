@@ -358,6 +358,9 @@ describe("entity list browser contract", () => {
     assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Calendar/);
     assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, defaultView: "week" } } }), /renderable view/);
     assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], kind: "datetime" }] } } }), /listed datetime field/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], endNullable: false }] } } }), /endNullable requires an end field/);
+    const ranged = parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], end: "due_on", endNullable: false }] } } });
+    assert.equal(ranged.surface.calendar?.dateFields[0]?.endNullable, false);
   });
 
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {

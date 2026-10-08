@@ -10,6 +10,10 @@ export interface ListCalendarDateFieldV1 {
   readonly start: string;
   /** Same kind as `start`; a null end means open-ended. */
   readonly end?: string;
+  /** Set only with `end`: whether the end field can be null. When false, no
+   * record is open-ended, so the open-ended query is not sent. Absent means
+   * the end may be null. */
+  readonly endNullable?: boolean;
   readonly label: string;
   /** `date` is a calendar day; `datetime` is an instant shown in the person's time zone. */
   readonly kind: "date" | "datetime";
@@ -70,7 +74,7 @@ export function parseListCalendar(
   const dateFields = items.map((item, index) => {
     const path = `surface.calendar.dateFields[${index}]`;
     const entry = record(item, path);
-    allowKeys(entry, ["start", "end", "label", "kind", "unscheduled", "tone"], path);
+    allowKeys(entry, ["start", "end", "endNullable", "label", "kind", "unscheduled", "tone"], path);
     const kind = entry.kind;
     if (kind !== "date" && kind !== "datetime") fail(`${path}.kind`, "must be date or datetime");
     const start = text(entry.start, `${path}.start`);
@@ -78,6 +82,8 @@ export function parseListCalendar(
     starts.add(start);
     const end = entry.end === undefined ? undefined : text(entry.end, `${path}.end`);
     if (end !== undefined && fields.get(end)?.valueKind !== kind) fail(`${path}.end`, `must be a listed ${kind} field`);
+    if (entry.endNullable !== undefined && end === undefined) fail(`${path}.endNullable`, "requires an end field");
+    const endNullable = entry.endNullable === undefined ? undefined : flag(entry.endNullable, `${path}.endNullable`);
     let tone: ListCalendarDateFieldV1["tone"];
     if (entry.tone !== undefined) {
       const toneValue = record(entry.tone, `${path}.tone`);
@@ -94,6 +100,7 @@ export function parseListCalendar(
     return Object.freeze({
       start,
       ...(end === undefined ? {} : { end }),
+      ...(endNullable === undefined ? {} : { endNullable }),
       label: text(entry.label, `${path}.label`),
       kind,
       unscheduled: flag(entry.unscheduled, `${path}.unscheduled`),

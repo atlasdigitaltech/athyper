@@ -46,6 +46,10 @@ describe("calendar windows and wire format", () => {
       { field: "ends_on", operator: "is_null" },
     ]);
     assert.equal(openEndedFilters(instantField, window, "UTC"), undefined);
+    // A required end: no open-ended query, and no null to exclude from the window query.
+    const requiredEnd = { ...dateField, endNullable: false };
+    assert.equal(openEndedFilters(requiredEnd, window, "UTC"), undefined);
+    assert.deepEqual(windowFilters(requiredEnd, window, "UTC").map((filter) => filter.operator), ["lt", "gte"]);
     assert.deepEqual(trayFilters(dateField), [{ field: "starts_on", operator: "is_null" }]);
     assert.equal(trayFilters(instantField), undefined);
   });

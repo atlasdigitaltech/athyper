@@ -49,7 +49,7 @@ export function resolveListCalendar(input: {
     return [
       Object.freeze({
         start: item.start,
-        ...(item.end === undefined ? {} : { end: item.end }),
+        ...(item.end === undefined ? {} : { end: item.end, endNullable: nullable(item.end) }),
         label: start.label,
         kind,
         unscheduled: nullable(item.start),
