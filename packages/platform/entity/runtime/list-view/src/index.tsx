@@ -67,6 +67,7 @@ import { recordCardLayout, type RecordCardLayout } from "./record-card-layout";
 import { EntityNavigation, EntityNavigationSkeleton } from "./navigation";
 import { EntityOverviewRuntime } from "./overview";
 import { GroupDialog } from "./dialogs/group-dialog";
+import { columnsModified, sortModified } from "./draft-comparison";
 export { EntityOverview, type EntityOverviewProps } from "./overview";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
@@ -3338,7 +3339,7 @@ function SortDialog({
       setPickerOpen(false);
     }
   }, [open, sort]);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(sort),
+  const dirty = sortModified(draft, sort),
     maximum = Math.min(descriptor.limits.maxSortLevels, fields.length);
   return (
     <>
@@ -3536,7 +3537,7 @@ function ColumnsDialog({
     }
     setDrag(undefined);
   };
-  const dirty = JSON.stringify(columns) !== JSON.stringify(state.columns);
+  const dirty = columnsModified(columns, state.columns);
   return (
     <>
       <Drawer.Body scrollable={false} className="a-entity-list__column-content">
