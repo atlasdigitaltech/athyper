@@ -322,6 +322,21 @@ The shared `SegmentedControl` receives one additive optional prop, `describedBy`
 
 Live publication for a real Entity waits on native list authoring activation (section 13).
 
+### 12.1 Execution sequence (amended 8 October 2026 at the project owner's direction)
+
+A parallel metadata cleanup (Country and State Region first) is editing Studio authoring, Studio DDL, generators, the publication service and the Studio blueprint. Work is therefore sequenced by overlap with that cleanup. Acceptance criteria are unchanged; each criterion is met by the step that owns it.
+
+| Step                  | Work                                                                                                                                                                                                                      | Overlaps the cleanup                                            | When                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------- |
+| A — 0b-i              | 0b items 1–4: `surface.unavailableModes`, no renderer fall-through, `view=` validation, exact tone lookup                                                                                                                 | No                                                              | Now                     |
+| B — Phase 1 runtime   | `board.ts`; the published-descriptor parser for `board`/`cardContent`; per-viewer board resolution in the list service; the Board renderer, card content, `describedBy`, i18n; jsdom and Playwright on synthetic fixtures | No                                                              | After A                 |
+| C — 0b-ii             | 0b item 5: the active-descriptor identity scan, then removing the identity fallbacks                                                                                                                                      | Yes (scan depends on cleaned metadata)                          | After the cleanup lands |
+| D — Phase 1 authoring | Reference members, guards, forward upgrade, compiler, generators, Studio dictionary (section 10)                                                                                                                          | Yes (same package, DDL folder, generators and Studio blueprint) | After the cleanup lands |
+| E — First real pilot  | Board metadata authored for an eligible Entity                                                                                                                                                                            | Depends on C, D and native list activation                      | After C and D           |
+| F — Phase 1b          | Studio List settings panel and Board editor                                                                                                                                                                               | Composer host chain (section 13)                                | Unchanged               |
+
+**Visual reference.** The owner-approved Board prototypes (8 October 2026) set the visual direction for step B: tone-accented lanes with a tinted background and tone count pill, a "Terminal" tag, collapsed lanes as a narrow vertical strip, a distribution summary built only from the lane counts already fetched, lane chips at narrow width, and the shared record card with a hover lift. Styling uses design-system tokens and the existing list breakpoints; no new font or dependency is added.
+
 ## 13. Dependencies and risks
 
 **Phase 1b prerequisite chain** (each step depends on the one before it):
@@ -332,6 +347,8 @@ Live publication for a real Entity waits on native list authoring activation (se
 4. **Board editor** (Studio section 7.6).
 
 Phase 1 runtime work does not wait on this chain. Phase 1b does.
+
+**Metadata cleanup dependency.** Steps C and D (section 12.1) wait for the parallel metadata cleanup to land, because they edit the same Studio authoring package, DDL, generators and blueprint, and the identity scan is only meaningful on cleaned metadata.
 
 | Item                                                                                                                                               | Effect                                                       | Handling                                                                                                                                            |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -349,7 +366,7 @@ Each item below is approved as written. Prerequisites still apply: Phase 0b also
 
 1. **Approved** — **Phase 0b contract change:** approve `surface.unavailableModes` (section 5.1). Phase 0b depends on this decision alone.
 2. **Approved** — **Phase 1 contract:** approve the three new reference members (including lane `tone`), `board` in `supported_modes`, the published `board` and `cardContent` projections, and `SaveableListStateV1.board` (sections 5.2–5.6). No binding column is added.
-3. **Approved** — Phase 0 as two commits: 0a moves and 0b corrections.
+3. **Approved** — Phase 0 as two commits: 0a moves and 0b corrections. **Amended 8 October 2026 by the project owner:** 0b lands as 0b-i (items 1–4) and 0b-ii (item 5), and Phase 1 lands as runtime and authoring steps, per section 12.1.
 4. **Approved** — Phase 1b, the Studio List settings panel and Board editor, scheduled after the composer host chain in section 13 (recommended), or defer it.
 5. **Approved** — correcting the identity fallbacks in 0b (recommended; required by AGENTS.md), including the precondition scan.
 6. **Approved** — Board requires `countMode = exact` (recommended), versus a later repository change to make lane counts optional.
