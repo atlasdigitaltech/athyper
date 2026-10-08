@@ -30,7 +30,15 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
       created = true;
       for (let i = 0; i < 100; i++) {
         try {
-          docker("exec", name, "pg_isready", "-U", "postgres");
+          docker(
+            "exec",
+            name,
+            "pg_isready",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "postgres",
+          );
           break;
         } catch {
           if (i === 99) throw Error("POSTGRES_NOT_READY");
@@ -45,6 +53,8 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
             "-i",
             name,
             "psql",
+            "-h",
+            "127.0.0.1",
             "-X",
             "-At",
             "-v",
@@ -64,12 +74,15 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
         CREATE ROLE athyper_product_command_app NOLOGIN;
         CREATE ROLE bootstrap_client LOGIN;
         GRANT athyper_product_command_app TO bootstrap_client;
-        CREATE SCHEMA metadata;
-        CREATE TABLE metadata.entity(id uuid PRIMARY KEY,tenant_id uuid,entity_code text);
+        CREATE SCHEMA metadata; CREATE SCHEMA master;
+        CREATE FUNCTION master.current_principal_id_soft() RETURNS uuid LANGUAGE sql AS $$ SELECT current_setting('app.current_principal_id',true)::uuid $$;
+        GRANT USAGE ON SCHEMA metadata,master TO athyper_product_command_app;
+        CREATE TABLE metadata.entity(id uuid PRIMARY KEY,tenant_id uuid,entity_code text,ownership_model text DEFAULT 'system');
         CREATE TABLE metadata.entity_change_set(id uuid PRIMARY KEY,entity_id uuid,tenant_id uuid,
-          source_kind text,status text,native_core_layout_version integer,lock_version bigint);
+          source_kind text,status text,native_core_layout_version integer,lock_version bigint,created_by uuid,change_set_code text,branch_code text,title text,base_release_id uuid,entity_label_id uuid);
+        ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.entity_change_set FORCE ROW LEVEL SECURITY;
         CREATE TABLE metadata.entity_operation(id uuid PRIMARY KEY,entity_id uuid,tenant_id uuid,
-          change_set_id uuid,operation_key text,operation_kind text,requires_mfa boolean);`);
+          change_set_id uuid,operation_key text,operation_kind text,requires_mfa boolean,label_id uuid);`);
       const transport = read(
         "scripts/operations/upgrades/entity-product-command/20261008_entity_product_command_authority.sql",
       );
@@ -82,6 +95,12 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
       query(
         read("ddl/planes/studio/metadata/46_native_operation_bootstrap.sql"),
       );
+      query(
+        read(
+          "ddl/planes/studio/metadata/48_operation_bootstrap_reservation.sql",
+        ),
+      );
+      query(read("ddl/planes/studio/metadata/47_product_draft_creation.sql"));
       const entity = randomUUID(),
         source = randomUUID(),
         target = randomUUID(),
@@ -90,11 +109,10 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
         tenant = randomUUID();
       const hash = "b".repeat(64),
         token = "a".repeat(64);
-      query(`INSERT INTO metadata.entity VALUES('${entity}',NULL,'fixture_reference');
-        INSERT INTO metadata.entity_change_set VALUES
-        ('${source}','${entity}',NULL,'product','draft',NULL,4),
-        ('${target}','${entity}',NULL,'product','draft',2,1);
-        INSERT INTO metadata.entity_operation VALUES('${operation}','${entity}',NULL,'${source}','read','read',false);
+      query(`INSERT INTO metadata.entity(id,tenant_id,entity_code) VALUES('${entity}',NULL,'fixture_reference');
+        INSERT INTO metadata.entity_change_set(id,entity_id,tenant_id,source_kind,status,native_core_layout_version,lock_version) VALUES
+        ('${source}','${entity}',NULL,'product','draft',NULL,4);
+        INSERT INTO metadata.entity_operation(id,entity_id,tenant_id,change_set_id,operation_key,operation_kind,requires_mfa) VALUES('${operation}','${entity}',NULL,'${source}','read','read',false);
         INSERT INTO entity_command_private.operation_bootstrap_source
         (target_change_set_id,source_rows_hash,entity_id,entity_code,source_change_set_id,source_revision,source_operation_id,operation_key,requires_mfa,approval_reference)
         VALUES('${target}','${hash}','${entity}','fixture_reference','${source}',4,'${operation}','read',false,'synthetic owner decision');
@@ -106,6 +124,19 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
         SELECT entity_command_private.enter('${token}','${hash}');`;
       const select = `SELECT count(*)||':'||coalesce(bool_or(requires_mfa)::text,'none')
         FROM entity_command_private.read_operation_bootstrap_source('${target}','${hash}','${operation}');`;
+      // Exact private reservation precedes target creation. It cannot be used
+      // until a matching native product root exists, even with admission.
+      expect(query(enter + select + "ROLLBACK;")).toContain("0:none");
+      expect(() =>
+        query(
+          `INSERT INTO metadata.entity_change_set(id,entity_id,tenant_id,source_kind,status,native_core_layout_version,lock_version) VALUES('${target}','${entity}',NULL,'product','draft',NULL,0);`,
+        ),
+      ).toThrow();
+      query(`BEGIN; INSERT INTO metadata.entity_change_set(id,entity_id,tenant_id,source_kind,status,native_core_layout_version,lock_version) VALUES('${target}','${entity}',NULL,NULL,'draft',NULL,0);
+        UPDATE metadata.entity_change_set SET source_kind='product',native_core_layout_version=2,lock_version=1 WHERE id='${target}'; COMMIT;`);
+      expect(() =>
+        query(`DELETE FROM metadata.entity_change_set WHERE id='${target}';`),
+      ).toThrow();
       expect(query(enter + select + "ROLLBACK;")).toContain("1:false");
       // Rollback consumption permits a fresh fixture transaction; production
       // transport separately revokes admissions and requires reauthorization.
@@ -153,10 +184,7 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
           `UPDATE metadata.entity_change_set SET lock_version=5 WHERE id='${source}';`,
           `UPDATE metadata.entity_change_set SET lock_version=4 WHERE id='${source}';`,
         ],
-        [
-          `UPDATE metadata.entity_change_set SET tenant_id='${tenant}' WHERE id='${target}';`,
-          `UPDATE metadata.entity_change_set SET tenant_id=NULL WHERE id='${target}';`,
-        ],
+
         [
           `UPDATE metadata.entity_change_set SET status='published' WHERE id='${target}';`,
           `UPDATE metadata.entity_change_set SET status='draft' WHERE id='${target}';`,
@@ -166,6 +194,36 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
         expect(query(enter + select + "ROLLBACK;")).toContain("0:none");
         query(restore!);
       }
+      denied(
+        `UPDATE metadata.entity_change_set SET tenant_id='${tenant}' WHERE id='${target}';`,
+        "OPERATION_BOOTSTRAP_TARGET_MISMATCH",
+      );
+      // Exact-source SQL insertion guard, independent of the TypeScript planner.
+      // Full column grants/graph constraints are checked separately, not modeled here.
+      const privileges = read(
+        "ddl/planes/studio/metadata/49_native_bootstrap_privileges.sql",
+      );
+      query(privileges.slice(0, privileges.indexOf("DO $$")));
+      query(privileges.slice(privileges.indexOf("-- Protected values")));
+      query(`UPDATE metadata.entity_change_set SET created_by='${actor}' WHERE id='${target}';
+        UPDATE entity_command_private.admission SET creation_entity_id='${entity}';
+        GRANT INSERT(id,entity_id,tenant_id,change_set_id,operation_key,operation_kind,requires_mfa,label_id) ON metadata.entity_operation TO athyper_product_command_app;`);
+      const insert = (
+        value: boolean,
+      ) => `INSERT INTO metadata.entity_operation(id,entity_id,tenant_id,change_set_id,operation_key,operation_kind,requires_mfa,label_id)
+        VALUES('${randomUUID()}','${entity}',NULL,'${target}','read','read',${value},'${randomUUID()}');`;
+      denied(
+        enter + insert(true),
+        "NATIVE_OPERATION_INITIALIZER_SOURCE_CHANGED",
+      );
+      query(enter + insert(false) + "ROLLBACK;");
+      query(
+        `UPDATE entity_command_private.admission SET creation_entity_id=NULL;`,
+      );
+      denied(enter + insert(false), "NATIVE_OPERATION_INITIALIZER_REQUIRED");
+      query(
+        `UPDATE entity_command_private.admission SET creation_entity_id='${entity}';`,
+      );
       // A committed admission cannot be entered twice.
       expect(query(enter + select + "COMMIT;")).toContain("1:false");
       denied(enter + select, "PRODUCT_COMMAND_ADMISSION_DENIED");

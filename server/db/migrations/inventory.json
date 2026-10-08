@@ -2084,6 +2084,34 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/47_product_draft_creation.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_operation_bootstrap_reservation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_operation_bootstrap_reservation.sql",
+      "sha256": "df9539898ceee1d9102be4e81fa677f869d073f5c2eb73ff544e7d10e335f032",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Permit exact future-target initializer reservation with deferred target-integrity guards and unchanged private approval privileges/source verification.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/48_operation_bootstrap_reservation.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_bootstrap_privileges.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_bootstrap_privileges.sql",
+      "sha256": "e71084c437e409747179e4922b3aee60db770cdea0d34ffa164a0f4ab749e3ac",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Insert-only native bootstrap privileges under exact creation admission with approved-source protected operation guard; pending cutover constraints retained.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/49_native_bootstrap_privileges.sql"
+      ]
     }
   ]
 }

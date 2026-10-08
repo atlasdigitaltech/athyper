@@ -67,7 +67,14 @@ ownership in PostgreSQL, and permits only an unpinned revision-zero draft root. 
 ordinary existing-draft ticket cannot create a root; native graph/initializer writes
 and independent publication review remain separate authorities. Operation initialization uses only the
 specifically approved source-bound initializer, never a default or client-supplied
-protected value. Native bootstrap does not attest deployed F6/F8/F9, publication or
+protected value. Private initializer evidence may reserve an exact future draft UUID;
+deferred database guards reject a mismatched or non-native target when that root is
+created, and the source reader grants nothing while it is absent. Source FKs and
+private evidence privileges remain intact. Insert-only native member grants require
+the creation ticket, matching product root, actor and initial revision. Native operation
+INSERT additionally checks and locks the approved source value in PostgreSQL; no
+protected-value UPDATE/DELETE authority follows from bootstrap. Pending cutover checks
+are removed only after canonical whole-graph application qualification. Native bootstrap does not attest deployed F6/F8/F9, publication or
 activation. Execution evidence and remaining integration gaps belong in the existing
 [qualification runbook](../../runbooks/entity-foundation-qualification.md).
 

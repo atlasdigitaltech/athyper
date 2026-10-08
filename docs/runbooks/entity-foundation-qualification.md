@@ -142,6 +142,53 @@ an unauthenticated session request still returns 401. Initializer target install
 qualification, actual bootstrap endpoint composition and deployed live reads remain
 open. No Entity draft, operation, release or activation was created by installation.
 
+### Initializer evidence and native INSERT privileges installed — 8 October
+
+The four owner-approved source bindings are now installed in DEV for exactly two
+reserved future draft UUIDs. `native-bootstrap-targets.json` and the
+`initializer-evidence-{rehearsal,installation,replay}.json` receipts reside in the
+existing private backup directory. Source hash remains
+`7326147996a695b2062fe081fadfd0d04318944690907cc281f5cc3b45c9d2f4`.
+The operational installer locks/rechecks every original source row/revision/value,
+rejects existing targets and conflicting evidence, and replays without overwriting
+installed rows. It installs no operation, draft or publication-review receipt.
+DEV readback: four bindings, two target IDs, zero existing target roots; the command
+role still has neither SELECT nor INSERT privileges on the private evidence table.
+
+Forward migration `20261008_entity_operation_bootstrap_reservation.sql` replaces only
+the target FK with deferred target-integrity triggers, retaining all source FKs. This
+allows preallocation without an administrator-created placeholder draft. A present
+target must be the matching native product root; deletion of a pinned target rejects.
+The existing source reader still requires the real matching empty target and current
+transaction admission. Migration SHA-256:
+`df9539898ceee1d9102be4e81fa677f869d073f5c2eb73ff544e7d10e335f032`.
+
+Forward migration `20261008_entity_native_bootstrap_privileges.sql` installs a finite
+INSERT-column inventory for the selected typed/reference families and retained
+structural bindings. Restrictive policies require exact creation admission, product
+root, initial revision and actor. Its operation trigger rechecks/locks the independently
+approved source and rejects a changed protected value. No operation UPDATE/DELETE
+permission is granted. SHA-256:
+`e71084c437e409747179e4922b3aee60db770cdea0d34ffa164a0f4ab749e3ac`.
+DEV rollback rehearsals, ledger-backed installation and grants replay passed; receipts
+are `initializer-reservation-*` and `native-grants-*` in the private backup directory.
+Authorization assignments and activation heads were unchanged. All seven native
+pending constraints remain: these installed privileges do not enable cutover.
+
+The opt-in PostgreSQL test now proves reservation-before-root, mismatch rejection,
+reserved-target retention, exact protected-value insertion, changed-value rejection,
+missing creation-ticket rejection and rollback under the application login. It also
+retains the earlier source-change/read-isolation checks. The minimal fixture schema
+is not a whole canonical graph or deployed F6/F8/F9 proof. Column-inventory tests
+compare the SQL grants with the selected typed descriptors; installer tests prove
+hash rejection and rollback-by-default. Whole-graph constraint cutover, live resource
+resolution, bootstrap endpoint composition and deployed live reads remain unfinished.
+Validation: 856 authoring tests passed (eight opt-in skips), the enhanced PostgreSQL
+test was explicitly enabled and passed, 21 installer/migration/inventory tests passed,
+and production/native-test typechecks, migration layout and formatting passed.
+Both original drafts remain revision 4 with no native marker.
+No replacement draft, new Entity publication or activation occurred.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`

@@ -1,0 +1,227 @@
+BEGIN;
+SET LOCAL lock_timeout='5s';
+-- Insert-only native bootstrap privileges. Pending cutover checks remain.
+-- Finite column inventory from the existing typed descriptors; no entity dispatch.
+CREATE FUNCTION entity_command_private.native_bootstrap_writable(p_target uuid,p_entity uuid) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ IF NOT entity_command_private.admitted_creation(p_target,p_entity) THEN RETURN false; END IF;
+ PERFORM 1 FROM metadata.entity_change_set WHERE id=p_target AND entity_id=p_entity AND tenant_id IS NULL
+  AND source_kind='product' AND native_core_layout_version=2 AND lock_version=1 AND status='draft'
+  AND created_by::text=current_setting('app.current_principal_id',true) FOR UPDATE;
+ RETURN FOUND;
+END $$;
+REVOKE ALL ON FUNCTION entity_command_private.native_bootstrap_writable(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION entity_command_private.native_bootstrap_writable(uuid,uuid) TO athyper_product_command_app;
+GRANT UPDATE(native_core_layout_version,entity_label_id) ON metadata.entity_change_set TO athyper_product_command_app;
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_access_permission'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_access_permission'; END IF; END $$;
+GRANT SELECT ON metadata.entity_access_permission TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_surface_id,capability_binding_id,target_plane,permission_code,permission_kind) ON metadata.entity_access_permission TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_access_permission FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_access_permission AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_access_permission FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_access_permission AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_authorization_profile'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_authorization_profile'; END IF; END $$;
+GRANT SELECT ON metadata.entity_authorization_profile TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,target_plane,ownership_resolver_key,ownership_resolver_version,record_read_operation_id,directory_operation_id,directory_population,owner_field_id,created_by_field_id,updated_by_field_id,administer_permission_code,administer_permission_kind) ON metadata.entity_authorization_profile TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_authorization_profile FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_authorization_profile AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_authorization_profile FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_authorization_profile AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,field_identity_id,parent_field_id,label_id,description,data_type,storage_type,cardinality,value_origin,storage_kind,storage_path,nullable,required,write_mode,data_classification,retention_policy_code,semantic_role,min_length,max_length,minimum,maximum,pattern,precision,scale,domain_code,default_kind,default_text,default_numeric,default_boolean,default_context_key,default_context_version,key_generation,relation_id,computed_contract_key,computed_contract_version,validation_contract_key,validation_contract_version,json_schema_key,json_schema_hash,replacement_field_id,minimum_date,maximum_date,minimum_datetime,maximum_datetime,temporal_kind,currency_field_id,currency_code,default_date,default_datetime,default_uuid,field_key,type_config,default_spec,computation_spec,validation_spec) ON metadata.entity_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_field_access'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_field_access'; END IF; END $$;
+GRANT SELECT ON metadata.entity_field_access TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_field_id,target_plane,read_operation_id,representation,query_uses,read_operation_change_set_id) ON metadata.entity_field_access TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_field_access FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_field_access AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_field_access FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_field_access AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_field_choice'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_field_choice'; END IF; END $$;
+GRANT SELECT ON metadata.entity_field_choice TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_field_id,value_text,label_id,tone,position) ON metadata.entity_field_choice TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_field_choice FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_field_choice AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_field_choice FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_field_choice AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_field_reference_binding'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_field_reference_binding'; END IF; END $$;
+GRANT SELECT ON metadata.entity_field_reference_binding TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_field_id,binding_key,reference_kind,target_entity_code,lookup_domain,resolver_key,require_active,status) ON metadata.entity_field_reference_binding TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_field_reference_binding FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_field_reference_binding AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_field_reference_binding FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_field_reference_binding AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_key'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_key'; END IF; END $$;
+GRANT SELECT ON metadata.entity_key TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,key_key,key_kind,uniqueness_scope,null_semantics,status,deprecated_since_release_no,planned_removal_release_no,replacement_key_key) ON metadata.entity_key TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_key FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_key AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_key FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_key AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_key_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_key_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_key_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_key_id,entity_field_id,position) ON metadata.entity_key_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_key_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_key_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_key_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_key_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_operation'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_operation'; END IF; END $$;
+GRANT SELECT ON metadata.entity_operation TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,operation_key,operation_kind,description,label_id,audit_event_code,execution_mode,idempotency_mode,input_surface_id,result_surface_id,authorization_target,authorization_effect,requires_parent_read,requires_preflight,replacement_operation_id,handler_key,handler_version,preflight_key,preflight_version,extension_field_mode,export_formats,export_max_records,label,requires_mfa) ON metadata.entity_operation TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_operation FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_operation AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_operation FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_operation AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_operation_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_operation_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_operation_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_operation_id,entity_field_id,position,operation_change_set_id) ON metadata.entity_operation_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_operation_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_operation_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_operation_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_operation_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_operation_permission'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_operation_permission'; END IF; END $$;
+GRANT SELECT ON metadata.entity_operation_permission TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_operation_id,target_plane,permission_code,permission_kind,status) ON metadata.entity_operation_permission TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_operation_permission FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_operation_permission AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_operation_permission FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_operation_permission AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_operation_scope_binding'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_operation_scope_binding'; END IF; END $$;
+GRANT SELECT ON metadata.entity_operation_scope_binding TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_operation_id,binding_key,target_plane,decision_mode,scope_kind,coordinate_source,coordinate_key,resolver_key,missing_value_behavior,status) ON metadata.entity_operation_scope_binding TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_operation_scope_binding FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_operation_scope_binding AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_operation_scope_binding FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_operation_scope_binding AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_predicate'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_predicate'; END IF; END $$;
+GRANT SELECT ON metadata.entity_predicate TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,predicate_key,parent_predicate_id,node_kind,conjunction,purpose,view_id,authorization_profile_id,field_binding_id,entity_field_id,operator,value_kind,value_text,value_numeric,value_boolean,value_date,value_datetime,value_uuid,value_text_set,position,surface_operation_id,surface_section_id,navigation_group_id,value_numeric_set,value_uuid_set,value_date_set,value_datetime_set,context_key,context_version) ON metadata.entity_predicate TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_predicate FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_predicate AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_predicate FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_predicate AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_relation'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_relation'; END IF; END $$;
+GRANT SELECT ON metadata.entity_relation TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,relation_key,relation_kind,resolution_kind,ownership_mode,mutation_mode,on_delete,on_update,inverse_relation_key,status,deprecated_since_release_no,planned_removal_release_no,replacement_relation_key) ON metadata.entity_relation TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_relation FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_relation AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_relation FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_relation AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_relation_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_relation_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_relation_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_relation_target_id,source_field_id,target_field_key,position) ON metadata.entity_relation_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_relation_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_relation_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_relation_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_relation_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_relation_target'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_relation_target'; END IF; END $$;
+GRANT SELECT ON metadata.entity_relation_target TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_relation_id,relation_target_key,target_entity_id,target_key_key,discriminator_value,is_default) ON metadata.entity_relation_target TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_relation_target FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_relation_target AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_relation_target FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_relation_target AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_runtime_profile'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_runtime_profile'; END IF; END $$;
+GRANT SELECT ON metadata.entity_runtime_profile TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,profile_key,backing_kind,storage_plane,storage_schema,storage_object,storage_catalogue_hash,read_mode,write_mode,api_exposure,create_mode,draft_ttl_hours,concurrency_mode,id_field_id,tenant_field_id,record_version_field_id,soft_delete_field_id,read_handler_key,read_handler_version,write_handler_key,write_handler_version,reference_capability_key,reference_capability_version,tenant_field_key,record_version_field_key,soft_delete_field_key) ON metadata.entity_runtime_profile TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_runtime_profile FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_runtime_profile AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_runtime_profile FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_runtime_profile AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_search_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_search_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_search_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_search_profile_id,entity_field_id,position,match_mode,weight) ON metadata.entity_search_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_search_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_search_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_search_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_search_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_search_profile'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_search_profile'; END IF; END $$;
+GRANT SELECT ON metadata.entity_search_profile TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,search_key,search_kind,query_operator,minimum_query_length,language_code,normalization_mode,is_default,status,deprecated_since_release_no,planned_removal_release_no,replacement_search_key) ON metadata.entity_search_profile TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_search_profile FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_search_profile AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_search_profile FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_search_profile AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,surface_key,surface_kind,embedded_mode,label_id,description_label_id,layout_kind,is_default,icon_key,identity_field_id,title_field_id,code_field_id,column_count,search_profile_id,supported_modes,default_page_size,allowed_page_sizes,max_sort_levels,count_mode,max_filters,max_filter_depth,max_page_size,empty_title_label_id,empty_description_label_id,component_contract_id,show_group_band,reference_key_id,reference_format,extension_point_key,title,description,layout_config) ON metadata.entity_surface TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface_field_binding'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface_field_binding'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface_field_binding TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_surface_id,entity_surface_section_id,overlay_id,entity_field_id,binding_key,binding_kind,position,label_override_id,help_label_id,placeholder_label_id,component_display_id,component_input_id,component_filter_id,component_format_id,column_span,width,alignment,filter_operators,default_filter_operator,meaningful_for_form,reference_surface_key,reference_load_mode,token_key,text_wrap,fraction_digits,date_style,empty_text_label_id,label_override,help_text,placeholder,display_config) ON metadata.entity_surface_field_binding TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface_field_binding FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface_field_binding AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface_field_binding FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface_field_binding AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface_navigation_group'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface_navigation_group'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface_navigation_group TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_surface_id,group_key,label_id,icon_key,section_display,position) ON metadata.entity_surface_navigation_group TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface_navigation_group FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface_navigation_group AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface_navigation_group FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface_navigation_group AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface_section'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface_section'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface_section TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_surface_id,navigation_group_id,parent_section_id,section_key,label_id,section_kind,content_kind,position,column_count,collapsible,collapsed_by_default,placement,icon_key,relation_target_id,target_surface_key,target_view_key,read_operation_key,presentation_cardinality,empty_title_label_id,empty_description_label_id,empty_creation_mode,setup_label_id,create_operation_key,edit_label_id,component_contract_id,entity_capability_id,capability_layout_binding_id,extension_point_key,title,layout_config) ON metadata.entity_surface_section TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface_section FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface_section AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface_section FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface_section AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface_view'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface_view'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface_view TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,entity_surface_id,view_key,view_kind,label_id,query_text,density,mode,position) ON metadata.entity_surface_view TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface_view FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface_view AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface_view FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface_view AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_surface_view_field'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_surface_view_field'; END IF; END $$;
+GRANT SELECT ON metadata.entity_surface_view_field TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,view_id,field_binding_id,visible_position,sort_position,sort_direction,grouped,width_override) ON metadata.entity_surface_view_field TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_surface_view_field FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_surface_view_field AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_surface_view_field FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_surface_view_field AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='metadata.entity_target'::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'NATIVE_BOOTSTRAP_RLS_REQUIRED: entity_target'; END IF; END $$;
+GRANT SELECT ON metadata.entity_target TO athyper_product_command_app;
+GRANT INSERT(id,change_set_id,entity_id,tenant_id,created_by,target_plane,requirement,position) ON metadata.entity_target TO athyper_product_command_app;
+CREATE POLICY native_bootstrap_read ON metadata.entity_target FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_read_fence ON metadata.entity_target AS RESTRICTIVE FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id));
+CREATE POLICY native_bootstrap_insert ON metadata.entity_target FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+CREATE POLICY native_bootstrap_insert_fence ON metadata.entity_target AS RESTRICTIVE FOR INSERT TO athyper_product_command_app WITH CHECK(tenant_id IS NULL AND created_by=master.current_principal_id_soft() AND entity_command_private.native_bootstrap_writable(change_set_id,entity_id));
+-- Protected values may only be copied from the exact privately approved source.
+-- Each insertion locks its original row, even after another approved operation
+-- has been inserted in this same atomic bootstrap transaction.
+CREATE FUNCTION entity_command_private.guard_native_operation_initialization() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE approved boolean;
+BEGIN
+ IF NOT entity_command_private.native_bootstrap_writable(NEW.change_set_id,NEW.entity_id) THEN
+  RAISE EXCEPTION 'NATIVE_OPERATION_INITIALIZER_REQUIRED' USING ERRCODE='42501';
+ END IF;
+ SELECT true INTO approved FROM entity_command_private.operation_bootstrap_source b
+ JOIN metadata.entity_change_set s ON s.id=b.source_change_set_id
+ JOIN metadata.entity e ON e.id=b.entity_id
+ JOIN metadata.entity_operation o ON o.id=b.source_operation_id
+ WHERE b.target_change_set_id=NEW.change_set_id AND b.entity_id=NEW.entity_id AND b.operation_key=NEW.operation_key
+ AND NEW.id<>b.source_operation_id AND NEW.operation_kind='read' AND NEW.requires_mfa=b.requires_mfa
+ AND s.entity_id=e.id AND s.tenant_id IS NULL AND s.status='draft' AND s.source_kind='product'
+ AND s.native_core_layout_version IS NULL AND s.lock_version=b.source_revision
+ AND e.tenant_id IS NULL AND e.entity_code=b.entity_code
+ AND o.change_set_id=s.id AND o.entity_id=e.id AND o.tenant_id IS NULL
+ AND o.operation_key=b.operation_key AND o.operation_kind='read' AND o.requires_mfa=b.requires_mfa
+ FOR SHARE OF b,s,e,o;
+ IF NOT FOUND THEN RAISE EXCEPTION 'NATIVE_OPERATION_INITIALIZER_SOURCE_CHANGED' USING ERRCODE='42501'; END IF;
+ RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION entity_command_private.guard_native_operation_initialization() FROM PUBLIC;
+CREATE TRIGGER native_operation_initialization_guard BEFORE INSERT ON metadata.entity_operation
+ FOR EACH ROW WHEN (NEW.label_id IS NOT NULL) EXECUTE FUNCTION entity_command_private.guard_native_operation_initialization();
+COMMIT;

@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  nativeBootstrapPrivilegesMigrationName,
+  operationReservationMigrationName,
   productDraftCreationMigrationName,
   operationBootstrapMigrationName,
   liveReadResourceReviewMigrationName,
@@ -480,5 +482,70 @@ test("product creation migration pins entity intent and leaves native/protected 
   assert.doesNotMatch(
     canonical,
     /DROP CONSTRAINT|requires_mfa|INSERT INTO metadata|GRANT UPDATE/,
+  );
+});
+
+test("reservation migration preserves private source evidence and guards final target identity", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        operationReservationMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/48_operation_bootstrap_reservation.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    source,
+    "BEGIN;\nSET LOCAL lock_timeout='5s';\n" + canonical + "COMMIT;\n",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(source, digest, false, operationReservationMigrationName),
+    /ROLLBACK;\n$/,
+  );
+  assert.match(canonical, /DEFERRABLE INITIALLY DEFERRED/);
+  assert.match(canonical, /OPERATION_BOOTSTRAP_TARGET_REFERENCED/);
+  assert.doesNotMatch(canonical, /INSERT INTO|GRANT|requires_mfa/);
+});
+
+test("native insert privileges retain pending cutover and canonical source checks", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        nativeBootstrapPrivilegesMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/49_native_bootstrap_privileges.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    source,
+    "BEGIN;\nSET LOCAL lock_timeout='5s';\n" + canonical + "COMMIT;\n",
+  );
+  assert.match(
+    preparationSql(
+      source,
+      createHash("sha256").update(source).digest("hex"),
+      false,
+      nativeBootstrapPrivilegesMigrationName,
+    ),
+    /ROLLBACK;\n$/,
+  );
+  assert.doesNotMatch(
+    canonical,
+    /DROP CONSTRAINT|INSERT INTO metadata|GRANT ALL|GRANT DELETE/,
   );
 });
