@@ -72,3 +72,51 @@ it("shared record fields honors server display values and rejects an unregistere
     /DETAIL_FIELD_RENDERER_UNSUPPORTED/,
   );
 });
+
+it("renders explicit boolean, enum and temporal bindings through the shared record component", () => {
+  const scalarDescriptor = parseEntityDetailDescriptor({
+    ...descriptor,
+    fields: [
+      descriptor.fields[0],
+      ...["boolean", "enum", "date", "datetime"].map((kind) => ({
+        key: kind,
+        label: kind,
+        kind,
+        required: false,
+        readOnly: true,
+        rendererKey: "text",
+        ...(kind === "enum"
+          ? { options: [{ value: "active", label: "Enabled" }] }
+          : {}),
+      })),
+    ],
+  });
+  const html = renderToStaticMarkup(
+    <EntityRecordFields
+      descriptor={scalarDescriptor}
+      record={{
+        id: "technical-record-identity",
+        values: {
+          name: "Reference",
+          boolean: true,
+          enum: "active",
+          date: "2026-10-08",
+          datetime: "2026-10-08T12:00:00Z",
+        },
+        displayValues: {
+          boolean: "Yes",
+          enum: "Enabled",
+          date: "8 October 2026",
+          datetime: "8 October 2026, 12:00",
+        },
+      }}
+      fieldKeys={["name", "boolean", "enum", "date", "datetime"]}
+    />,
+  );
+  assert.match(html, /Yes/);
+  assert.match(html, /Enabled/);
+  assert.match(html, /<time dateTime="2026-10-08"/);
+  assert.match(html, /<time dateTime="2026-10-08T12:00:00Z"/);
+  assert.match(html, /8 October 2026, 12:00/);
+  assert.doesNotMatch(html, /technical-record-identity|>active</);
+});

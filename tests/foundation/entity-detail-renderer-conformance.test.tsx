@@ -85,3 +85,54 @@ it("retains the explicit renderer across the public detail descriptor boundary",
     /DETAIL_FIELD_RENDERER_UNSUPPORTED/,
   );
 });
+
+it("preserves localized scalar display values and semantic time elements", async () => {
+  const { createEffectiveLocalization, createIntlRuntime } =
+    await import("../../packages/platform/foundation/i18n/src/index");
+  const { formatEntityValue } =
+    await import("../../packages/platform/foundation/i18n/src/entity-value");
+  const intl = createIntlRuntime({
+    localization: createEffectiveLocalization({
+      uiLocale: "en",
+      formatLocale: "en-US",
+      timeZone: "UTC",
+    }),
+    messages: { "entity.value.yes": "Yes", "entity.value.no": "No" },
+  });
+  for (const [kind, value, expected] of [
+    ["boolean", true, "Yes"],
+    ["boolean", false, "No"],
+    ["enum", "active", "Enabled &amp; ready"],
+    ["datetime", null, "—"],
+  ] as const) {
+    const scalar = {
+      ...field,
+      kind,
+      options: [{ value: "active", label: "Enabled & ready" }],
+    };
+    assert.equal(
+      renderToStaticMarkup(
+        <span>
+          {renderDetailFieldValue(
+            scalar,
+            formatEntityValue(value, scalar, intl),
+          )}
+        </span>,
+      ),
+      `<span>${expected}</span>`,
+    );
+  }
+  for (const kind of ["date", "datetime"] as const) {
+    const value = kind === "date" ? "2026-10-08" : "2026-10-08T12:00:00Z";
+    const scalar = { ...field, kind };
+    const content = (
+      <time dateTime={value}>{formatEntityValue(value, scalar, intl)}</time>
+    );
+    assert.equal(
+      renderToStaticMarkup(
+        <span>{renderDetailFieldValue(scalar, content)}</span>,
+      ),
+      `<span>${renderToStaticMarkup(content)}</span>`,
+    );
+  }
+});

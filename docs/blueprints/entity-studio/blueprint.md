@@ -1255,6 +1255,13 @@ installed in DEV with rehearsal/replay evidence; this does not enable native boo
 or qualify live records. The runbook distinguishes fixture-admission PostgreSQL coverage
 from actual application-role negative privilege checks.
 
+**Detail scalar capability:** the shared explicit `text` detail renderer accepts
+string/reference content plus boolean, enum, date and datetime display content through
+the existing localized formatter and semantic time/reference elements. UUID, JSON and
+numeric kinds remain outside this bounded declaration. Code-level support does not
+expand an installed component contract: a successor declaration and exact deployed
+conformance evidence must qualify any newly selected data types before publication.
+
 **Fresh bootstrap component assembly:** explicit surface, section and field component
 selections resolve through configured exact catalogue/manifest/release pins and the
 restricted installed-evidence reader before graph child rows exist. Host admission is

@@ -189,6 +189,33 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Complete-graph display prerequisite — 8 October
+
+The checked-in Country definition includes boolean, enum and datetime fields; State
+Region includes enum and datetime fields. Their detail sections select these fields.
+The explicit shared detail `text` parser previously accepted only string/reference
+kinds, despite the existing record component already formatting the scalar types.
+The parser now accepts boolean, enum, date and datetime content without selecting a
+fallback renderer or changing field authorization. UUID/JSON/numeric combinations
+remain unsupported. Tests exercise the actual record component, server display values,
+localized booleans/options, semantic time elements and escaped content.
+
+Executed: `node tooling/scripts/testing/run-foundation-tests.mjs
+ tests/foundation/entity-detail-renderer-conformance.test.tsx
+ tests/foundation/entity-localization.test.ts
+ tests/foundation/entity-record-fields-conformance.test.tsx` (27 tests across the
+three files, run in two invocations), and `pnpm --filter @athyper/studio build` (passed).
+This is source/build evidence only. No new deployment manifest, component approval,
+component activation, native draft or Entity activation is claimed. The installed
+string-only component declarations remain unchanged and cannot be used as proof of
+these additional capabilities.
+
+The immediate exit criterion has **not** been met: actual complete native graph
+proposals and production resource resolution remain unfinished, followed by canonical
+application/replay and deployed F6/F8/F9. No acceptance command for those unimplemented
+integrations is presented as executable or passing. RLS and the approved initializer
+were not changed.
+
 ### Bootstrap resource composition — 8 October
 
 The product-command runtime now accepts `nativeBootstrapResources` alongside the pinned
