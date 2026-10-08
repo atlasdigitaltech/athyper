@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "db:setup:rebuild-entity-metadata": "node ../../tooling/scripts/local-dev/entity-native-build.mjs",
     "test:security-boundary": "tsx --test src/security/*.test.ts src/provisioning/*.test.ts src/tooling/*.test.ts",
     "typecheck:security": "tsc -p tsconfig.security.json --noEmit",
     "db:generate:security-definer-contract": "tsx scripts/checks/security/generate-security-definer-contract.ts",

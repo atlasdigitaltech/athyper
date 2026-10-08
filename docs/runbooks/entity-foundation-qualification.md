@@ -1,9 +1,233 @@
-# Country and Principal foundation qualification
+# Entity Framework foundation qualification
 
 Started 2026-09-30, baseline commit `0fedc0e97c7a4c5f6b20586d0776c888680435f7`.
-Scope: shared Entity Framework hardening using Country and Principal. This is
+Historical starting scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
+
+<a id="current-local-native-build"></a>
+
+## Current delivery — approved local native rebuild: Country and State Region
+
+Recorded 9 October 2026. This section is the single current execution plan and status location. The [blueprint local exception](../blueprints/entity-studio/blueprint.md#local-native-build-exception) is the normative scope authority. Sections below this current section retain historical execution evidence; do not interpret their old “remaining” lists as the current backlog.
+
+### Approval and supersession
+
+The project owner explicitly approved, in the conversation headed “Decisions for Audit 1 comments”:
+
+1. The local build profile's keep, simplify and defer lists.
+2. Rebuilding the local Studio metadata schema after a recoverable `pg_dump`, with fresh native drafts and fresh identities and no adoption; this extends the 8 October disposal approval.
+3. Writing the four Country/State Region list/read operations with the proposal's declared `requires_mfa=false`, without the revision-4 source-row initializer.
+
+The subsequent request authorizes recording this detailed plan. These are owner decisions, not installed resources or independent publication approvals. The exact initialization permission does not grant ordinary clients access to protected-state mutation or set defaults for future entities/operations.
+
+**Superseded for this local delivery:** preservation of obsolete drafts inside the active schema; historical conversion; historical identity reconstruction; adoption of the 31 old reserved identities and its tests; source-row initializer locks/reservations; in-place predecessor-cutover rehearsal; a second rehearsal environment; detailed per-finding dossiers. Backups retain historical material. Existing migration capability/evidence is not deleted or declared qualified.
+
+**Retained:** complete typed graphs, canonical commands/rows, shared compiler and UI, no entity hardcoding, exact permissions, tenant/record isolation, current authorization on replay, application-role persistence, transaction integrity, required component semantics, existing supported AI declarations, independent human publication review and artifact verification.
+
+### Current status — documentation baseline, not a new execution receipt
+
+Implementation baseline reviewed in this conversation: `e8518cc2e` (proposal bundle construction). Latest reported read-only DEV inspection: both existing drafts revision 4, native version unset, seven pending constraints. That inspection was administrative, not application-role write evidence. The latest audit reconciliation inspected inbound FKs and selected dependent row counts as recorded under L2; it did not requalify draft writes or refresh every earlier baseline value. The harness must refresh the complete baseline before setup.
+
+| ID  | Deliverable                               | Status      | Available evidence / actual gap                                                                                                                | Next action                                                                            |
+| --- | ----------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| L0a | Non-destructive local preparation harness | In progress | Repaired command; seven tests pass; actual Studio dump restored successfully; reset/production acceptance not implemented                      | Complete logical cleanup dispositions and L1 graph/startup integration before reset    |
+| L1  | Complete native proposals                 | In progress | Bundle transport and component mappings exist; two complete real native graphs and fresh identity/operation initialization are not established | Assemble both graphs, retain source coverage, resolve required diagnostics             |
+| L2  | Clean schema and startup composition      | In progress | Existing preparation/guards and readers exist; new clean profile not installed and native startup composition incomplete                       | Connect config/resolver; implement maintained final schema/setup and restricted grants |
+| L3  | Actual native bootstrap and replay        | Not started | No replacement native draft execution established                                                                                              | Execute authenticated commands after L1/L2, verify exact readback/replay/rollback      |
+| L4  | Working local live-read integration       | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                                                      | Implement bounded validation and actual storage/security/identity composition          |
+| L5  | Human review, publication and activation  | Not started | Existing infrastructure/component releases are not new native Entity delivery                                                                  | Submit concrete Entity candidates and use independent review/worker paths              |
+| L6  | Local manual-test handover                | Not started | Old-release testing cannot establish this milestone                                                                                            | Verify new activated releases in standard UI and deliver exact identifiers             |
+
+Status vocabulary: **Not started / In progress / Blocked / Complete**. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
+
+Current implementation order is **L0a (non-destructive harness/inventory/backup verification) → L1 (complete replacement graphs and startup assembly) → L2 (explicit destructive rebuild/final constraints/grants)**, as one sequential integration effort. Reset installs the final native integrity contract directly; it is not required merely to obtain an empty target. The reset executor must not destroy source inputs before L1 and its scoped manifest are ready. L4 preparation may run independently only with a separate assigned implementer and isolated changes. Do not split unfinished production composition across uncoordinated sessions.
+
+### Ownership, scope and progress updates
+
+| Responsibility                         | Accountable role                               | Assignment / commitment                                                                                   |
+| -------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| L0–L3 integrated delivery              | One shared Entity/host integration implementer | Named person not supplied; current authorized engineering continues, staffing is not a new technical gate |
+| L4 storage and security implementation | Storage/provider and authorization maintainers | Named assignees not supplied; otherwise continue sequentially                                             |
+| Product candidate authorship           | Platform Admin                                 | Existing authenticated human author; request refreshed session only for a ready command                   |
+| Independent candidate review           | Platform Owner                                 | Concrete candidate review, never inferred from scope approval or a session refresh                        |
+| Local delivery acceptance              | Project owner                                  | Review L3 evidence and L6 handover; no new general implementation approval required                       |
+
+The independently owner-approved Tree A1/P-T1/B1 work is not revoked by this delivery fence; it remains separate and is not added to the cleanup critical path. Existing grouping/hasChildren issues enter the pre-reset baseline only when reproduced or linked to inspected evidence, not merely because another audit mentions them.
+
+No accepted calendar delivery commitment was supplied. Older C0–C6 dates and estimates are superseded planning proposals, not current deadlines. Size L0 small–medium, L1 large, L2 medium–large, L3 medium, L4 medium–large and L5/L6 medium plus human review turnaround. Replace these with named/date commitments when supplied or a grounded implementation estimate after the first harness run; do not silently assign a one-day promise or repeat “two hours” placeholders.
+
+Freeze this delivery to Country/State Region and necessary shared-framework fixes. Composer UI, Board/Calendar/Gantt work, other business-entity onboarding, historical migration, release sets and unrelated capability expansion are excluded unless the owner changes scope. Preserve unrelated concurrent work. A required correctness defect stays in this delivery; other findings become deferred limitations. Scope/control changes require their specific decision, not another general permission request.
+
+Each update records: checkpoint; completed implementation and executed result; evidence revision/run; exact blocker; next corrective action; DEV impact (none/schema rebuilt/drafts created/releases activated). Report meaningful changes rather than recurring “full request incomplete” statements. If the same critical failure persists for two working days, a scope decision appears, or an accepted target is missed, escalate harness output plus a short blocker/options statement. Never automatically drop State Region or bypass controls.
+
+### L0a — non-destructive harness and executable-command register
+
+Use the actual production environment/file configuration loader and composition, not hand-built test options or a replacement mock resolver. Native-bootstrap config/startup wiring is an implementation task. The DEV-only control API check is not sufficient for independently executable reset tools or workers; each destructive setup entrypoint checks its actual local target and scope.
+
+The harness has explicit **reset/fresh-build** and **resume/verify** modes. Reset never occurs on routine verification or replay. One run reports passed/failed/blocked/not-run for each stage; a failed or blocked required exit makes the overall run non-successful. Negative tests expected to reject are separate from positive acceptance. Run all independently evaluable diagnostics, marking dependent checks blocked rather than falsely passed.
+
+| Command/capability                                                                                                                          | Current executable status                                                                             | Use / required correction                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:setup:rebuild-entity-metadata`                                                                                                     | Delegated script repaired; inspect/backup-verify/verify modes implemented; reset deliberately rejects | Default inspects only; use explicit modes below; this is not yet a working destructive reset                                     |
+| `pnpm exec tsx server/apps/platform-host/scripts/operations/build-native-bootstrap-proposals.ts <native-input.json> <new-output-directory>` | Existing offline bundle constructor                                                                   | Accepts already-complete native graphs; does not assemble source, authorize writes or configure startup                          |
+| Integrated local reset/bootstrap/verify command                                                                                             | **Not implemented / no executable invocation claimed**                                                | Record exact supported command/flags here only when implemented                                                                  |
+| Authenticated Entity bootstrap, review and worker invocation                                                                                | Existing framework pieces; complete local-profile execution not established                           | Record real invocation and sanitized result when assembled; no placeholder command counted as evidence                           |
+| `pnpm dev:publish`                                                                                                                          | Existing DEV overlay/machine-credential tooling                                                       | Not an accepted substitute for human Admin/Owner Entity review; use the authenticated shared path unless compatibility is proven |
+
+Keep the transport manifest's strict shape unchanged. Diagnostics are qualification output, not a new authoring property bag. One run-level header records time, code revision, environment, source/proposal hashes and relevant resource identities; each finding needs only code, source path, classification and status. Do not print credentials or tokens. Record actual login/effective role and admission outcome at the relevant command boundary, not six repetitive dossiers.
+
+Store machine-readable results in the existing private qualification workspace, e.g. `~/.athyper/instances/dev/workspace/`, and link the exact run location here after execution. No new report file or evidence framework is required. No local-build result path is claimed to exist yet. The existing 8 October backup path below is historical recovery evidence, not a backup of future changes.
+
+### L0a executed preparation — 9 October 2026 local time
+
+Implemented `tooling/scripts/local-dev/entity-native-build.mjs` and repaired the delegated `server/db` script. Seven colocated Node tests pass, including mode/target validation, untruncated dependency counts, SQL identifier quoting, restore comparison and reset rejection before any Docker invocation. Existing root invocation now works from the repository:
+
+```sh
+pnpm db:setup:rebuild-entity-metadata --mode inspect
+pnpm db:setup:rebuild-entity-metadata --mode backup-verify
+pnpm db:setup:rebuild-entity-metadata --mode verify
+```
+
+`inspect` is also the default and only reads source state. `backup-verify` captures a private Studio custom-format archive plus cluster globals, restores the archive into a randomly named temporary database, compares metadata dependencies/constraints/routines/triggers and records restored row counts, then removes the temporary target. Existing cluster roles are reused; this does not prove global-role restoration or cross-database recovery. The source is not reset or quiesced in this preparation run, so a later destructive run needs a current backup and controlled write window. These two modes return success for their requested preparation only; their report still sets `ready=false`. `verify` returns nonzero while end-to-end prerequisites remain missing. `--mode reset` explicitly rejects with `LOCAL_RESET_BLOCKED:L1_AND_RESET_MANIFEST_NOT_ESTABLISHED`; no destructive executor is claimed implemented.
+
+Executed receipt: `~/.athyper/instances/dev/workspace/entity-native-build-b690cb4d-d638-4ae8-bc60-ebed77394a19/result.json`. Run timestamps are UTC 8 October 18:33:20–18:33:51 (9 October local), revision `c703d9cca9c6cb22ffedf45b8eefde9762175424` with working-tree changes. Archive SHA-256: `010a4087d5a56208a34c1725a46f0eb49c38555797d7a68e32c784938787f3af`. Restore and schema comparison passed; temporary database removed. Inventory counts: **294 touching-metadata FKs = 182 internal + 25 external inbound + 87 outbound**; all seven pending checks remain. Exact constraint definitions, grants/RLS catalogue, routines, triggers, field identity IDs, draft coordinates and table counts are captured without query truncation. Logical dependency closure and row-level removal dispositions are still not established.
+
+The first run (`entity-native-build-8ac888a9-f8ca-4e97-ac04-bff9387f0bcc`) restored successfully but correctly reported an inspection-comparison failure: PostgreSQL flattened redundant `AND` nesting in three CHECK expressions. The comparator now uses PostgreSQL's pretty constraint deparser, retains raw definitions for exact predecessor evidence, and rejects changed expressions/validation status; no application constraint was changed. The successful second run above is the recovery receipt. Implementation hashes are now included on subsequent runs; neither this receipt nor the unit tests claims production startup or application-role acceptance.
+
+The actual `--mode verify` run returned exit 1 with `ready=false`, L1 blocked and reset/bootstrap/replay/live reads/publication not run. Receipt: `~/.athyper/instances/dev/workspace/entity-native-build-75151685-fe2b-4c4d-b056-69c0ad33ca6b/result.json`. This verifies honest incomplete reporting, not positive production acceptance.
+
+### L1 — complete graphs, fresh identities and approved initial values
+
+Pin the maintained source definitions and declared target scope. Assemble both graphs through shared code selected by metadata. Include root/provenance, fields/types/keys, relations, labels, navigation/sections/views/bindings, selected components, operations, exact permission semantics, storage/runtime settings, supported AI declarations and dependencies. AI can be processed last but cannot silently disappear from the accepted graph.
+
+Report source coverage alongside diagnostics. A zero finding count is insufficient if a source family was skipped. Resolve each required finding as supported mapping, shared-framework fix, explicit metadata correction or owner-approved scope removal. Free-text disposition cannot clear an invalid compiler input. Keep UUIDs internal for routing; explicitly correct invalid visible technical bindings. Equal label text does not establish common label identity. Validate actual physical types/provider capabilities and readable relation targets.
+
+Allocate fresh field identities for the new graphs and persist them through the canonical command. Bind stable proposed IDs to the proposal before retry; do not allocate a new set on every command attempt. A fresh reset run may have new identities. Prove uniqueness, valid parent/reference membership, atomic rollback and replay without duplicate allocation. No old identity adoption or historical mapping resource is required by this profile.
+
+Implement trusted local bootstrap initialization for exactly the four approved list/read operations with their declared `requires_mfa=false`. This replaces the old `ApprovedOperationBootstrap` source-copy dependency for this profile; implementation is still pending. Bind the scope through approved proposal/operation coordinates, not entity-name dispatch or a blanket false default. Ordinary mutation clients remain unable to write protected state. No revision-4 rows or initializer reservations are needed after the rebuild.
+
+Exit: both complete native graphs compile with supported resource bindings; all required paths are accounted for, and proposed IDs/operation declarations remain stable for execution and replay.
+
+### L2 — backup, scoped rebuild and production composition
+
+**Local-build scope:** there is no current QA/STG/PRD deployment assumed by this plan. Cleanup and native delivery are the active work; historical upgrade and formal environment-promotion qualification stay deferred. Rebuild the approved Entity scope, not every object in `metadata` regardless of dependents. `assertBootstrapPlansEmpty` checks the target member plans; it does not require deleting unrelated metadata or all historical records.
+
+#### Verified inbound dependency inventory — 9 October 2026
+
+Read-only administrative inspection of `athyper_studio` in `athyper-dev-db-1` found **25 cross-schema FK constraints** referencing `metadata` (audit reported 15). This is installed schema evidence, not application-role qualification. The counts below are FK edges, not row counts. Refresh at execution and inventory intra-metadata dependencies, views/routines/triggers/grants and logical resource/activation references too; this FK list is not the whole reset manifest.
+
+| Dependent table                                     | Referenced metadata tables                          | FK edges | Default disposition for scoped reset                                                                                                               |
+| --------------------------------------------------- | --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `snapshot.entity_contract_revision`                 | entity, entity_change_set, entity_release           | 3        | Classify exact obsolete Entity histories; preserve unrelated histories and their complete parent closure                                           |
+| `snapshot.entity_contract_test_run`                 | entity, entity_change_set                           | 2        | Remove only scoped obsolete test history; preserve other rows and composite-key parents                                                            |
+| `snapshot.entity_numbering_test_artifact`           | entity, entity_change_set, entity_numbering_binding | 3        | Same scoped evidence classification; do not discard shared numbering dependencies                                                                  |
+| `snapshot.entity_release_artifact`                  | entity, entity_release                              | 2        | Back up/remove only approved obsolete artifacts; preserve required unrelated artifacts and parents                                                 |
+| `snapshot.entity_draft_save`                        | entity_change_set (two keys)                        | 2        | Remove scoped obsolete draft history only with its graph; fresh drafts create new history                                                          |
+| `publication.entity_release_link`                   | entity_release                                      | 1        | Remove affected obsolete link only with a consistent scoped publication/projection disposition                                                     |
+| `publication.entity_baseline_release_link`          | entity_release, entity_baseline_import              | 2        | Same; retain links/parents required by preserved consumers                                                                                         |
+| `publication.entity_authorization_successor_link`   | entity_release, entity_baseline_import              | 2        | Same; do not break unrelated authorization lineage                                                                                                 |
+| `publication.entity_runtime_restoration_link`       | entity_release                                      | 1        | Same; retain required restoration evidence                                                                                                         |
+| `ai.atlas_learning_inbox`                           | entity_change_set                                   | 1        | Preserve; currently empty, recheck before reset; no authorization to delete learning data                                                          |
+| `onboarding.onboarding_case`                        | entity_flow                                         | 1        | Preserve; currently empty, retain required flow metadata/structure                                                                                 |
+| `onboarding.onboarding_case_step`                   | entity_flow_step                                    | 1        | Preserve; currently empty, retain required flow-step metadata/structure                                                                            |
+| `entity_command_private.admission`                  | entity                                              | 1        | Quiesce command activity; classify expired/reset-scoped admissions; retain table/routine security                                                  |
+| `entity_command_private.operation_bootstrap_source` | entity, entity_change_set, entity_operation         | 3        | Old source-copy evidence is unnecessary for this approved fresh path; clear only obsolete scoped references, without granting private-table access |
+
+Additional observed row counts: `ai.atlas_learning_inbox=0`, `onboarding.onboarding_case=0`, `onboarding.onboarding_case_step=0`, `snapshot.entity_contract_revision=46`, `metadata.entity_field_identity=31`, `metadata.entity_field_identity_adoption=0`. Empty dependent tables still have DDL dependencies. These values are an inspection baseline, not permission to assume they stay empty or to remove all 46 revisions. The 63-label count and exact activation heads cited in earlier material were not reverified in this inspection; capture actual values before reset instead of copying stale counts.
+
+The inspection used `pg_constraint` joined to source/referenced `pg_class`/`pg_namespace`, filtering `contype='f'`, referenced schema `metadata` and dependent schema other than `metadata`. Record exact constraint definitions and composite keys in the setup inventory. Default/RESTRICT row deletion is not automatic cascading deletion. `DROP ... CASCADE` may remove inbound constraint objects rather than dependent table rows, leaving an apparently populated but unprotected schema; it is not a preservation technique.
+
+#### Binding cleanup decisions
+
+- **Preserved dependency closure:** preserve IDs and full meaning of metadata parents needed by out-of-scope AI/onboarding/platform/history rows. Prefer retaining those objects/rows; if rebuilding is necessary, extract/restore complete parent and required child closure with original IDs, validate all FKs and compare preserved content. Never fabricate stub parents or reinterpret an old identity. This does not adopt those IDs into fresh drafts.
+- **Obsolete Entity closure:** existing approval permits removal of specifically inventoried obsolete local Entity drafts/snapshots/releases/test artifacts and affected links/projections after backup. Identify entity/release/draft coordinates, tenant/plane scope and reason. Do not globally truncate snapshot/publication/runtime schemas, erase unrelated audit data or infer obsolescence from a table being empty.
+- **Old identities:** inventory all 31 existing identities and references before reset. Remove only those within the obsolete deletion closure; preserved historical identities retain their original meaning (retire through an applicable existing lifecycle where needed). Fresh field IDs must not reuse them. Do not restore old IDs as new field identities or retain adoption as a prerequisite.
+- **Constraints and routines:** no blanket inbound-FK disabling. Any temporary DDL reconstruction names each object, restores its definition/grants and validates it before services resume. Unknown preserved-state dependencies stop destructive setup until disposition; they do not block independent graph/startup implementation.
+- **Initializer:** the old `operation_bootstrap_source` reader is not a required dependency under the new owner approval. Do not preserve obsolete source rows solely to keep using it. Implement the bounded approved fresh-operation initialization instead; ordinary protected-state controls stay unchanged.
+
+The setup inventory is emitted and recorded before destructive execution, with preserve/remove/recreate actions and dependency closure. Producing it is authorized engineering, not another general approval gate. Scope expansion into preserved business/AI/onboarding state requires a specific decision; do not silently expand cleanup.
+
+#### Recovery proof and pre-reset defect baseline
+
+Verify the **newly captured** backup by restoring it into temporary local targets, checking command exit, required schemas/routines/roles and representative counts/FK integrity, then remove the temporary targets. Do not substitute the successful 8 October restore proof for a later dump. No second long-lived environment is required. Keep the source instance intact until restoration succeeds; failed restoration blocks destruction. Quiesce writers/workers over the capture/reset window, and record any cross-database consistency limits.
+
+One compact harness baseline captures:
+
+- Exact pending constraint definitions, migration inventory and final-schema differences.
+- Old field-identity IDs/status/reference scope, label IDs/counts and graph/source hashes.
+- Affected publication keys, release IDs, activation heads and installed resource fingerprints by destination; do not infer their identity from aggregate counts.
+- Preserved dependency counts/content checks and explicitly removed object/row coordinates.
+- Known failing assertions: missing bootstrap startup composition, unsupported graph mappings if found, pending schema readiness, and live-resource semantic qualification rejection. Record fixed historical trigger/key/order/privilege bugs as historical, not active failures without reproduction.
+
+After reset, compare preserved state, confirm removed obsolete state is not still active on a consuming plane, and check fresh identities are disjoint from the old set. Reset success does not fix missing production assembly or semantic validation; those still need code and executed tests. This baseline is a small machine-readable run result, not another audit report.
+
+Prepare the complete graph/startup implementation before discarding its old inputs. The owner has authorized reset; do not ask again merely because setup is destructive within the approved scope. Dependency inspection is still required to determine that scope concretely.
+
+1. Enumerate Entity metadata tables, dependent snapshots/receipts/private command references, affected obsolete publication/runtime projections and required shared resources. Preserve IAM, business data, unrelated services and migration history. Retain or reinstall shared component/descriptor/provider dependencies. Avoid uncontrolled `DROP ... CASCADE` or schema-wide deletion of unrelated state.
+2. Stop affected writers/workers, capture a fresh recoverable backup including required roles/dependencies, restore-verify that exact backup in temporary local targets, and record the recovery command/location and result without credentials. Restore on setup failure where transactional rollback cannot recover the reset. Backup/restore is an approved local tradeoff, not a claim of simultaneous cross-database snapshot protection.
+3. Rebuild the scoped canonical structures through maintained setup/migrations, install final native constraints/guards and restricted grants, and reinstall required framework resources. Preserve immutable migration files/hashes. Explicitly handle schema recreation alongside the retained migration ledger; an already-recorded migration will not automatically recreate dropped objects.
+4. Load the actual host configuration and assemble the trusted proposal/compiler/provider/identity/resource bindings. Missing required config remains an actionable failure. Resolve current local resource pins automatically where possible; no no-op qualifier, candidate self-authorization or administrator graph seeding.
+
+Acceptance expects **zero `_native_pending_ck` blockers**, final integrity checks present/enabled, and application-role access that is neither superuser nor BYPASSRLS nor inherited admin. Print all underlying schema blockers, not just `NATIVE_SCHEMA_NOT_READY`. Prove valid writes and focused invalid graph writes reach and fail their intended constraints; an unrelated permission rejection is not replacement-integrity evidence.
+
+The old seven-predecessor transition and adoption rehearsal are not this clean-path gate. The seven-check constraint-release upgrade migration is deferred, not cancelled or claimed implemented: before an upgraded baseline is supported, author and rehearse that migration against a restored copy of the upgraded database. No QA/STG/PRD environment exists by assumption in this local plan; do not force an upgrade rehearsal ahead of local native delivery or a future clean-install-only environment. New-run fingerprints need not match discarded DEV values; bind internally consistent values for this run and reject within-run mismatch. Formal signed qualification dossiers are deferred; existing artifact verification and required semantic checks are not disabled.
+
+### L3 — actual command execution, replay and rollback
+
+Use a current authenticated Platform Admin session and the actual product-command application role. Request refresh only when an executable command is ready; never request or log tokens. Current author admission remains required for initial execution and replay.
+
+Run each entity command in its own transaction. Verify complete canonical readback, graph hash, compiler output and runtime parsing; capture draft coordinates, revision and command result. Prove replay returns matching hashes with unchanged root/revision/members/identities/snapshots/command receipt. The existing audit path may append a correctly classified replay event; do not require globally unchanged audit row counts or disable auditing.
+
+Inject a controlled failure using a separate local test proposal within the approved reset scope. Confirm no partial root, fields, identities, history or success receipt remains. Reauthorize on retry. Keep the accepted two-entity proposal input unchanged; reset is not a substitute for rollback or replay.
+
+If Country succeeds and State Region fails, retain Country's unpublished draft and retry State Region. The combined milestone remains incomplete. There is no cross-entity coordinator, compensating deletion of committed history, or automatic publication from bootstrap.
+
+**Milestone A:** both fresh drafts committed through the actual application path, exact graph readback and compilation verified, both commands replayed, and controlled failure rolled back. Old revision-4 drafts or fixture-only SQL results cannot satisfy this exit. Applicable authorization remains required for any real storage access even though formal F6/F8 dossiers are deferred.
+
+### L4–L6 — real local reads, review, activation and UI handover
+
+L4 implements bounded live-resource semantic qualification and actual production storage/current-security/identity adapters. `RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED` must be replaced by real validation, never unconditional success. No new allow branch for local runtime is authorized. Pre-publication compiler/provider tests prepare the path; final standard-UI acceptance is after new release activation.
+
+L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
+
+L6 verifies both entities against the new activated artifacts:
+
+- Authorized list and detail requests succeed; an expected denial fails for the intended reason.
+- Valid undefined entity permissions do not gain invented grant requirements; tenant/record boundaries remain enforced.
+- Supported search, filters, sorting and pagination work; State Region resolves Country through readable reference labels.
+- Compiled presentation excludes visible technical UUID bindings; actual default/saved views, reference labels and fallbacks do not expose UUIDs. Internal artifact UUIDs remain valid routing/identity data.
+- Navigation uses explicit published groups/sections and the standard shared UI, with no invented Overview/display identity.
+
+**Milestone B:** both new Entity releases independently reviewed, published and activated; final API/UI smoke results identify their exact active artifacts. Handover includes environment/URLs, entity and draft IDs, proposal/compiled hashes, release/deployment IDs, declared planes/destinations, acknowledgements, tested accounts/roles without secrets, tested behaviors, known limitations and recovery location. Old-release baseline testing does not qualify.
+
+Handover wording: **Local native build and manual-test readiness verified. Formal QA/staging qualification remains subject to the entry checklist.** Do not claim full F6/F8/F9 qualification from local smoke evidence. Local manual testing is distinct from creating/promoting to a separate QA environment.
+
+### QA-entry and later capability checklist
+
+| Item                                       | Local treatment                                                                           | Required next boundary                                           | Current result                                 |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| Installed-database upgrade compatibility   | Clean rebuild; historical predecessor rehearsal deferred                                  | Before claiming upgrade support / applicable QA upgrade testing  | Deferred, not passed                           |
+| Formal F6 storage authority                | Real local provider/scope smoke behavior required                                         | Before QA live-data qualification                                | Formal evidence pending                        |
+| Formal F8 effective security               | Actual exact-permission/tenant/record checks required                                     | Before QA live-data qualification                                | Formal evidence pending                        |
+| Formal F9 identity resolution              | Fresh identities and current reader resolution locally                                    | Before QA qualification of supported identity path               | Formal evidence pending                        |
+| Historical F9/adoption/conversion          | Excluded; material retained in backup                                                     | Only before offering that migration capability                   | Not a universal fresh-native QA blocker        |
+| Resource provenance/qualification packages | Current consistent resources and protocol verification retained; formal dossiers deferred | QA promotion and applicable resource acceptance                  | Pending                                        |
+| Replay/concurrency/audit qualification     | State-preserving replay, current authorization and rollback locally                       | Broader QA negative/concurrent scenarios                         | Broader suite pending                          |
+| Environment containment                    | Explicit local setup guard and no runtime bypass                                          | Before enabling a QA/staging deployment profile                  | Proof pending                                  |
+| Recovery and staging rehearsal             | One DEV environment with recoverable backup                                               | QA recovery acceptance; separate staging rehearsal as applicable | Future reset backup/execution not yet recorded |
+| Independent review and target delivery     | Required locally, not waived                                                              | Before local L5 and every later release                          | New native Entity delivery pending             |
+| F5 retention/capacity                      | Not a local smoke prerequisite                                                            | Before production enablement                                     | Deferred                                       |
+
+Close applicable checklist items or record a specific owner disposition before promotion; do not silently carry local exceptions into another environment. Security/authentication/runtime correctness is not waived by shortening evidence. No general promise that every historical migration feature must exist before fresh-native QA.
+
+### Latest execution and next action
+
+**This update:** L0a preparation tooling implemented/tested and actual Studio backup/temporary restore verification executed; source database unchanged. No reset, fresh identities, replacement native drafts, Entity publication or activation occurred. The dump is restored and the temporary target removed; broader cleanup closure, complete graph/startup assembly and application-role bootstrap remain unfinished. The next implementation is L1 (fresh identities/approved operation initialization, both complete graphs and production composition) alongside explicit row-level cleanup dispositions. L2 destructive execution remains gated on that readiness, not another general owner approval. Milestone A and Milestone B are not complete.
+
+## Historical evidence boundary
+
+All following entries are chronological evidence from the earlier foundation approaches. Their commands, receipts and test results retain their original scope. Their adoption/source-copy/legacy-conversion requirements and stale “remaining” statements are superseded for the current local profile by the section above. Do not delete old evidence, rewrite historical results, or treat historical component approvals as approval of new native entities.
 
 ## Owner-authorized DEV reset preparation — 2026-10-08
 
