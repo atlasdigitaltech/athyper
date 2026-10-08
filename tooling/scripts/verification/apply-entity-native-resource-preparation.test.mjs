@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  componentResourceReviewMigrationName,
   productComponentValidationReadMigrationName,
   nativeFieldKeyUniquenessMigrationName,
   nativeFieldContractTriggerMigrationName,
@@ -792,6 +793,37 @@ test("component catalogue reads require referenced active product resources and 
       true,
       productComponentValidationReadMigrationName,
     ),
+    /COMMIT;/,
+  );
+});
+
+test("component resource migration extends pinned kind lists without installation authority", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/publication/34_component_resource_review.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        componentResourceReviewMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  assert.match(canonical, /COMPONENT_RESOURCE_PREDECESSOR_CHANGED/);
+  assert.match(canonical, /md5\(body\)<>r.expected_hash/);
+  assert.doesNotMatch(canonical, /GRANT|INSERT INTO|UPDATE .* SET|DROP/);
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(source, digest, false, componentResourceReviewMigrationName),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(source, digest, true, componentResourceReviewMigrationName),
     /COMMIT;/,
   );
 });

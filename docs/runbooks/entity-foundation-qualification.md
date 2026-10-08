@@ -251,6 +251,44 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Component publication and installation integration — 8 October
+
+Implemented `entity_ui_component` through the existing artifact parser, approved-source
+compiler/sign/dispatch paths, verified loader and immutable applied-payload projection.
+The loader requires a dedicated component qualifier; the current unconfigured host rejects
+with `RESOURCE_COMPONENT_QUALIFICATION_REQUIRED`. A valid signature does not manufacture
+registered implementation or reviewer evidence. Studio is the initial supported destination.
+
+The local activation repository now requires a transactional component installer before
+activating this resource kind. `installNativeComponentCatalogue` accepts only qualified
+active-source evidence, inserts derived typed columns and verifies exact readback. It rejects
+conflicting immutable rows. Tests prove missing installer/transaction denial and propagation
+of installation failure; these mocked transaction tests are not PostgreSQL rollback proof.
+The concrete locked evidence adapter and restricted catalogue INSERT authority still need
+host integration and database qualification. No catalogue rows were installed.
+
+Forward migration `20261008_entity_component_resource_review.sql` was rollback-rehearsed,
+applied and ledger-replayed in DEV. It extends only pinned resource-kind lists in six
+existing review/verification functions, retaining human/independent-review/source checks.
+SHA-256: `de5a4284f86f28f56babd5522483df16a00bc711b28ea6cb947492e272913244`.
+Receipts are `lifecycle-{rehearsal,installation,replay}.json` in the existing private
+component candidate directory. Authorization and activation heads remained unchanged.
+
+Field-display inspection: `renderCardValue` explicitly registers `number.progress` and
+`date.due`; the rehearsal's `text` key currently reaches the existing plain-text fallback.
+That is not qualified explicit component registration. No claim of text-component approval
+or deployed qualification is made, and composer/UI wiring remains deferred.
+Remaining: real component implementation qualification, locked installation-evidence adapter,
+restricted catalogue installation grants, independent candidate review and activation.
+Installed native proposal resolution and F6/F8/F9 also remain open. No replacement drafts
+or component/entity publication or activation occurred during this checkpoint.
+
+Validation: 880 authoring tests passed (nine opt-in tests skipped), 233 publication
+contract tests passed, and 475 publication-service tests passed (five opt-in exclusions)
+before three additional activation tests also passed. Migration runner: 24 tests passed;
+layout: 167 classified files / 159 retained SQL. Native-test, publication-service and
+platform-host typechecks pass. These results do not establish deployed resource qualification.
+
 ### Component source and projection preparation — 8 October
 
 The current publication pipeline supports descriptor, identity-review and live-read

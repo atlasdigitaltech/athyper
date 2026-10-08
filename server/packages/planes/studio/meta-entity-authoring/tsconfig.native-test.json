@@ -58,7 +58,8 @@
     "src/product-draft-creation.postgres.test.ts",
     "src/native-bootstrap-identities.test.ts",
     "src/native-identity-adoption.postgres.test.ts",
-    "src/native-component-publication.test.ts"
+    "src/native-component-publication.test.ts",
+    "src/native-component-installation.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

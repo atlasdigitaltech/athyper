@@ -192,3 +192,7 @@ export {
   compileUiComponentProjection,
   type UiComponentProjectionEvidence,
 } from "./native-component-publication.js";
+export {
+  installNativeComponentCatalogue,
+  type UiComponentInstallationPolicy,
+} from "./native-component-installation.js";

@@ -26,6 +26,8 @@ export function createResourceSourceQualification(
         throw Error("RESOURCE_DESCRIPTOR_CHANGED");
       return;
     }
+    if (payload.schema === "entity.ui-component-resource/1")
+      throw Error("RESOURCE_COMPONENT_QUALIFICATION_REQUIRED");
     if (payload.schema === "entity.installed-live-read-resource/1")
       throw Error("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
     if (payload.authoringSchemaHash !== descriptorHash)

@@ -1173,6 +1173,23 @@ Composite read-operation FK uses read_operation_change_set_id. Cross-draft selec
 
 **DDL status:** typed catalogue generated in `41_ui_component_catalogue.generated.sql` from `ui-component-contract.ts`; installed empty in DEV by forward migration `20261007_entity_ui_component_catalogue.sql`. Resource installation and approved host composition are not yet qualified.
 
+**Component publication integration:** `entity_ui_component` uses the existing reviewed
+resource release, signed artifact and immutable applied-payload machinery, initially on
+Studio. The publication envelope checks transport shape; the owning typed source and
+registered-implementation qualifier remains mandatory at compile/sign/dispatch and loading.
+Absent component qualification rejects; signature verification alone cannot enable it.
+The signed document is retained in applied payload coordinates for installation evidence.
+
+Activation of this kind requires an explicit installer and an enclosing local database
+transaction. The catalogue installation runs after the activation-head update in that same
+transaction; installation failure propagates so the caller rolls both back. The typed
+installer requires a trusted active-source callback holding exact head/evidence scope,
+inserts immutable columns, and compares full readback. Exact replay is allowed; conflict
+never updates an existing resource. This adapter boundary is not an installation grant:
+restricted database installation authority and concrete host evidence remain required.
+Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
+review/verification functions without changing their independent-review or source guards.
+
 **Resource source/projection boundary:** `ui-component-resource.ts` defines the closed
 `entity.ui-component-resource/1` source. It includes the typed declaration and explicit
 package/export/runtime-key/implementation-source hash. It excludes `manifestHash`,

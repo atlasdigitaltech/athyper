@@ -47,6 +47,14 @@ export interface PublicationArtifactLoaderOptions {
       >,
     ): Promise<void>;
   };
+  readonly uiComponents?: {
+    qualify(
+      envelope: Extract<
+        import("@athyper/server-contract-publication").PublicationArtifactEnvelopeV1,
+        { artifactKind: "entity_ui_component" }
+      >,
+    ): Promise<void>;
+  };
   readonly authoringResources?: {
     qualify(
       kind: "entity_authoring_descriptor" | "entity_identity_review",
@@ -146,6 +154,10 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       )
         throw failure("PROJECTION_HASH_MISMATCH");
       await this.options.liveReadResources.qualify(structuredClone(envelope));
+    }
+    if (envelope.artifactKind === "entity_ui_component") {
+      if (!this.options.uiComponents) throw failure("RUNTIME_INCOMPATIBLE");
+      await this.options.uiComponents.qualify(structuredClone(envelope));
     }
     if (envelope.artifactKind === "business_partner_definition_bundle") {
       const payload = envelope.payload;
@@ -527,6 +539,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         : envelope.artifactKind === "compiled_entity_runtime" ||
             envelope.artifactKind === "entity_authoring_descriptor" ||
             envelope.artifactKind === "entity_identity_review" ||
+            envelope.artifactKind === "entity_ui_component" ||
             envelope.artifactKind === "entity_security_manifest" ||
             envelope.artifactKind === "entity_storage_authority"
           ? {

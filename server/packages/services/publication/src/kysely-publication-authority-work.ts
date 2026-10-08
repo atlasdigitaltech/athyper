@@ -140,7 +140,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     releaseId: string,
   ): Promise<{ readonly compilationIds: readonly string[] }> {
     const resources = (
-      await sql<Row>`SELECT id,release_key,release_no,created_by,approved_by,status,metadata->>'artifactKind' AS kind FROM publication.release WHERE id=${releaseId}::uuid AND metadata->>'artifactKind' IN ('entity_authoring_descriptor','entity_identity_review','entity_security_manifest','entity_storage_authority')`.execute(
+      await sql<Row>`SELECT id,release_key,release_no,created_by,approved_by,status,metadata->>'artifactKind' AS kind FROM publication.release WHERE id=${releaseId}::uuid AND metadata->>'artifactKind' IN ('entity_authoring_descriptor','entity_identity_review','entity_ui_component','entity_security_manifest','entity_storage_authority')`.execute(
         this.options.database,
       )
     ).rows;
@@ -735,6 +735,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     if (
       artifactKind === "entity_authoring_descriptor" ||
       artifactKind === "entity_identity_review" ||
+      artifactKind === "entity_ui_component" ||
       artifactKind === "entity_security_manifest" ||
       artifactKind === "entity_storage_authority"
     ) {
@@ -900,7 +901,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
 
   private async assertActivationApproved(deploymentId: string): Promise<void> {
     const resource = (
-      await sql<Row>`SELECT c.unsigned_document,c.unsigned_hash FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.artifact_compilation c ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind WHERE d.id=${deploymentId}::uuid AND a.artifact_kind IN ('entity_authoring_descriptor','entity_identity_review','entity_security_manifest','entity_storage_authority')`.execute(
+      await sql<Row>`SELECT c.unsigned_document,c.unsigned_hash FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.artifact_compilation c ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind WHERE d.id=${deploymentId}::uuid AND a.artifact_kind IN ('entity_authoring_descriptor','entity_identity_review','entity_ui_component','entity_security_manifest','entity_storage_authority')`.execute(
         this.options.database,
       )
     ).rows;
@@ -1245,6 +1246,7 @@ function artifactKindValue(
     value !== "business_partner_definition_bundle" &&
     value !== "entity_authoring_descriptor" &&
     value !== "entity_identity_review" &&
+    value !== "entity_ui_component" &&
     value !== "entity_security_manifest" &&
     value !== "entity_storage_authority"
   )

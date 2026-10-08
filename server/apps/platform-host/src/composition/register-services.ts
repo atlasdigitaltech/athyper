@@ -5967,7 +5967,8 @@ function registerPublication(
       const envelope = loaded.document.envelope;
       if (
         envelope.artifactKind === "entity_authoring_descriptor" ||
-        envelope.artifactKind === "entity_identity_review"
+        envelope.artifactKind === "entity_identity_review" ||
+        envelope.artifactKind === "entity_ui_component"
       ) {
         if (!resourceConfiguration)
           throw Error("AUTHORING_RESOURCE_ADAPTER_REQUIRED");

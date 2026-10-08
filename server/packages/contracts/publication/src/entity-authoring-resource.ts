@@ -7,7 +7,20 @@ import { PublicationContractError } from "./errors.js";
 export type EntityAuthoringResourceKind =
   | "entity_authoring_descriptor"
   | "entity_identity_review"
+  | "entity_ui_component"
   | EntityLiveReadResourceKind;
+/** Envelope shape only; the owning typed component qualifier validates the
+ * declaration and registered implementation at compile/sign/dispatch/install. */
+export interface UiComponentPublicationResource {
+  readonly schema: "entity.ui-component-resource/1";
+  readonly declaration: Readonly<Record<string, unknown>>;
+  readonly implementation: {
+    readonly packageName: string;
+    readonly exportName: string;
+    readonly sourceHash: string;
+    readonly runtimeKey: string;
+  };
+}
 export interface AuthoringDescriptorResource {
   readonly schema: "entity.installed-authoring-descriptor/1";
   readonly schemaVersion: number;
@@ -33,7 +46,10 @@ export interface IdentityReviewResource {
   }[];
 }
 export type EntityAuthoringResource =
-  AuthoringDescriptorResource | IdentityReviewResource | EntityLiveReadResource;
+  | AuthoringDescriptorResource
+  | IdentityReviewResource
+  | EntityLiveReadResource
+  | UiComponentPublicationResource;
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const hash = (v: unknown) => typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
@@ -60,7 +76,35 @@ export function parseEntityAuthoringResource(
   )
     return parseEntityLiveReadResource(kind, value);
   if (!object(value)) return fail();
-  if (kind === "entity_authoring_descriptor") {
+  if (kind === "entity_ui_component") {
+    if (
+      !keys(value, ["schema", "declaration", "implementation"]) ||
+      value.schema !== "entity.ui-component-resource/1" ||
+      !object(value.declaration) ||
+      value.declaration.tenantId !== null ||
+      ["manifestHash", "publicationReleaseHash", "status"].some((key) =>
+        Object.hasOwn(value.declaration as object, key),
+      ) ||
+      !object(value.implementation) ||
+      !keys(value.implementation, [
+        "packageName",
+        "exportName",
+        "sourceHash",
+        "runtimeKey",
+      ]) ||
+      !hash(value.implementation.sourceHash) ||
+      ![
+        value.implementation.packageName,
+        value.implementation.exportName,
+        value.implementation.runtimeKey,
+      ].every(
+        (v) => typeof v === "string" && v.length > 0 && v.length <= 127,
+      ) ||
+      !Array.isArray(value.declaration.supportedPlanes) ||
+      !value.declaration.supportedPlanes.includes("studio")
+    )
+      return fail();
+  } else if (kind === "entity_authoring_descriptor") {
     if (
       !keys(value, [
         "schema",

@@ -108,6 +108,7 @@ export async function qualifyEntityAuthoringResource(
   if (
     envelope.artifactKind !== "entity_authoring_descriptor" &&
     envelope.artifactKind !== "entity_identity_review" &&
+    envelope.artifactKind !== "entity_ui_component" &&
     envelope.artifactKind !== "entity_security_manifest" &&
     envelope.artifactKind !== "entity_storage_authority"
   )

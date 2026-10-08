@@ -1,0 +1,30 @@
+import type { UiComponentResourceSource } from "@athyper/server-contract-meta-entity-authoring";
+export const componentSourceFixture = (): UiComponentResourceSource => ({
+  schema: "entity.ui-component-resource/1",
+  declaration: {
+    id: "00000000-0000-4000-8000-000000000001",
+    tenantId: null,
+    componentKey: "shared.text",
+    componentVersion: 1,
+    componentLevel: "field_display",
+    componentTier: "standard",
+    resourceOwner: "platform",
+    resourceNamespace: "entity.ui",
+    publicationResourceKey: "shared.text",
+    supportedDataTypes: ["string"],
+    supportedPlanes: ["studio"],
+    supportedSurfaceKinds: ["list"],
+    supportedModes: [],
+    cardinalities: ["one"],
+    optionKeys: [],
+    filterOperators: [],
+    compatibleDisplayIds: [],
+    maskedRepresentationSafe: false,
+  },
+  implementation: {
+    packageName: "fixture-package",
+    exportName: "Text",
+    runtimeKey: "text",
+    sourceHash: "a".repeat(64),
+  },
+});

@@ -46,7 +46,21 @@ const review = {
   reviewerId: id(4),
   releases: [],
 };
-it.each(["entity_authoring_descriptor", "entity_identity_review"] as const)(
+const component = {
+  schema: "entity.ui-component-resource/1",
+  declaration: { tenantId: null, supportedPlanes: ["studio"] },
+  implementation: {
+    packageName: "fixture.package",
+    exportName: "Fixture",
+    runtimeKey: "fixture",
+    sourceHash: "a".repeat(64),
+  },
+};
+it.each([
+  "entity_authoring_descriptor",
+  "entity_identity_review",
+  "entity_ui_component",
+] as const)(
   "compiles, requalifies, verifies and projects %s through the shared envelope",
   async (kind) => {
     const source: EntityAuthoringResourceSource = {
@@ -55,7 +69,12 @@ it.each(["entity_authoring_descriptor", "entity_identity_review"] as const)(
       releaseNo: 1,
       generatedAt: "2026-10-08T00:00:00.000Z",
       kind,
-      payload: kind === "entity_authoring_descriptor" ? descriptor : review,
+      payload:
+        kind === "entity_authoring_descriptor"
+          ? descriptor
+          : kind === "entity_ui_component"
+            ? component
+            : review,
     };
     const policy = {
       load: vi.fn(async () => source),
@@ -119,9 +138,12 @@ it.each(["entity_authoring_descriptor", "entity_identity_review"] as const)(
     const loaded = await new VerifiedPublicationArtifactLoader({
       ...options,
       authoringResources: { qualify },
+      uiComponents: { qualify },
     }).load(deployment);
     expect(loaded.verification.signatureVerified).toBe(true);
-    expect(qualify).toHaveBeenCalledWith(kind, source.payload);
+    if (kind === "entity_ui_component")
+      expect(qualify).toHaveBeenCalledWith(unsigned.envelope);
+    else expect(qualify).toHaveBeenCalledWith(kind, source.payload);
     expect(projectionJson(document)).toMatchObject({
       applied_release_payload: {
         artifact_kind: kind,

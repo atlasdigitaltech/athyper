@@ -28,6 +28,12 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
   constructor(
     private readonly database: Kysely<Database>,
     private readonly preview = false,
+    private readonly componentInstaller?: {
+      install(
+        database: Kysely<Database>,
+        appliedReleaseId: string,
+      ): Promise<void>;
+    },
   ) {}
 
   async stage(input: {
@@ -136,6 +142,19 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
     readonly appliedReleaseId: string;
     readonly evidence?: Readonly<Record<string, unknown>>;
   }): Promise<ActiveReleaseProjection> {
+    const component =
+      await sql<Row>`SELECT applied_release_id FROM runtime_meta.applied_release_payload
+      WHERE applied_release_id=${input.appliedReleaseId}::uuid AND artifact_kind='entity_ui_component'`.execute(
+        this.database,
+      );
+    if (
+      component.rows.length &&
+      (!this.database.isTransaction || !this.componentInstaller)
+    )
+      throw new PublicationContractError(
+        "RUNTIME_INCOMPATIBLE",
+        "Transactional component installer required",
+      );
     // Resumed, previously verified deployments must pass the same admission
     // gate. Do not rely exclusively on today's staging path having run.
     const stored =
@@ -167,6 +186,11 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
     await sql`SELECT authz.fn_activate_entity_operation_projection(${input.appliedReleaseId}::uuid,clock_timestamp())`.execute(
       this.database,
     );
+    if (component.rows.length)
+      await this.componentInstaller!.install(
+        this.database,
+        input.appliedReleaseId,
+      );
     const release = await this.findById(input.appliedReleaseId);
     if (!release || release.status !== "active" || !release.activatedAt)
       throw new Error("LOCAL_ACTIVATION_HEAD_MISMATCH");
@@ -378,6 +402,7 @@ function assertArtifactCoordinates(
       : envelope.artifactKind === "compiled_entity_runtime" ||
           envelope.artifactKind === "entity_authoring_descriptor" ||
           envelope.artifactKind === "entity_identity_review" ||
+          envelope.artifactKind === "entity_ui_component" ||
           envelope.artifactKind === "entity_security_manifest" ||
           envelope.artifactKind === "entity_storage_authority"
         ? envelope.targetPlane
@@ -414,6 +439,7 @@ export function projectionJson(artifact: PublicationArtifactDocumentV1) {
   if (
     envelope.artifactKind === "entity_authoring_descriptor" ||
     envelope.artifactKind === "entity_identity_review" ||
+    envelope.artifactKind === "entity_ui_component" ||
     envelope.artifactKind === "entity_security_manifest" ||
     envelope.artifactKind === "entity_storage_authority"
   ) {
@@ -439,7 +465,8 @@ export function projectionJson(artifact: PublicationArtifactDocumentV1) {
           plane_code: envelope.targetPlane,
           // Derived immutable signature input supports request-time trust/key
           // revocation checks without depending on the central Studio database.
-          ...(envelope.artifactKind === "entity_security_manifest" ||
+          ...(envelope.artifactKind === "entity_ui_component" ||
+          envelope.artifactKind === "entity_security_manifest" ||
           envelope.artifactKind === "entity_storage_authority"
             ? { signed_document: artifact }
             : {}),

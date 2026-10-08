@@ -2182,6 +2182,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/54_product_component_validation_read.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_component_resource_review.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_component_resource_review.sql",
+      "sha256": "de5a4284f86f28f56babd5522483df16a00bc711b28ea6cb947492e272913244",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Extend existing reviewed-resource lifecycle and immutable payload verification to UI component resources; preserve review controls and grant no installation authority.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/34_component_resource_review.sql"
+      ]
     }
   ]
 }

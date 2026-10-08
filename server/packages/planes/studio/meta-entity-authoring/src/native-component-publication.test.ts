@@ -5,35 +5,7 @@ import {
 } from "@athyper/server-contract-meta-entity-authoring";
 import { compileUiComponentProjection } from "./native-component-publication.js";
 import { sha256 } from "./deterministic.js";
-const source = (): UiComponentResourceSource => ({
-  schema: "entity.ui-component-resource/1",
-  declaration: {
-    id: "00000000-0000-4000-8000-000000000001",
-    tenantId: null,
-    componentKey: "shared.text",
-    componentVersion: 1,
-    componentLevel: "field_display",
-    componentTier: "standard",
-    resourceOwner: "platform",
-    resourceNamespace: "entity.ui",
-    publicationResourceKey: "shared.text",
-    supportedDataTypes: ["string"],
-    supportedPlanes: ["studio"],
-    supportedSurfaceKinds: ["list"],
-    supportedModes: [],
-    cardinalities: ["one"],
-    optionKeys: [],
-    filterOperators: [],
-    compatibleDisplayIds: [],
-    maskedRepresentationSafe: false,
-  },
-  implementation: {
-    packageName: "fixture-package",
-    exportName: "Text",
-    runtimeKey: "text",
-    sourceHash: "a".repeat(64),
-  },
-});
+import { componentSourceFixture as source } from "./native-component-publication.fixtures.js";
 const qualify = async (s: UiComponentResourceSource, hash: string) => ({
   sourceHash: hash,
   publicationReleaseHash: "b".repeat(64),

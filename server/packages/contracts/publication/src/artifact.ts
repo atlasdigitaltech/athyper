@@ -6,6 +6,7 @@ import {
   parseEntityAuthoringResource,
   type AuthoringDescriptorResource,
   type IdentityReviewResource,
+  type UiComponentPublicationResource,
 } from "./entity-authoring-resource.js";
 import { validateEntityLiveReadContractV1 } from "@athyper/server-contract-metadata";
 import { parseChangeRequestBinding } from "./change-request-binding.js";
@@ -37,6 +38,7 @@ export type PublicationArtifactKind =
   | "business_partner_definition_bundle"
   | "entity_authoring_descriptor"
   | "entity_identity_review"
+  | "entity_ui_component"
   | "entity_security_manifest"
   | "entity_storage_authority";
 
@@ -155,6 +157,10 @@ export type PublicationArtifactEnvelopeV1 =
   | (PublicationArtifactEnvelopeBaseV1 & {
       readonly artifactKind: "entity_authoring_descriptor";
       readonly payload: AuthoringDescriptorResource;
+    })
+  | (PublicationArtifactEnvelopeBaseV1 & {
+      readonly artifactKind: "entity_ui_component";
+      readonly payload: UiComponentPublicationResource;
     })
   | (PublicationArtifactEnvelopeBaseV1 & {
       readonly artifactKind: "entity_identity_review";
@@ -1104,7 +1110,8 @@ export function parsePublicationArtifactEnvelope(
       );
   } else if (
     value.artifactKind === "entity_authoring_descriptor" ||
-    value.artifactKind === "entity_identity_review"
+    value.artifactKind === "entity_identity_review" ||
+    value.artifactKind === "entity_ui_component"
   ) {
     if (value.targetPlane !== "studio")
       throw new PublicationContractError(
