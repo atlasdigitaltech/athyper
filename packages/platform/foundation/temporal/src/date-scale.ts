@@ -62,7 +62,10 @@ export interface CalendarWindow {
 }
 
 /** The window a month view shows: the whole weeks covering the anchor's month. */
-export function monthGridWindow(anchor: string, weekStart: number): CalendarWindow {
+export function monthGridWindow(
+  anchor: string,
+  weekStart: number,
+): CalendarWindow {
   const first = startOfMonth(anchor);
   const next = addMonths(anchor, 1);
   const start = startOfWeek(first, weekStart);
@@ -101,7 +104,11 @@ export function daysBetween(from: string, to: string): number {
 export type DatePeriod = "month-grid" | "month" | "quarter-weeks" | "year";
 
 /** The window a period shows around `anchor`. */
-export function periodWindow(anchor: string, period: DatePeriod, weekStart: number): CalendarWindow {
+export function periodWindow(
+  anchor: string,
+  period: DatePeriod,
+  weekStart: number,
+): CalendarWindow {
   switch (period) {
     case "month-grid":
       return monthGridWindow(anchor, weekStart);
@@ -111,7 +118,10 @@ export function periodWindow(anchor: string, period: DatePeriod, weekStart: numb
       const first = startOfQuarter(anchor);
       return {
         start: startOfWeek(first, weekStart),
-        end: addDays(startOfWeek(addDays(addMonths(first, 3), -1), weekStart), 7),
+        end: addDays(
+          startOfWeek(addDays(addMonths(first, 3), -1), weekStart),
+          7,
+        ),
       };
     }
     case "year": {
@@ -122,7 +132,9 @@ export function periodWindow(anchor: string, period: DatePeriod, weekStart: numb
 }
 
 /** The days of a window grouped into weeks of seven. */
-export function weekRows(window: CalendarWindow): readonly (readonly string[])[] {
+export function weekRows(
+  window: CalendarWindow,
+): readonly (readonly string[])[] {
   const rows: string[][] = [];
   for (let day = window.start; day < window.end; day = addDays(day, 7))
     rows.push(Array.from({ length: 7 }, (_, index) => addDays(day, index)));
@@ -132,18 +144,33 @@ export function weekRows(window: CalendarWindow): readonly (readonly string[])[]
 /** The days of a window, in order. */
 export function windowDays(window: CalendarWindow): readonly string[] {
   const days: string[] = [];
-  for (let day = window.start; day < window.end; day = addDays(day, 1)) days.push(day);
+  for (let day = window.start; day < window.end; day = addDays(day, 1))
+    days.push(day);
   return days;
 }
 
 /** Offset of `timeZone` from UTC at `instant`, in milliseconds. */
 function zoneOffset(instant: number, timeZone: string): number {
   const fields = new Intl.DateTimeFormat("en-US", {
-    timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   }).formatToParts(new Date(instant));
-  const get = (type: string) => Number(fields.find((part) => part.type === type)?.value);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const get = (type: string) =>
+    Number(fields.find((part) => part.type === type)?.value);
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
   return asUtc - Math.floor(instant / 1000) * 1000;
 }
 
@@ -161,8 +188,14 @@ export function zonedDayStart(day: string, timeZone: string): string {
 /** The calendar day an instant falls on in `timeZone`. */
 export function zonedDay(instant: string | number, timeZone: string): string {
   const value = typeof instant === "number" ? instant : Date.parse(instant);
-  const fields = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value));
-  const get = (type: string) => fields.find((part) => part.type === type)?.value ?? "";
+  const fields = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value));
+  const get = (type: string) =>
+    fields.find((part) => part.type === type)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 

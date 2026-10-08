@@ -46,7 +46,16 @@ export function useDateRangePages(input: {
   const queryKey = JSON.stringify([
     input.descriptor.revision.descriptorHash,
     input.descriptor.scope.fingerprint,
-    query ? [query.standardViewKey ?? null, query.query ?? null, query.filters, query.sort, query.columns, query.pageSize] : null,
+    query
+      ? [
+          query.standardViewKey ?? null,
+          query.query ?? null,
+          query.filters,
+          query.sort,
+          query.columns,
+          query.pageSize,
+        ]
+      : null,
     refreshKey,
     continuation ? (firstCursor ?? null) : "fresh",
   ]);
@@ -76,11 +85,24 @@ export function useDateRangePages(input: {
       })
       .then((page) => {
         if (controller.signal.aborted) return;
-        if (page.descriptorHash !== descriptor.revision.descriptorHash || page.scopeFingerprint !== descriptor.scope.fingerprint)
-          throw new TypeError("Calendar response authority no longer matches its descriptor");
-        setRows((previous) => (cursor ? [...previous, ...page.rows] : page.rows));
-        setNextCursor(page.pagination.hasNext ? page.pagination.nextCursor : undefined);
-        setTotal(page.pagination.countMode === "exact" ? page.pagination.total : undefined);
+        if (
+          page.descriptorHash !== descriptor.revision.descriptorHash ||
+          page.scopeFingerprint !== descriptor.scope.fingerprint
+        )
+          throw new TypeError(
+            "Calendar response authority no longer matches its descriptor",
+          );
+        setRows((previous) =>
+          cursor ? [...previous, ...page.rows] : page.rows,
+        );
+        setNextCursor(
+          page.pagination.hasNext ? page.pagination.nextCursor : undefined,
+        );
+        setTotal(
+          page.pagination.countMode === "exact"
+            ? page.pagination.total
+            : undefined,
+        );
       })
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
@@ -93,5 +115,12 @@ export function useDateRangePages(input: {
   const loadMore = useCallback(() => {
     if (nextCursor && !loading) setCursor(nextCursor);
   }, [nextCursor, loading]);
-  return { rows, loading, failed, hasNext: nextCursor !== undefined, ...(total === undefined ? {} : { total }), loadMore };
+  return {
+    rows,
+    loading,
+    failed,
+    hasNext: nextCursor !== undefined,
+    ...(total === undefined ? {} : { total }),
+    loadMore,
+  };
 }

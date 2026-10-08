@@ -728,7 +728,10 @@ function EntityCollectionRuntime({
   const inherited = useEntityApplication();
   const locale = useOptionalI18n()?.localization.uiLocale;
   // Calendar windows use the person's governed time zone and week start (i18n defaults otherwise).
-  const localization = useOptionalI18n()?.localization ?? { timeZone: "UTC", weekStart: 1 };
+  const localization = useOptionalI18n()?.localization ?? {
+    timeZone: "UTC",
+    weekStart: 1,
+  };
   const actionReasonId = useId();
   const [sourceDescriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const entityIntl = useEntityI18n();
@@ -804,7 +807,13 @@ function EntityCollectionRuntime({
           // Calendar's page query is the window query for this field, view and anchor.
           calendar:
             state.mode === "calendar"
-              ? [state.calendar?.dateField ?? null, state.calendar?.view ?? null, state.calendarAnchor ?? null, localization.timeZone, localization.weekStart]
+              ? [
+                  state.calendar?.dateField ?? null,
+                  state.calendar?.view ?? null,
+                  state.calendarAnchor ?? null,
+                  localization.timeZone,
+                  localization.weekStart,
+                ]
               : null,
         }
       : null,
@@ -960,7 +969,10 @@ function EntityCollectionRuntime({
         )
           setActionNotice(listNotice("list.notice.savedViewRetired"));
         if (controller.signal.aborted) return;
-        next = withRenderableModes(next, { board: !embedding, calendar: !embedding });
+        next = withRenderableModes(next, {
+          board: !embedding,
+          calendar: !embedding,
+        });
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
         const effectiveSearch = entityLocationSearch(
@@ -1770,9 +1782,15 @@ function EntityCollectionRuntime({
                 recordHref={(row) => recordHref(descriptor, row)}
                 onOpenRecord={onOpenRecord}
                 renderActions={(row) => (
-                  <RowMenu descriptor={descriptor} row={row} intl={entityIntl} />
+                  <RowMenu
+                    descriptor={descriptor}
+                    row={row}
+                    intl={entityIntl}
+                  />
                 )}
-                onCalendarChange={(change) => update({ ...state, ...change }, "replace")}
+                onCalendarChange={(change) =>
+                  update({ ...state, ...change }, "replace")
+                }
               />
             ) : page &&
               state.mode === "board" &&
@@ -2080,7 +2098,10 @@ function ListChrome({
           // calendar) compare equal however the descriptor was obtained.
           ...(activeView?.state ??
             saveableViewState(
-              parseSaveableListState(descriptor.surface.defaultState, descriptor),
+              parseSaveableListState(
+                descriptor.surface.defaultState,
+                descriptor,
+              ),
             )),
           density: undefined,
           ...(embedding ? { mode: undefined } : {}),

@@ -7,8 +7,16 @@ import { progressPercent } from "../../packages/platform/entity/runtime/list-vie
 import { renderFieldValue } from "../../packages/platform/entity/runtime/list-view/src/field-value";
 
 const field: ListFieldDescriptorV1 = {
-  key: "completion", label: "Completion", valueKind: "decimal", rendererKey: "number.progress",
-  defaultVisible: true, defaultOrder: 0, filterOperators: [], sortable: false, groupable: false, aggregations: [],
+  key: "completion",
+  label: "Completion",
+  valueKind: "decimal",
+  rendererKey: "number.progress",
+  defaultVisible: true,
+  defaultOrder: 0,
+  filterOperators: [],
+  sortable: false,
+  groupable: false,
+  aggregations: [],
 } as ListFieldDescriptorV1;
 
 describe("shared progress reader", () => {
@@ -20,7 +28,8 @@ describe("shared progress reader", () => {
   });
 
   it("treats blank, whitespace, non-numeric and null values as no value", () => {
-    for (const value of ["", " ", "\t", "abc", null, undefined, Number.NaN]) assert.equal(progressPercent(value), undefined);
+    for (const value of ["", " ", "\t", "abc", null, undefined, Number.NaN])
+      assert.equal(progressPercent(value), undefined);
   });
 
   it("renders blank progress text as an empty value, not a 0% bar, wherever list values render", () => {

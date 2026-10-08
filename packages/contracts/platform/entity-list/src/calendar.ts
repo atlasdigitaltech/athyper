@@ -20,7 +20,10 @@ export interface ListDateRangeFieldV1 {
   readonly kind: "date" | "datetime";
   /** The start field is nullable, so records without a start appear in a tray. */
   readonly unscheduled: boolean;
-  readonly tone?: { readonly field: string; readonly tones: Readonly<Record<string, ListCalendarTone>> };
+  readonly tone?: {
+    readonly field: string;
+    readonly tones: Readonly<Record<string, ListCalendarTone>>;
+  };
 }
 
 /** Calendar's name for the shared date-range shape. */
@@ -43,14 +46,22 @@ function fail(path: string, reason: string): never {
   throw new TypeError(`${path} ${reason}`);
 }
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be an object");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    fail(path, "must be an object");
   return value as Record<string, unknown>;
 }
-function allowKeys(value: Record<string, unknown>, keys: readonly string[], path: string): void {
-  for (const key of Object.keys(value)) if (!keys.includes(key)) fail(`${path}.${key}`, "is not a calendar property");
+function allowKeys(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+  path: string,
+): void {
+  for (const key of Object.keys(value))
+    if (!keys.includes(key))
+      fail(`${path}.${key}`, "is not a calendar property");
 }
 function text(value: unknown, path: string): string {
-  if (typeof value !== "string" || !value.trim() || value.length > 200) fail(path, "must be readable text");
+  if (typeof value !== "string" || !value.trim() || value.length > 200)
+    fail(path, "must be readable text");
   return value;
 }
 function flag(value: unknown, path: string): boolean {
@@ -58,7 +69,11 @@ function flag(value: unknown, path: string): boolean {
   return value;
 }
 function view(value: unknown, path: string): ListCalendarView {
-  if (typeof value !== "string" || !(LIST_CALENDAR_VIEWS as readonly string[]).includes(value)) fail(path, "must be a renderable view");
+  if (
+    typeof value !== "string" ||
+    !(LIST_CALENDAR_VIEWS as readonly string[]).includes(value)
+  )
+    fail(path, "must be a renderable view");
   return value as ListCalendarView;
 }
 
@@ -70,33 +85,56 @@ export function parseListCalendar(
 ): ListCalendarV1 {
   const value = record(raw, "surface.calendar");
   allowKeys(value, ["defaultView", "dateFields"], "surface.calendar");
-  if (!Array.isArray(value.dateFields)) fail("surface.calendar.dateFields", "must be an array");
+  if (!Array.isArray(value.dateFields))
+    fail("surface.calendar.dateFields", "must be an array");
   const items = value.dateFields as unknown[];
   if (!items.length || items.length > LIST_CALENDAR_MAX_DATE_FIELDS)
-    fail("surface.calendar.dateFields", `must declare 1 to ${LIST_CALENDAR_MAX_DATE_FIELDS} date fields`);
+    fail(
+      "surface.calendar.dateFields",
+      `must declare 1 to ${LIST_CALENDAR_MAX_DATE_FIELDS} date fields`,
+    );
   const starts = new Set<string>();
   const dateFields = items.map((item, index) => {
     const path = `surface.calendar.dateFields[${index}]`;
     const entry = record(item, path);
-    allowKeys(entry, ["start", "end", "endNullable", "label", "kind", "unscheduled", "tone"], path);
+    allowKeys(
+      entry,
+      ["start", "end", "endNullable", "label", "kind", "unscheduled", "tone"],
+      path,
+    );
     const kind = entry.kind;
-    if (kind !== "date" && kind !== "datetime") fail(`${path}.kind`, "must be date or datetime");
+    if (kind !== "date" && kind !== "datetime")
+      fail(`${path}.kind`, "must be date or datetime");
     const start = text(entry.start, `${path}.start`);
-    if (fields.get(start)?.valueKind !== kind || starts.has(start)) fail(`${path}.start`, `must be a listed ${kind} field, declared once`);
+    if (fields.get(start)?.valueKind !== kind || starts.has(start))
+      fail(`${path}.start`, `must be a listed ${kind} field, declared once`);
     starts.add(start);
-    const end = entry.end === undefined ? undefined : text(entry.end, `${path}.end`);
-    if (end !== undefined && fields.get(end)?.valueKind !== kind) fail(`${path}.end`, `must be a listed ${kind} field`);
-    if (entry.endNullable !== undefined && end === undefined) fail(`${path}.endNullable`, "requires an end field");
-    const endNullable = entry.endNullable === undefined ? undefined : flag(entry.endNullable, `${path}.endNullable`);
+    const end =
+      entry.end === undefined ? undefined : text(entry.end, `${path}.end`);
+    if (end !== undefined && fields.get(end)?.valueKind !== kind)
+      fail(`${path}.end`, `must be a listed ${kind} field`);
+    if (entry.endNullable !== undefined && end === undefined)
+      fail(`${path}.endNullable`, "requires an end field");
+    const endNullable =
+      entry.endNullable === undefined
+        ? undefined
+        : flag(entry.endNullable, `${path}.endNullable`);
     let tone: ListCalendarDateFieldV1["tone"];
     if (entry.tone !== undefined) {
       const toneValue = record(entry.tone, `${path}.tone`);
       allowKeys(toneValue, ["field", "tones"], `${path}.tone`);
       const field = text(toneValue.field, `${path}.tone.field`);
-      if (!fields.has(field)) fail(`${path}.tone.field`, "must be a listed field");
+      if (!fields.has(field))
+        fail(`${path}.tone.field`, "must be a listed field");
       const tones: Record<string, ListCalendarTone> = {};
-      for (const [key, candidate] of Object.entries(record(toneValue.tones, `${path}.tone.tones`))) {
-        if (typeof candidate !== "string" || !(TONES as readonly string[]).includes(candidate)) fail(`${path}.tone.tones.${key}`, "must be a published tone");
+      for (const [key, candidate] of Object.entries(
+        record(toneValue.tones, `${path}.tone.tones`),
+      )) {
+        if (
+          typeof candidate !== "string" ||
+          !(TONES as readonly string[]).includes(candidate)
+        )
+          fail(`${path}.tone.tones.${key}`, "must be a published tone");
         tones[key] = candidate as ListCalendarTone;
       }
       tone = Object.freeze({ field, tones: Object.freeze(tones) });
@@ -111,21 +149,40 @@ export function parseListCalendar(
       ...(tone ? { tone } : {}),
     });
   });
-  return Object.freeze({ defaultView: view(value.defaultView, "surface.calendar.defaultView"), dateFields: Object.freeze(dateFields) });
+  return Object.freeze({
+    defaultView: view(value.defaultView, "surface.calendar.defaultView"),
+    dateFields: Object.freeze(dateFields),
+  });
 }
 
 /** Normalizes saved or shared calendar state against this viewer's calendar.
  * An unusable date field falls back to the first declared one; a view the
  * descriptor cannot render becomes the default view. Display state only, so
  * normalizing it never widens results. */
-export function parseListCalendarState(raw: unknown, calendar: ListCalendarV1): ListCalendarStateV1 {
-  const value = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
-  const dateField = calendar.dateFields.find((item) => item.start === value.dateField)?.start ?? calendar.dateFields[0]!.start;
-  const chosen = typeof value.view === "string" && (LIST_CALENDAR_VIEWS as readonly string[]).includes(value.view) ? (value.view as ListCalendarView) : calendar.defaultView;
+export function parseListCalendarState(
+  raw: unknown,
+  calendar: ListCalendarV1,
+): ListCalendarStateV1 {
+  const value =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  const dateField =
+    calendar.dateFields.find((item) => item.start === value.dateField)?.start ??
+    calendar.dateFields[0]!.start;
+  const chosen =
+    typeof value.view === "string" &&
+    (LIST_CALENDAR_VIEWS as readonly string[]).includes(value.view)
+      ? (value.view as ListCalendarView)
+      : calendar.defaultView;
   return Object.freeze({ dateField, view: chosen });
 }
 
 /** True for a calendar anchor value (`YYYY-MM-DD`). */
 export function isListCalendarAnchor(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  );
 }
