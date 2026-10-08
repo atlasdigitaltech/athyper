@@ -67,6 +67,9 @@ export interface KyselyPublicationAuthorityWorkOptions {
   /** Trusted source lowering and persisted qualification; absent denies split publication. */
   readonly compiledRuntimePublication?: CompiledRuntimePublication;
   readonly authoringResourcePublication?: EntityAuthoringResourcePublication;
+  readonly authoringResourcePublicationFactory?: (
+    database: Kysely<Database>,
+  ) => EntityAuthoringResourcePublication;
   /** Absent means authorization releases may be signed but cannot dispatch. */
   readonly authorizeEntityActivation?: (releaseId: string) => Promise<void>;
   readonly caseOperationCatalog?: () => Promise<
@@ -87,9 +90,17 @@ export interface KyselyPublicationAuthorityWorkOptions {
 }
 
 export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork {
-  constructor(
-    private readonly options: KyselyPublicationAuthorityWorkOptions,
-  ) {}
+  constructor(private readonly options: KyselyPublicationAuthorityWorkOptions) {
+    if (
+      !options.authoringResourcePublication &&
+      options.authoringResourcePublicationFactory
+    )
+      this.options = {
+        ...options,
+        authoringResourcePublication:
+          options.authoringResourcePublicationFactory(options.database),
+      };
+  }
 
   private scoped<T>(
     work: (worker: KyselyPublicationAuthorityWork) => Promise<T>,
@@ -105,6 +116,12 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
           ...this.options,
           database,
           authority: new KyselyPublicationAuthorityRepository(database),
+          ...(this.options.authoringResourcePublicationFactory
+            ? {
+                authoringResourcePublication:
+                  this.options.authoringResourcePublicationFactory(database),
+              }
+            : {}),
         }),
       );
     });

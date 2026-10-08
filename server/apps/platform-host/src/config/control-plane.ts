@@ -81,6 +81,8 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
     port,
     productCommands,
     referenceResourcePolicyFile,
+    referenceTrustFile:
+      environment.PLATFORM_CONTROL_REFERENCE_TRUST_FILE?.trim() || undefined,
     resourceProducer:
       sourceDirectory && descriptorHash
         ? { sourceDirectory, descriptorHash }

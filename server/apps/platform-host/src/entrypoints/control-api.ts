@@ -1,3 +1,4 @@
+import { createResourceVerifier } from "../composition/control-plane/resource-verifier.js";
 import { createControlResourceReview } from "../composition/control-plane/resource-review.js";
 import { createResourceSourceQualification } from "../composition/control-plane/resource-source-qualification.js";
 import { createFileAuthoringResourceSnapshotReader } from "@athyper/server-service-publication";
@@ -122,6 +123,11 @@ export async function startControlApi() {
       throw Error("CONTROL_PLANE_TRUST_UNAVAILABLE");
     const signer = new Ed25519PublicationSigner(keys),
       verifier = new Ed25519PublicationVerifier(keys);
+    const resourceVerifier = config.referenceTrustFile
+      ? createResourceVerifier(
+          JSON.parse(await readFile(config.referenceTrustFile, "utf8")),
+        )
+      : verifier;
     const audit = createAuditService({
       sink: createTransactionBoundAuditSink(
         createStructuredLogAuditSink({
@@ -210,7 +216,7 @@ export async function startControlApi() {
                     ),
                   ),
                   authorityTenantId: config.authority.tenantId,
-                  verifier,
+                  verifier: resourceVerifier,
                   authorizeReview: async (_tx, input) =>
                     createCurrentResourceReviewEligibility({
                       database,

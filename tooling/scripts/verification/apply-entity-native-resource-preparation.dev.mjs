@@ -1,3 +1,17 @@
+export const authoringIdentityPolicyValidationMigrationName =
+  "20261008_entity_authoring_identity_policy_validation.sql";
+export const authoringIdentityGraphValidationMigrationName =
+  "20261008_entity_authoring_identity_graph_validation.sql";
+export const authoringIdentityConstraintExecutionMigrationName =
+  "20261008_entity_authoring_identity_constraint_execution.sql";
+export const authoringResourceEntitlementReadsMigrationName =
+  "20261008_entity_authoring_resource_entitlement_reads.sql";
+export const authoringResourceEntitlementEvaluationMigrationName =
+  "20261008_entity_authoring_resource_entitlement_evaluation.sql";
+export const authoringResourceScopeEvaluationMigrationName =
+  "20261008_entity_authoring_resource_scope_evaluation.sql";
+export const authoringResourceWorkerReadsMigrationName =
+  "20261008_entity_authoring_resource_worker_reads.sql";
 export const authoringResourceCurrentSourceMigrationName =
   "20261008_entity_authoring_resource_current_source.sql";
 export const authoringResourceHistoryMigrationName =
@@ -64,6 +78,13 @@ export function preparationSql(
       authoringResourceReviewMigrationName,
       authoringResourceHistoryMigrationName,
       authoringResourceCurrentSourceMigrationName,
+      authoringResourceWorkerReadsMigrationName,
+      authoringResourceScopeEvaluationMigrationName,
+      authoringResourceEntitlementEvaluationMigrationName,
+      authoringResourceEntitlementReadsMigrationName,
+      authoringIdentityConstraintExecutionMigrationName,
+      authoringIdentityGraphValidationMigrationName,
+      authoringIdentityPolicyValidationMigrationName,
     ].includes(selectedMigration),
   );
   assert.match(digest, /^[a-f0-9]{64}$/);
@@ -103,6 +124,13 @@ export function runPreparation(args) {
     "--authoring-resource-review",
     "--authoring-resource-history",
     "--authoring-resource-current-source",
+    "--authoring-resource-worker-reads",
+    "--authoring-resource-scope-evaluation",
+    "--authoring-resource-entitlement-evaluation",
+    "--authoring-resource-entitlement-reads",
+    "--authoring-identity-constraint-execution",
+    "--authoring-identity-graph-validation",
+    "--authoring-identity-policy-validation",
   ]);
   let output;
   for (let i = 0; i < args.length; i++) {
@@ -137,42 +165,67 @@ export function runPreparation(args) {
       "--authoring-resource-review",
       "--authoring-resource-history",
       "--authoring-resource-current-source",
+      "--authoring-resource-worker-reads",
+      "--authoring-resource-scope-evaluation",
+      "--authoring-resource-entitlement-evaluation",
+      "--authoring-resource-entitlement-reads",
+      "--authoring-identity-constraint-execution",
+      "--authoring-identity-graph-validation",
+      "--authoring-identity-policy-validation",
     ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--authoring-resource-current-source")
-    ? authoringResourceCurrentSourceMigrationName
-    : !allowed.has("--authoring-resource-history")
-      ? authoringResourceHistoryMigrationName
-      : !allowed.has("--authoring-resource-review")
-        ? authoringResourceReviewMigrationName
-        : !allowed.has("--reference-resource-reads")
-          ? referenceResourceReadsMigrationName
-          : !allowed.has("--authoring-resource-projection")
-            ? authoringResourceProjectionMigrationName
-            : !allowed.has("--reference-command-privileges")
-              ? referencePrivilegesMigrationName
-              : !allowed.has("--ownership-initialization")
-                ? ownershipInitializationMigrationName
-                : !allowed.has("--component-catalogue")
-                  ? componentCatalogueMigrationName
-                  : !allowed.has("--snapshot-guards")
-                    ? snapshotMigrationName
-                    : !allowed.has("--core-root-guards")
-                      ? coreRootMigrationName
-                      : !allowed.has("--constraint-compatibility")
-                        ? constraintMigrationName
-                        : !allowed.has("--typed-row-guards")
-                          ? typedRowMigrationName
-                          : !allowed.has("--legacy-nullability")
-                            ? legacyNullabilityMigrationName
-                            : !allowed.has("--revision-provenance")
-                              ? revisionProvenanceMigrationName
-                              : !allowed.has("--revision")
-                                ? revisionMigrationName
-                                : allowed.has("--root")
-                                  ? migrationName
-                                  : rootMigrationName;
+  const selectedMigration = !allowed.has(
+    "--authoring-identity-policy-validation",
+  )
+    ? authoringIdentityPolicyValidationMigrationName
+    : !allowed.has("--authoring-identity-graph-validation")
+      ? authoringIdentityGraphValidationMigrationName
+      : !allowed.has("--authoring-identity-constraint-execution")
+        ? authoringIdentityConstraintExecutionMigrationName
+        : !allowed.has("--authoring-resource-entitlement-reads")
+          ? authoringResourceEntitlementReadsMigrationName
+          : !allowed.has("--authoring-resource-entitlement-evaluation")
+            ? authoringResourceEntitlementEvaluationMigrationName
+            : !allowed.has("--authoring-resource-scope-evaluation")
+              ? authoringResourceScopeEvaluationMigrationName
+              : !allowed.has("--authoring-resource-worker-reads")
+                ? authoringResourceWorkerReadsMigrationName
+                : !allowed.has("--authoring-resource-current-source")
+                  ? authoringResourceCurrentSourceMigrationName
+                  : !allowed.has("--authoring-resource-history")
+                    ? authoringResourceHistoryMigrationName
+                    : !allowed.has("--authoring-resource-review")
+                      ? authoringResourceReviewMigrationName
+                      : !allowed.has("--reference-resource-reads")
+                        ? referenceResourceReadsMigrationName
+                        : !allowed.has("--authoring-resource-projection")
+                          ? authoringResourceProjectionMigrationName
+                          : !allowed.has("--reference-command-privileges")
+                            ? referencePrivilegesMigrationName
+                            : !allowed.has("--ownership-initialization")
+                              ? ownershipInitializationMigrationName
+                              : !allowed.has("--component-catalogue")
+                                ? componentCatalogueMigrationName
+                                : !allowed.has("--snapshot-guards")
+                                  ? snapshotMigrationName
+                                  : !allowed.has("--core-root-guards")
+                                    ? coreRootMigrationName
+                                    : !allowed.has("--constraint-compatibility")
+                                      ? constraintMigrationName
+                                      : !allowed.has("--typed-row-guards")
+                                        ? typedRowMigrationName
+                                        : !allowed.has("--legacy-nullability")
+                                          ? legacyNullabilityMigrationName
+                                          : !allowed.has(
+                                                "--revision-provenance",
+                                              )
+                                            ? revisionProvenanceMigrationName
+                                            : !allowed.has("--revision")
+                                              ? revisionMigrationName
+                                              : allowed.has("--root")
+                                                ? migrationName
+                                                : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

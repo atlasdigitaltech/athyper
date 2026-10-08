@@ -1,0 +1,9 @@
+# Optional Studio publication worker binding; no authoring or review credentials.
+services:
+  worker:
+    environment:
+      PUBLICATION_AUTHORING_DESCRIPTOR_HASH: ${ATHYPER_RESOURCE_DESCRIPTOR_HASH:?Exact reviewed descriptor hash required}
+      PLATFORM_AUTHORITY_TENANT_ID: ${PLATFORM_AUTHORITY_TENANT_ID:?Platform authority tenant required}
+      PLATFORM_CONTROL_REALM: platform-control
+      PLATFORM_CONTROL_ISSUER_URL: ${PLATFORM_CONTROL_ISSUER_URL:?Platform authority issuer required}
+      PLATFORM_CONTROL_AUDIENCE: athyper-platform-control-api

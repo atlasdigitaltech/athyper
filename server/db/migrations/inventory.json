@@ -1930,6 +1930,104 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/25_authoring_resource_current_source.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_worker_reads.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_worker_reads.sql",
+      "sha256": "737a55ab856e67b6129c26df771021357288f7e2c2ba202f12b76664ecfe9989",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit read-only dependency inventory for current resource publication eligibility; existing RLS remains enforced.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/26_authoring_resource_worker_reads.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_scope_evaluation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_scope_evaluation.sql",
+      "sha256": "b4bef03f4df67ecc016e60d324edc232843ff48a8b0bb257bc84f0677a1d3544",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Shared scope evaluator execution for publication eligibility; no IAM writes or policy changes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/27_authoring_resource_scope_evaluation.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_entitlement_evaluation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_entitlement_evaluation.sql",
+      "sha256": "409f18303271582fbfd98f516774651126ca04f81d201fa816dc9e9f9b9763c5",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Shared read-only entitlement evaluator for publication eligibility; no entitlement writes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/28_authoring_resource_entitlement_evaluation.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_entitlement_reads.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_entitlement_reads.sql",
+      "sha256": "6809e739caca8793e8ec3024fdd2be339ef3317fde184bd9f256e72f1f876e1e",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Complete invoker dependencies of existing entitlement readers; no entitlement mutation or RLS changes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/29_authoring_resource_entitlement_reads.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_identity_constraint_execution.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_constraint_execution.sql",
+      "sha256": "0a7fc25e62960c24476bb61aac1222dd765bf77a840f3559b0218ac18b346ab1",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Pure JSON constraint validator execution for admitted identity updates; no new mutation privileges.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/30_authoring_identity_constraint_execution.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_identity_graph_validation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_graph_validation.sql",
+      "sha256": "e23565df8aa9dcea88ed7671e07105f660afedf322bad7a5343e08129d60c40a",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Existing deferred validator execution for admitted identity updates; no new graph write privilege.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/31_authoring_identity_graph_validation.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_identity_policy_validation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_policy_validation.sql",
+      "sha256": "bf21469e817d3159454dcd3c4a578656c8b4bf33af3a5bcb0941d151ac274768",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Column-scoped policy validation read; no policy content or mutation grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/32_authoring_identity_policy_validation.sql"
+      ]
     }
   ]
 }

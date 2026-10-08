@@ -20,7 +20,7 @@ export interface InstalledReferenceResourcePin {
 }
 interface ResourceRow {
   document: Record<string, unknown>;
-  release_no: number;
+  release_no: number | string;
   unsigned_hash: string;
   signature: string;
   algorithm: string;
@@ -96,8 +96,11 @@ export function createInstalledReferenceResourceReader(options: {
     const envelope = parsePublicationArtifactEnvelope(row.document.envelope);
     const manifest = row.document.manifest as
       Record<string, unknown> | undefined;
+    const releaseNo = Number(row.release_no);
     if (
-      envelope.releaseNo !== row.release_no ||
+      !Number.isSafeInteger(releaseNo) ||
+      releaseNo < 1 ||
+      envelope.releaseNo !== releaseNo ||
       envelope.artifactKind !== pin.kind ||
       envelope.releaseId !== pin.releaseId ||
       envelope.publicationKey !== pin.publicationKey ||

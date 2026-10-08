@@ -1,0 +1,6 @@
+# Opt-in only after descriptor and identity-review resources are activated.
+services:
+  control-api:
+    environment:
+      PLATFORM_CONTROL_REFERENCE_RESOURCE_POLICY_FILE: /run/resource-review/reference-policy.json
+      PLATFORM_CONTROL_REFERENCE_TRUST_FILE: /run/resource-review/resource-trust.json

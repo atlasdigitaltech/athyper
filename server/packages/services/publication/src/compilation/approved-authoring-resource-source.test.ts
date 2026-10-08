@@ -66,7 +66,8 @@ it("rechecks exact approved source and current review on every phase", async () 
 });
 it("rejects absent approval and changed resource source", async () => {
   const f = setup();
-  query.mockResolvedValueOnce({ rows: [] });
+  query.mockResolvedValueOnce({ rows: [] }); // transaction scope
+  query.mockResolvedValueOnce({ rows: [] }); // no approved ledger row
   await expect(f.adapter.load("release")).rejects.toThrow(
     "APPROVED_SOURCE_REQUIRED",
   );

@@ -3130,8 +3130,18 @@ human/governance eligibility. A release row alone does not attest that provenanc
 Current identity source qualification uses the immutable saved graph at the exact
 draft revision and verifies its hash; complete historical lineage remains required.
 
-The implemented optional bindings and DEV forward projection migration are recorded
-in the qualification runbook; neither declares actual enrollment or F6/F8/F9 passed.
+Worker source and activation qualification reuse the canonical publication
+transaction, restore its service context after eligibility reads and retain exact
+source/hash checks at each phase. Resource consumers use explicitly pinned public
+verification keys through the existing trust resolver, without receiving signing
+capability. Database bigint coordinates are decoded with safe-integer validation.
+
+The 8 October DEV checkpoint now includes independent authenticated Owner review,
+published/activated/acknowledged resource releases and actual Admin-command ownership
+and identity enrollment: Country 22 fields, State Region nine, both revision 4.
+All 14 historical release hashes remain valid; three breaking rebind findings remain
+explicit. See the existing qualification runbook for exact evidence. This proves
+the enrollment stage, not native cutover or complete deployed F6/F8/F9 qualification.
 
 
 F0 includes a first-class resources inventory alongside relational property mappings. Each entry records resource key, schema version and schema hash, content version/hash where applicable, owning package/service, producer, consuming adapters, dependency pins, trust/revocation policy and conformance-suite identifier/results. Pending identifiers/hashes are explicit pending evidence, never fabricated values. Distinguish a resolver interface schema from its implementation version and a catalogue schema from a particular catalogue publication. Resource inventory entries are typed contract inputs; runtime publication content remains owned by its existing resource service.

@@ -173,6 +173,7 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
     "@athyper/server-service-publication",
     "@athyper/server-contract-publication",
     "../composition/control-plane/resource-review.js",
+    "../composition/control-plane/resource-verifier.js",
     "../composition/control-plane/resource-source-qualification.js",
     "node:fs/promises",
     "kysely",

@@ -5,6 +5,75 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Published resources and actual reference enrollment — 2026-10-08
+
+This checkpoint supersedes the pending producer/review status below. Platform Owner
+approved all three exact Admin proposals through the authenticated control endpoint;
+approval replay preserved attribution and timestamps. The existing worker compiled,
+signed, dispatched and activated the descriptor and both identity-review resources.
+All three release rows are now `published`, with matching Studio activation
+acknowledgements. Attempt 1's runtime-compatibility rejection is retained; attempt 2
+activated after wiring the existing loader and activation guard.
+
+| Actual DEV result                              | Country                            | State Region                       |
+| ---------------------------------------------- | ---------------------------------- | ---------------------------------- |
+| Product ownership / platform publication owner | Installed                          | Installed                          |
+| Current draft revision                         | 4                                  | 4                                  |
+| Current fields with stable identities          | 22 / 22                            | 9 / 9                              |
+| Historical releases with valid original hashes | 13 / 13                            | 1 / 1                              |
+| Retained breaking rebind findings              | 1 type change                      | 2 reference-binding changes        |
+| Ownership and identity command replay          | HTTP 200; same revision/identities | HTTP 200; same revision/identities |
+
+Enrollment used a fresh authenticated Platform Admin, transaction-bound command
+admission, installed exact resource pins, signature verification and current human
+review eligibility. The 292 accepted historical correspondences and three explicit
+exceptions retain the independent Owner attribution. Installed identities are
+reserved authoring identities; this is not a claim that deployed F9 resolution is
+qualified. Historical artifacts and existing protected controls remain intact.
+
+Worker resource qualification now reuses the publication transaction and restores
+its worker context after human-eligibility reads. This avoids pool exhaustion under
+concurrent queue jobs. Ledger reads no longer request write-dependent row locks;
+immutable source hashes and current review are checked at compile/sign/dispatch
+and again in the activation transaction. The loader separately validates resource
+shape and the installed descriptor pin. Current eligibility uses an explicit
+read/execute dependency inventory, preserving existing RLS and granting no IAM
+mutation or review-authority functions to the worker.
+
+The control host's resource verifier accepts only the configured DEV public key
+and fingerprint through the shared verification-only trust resolver. It uses the
+worker's existing signing key, recovered from its configured secret store; it adds
+no private key or signing capability to enrollment. Its control-policy signing
+configuration is unchanged. The resource reader now safely decodes PostgreSQL
+bigint release numbers; unsafe coordinates still reject. Deferred field validation
+required explicit execution grants plus only policy `id`/`status` reads. Failed
+identity attempts rolled back before the successful installation.
+
+Applied forward migrations, each with rollback rehearsal and unchanged-data checks:
+
+| Migration                                                       | SHA-256                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `20261008_entity_authoring_identity_constraint_execution.sql`   | `0a7fc25e62960c24476bb61aac1222dd765bf77a840f3559b0218ac18b346ab1` |
+| `20261008_entity_authoring_identity_graph_validation.sql`       | `e23565df8aa9dcea88ed7671e07105f660afedf322bad7a5343e08129d60c40a` |
+| `20261008_entity_authoring_identity_policy_validation.sql`      | `bf21469e817d3159454dcd3c4a578656c8b4bf33af3a5bcb0941d151ac274768` |
+| `20261008_entity_authoring_resource_entitlement_evaluation.sql` | `409f18303271582fbfd98f516774651126ca04f81d201fa816dc9e9f9b9763c5` |
+| `20261008_entity_authoring_resource_entitlement_reads.sql`      | `6809e739caca8793e8ec3024fdd2be339ef3317fde184bd9f256e72f1f876e1e` |
+| `20261008_entity_authoring_resource_scope_evaluation.sql`       | `b4bef03f4df67ecc016e60d324edc232843ff48a8b0bb257bc84f0677a1d3544` |
+| `20261008_entity_authoring_resource_worker_reads.sql`           | `737a55ab856e67b6129c26df771021357288f7e2c2ba202f12b76664ecfe9989` |
+
+Private token-free evidence is under
+`~/.athyper/instances/dev/workspace/resource-review-candidates-20261008/`:
+`approval-receipts.json`, `enrollment-receipts.json`,
+`installed-enrollment-evidence.json`, exact resource pins and migration receipts.
+
+Validation: 833 authoring tests pass (6 opt-in skips), 467 publication-service tests
+pass (3 opt-in skips), 31 focused host tests pass, host typecheck passes. Gateway
+matching and migration-layout checks pass. These local tests are distinct from the
+actual DEV authenticated commands, worker execution and readback above.
+
+**Still pending:** canonical native conversion/cutover and complete deployed
+F6/F8/F9 live-read qualification. No production enablement or UI work is claimed.
+
 ## Authenticated resource producer/review integration — 2026-10-08
 
 Generated resource proposals now use the existing publication repository and

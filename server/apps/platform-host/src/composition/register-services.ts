@@ -1,13 +1,27 @@
+import { parseEntityAuthoringResource } from "@athyper/server-contract-publication";
+import {
+  createResourcePublication,
+  readResourcePublicationConfiguration,
+} from "./control-plane/resource-publication.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
-import { businessPartnerCollaborationBinding, createPartnerCapabilityActionHandlers } from "@athyper/server-service-master-data";
+import {
+  businessPartnerCollaborationBinding,
+  createPartnerCapabilityActionHandlers,
+} from "@athyper/server-service-master-data";
 import { assertRollbackEntityReadiness } from "./shared/publication/rollback-readiness.js";
-import { admitEntityDescriptor, createHostEntityReadiness } from "./shared/entity-runtime/deployment-readiness.js";
-import { registerEntitySupportQualification, type EntitySupportQualificationRegistration } from "./shared/entity-runtime/support-qualification.js";
+import {
+  admitEntityDescriptor,
+  createHostEntityReadiness,
+} from "./shared/entity-runtime/deployment-readiness.js";
+import {
+  registerEntitySupportQualification,
+  type EntitySupportQualificationRegistration,
+} from "./shared/entity-runtime/support-qualification.js";
 import { createEntityReadinessHealth } from "./shared/entity-runtime/readiness-inventory.js";
 import { createEntityReadinessInventory } from "@athyper/server-platform-metadata";
 import { publicationCompilerIdentity as entityServingBuildIdentity } from "./shared/publication/compiler-build.js";
-import {createUiProfileMutationPolicy} from "./shared/entity-runtime/ui-profile-mutation-policy.js";
+import { createUiProfileMutationPolicy } from "./shared/entity-runtime/ui-profile-mutation-policy.js";
 import { createAtlasEntityContextReader } from "./shared/atlas-entity-context.js";
 import { createPublishedOwnerAdministrationAuthorizer } from "./shared/entity-runtime/published-owner-administration.js";
 import { createPublishedActionAuthorizer } from "./shared/entity-runtime/published-action-authorizer.js";
@@ -91,9 +105,7 @@ import {
 } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./shared/entity-governance/meta-entity-activation-inspection.js";
 import { HttpError } from "@athyper/server-runtime-http";
-import {
-  createSharedReferenceDirectory,
-} from "@athyper/server-service-records";
+import { createSharedReferenceDirectory } from "@athyper/server-service-records";
 import { createEntityPresentationChoiceResolvers } from "./shared/entity-runtime/presentation-choice-resolvers.js";
 import { registeredRecordScopeSqlCompilers } from "./shared/entity-runtime/record-scope-sql.js";
 import {
@@ -138,7 +150,8 @@ import {
   AtlasLearningCandidateService,
   isAtlasLearningSourceCurrent,
   evaluateAtlasLearningVocabulary,
-  ATLAS_LEARNING_RESOLVER_VERSION, ATLAS_LEARNING_SCORING_VERSION,
+  ATLAS_LEARNING_RESOLVER_VERSION,
+  ATLAS_LEARNING_SCORING_VERSION,
 } from "@athyper/server-platform-ai";
 import {
   AtlasLearningInbox,
@@ -774,7 +787,9 @@ export function registerServices(
   plan?: RegistrationPlan,
 ): void {
   // Explicit entrypoints validate MODE. Direct composition callers retain API defaults.
-  const collaborationCoordinates = createCollaborationEntityCoordinates([businessPartnerCollaborationBinding]);
+  const collaborationCoordinates = createCollaborationEntityCoordinates([
+    businessPartnerCollaborationBinding,
+  ]);
   const collaborationEntityCode = collaborationCoordinates.entityCode;
   const collaborationEntityTypes = collaborationCoordinates.entityTypes;
   const role =
@@ -795,7 +810,8 @@ export function registerServices(
     );
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
-  const partnerCapabilityHandlers = createPartnerCapabilityActionHandlers<RecordTransaction>();
+  const partnerCapabilityHandlers =
+    createPartnerCapabilityActionHandlers<RecordTransaction>();
   const refreshEntityContext = createKyselyContextRefresh({
     run: (identity, work) => {
       const adapter =
@@ -843,7 +859,11 @@ export function registerServices(
       : selected;
   };
   let entityBuildIdentity: string | null = null;
-  try { entityBuildIdentity = entityServingBuildIdentity().buildHash; } catch { /* Unidentified installations cannot claim qualified support. */ }
+  try {
+    entityBuildIdentity = entityServingBuildIdentity().buildHash;
+  } catch {
+    /* Unidentified installations cannot claim qualified support. */
+  }
   container.platform.entityReadiness = createHostEntityReadiness({
     configuration: () => config,
     storage: container.adapters.objectStorageArtifacts,
@@ -852,10 +872,16 @@ export function registerServices(
   const authorizer = createPublishedTenantRecordAuthorizer({
     ownerAccess: true,
     actionAuthority: createPublishedActionAuthorizer(
-      { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
-      new Set([...partnerCapabilityHandlers.keys(), ...(dependencies.activityAdapters ?? []).flatMap(
-        registration => [...(registration.domainHandlers?.keys() ?? [])],
-      )]),
+      {
+        getEntityDescriptor: (context, entityCode) =>
+          metadata.getEntityDescriptor(context, entityCode),
+      },
+      new Set([
+        ...partnerCapabilityHandlers.keys(),
+        ...(dependencies.activityAdapters ?? []).flatMap((registration) => [
+          ...(registration.domainHandlers?.keys() ?? []),
+        ]),
+      ]),
     ),
     ownerAuthority: createPublishedOwnerAdministrationAuthorizer({
       getEntityDescriptor: (context, entityCode) =>
@@ -921,10 +947,14 @@ export function registerServices(
     dependencies.controlAdmin?.parameters ??
     createKyselyParameterRepositories(metadataDatabases);
   if (Object.keys(metadataDatabases).length > 0 && role === "api") {
-    container.runtimes.health.register("entity.deployment-support", createEntityReadinessHealth({
-      inventory: createEntityReadinessInventory(metadataDatabases),
-      assertDescriptors: descriptors => container.platform.entityReadiness!.assertDescriptors(descriptors),
-    }));
+    container.runtimes.health.register(
+      "entity.deployment-support",
+      createEntityReadinessHealth({
+        inventory: createEntityReadinessInventory(metadataDatabases),
+        assertDescriptors: (descriptors) =>
+          container.platform.entityReadiness!.assertDescriptors(descriptors),
+      }),
+    );
   }
   if (Object.keys(metadataDatabases).length > 0) {
     const experienceAdapters = {
@@ -2030,13 +2060,17 @@ export function registerServices(
     transactions,
     dependencies.metadata,
   );
-  registerEntitySupportQualification(container, dependencies.entitySupportQualification);
+  registerEntitySupportQualification(
+    container,
+    dependencies.entitySupportQualification,
+  );
   let readPublishedParent:
     Parameters<typeof createPublishedParentAdmission>[0]["read"] | undefined;
   let readPublishedHeader:
     Parameters<typeof createPublishedRecordHeader>[0]["read"] | undefined;
-  const admitDescriptor = (descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor) =>
-    admitEntityDescriptor(container.platform.entityReadiness, descriptor);
+  const admitDescriptor = (
+    descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor,
+  ) => admitEntityDescriptor(container.platform.entityReadiness, descriptor);
   const publishedParent = createPublishedParentAdmission({
     admitDescriptor,
     reader: container.platform.compiledEntityReader!,
@@ -2238,10 +2272,12 @@ export function registerServices(
     authorizeParent: async (input, release) => {
       if (await publishedParent(input, release)) return true;
       if (!readPublishedParent) return false;
-      const descriptor = await admitDescriptor(await readCompiledRuntimeContract(
-        container.platform.compiledEntityReader!,
-        release,
-      ));
+      const descriptor = await admitDescriptor(
+        await readCompiledRuntimeContract(
+          container.platform.compiledEntityReader!,
+          release,
+        ),
+      );
       const operation =
         await container.platform.compiledEntityReader!.operation(release);
       const binding = parseActivityBinding(
@@ -2847,7 +2883,10 @@ export function registerServices(
     transactions,
     {
       databases: metadataDatabases,
-      mutationPolicies: new Set(["platform.notifications.preferences.v1", "platform.experience.ui_profile.v1"]),
+      mutationPolicies: new Set([
+        "platform.notifications.preferences.v1",
+        "platform.experience.ui_profile.v1",
+      ]),
       runtime: {
         qualify(profile, bindings) {
           const runtime = localGraphRuntimeQualifiers.get(container);
@@ -3976,7 +4015,10 @@ export function registerServices(
           historyAdapters,
           activityDomainHandlers,
           mutationPolicies: new Map([
-            ["platform.experience.ui_profile.v1",createUiProfileMutationPolicy()],
+            [
+              "platform.experience.ui_profile.v1",
+              createUiProfileMutationPolicy(),
+            ],
             [
               "platform.notifications.preferences.v1",
               createNotificationPreferenceRecordPolicy(),
@@ -5131,17 +5173,20 @@ export function registerAtlas(
               if (
                 !read ||
                 !(
-                  await authorizeEntityOperation(container.platform.authorizer!, {
-                    context,
-                    permissionCode: read.permissionCode,
-                    resource: {
-                      tenantId: context.tenantId,
-                      entityCode,
-                      resourceCode: entityCode,
-                      operationKey: "read",
-                      recordId,
+                  await authorizeEntityOperation(
+                    container.platform.authorizer!,
+                    {
+                      context,
+                      permissionCode: read.permissionCode,
+                      resource: {
+                        tenantId: context.tenantId,
+                        entityCode,
+                        resourceCode: entityCode,
+                        operationKey: "read",
+                        recordId,
+                      },
                     },
-                  })
+                  )
                 ).allowed
               )
                 return false;
@@ -5446,11 +5491,14 @@ function registerStudioAuthoring(
   const learning = new AtlasLearningInbox({
     database,
     fixtureSets: createPublishedLearningFixtureProvider(database),
-    authorizer: { authorize: input => learningAuthorizer.authorize(input) },
+    authorizer: { authorize: (input) => learningAuthorizer.authorize(input) },
     sourceCurrent: (proposal) =>
       isAtlasLearningSourceCurrent(transactions, proposal),
     evaluate: evaluateAtlasLearningVocabulary,
-    evaluationIdentity: { resolverVersion: ATLAS_LEARNING_RESOLVER_VERSION, scoringVersion: ATLAS_LEARNING_SCORING_VERSION },
+    evaluationIdentity: {
+      resolverVersion: ATLAS_LEARNING_RESOLVER_VERSION,
+      scoringVersion: ATLAS_LEARNING_SCORING_VERSION,
+    },
   });
   atlasLearningInboxes.set(container, learning);
   const repository = createScopedMetaEntityAuthoringRepository(
@@ -5757,13 +5805,25 @@ function registerStudioAuthoring(
           : null;
       }),
   );
-  const learningAuthorizer = createAtlasLearningReviewAuthorizer(authoringAuthorizer, (context, id) =>
-    transactions.run("studio", context, async tx => {
-      const row = (await sql<{ tenant_id: string; submitted_by: string; state: string }>`
+  const learningAuthorizer = createAtlasLearningReviewAuthorizer(
+    authoringAuthorizer,
+    (context, id) =>
+      transactions.run("studio", context, async (tx) => {
+        const row = (
+          await sql<{ tenant_id: string; submitted_by: string; state: string }>`
         SELECT tenant_id,submitted_by,state FROM ai.atlas_learning_inbox
-        WHERE tenant_id=${context.tenantId}::uuid AND id=${id}::uuid`.execute(tx)).rows[0];
-      return row ? { tenantId: row.tenant_id, submittedBy: row.submitted_by, state: row.state } : null;
-    }),
+        WHERE tenant_id=${context.tenantId}::uuid AND id=${id}::uuid`.execute(
+            tx,
+          )
+        ).rows[0];
+        return row
+          ? {
+              tenantId: row.tenant_id,
+              submittedBy: row.submitted_by,
+              state: row.state,
+            }
+          : null;
+      }),
   );
   container.platform.httpRegistrars.push((application) =>
     registerMetaEntityAuthoringRoutes(application, {
@@ -5812,7 +5872,10 @@ function registerPublication(
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
-  const coordinatedWorkload = loadPublicationWorkloadConfiguration(process.env, config.env);
+  const coordinatedWorkload = loadPublicationWorkloadConfiguration(
+    process.env,
+    config.env,
+  );
   const devConfiguration = loadDevPublicationConfiguration(
     process.env,
     config.env,
@@ -5843,6 +5906,9 @@ function registerPublication(
       !container.adapters.publicationVerifier)
   )
     throw new Error("Publication artifact store and verifier are unavailable");
+  const resourceConfiguration = readResourcePublicationConfiguration(
+    process.env,
+  );
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
   const { projections, orchestrators, loaders } = createPublicationTargets({
     authorityDatabase,
@@ -5856,6 +5922,21 @@ function registerPublication(
       verifier: container.adapters.publicationVerifier!,
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
+      ...(resourceConfiguration
+        ? {
+            authoringResources: {
+              async qualify(kind, payload) {
+                const resource = parseEntityAuthoringResource(kind, payload);
+                const hash =
+                  resource.schema === "entity.installed-authoring-descriptor/1"
+                    ? resource.descriptorHash
+                    : resource.authoringSchemaHash;
+                if (hash !== resourceConfiguration.descriptorHash)
+                  throw Error("RESOURCE_DESCRIPTOR_CHANGED");
+              },
+            },
+          }
+        : {}),
       ...(authorizationCompilation
         ? { authorizationRuntime: authorizationCompilation.runtime }
         : {}),
@@ -5876,6 +5957,26 @@ function registerPublication(
       if (!approved)
         throw new Error("PUBLICATION_ACTIVATION_APPROVAL_REQUIRED");
       const envelope = loaded.document.envelope;
+      if (
+        envelope.artifactKind === "entity_authoring_descriptor" ||
+        envelope.artifactKind === "entity_identity_review"
+      ) {
+        if (!resourceConfiguration)
+          throw Error("AUTHORING_RESOURCE_ADAPTER_REQUIRED");
+        const policy = createResourcePublication({
+          database: authorityTransaction,
+          configuration: resourceConfiguration,
+          canonical: { canonicalBytes, sha256 },
+        });
+        const source = await policy.load(deployment.sourceReleaseId);
+        if (
+          source.kind !== envelope.artifactKind ||
+          sha256(canonicalBytes(source.payload)) !==
+            sha256(canonicalBytes(envelope.payload))
+        )
+          throw Error("AUTHORING_RESOURCE_SOURCE_MISMATCH");
+      }
+
       const descriptors =
         envelope.artifactKind === "entity_runtime" &&
         envelope.payload.entityDescriptor.descriptorKind === "entity_runtime"
@@ -5885,7 +5986,8 @@ function registerPublication(
                 plane_code: envelope.payload.entityDescriptor.plane,
                 release_id: envelope.payload.entityContract.releaseId,
                 release_no: envelope.payload.entityContract.releaseNo,
-                entity_contract_hash: envelope.payload.entityContract.contractHash,
+                entity_contract_hash:
+                  envelope.payload.entityContract.contractHash,
                 compiled_hash: envelope.payload.entityDescriptor.compiledHash,
                 compiled_json: envelope.payload.entityDescriptor.descriptor,
               }),
@@ -5900,7 +6002,9 @@ function registerPublication(
                   }),
                 )
             : [];
-      await container.platform.entityReadiness!.assertActivationDescriptors(descriptors);
+      await container.platform.entityReadiness!.assertActivationDescriptors(
+        descriptors,
+      );
       assertEntityAuthorizationEnforceable(
         descriptors,
         deployment.targetPlane,
@@ -5972,7 +6076,12 @@ function registerPublication(
                 authorityDatabase,
                 plane,
                 (transaction, appliedReleaseId, targetPlane) =>
-                  assertRollbackEntityReadiness(transaction, appliedReleaseId, targetPlane, container.platform.entityReadiness!),
+                  assertRollbackEntityReadiness(
+                    transaction,
+                    appliedReleaseId,
+                    targetPlane,
+                    container.platform.entityReadiness!,
+                  ),
               ),
             ]),
         ),
@@ -6140,7 +6249,20 @@ function registerPublication(
       throw new Error(
         "Publication authority signer and bucket are unavailable",
       );
+    const resourceConfiguration = readResourcePublicationConfiguration(
+      process.env,
+    );
     const work = new KyselyPublicationAuthorityWork({
+      ...(resourceConfiguration
+        ? {
+            authoringResourcePublicationFactory: (database) =>
+              createResourcePublication({
+                database,
+                configuration: resourceConfiguration,
+                canonical: { canonicalBytes, sha256 },
+              }),
+          }
+        : {}),
       caseOperationCatalog: async () => {
         const db = container.adapters.neonDatabase?.database;
         if (!db) throw new Error("COMPANY_CASE_CATALOG_UNAVAILABLE");
@@ -6173,7 +6295,8 @@ function registerPublication(
       bucket: container.adapters.objectStorageArtifactsBucket,
       signingKeyId: config.publication.signingKeyId!,
       targetEnvironment: config.env,
-      targetInstance: coordinatedWorkload?.instance ?? process.env["ATHYPER_INSTANCE"],
+      targetInstance:
+        coordinatedWorkload?.instance ?? process.env["ATHYPER_INSTANCE"],
       targetPlanes: config.publication.targetPlanes,
     });
     const handlers = createPublicationAuthorityHandlers(
@@ -6193,9 +6316,20 @@ function registerPublication(
         const database = adapter.database as unknown as Kysely<
           Record<string, never>
         >;
-        const coordinatedPrincipal = await coordinatedApplyPrincipal({ authority: authorityDatabase, target: database,
-          configuration: coordinatedWorkload, execution, plane, deploymentId });
-        if (coordinatedPrincipal) return { ...execution, planeKey: plane, principalId: coordinatedPrincipal };
+        const coordinatedPrincipal = await coordinatedApplyPrincipal({
+          authority: authorityDatabase,
+          target: database,
+          configuration: coordinatedWorkload,
+          execution,
+          plane,
+          deploymentId,
+        });
+        if (coordinatedPrincipal)
+          return {
+            ...execution,
+            planeKey: plane,
+            principalId: coordinatedPrincipal,
+          };
         const principalId = await database
           .transaction()
           .execute(async (transaction) => {

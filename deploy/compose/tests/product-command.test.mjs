@@ -31,7 +31,12 @@ test("gateway enroll-labels is an exact change-set operation, not a broad contro
   const route = new RegExp(pattern);
   const root =
     "/api/platform-control/meta-entity-authoring/change-sets/00000000-0000-4000-8000-000000000001";
-  assert.ok(route.test(root + "/enroll-labels"));
+  for (const operation of [
+    "enroll-labels",
+    "initialize-ownership",
+    "install-identities",
+  ])
+    assert.ok(route.test(root + "/" + operation));
   for (const suffix of [
     "/execute",
     "/enroll-labels/extra",

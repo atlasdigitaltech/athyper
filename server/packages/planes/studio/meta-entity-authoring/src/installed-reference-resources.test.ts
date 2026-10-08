@@ -175,3 +175,15 @@ it("rejects wrong resource kind and unpinned descriptor bodies", async () => {
     resolveInstalledAuthoringDescriptor(tx, f.pin, f.read, "0".repeat(64)),
   ).rejects.toThrow();
 });
+
+it("decodes PostgreSQL bigint release numbers without accepting unsafe coordinates", async () => {
+  const f = fixture();
+  query.mockResolvedValue({ rows: [{ ...f.row, release_no: "1" }] });
+  await expect(f.read(tx, f.pin)).resolves.toBeDefined();
+  query.mockResolvedValue({
+    rows: [{ ...f.row, release_no: "9007199254740993" }],
+  });
+  await expect(f.read(tx, f.pin)).rejects.toMatchObject({
+    code: "REFERENCE_RESOURCE_NOT_QUALIFIED",
+  });
+});

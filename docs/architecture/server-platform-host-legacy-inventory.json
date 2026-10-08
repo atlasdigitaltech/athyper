@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 382,
+    "operational-scripts:new": 389,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -116,6 +116,7 @@
       "currentLocations": [
         "deploy/compose/instance/compose.control-api.yaml",
         "deploy/compose/instance/compose.product-command.yaml",
+        "deploy/compose/instance/compose.reference-enrollment.yaml",
         "deploy/compose/instance/compose.resource-review.yaml"
       ],
       "disposition": "new",
@@ -678,7 +679,8 @@
         "deploy/compose/instance/compose.publication-local-trust.yaml",
         "deploy/compose/instance/compose.publication-trust.yaml",
         "deploy/compose/instance/compose.publication-workload.yaml",
-        "deploy/compose/instance/compose.publication.yaml"
+        "deploy/compose/instance/compose.publication.yaml",
+        "deploy/compose/instance/compose.resource-publication.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -12741,12 +12743,72 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:20261008_entity_authoring_identity_constraint_execution",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_identity_constraint_execution",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_constraint_execution.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_identity_graph_validation",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_identity_graph_validation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_graph_validation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_identity_policy_validation",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_identity_policy_validation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_identity_policy_validation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:20261008_entity_authoring_resource_current_source",
       "category": "operational-scripts",
       "key": "20261008_entity_authoring_resource_current_source",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_current_source.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_entitlement_evaluation",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_entitlement_evaluation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_entitlement_evaluation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_entitlement_reads",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_entitlement_reads",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_entitlement_reads.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -12783,6 +12845,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_review.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_scope_evaluation",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_scope_evaluation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_scope_evaluation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_worker_reads",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_worker_reads",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_worker_reads.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

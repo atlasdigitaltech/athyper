@@ -56,12 +56,15 @@ export function createApprovedAuthoringResourcePublication(options: {
     if (bytes.length > options.maximumBytes)
       throw Error("AUTHORING_RESOURCE_SOURCE_BUDGET_EXCEEDED");
     const sourceHash = options.canonical.sha256(bytes);
-    await options.database.transaction().execute(async (tx) => {
+    const inspect = async (tx: Kysely<Record<string, never>>) => {
+      await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_tenant_id',${options.authorityTenantId},true)`.execute(
+        tx,
+      );
       const rows = (
         await sql<{
           author_id: string;
           reviewer_id: string;
-        }>`SELECT created_by AS author_id,approved_by AS reviewer_id FROM publication.release WHERE id=${releaseId}::uuid AND tenant_id=${options.authorityTenantId}::uuid AND release_key=${source.publicationKey} AND release_no=${source.releaseNo} AND release_kind='publish' AND compatibility_level='breaking' AND status IN ('approved','published') AND release_hash=${sourceHash} AND approved_at IS NOT NULL AND approved_by IS NOT NULL AND approved_by<>created_by AND metadata->>'artifactKind'=${source.kind} FOR SHARE`.execute(
+        }>`SELECT created_by AS author_id,approved_by AS reviewer_id FROM publication.release WHERE id=${releaseId}::uuid AND tenant_id=${options.authorityTenantId}::uuid AND release_key=${source.publicationKey} AND release_no=${source.releaseNo} AND release_kind='publish' AND compatibility_level='breaking' AND status IN ('approved','published') AND release_hash=${sourceHash} AND approved_at IS NOT NULL AND approved_by IS NOT NULL AND approved_by<>created_by AND metadata->>'artifactKind'=${source.kind}`.execute(
           tx,
         )
       ).rows;
@@ -80,15 +83,19 @@ export function createApprovedAuthoringResourcePublication(options: {
         )
           throw Error("AUTHORING_RESOURCE_REVIEW_ATTRIBUTION_MISMATCH");
       }
-      await options.authorizeReview({
-        releaseId,
-        authorId: row.author_id,
-        reviewerId: row.reviewer_id,
-        sourceHash,
-        phase,
-      });
-      await options.qualifyResource(structuredClone(source));
+      return row;
+    };
+    const row = options.database.isTransaction
+      ? await inspect(options.database)
+      : await options.database.transaction().execute(inspect);
+    await options.authorizeReview({
+      releaseId,
+      authorId: row.author_id,
+      reviewerId: row.reviewer_id,
+      sourceHash,
+      phase,
     });
+    await options.qualifyResource(structuredClone(source));
     return source;
   }
   return {
