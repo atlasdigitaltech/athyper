@@ -42,9 +42,15 @@ export function withRenderableModes(
   if (!missing.length) return descriptor;
   const renderable = supportedModes.filter(drawable);
   const fallback: ListViewMode = renderable[0] ?? "table";
+  // Keep the parser's invariants: each mode is listed once and never also
+  // supported, so a server-declared reason wins over the runtime's own.
+  const declared = descriptor.surface.unavailableModes ?? [];
+  const listed = new Set(declared.map((entry) => entry.mode));
   const unavailableModes: readonly ListUnavailableModeV1[] = [
-    ...(descriptor.surface.unavailableModes ?? []),
-    ...missing.map((mode) => ({ mode, code: LIST_MODE_RENDERER_MISSING })),
+    ...declared.filter((entry) => !renderable.includes(entry.mode)),
+    ...[...new Set(missing)]
+      .filter((mode) => !listed.has(mode))
+      .map((mode) => ({ mode, code: LIST_MODE_RENDERER_MISSING })),
   ];
   // A projection travels with its mode: an unrenderable Board takes its lanes with it.
   const { board, ...surface } = descriptor.surface;

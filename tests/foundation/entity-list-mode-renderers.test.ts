@@ -54,6 +54,19 @@ describe("list mode renderer registry", () => {
     assert.deepEqual(chooser.surface.unavailableModes, [{ mode: "board", code: LIST_MODE_RENDERER_MISSING }]);
   });
 
+  it("never lists a mode twice or as both supported and unavailable", () => {
+    const descriptor = {
+      surface: {
+        supportedModes: ["table", "dashboard", "dashboard"],
+        unavailableModes: [{ mode: "dashboard", code: "LIST_MODE_UNSUPPORTED" }],
+        defaultState: { mode: "table" },
+      },
+    } as unknown as EntityListDescriptorV1;
+    const normalized = withRenderableModes(descriptor);
+    assert.deepEqual(normalized.surface.supportedModes, ["table"]);
+    assert.deepEqual(normalized.surface.unavailableModes, [{ mode: "dashboard", code: "LIST_MODE_UNSUPPORTED" }]);
+  });
+
   it("returns the same descriptor when every supported mode has a renderer", () => {
     const descriptor = { surface: { supportedModes: ["table", "compact"], defaultState: { mode: "table" } } } as unknown as EntityListDescriptorV1;
     assert.equal(withRenderableModes(descriptor), descriptor);
