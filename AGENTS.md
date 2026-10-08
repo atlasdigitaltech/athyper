@@ -42,6 +42,20 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - This redesign remains Entity onboarding/shared framework work. It does not
   authorize workflow/case execution, new business handlers or MFA changes.
 
+## Entity list Board (Kanban) Layout
+
+- The active design is the
+  [Entity list Board blueprint](docs/blueprints/entity-list-board/blueprint.md).
+  Read it before implementing Board/Kanban list behaviour and update it in
+  place. It is proposed until the project owner approves its contract
+  properties; do not implement unapproved properties.
+- Board is a Layout of the shared Entity list, available to any eligible
+  Entity through governed, published Meta Entity properties. Do not create a
+  Board route, page, provider stack or entity-specific board.
+- Its authoring storage, codec, compiler and composer work must conform to the
+  [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
+  both documents together where they meet.
+
 ## Entity list identity and record navigation
 
 - Define navigation groups, section behavior, visible columns and readable

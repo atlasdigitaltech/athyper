@@ -7,6 +7,17 @@ working-tree metadata draft, or onboard additional entities.
 
 ## Live-read resource publication transport — 2026-10-08
 
+Manual-test handover check (2026-10-08): read-only DEV Studio queries confirm Country
+draft `28e155d7-9f18-48fd-9f4d-847ff80f7e87` and State Region draft
+`9672c64b-b40f-43ce-8a2f-e0fbebd1154e` remain product drafts at revision 4 with
+`native_core_layout_version` NULL. `metadata.ui_component_contract` has zero rows;
+there are no active `entity_security_manifest` or `entity_storage_authority` payloads
+in Studio. Existing local heads are `metadata.reference.country` release 13 and
+`metadata.reference.state_region` release 1. These older heads are not qualification
+of the new native path. No new entity publication/activation was attempted. Native
+conversion resources/grants, canonical history qualification and deployed evidence
+composition must finish before the requested new-path manual-test handover.
+
 Follow-up: the shared native runtime projection and publication lowering now support
 explicit version-1.1 live-read contracts. Source coordinates are checked against the
 immutable publication source, then validated by the real runtime parser. Historical
