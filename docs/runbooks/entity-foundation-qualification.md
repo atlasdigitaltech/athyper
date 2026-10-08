@@ -189,6 +189,46 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Installed compiler identity reads — 8 October, 15:39 UTC
+
+The production native proposal composition now resolves the compiler's stable-identity
+roster through the admitted application transaction. It replaces supplied key/parent
+mappings with exact installed rows, rejects missing/duplicate/retired/foreign identities,
+and rechecks that roster during qualification, including replay. This supplies the
+identity roster only: it does not establish the separate identity-resource publication
+pin, provider/catalogue resources, or source-bound reservation adoption.
+
+A real PostgreSQL application-role regression demonstrated that the existing identity
+SELECT policies returned zero rows before the fresh root was inserted. Forward migration
+`20261008_entity_native_bootstrap_identity_read.sql` extends only those SELECT policies
+using the existing entity-bound creation admission. No new role/table grant, mutation,
+initializer or publication authority is added. The test proves exact entity visibility,
+wrong-actor/no-ticket rejection and tenant isolation, including when an unrelated broad
+permissive policy exists. It uses real admission/RLS and reduced fixture tables, not DEV
+end-to-end bootstrap evidence.
+
+DEV installation and no-op replay completed using the existing runner:
+
+```sh
+node tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs --native-bootstrap-identity-read --apply=DEV-NATIVE-RESOURCE-PREPARATION --output ~/.athyper/instances/dev/workspace/native-bootstrap-identity-read-20261008/application.json
+```
+
+Migration SHA-256: `b60826e4b277549aad553bf74dd51cef0d422128280fab3f13e9ccdf41ebb4c6`.
+The sibling `replay.json` records the repeated invocation. Rollback rehearsal passed;
+original authoring/history data, authorization rows and activation heads were unchanged.
+The runner's `authorizationAndHeadsUnchanged` field fingerprints rows, not the intentionally
+changed identity SELECT policy. Existing verified DEV backup remains available.
+
+Validation: 885 authoring tests passed (10 opt-in skips), the separate PostgreSQL
+creation/admission test passed, and 36 focused host composition tests passed. The host regression confirms that
+installed rows replace a supplied compiler roster and changed rows reject even without
+optional component composition. Authoring
+production/test typechecks passed; migration layout contains 172 classified files and
+164 retained SQL files. No replacement draft or new Entity activation was produced.
+Complete native proposals, provider/compiler resource assembly and startup configuration,
+canonical bootstrap/replay and deployed F6/F8/F9 remain unfinished. This migration does
+not remove any of the seven pending cutover constraints or attest manual-test readiness.
+
 ### Native command-host integration and push recovery — 8 October
 
 Formatting-only commit `40d34fd74` repaired the committed shared Entity files without

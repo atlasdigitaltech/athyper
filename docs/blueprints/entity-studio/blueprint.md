@@ -61,7 +61,14 @@ historical identity reconstruction are separate acceptance work, not prerequisit
 for this fresh-native demonstration. Root creation, typed whole-graph persistence,
 initial/saved history, exact readback, compilation and reader compatibility form one
 atomic command; an interrupted or rejected command must leave no partial draft.
-Replay requires fresh current authorization. Fresh-root admission additionally pins the
+Replay requires fresh current authorization. The compiler identity roster is resolved from installed stable
+identity rows under that creation ticket, including before the target root exists.
+The identity SELECT fence admits only the ticket's product entity; tenant identities,
+other entities and unauthenticated preparation remain unavailable. Keys and parent
+identity links come from those rows, not proposal-supplied context. Every qualification
+and replay rechecks the roster. Reservation adoption remains a separate source-bound
+check in the canonical writer; this read path cannot allocate or activate identities.
+ Fresh-root admission additionally pins the
 product entity ID in the transaction ticket, rechecks and locks its current system
 ownership in PostgreSQL, and permits only an unpinned revision-zero draft root. An
 ordinary existing-draft ticket cannot create a root; native graph/initializer writes

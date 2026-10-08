@@ -257,6 +257,57 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
       q(
         `UPDATE entity_command_private.admission SET creation_entity_id='${entity}'; DELETE FROM metadata.entity_change_set WHERE id='${target}';`,
       );
+      // Compiler preparation must resolve existing identities before inserting
+      // the fresh root. Exercise both old visibility failure and new exact scope.
+      q(`CREATE TABLE metadata.entity_field_identity(id uuid PRIMARY KEY,entity_id uuid,tenant_id uuid);
+        ALTER TABLE metadata.entity_field_identity ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE metadata.entity_field_identity FORCE ROW LEVEL SECURITY;
+        GRANT SELECT ON metadata.entity_field_identity TO athyper_product_command_app;
+        CREATE POLICY reference_command_read ON metadata.entity_field_identity FOR SELECT TO athyper_product_command_app
+          USING(tenant_id IS NULL AND EXISTS(SELECT 1 FROM metadata.entity_change_set c WHERE c.entity_id=entity_field_identity.entity_id AND entity_command_private.admitted(c.id)));
+        CREATE POLICY reference_command_read_fence ON metadata.entity_field_identity AS RESTRICTIVE FOR SELECT TO athyper_product_command_app
+          USING(tenant_id IS NULL AND EXISTS(SELECT 1 FROM metadata.entity_change_set c WHERE c.entity_id=entity_field_identity.entity_id AND entity_command_private.admitted(c.id)));
+        INSERT INTO metadata.entity_field_identity VALUES('${randomUUID()}','${entity}',NULL),('${randomUUID()}','${other}',NULL),('${randomUUID()}','${entity}','${tenant}');`);
+      const identityCount =
+        "SELECT count(*) FROM metadata.entity_field_identity; ROLLBACK;";
+      expect(
+        q(session + enter + identityCount)
+          .trim()
+          .split("\n"),
+      ).toContain("0");
+      q(
+        read(
+          "ddl/planes/studio/metadata/57_native_bootstrap_identity_read.sql",
+        ),
+      );
+      expect(
+        q(session + enter + identityCount)
+          .trim()
+          .split("\n"),
+      ).toContain("1");
+      expect(
+        q(session + identityCount)
+          .trim()
+          .split("\n"),
+      ).toContain("0");
+      q(
+        "CREATE POLICY deliberately_broad_identity_read ON metadata.entity_field_identity FOR SELECT TO athyper_product_command_app USING(true);",
+      );
+      expect(
+        q(session + enter + identityCount)
+          .trim()
+          .split("\n"),
+      ).toContain("1");
+      expect(
+        q(
+          session +
+            enter +
+            `SET LOCAL app.current_principal_id='${randomUUID()}';` +
+            identityCount,
+        )
+          .trim()
+          .split("\n"),
+      ).toContain("0");
       // Real admission and new catalogue policies; reduced resource/member tables
       // isolate authorization, not component publication or semantic qualification.
       q(`CREATE TABLE metadata.ui_component_contract(id uuid,tenant_id uuid,status text);

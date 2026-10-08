@@ -2252,6 +2252,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/56_native_bootstrap_ai_privileges.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_bootstrap_identity_read.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_bootstrap_identity_read.sql",
+      "sha256": "b60826e4b277549aad553bf74dd51cef0d422128280fab3f13e9ccdf41ebb4c6",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Read installed identities under exact fresh-root creation admission before compiler preparation; preserves mutation and tenant fences.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/57_native_bootstrap_identity_read.sql"
+      ]
     }
   ]
 }

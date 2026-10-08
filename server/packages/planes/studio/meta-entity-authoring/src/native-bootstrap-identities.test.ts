@@ -1,7 +1,10 @@
 import { Kysely, PostgresDialect, type Transaction } from "kysely";
 import { expect, it, vi } from "vitest";
 import { nativeReleaseFixture } from "./native-release-compilation.fixtures.js";
-import { establishNativeBootstrapIdentities } from "./native-bootstrap-identities.js";
+import {
+  establishNativeBootstrapIdentities,
+  resolveNativeBootstrapIdentities,
+} from "./native-bootstrap-identities.js";
 import { sha256 } from "./deterministic.js";
 function fixture() {
   const f = nativeReleaseFixture();
@@ -16,15 +19,19 @@ function fixture() {
   }));
   const installed = f.c.core.identities.map((i) => ({
     id: i.id,
+    entity_id: i.entityId,
+    tenant_id: i.tenantId,
     field_key: i.fieldKey,
     parent_identity_id: i.parentIdentityId,
     identity_status: "reserved",
     introduced_change_set_id: source,
   }));
   const query = vi.fn(async (text: string, values: unknown[]) => ({
-    rows: text.includes("SELECT id,field_key")
-      ? installed.filter((i) => i.id === values[0])
-      : [],
+    rows: text.includes("SELECT id,entity_id")
+      ? installed
+      : text.includes("SELECT id,field_key")
+        ? installed.filter((i) => i.id === values[0])
+        : [],
     rowCount: 1,
   }));
   const db = new Kysely<Record<string, never>>({
@@ -50,6 +57,12 @@ function fixture() {
     installed,
     query,
     input,
+    resolve: () =>
+      resolveNativeBootstrapIdentities(
+        db as Transaction<Record<string, never>>,
+        input,
+        f.graph,
+      ),
     run: (s = sources) =>
       establishNativeBootstrapIdentities(
         db as Transaction<Record<string, never>>,
@@ -134,4 +147,38 @@ it("propagates database source proof failure; does not claim installation", asyn
     return { rows: f.installed.filter((i) => i.id === values[0]), rowCount: 1 };
   });
   await expect(f.run()).rejects.toThrow("IDENTITY_ADOPTION_SNAPSHOT_INVALID");
+});
+
+it("resolves compiler identities from installed rows and exact creation scope", async () => {
+  const f = fixture();
+  expect(await f.resolve()).toEqual(f.f.c.core.identities);
+  const [query, values] = f.query.mock.calls[0]!;
+  expect(query).toContain("entity_command_private.admitted_creation");
+  expect(values).toContain(f.input.actorId);
+  expect(values).toContain(f.input.entityId);
+  expect(values).toContain(f.input.changeSetId);
+});
+it("rejects missing, duplicate, foreign and retired installed compiler bindings", async () => {
+  for (const corrupt of [
+    (f: ReturnType<typeof fixture>) => f.installed.pop(),
+    (f: ReturnType<typeof fixture>) => (f.installed[0] = f.installed[1]!),
+    (f: ReturnType<typeof fixture>) =>
+      (f.installed[0]!.entity_id = f.input.actorId),
+    (f: ReturnType<typeof fixture>) =>
+      (f.installed[0]!.identity_status = "retired"),
+  ]) {
+    const f = fixture();
+    corrupt(f);
+    await expect(f.resolve()).rejects.toMatchObject({
+      code: "NATIVE_IDENTITY_BINDING_UNAVAILABLE",
+    });
+  }
+});
+it("rejects changed proposal before reading installed identities", async () => {
+  const f = fixture();
+  f.input.proposalHash = "f".repeat(64);
+  await expect(f.resolve()).rejects.toMatchObject({
+    code: "NATIVE_IDENTITY_BINDING_UNAVAILABLE",
+  });
+  expect(f.query).not.toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import { nativeReleaseFixture } from "../../../../../packages/planes/studio/meta-entity-authoring/src/native-release-compilation.fixtures.js";
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it, vi } from "vitest";
 import { createControlProductCommandRuntime } from "./product-command-runtime.js";
@@ -25,19 +26,26 @@ const appRole = {
   application: true,
   owner: false,
 };
-function database(row: unknown, auditAllowed = true, resourceAllowed = true) {
+function database(
+  row: unknown,
+  auditAllowed = true,
+  resourceAllowed = true,
+  identities: unknown[] = [],
+) {
   return new Kysely<Record<string, never>>({
     dialect: new PostgresDialect({
       pool: {
         connect: async () => ({
           query: async (query: string) => ({
-            rows: [
-              query.includes("has_schema_privilege")
-                ? { allowed: auditAllowed }
-                : query.includes("has_function_privilege")
-                  ? { allowed: resourceAllowed }
-                  : row,
-            ],
+            rows: query.includes("SELECT id,entity_id")
+              ? identities
+              : [
+                  query.includes("has_schema_privilege")
+                    ? { allowed: auditAllowed }
+                    : query.includes("has_function_privilege")
+                      ? { allowed: resourceAllowed }
+                      : row,
+                ],
             rowCount: 1,
           }),
           release() {},
@@ -312,5 +320,102 @@ it("rejects bootstrap resource wiring without proposal composition before databa
   } finally {
     await f.issuerDatabase.destroy();
     await f.commandDatabase.destroy();
+  }
+});
+
+it("binds compiler identities to application rows and revalidates without component composition", async () => {
+  const f = await fixture(),
+    native = nativeReleaseFixture();
+  const rows = native.c.core.identities.map((i) => ({
+    id: i.id,
+    entity_id: i.entityId,
+    tenant_id: i.tenantId,
+    field_key: i.fieldKey,
+    parent_identity_id: i.parentIdentityId,
+    identity_status: "reserved",
+  }));
+  const tx = database(appRole, true, true, rows);
+  Object.defineProperty(tx, "isTransaction", { value: true });
+  const proposal = {
+    graph: native.graph,
+    title: "Reference",
+    branchCode: "native",
+    baseReleaseId: null,
+  };
+  const input = {
+    entityId: native.graph.authoringSource.entityId,
+    changeSetId: native.graph.ownedLabels!.changeSetId,
+    actorId: authority.tenantId,
+    tenantId: null,
+    idempotencyKey: "native-test",
+    proposalHash: native.c.graphHash,
+  };
+  const qualify = vi.fn(async () => {});
+  try {
+    const runtime = await createControlProductCommandRuntime({
+      ...f.options,
+      referenceResources: {
+        authorityTenantId: authority.tenantId,
+        descriptorPin: {
+          kind: "entity_authoring_descriptor",
+          publicationKey: "fixture.descriptor",
+          releaseId: authority.tenantId,
+          unsignedHash: "a".repeat(64),
+          artifactHash: "b".repeat(64),
+        },
+        descriptorHash: native.c.authoringSchemaHash,
+        maximumBytes: 10000,
+        maximumReleases: 20,
+        supportedLocales: ["en"],
+        verifier: { verify: async () => true },
+        authorizeReview: async () => {},
+        audit: async () => {},
+      },
+      nativeBootstrapProposals: {
+        maximumBytes: 100000,
+        readProposal: async () => proposal,
+        audit: async () => {},
+        resolveResources: async () => ({
+          schema: {} as never,
+          host: {
+            commands: {
+              authoringSchemaHash: native.c.authoringSchemaHash,
+              maxMembers: 1000,
+              maxCommands: 100,
+              maxBatchBytes: 100000,
+            },
+            snapshotVersions: [2],
+            admit: async () => {},
+          } as never,
+          qualify,
+          preparation: {
+            compiler: {
+              ...native.c,
+              core: { ...native.c.core, identities: [] },
+            },
+            operations: {} as never,
+            reader: {} as never,
+          },
+        }),
+      },
+    });
+    const resolved =
+      await runtime.referenceEnrollment!.nativeBootstrap!.resolve(
+        tx as never,
+        { principalId: input.actorId } as never,
+        input,
+      );
+    const prepared = await resolved.policy.prepare(tx as never, input);
+    expect(prepared.compiler.core.identities).toEqual(native.c.core.identities);
+    await resolved.policy.qualify(tx as never, input);
+    expect(qualify).toHaveBeenCalledTimes(1);
+    rows[0]!.field_key = "changed";
+    await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
+      "IDENTITY_BINDING_CHANGED",
+    );
+    expect(qualify).toHaveBeenCalledTimes(1);
+  } finally {
+    await tx.destroy();
+    await f.close();
   }
 });

@@ -1,3 +1,5 @@
+export const nativeBootstrapIdentityReadMigrationName =
+  "20261008_entity_native_bootstrap_identity_read.sql";
 export const nativeBootstrapAiPrivilegesMigrationName =
   "20261008_entity_native_bootstrap_ai_privileges.sql";
 export const lockedLiveReadResourcesMigrationName =
@@ -93,6 +95,7 @@ export function preparationSql(
 ) {
   assert.ok(
     [
+      nativeBootstrapIdentityReadMigrationName,
       nativeBootstrapAiPrivilegesMigrationName,
       lockedLiveReadResourcesMigrationName,
       productComponentResourceReadMigrationName,
@@ -173,6 +176,7 @@ export function runPreparation(args) {
     "--live-read-resource-review",
     "--component-catalogue-installation",
     "--component-resource-review",
+    "--native-bootstrap-identity-read",
     "--native-bootstrap-ai-privileges",
     "--locked-live-read-resources",
     "--product-component-resource-read",
@@ -230,6 +234,7 @@ export function runPreparation(args) {
       "--live-read-resource-review",
       "--component-catalogue-installation",
       "--component-resource-review",
+      "--native-bootstrap-identity-read",
       "--native-bootstrap-ai-privileges",
       "--locked-live-read-resources",
       "--product-component-resource-read",
@@ -380,6 +385,8 @@ export function runPreparation(args) {
                                                                               : rootMigrationName;
   if (!allowed.has("--native-bootstrap-ai-privileges"))
     selectedMigration = nativeBootstrapAiPrivilegesMigrationName;
+  if (!allowed.has("--native-bootstrap-identity-read"))
+    selectedMigration = nativeBootstrapIdentityReadMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

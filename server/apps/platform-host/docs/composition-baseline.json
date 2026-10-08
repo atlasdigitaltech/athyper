@@ -322,7 +322,7 @@
     },
     {
       "file": "src/composition/control-plane/product-command-runtime.ts",
-      "lines": 273,
+      "lines": 299,
       "imports": [
         {
           "specifier": "./native-bootstrap-resources.js",

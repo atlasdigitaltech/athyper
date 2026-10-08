@@ -6,6 +6,8 @@ import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-entity-authoring";
 import {
   createProductCommandAuthority,
+  resolveNativeBootstrapIdentities,
+  sha256,
   createProductLabelHost,
   createProductNativeBootstrapHost,
   createProductReferenceResourcePolicies,
@@ -64,8 +66,32 @@ export async function createControlProductCommandRuntime(options: {
           throw Error("PRODUCT_NATIVE_DESCRIPTOR_MISMATCH");
         if (!resources.host.snapshotVersions?.includes(2))
           throw Error("PRODUCT_NATIVE_SNAPSHOT_VERSION_REQUIRED");
+        const identities = await resolveNativeBootstrapIdentities(
+          args[0],
+          args[2],
+          args[3].graph,
+        );
         return {
           ...resources,
+          async qualify(tx, command) {
+            if (tx !== args[0] || sha256(command) !== sha256(args[2]))
+              throw Error("PRODUCT_NATIVE_IDENTITY_SCOPE_CHANGED");
+            const current = await resolveNativeBootstrapIdentities(
+              tx,
+              command,
+              args[3].graph,
+            );
+            if (sha256(current) !== sha256(identities))
+              throw Error("PRODUCT_NATIVE_IDENTITY_BINDING_CHANGED");
+            await resources.qualify(tx, command);
+          },
+          preparation: {
+            ...resources.preparation,
+            compiler: {
+              ...resources.preparation.compiler,
+              core: { ...resources.preparation.compiler.core, identities },
+            },
+          },
           host: createProductNativeBootstrapHost({
             authorityTenantId: options.authority.tenantId,
             descriptorPin: installed.descriptorPin,

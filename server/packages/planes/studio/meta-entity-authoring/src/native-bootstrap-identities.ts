@@ -6,6 +6,7 @@ import {
   type ExpandedNativeMetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
 import type { NativeReleaseCompilationContext } from "./native-release-compilation.js";
+import { sha256 } from "./deterministic.js";
 import type { NativeBootstrapInput } from "./native-bootstrap-application.js";
 export interface NativeIdentityAdoptionSource {
   readonly identityId: string;
@@ -113,4 +114,79 @@ export async function establishNativeBootstrapIdentities(
   }
   if (consumed.size !== captured.length)
     fail("NATIVE_IDENTITY_ADOPTION_UNUSED");
+}
+
+/** Compiler bindings are read from installed identities in the admitted application
+ * transaction. An import cannot supply its own field keys or identity ownership.
+ * Reservation adoption is still independently checked by the canonical writer.
+ */
+export async function resolveNativeBootstrapIdentities(
+  tx: Transaction<Record<string, never>>,
+  input: NativeBootstrapInput,
+  graph: ExpandedNativeMetaEntityGraph,
+): Promise<NativeReleaseCompilationContext["core"]["identities"]> {
+  const fail = (): never => {
+    throw new AuthoringPolicyError(
+      "NATIVE_IDENTITY_BINDING_UNAVAILABLE",
+      "Resolve every native field from installed, scoped stable identities.",
+    );
+  };
+  if (
+    !tx.isTransaction ||
+    input.tenantId !== null ||
+    graph.authoringSource.entityId !== input.entityId ||
+    graph.authoringSource.tenantId !== null ||
+    graph.authoringSource.sourceKind !== "product" ||
+    graph.ownedLabels?.changeSetId !== input.changeSetId ||
+    sha256(graph) !== input.proposalHash ||
+    !graph.fields.length ||
+    graph.fields.length > 4096
+  )
+    fail();
+  for (const id of [input.entityId, input.changeSetId, input.actorId])
+    validateFoundationNode(referenceUuid, id, "/bootstrap/id");
+  const ids = graph.fields.map((field) => field.fieldIdentityId);
+  if (new Set(ids).size !== ids.length) fail();
+  for (const id of ids)
+    validateFoundationNode(referenceUuid, id, "/bootstrap/identity");
+  const rows = (
+    await sql<{
+      id: string;
+      entity_id: string;
+      tenant_id: string | null;
+      field_key: string;
+      parent_identity_id: string | null;
+      identity_status: string;
+    }>`SELECT id,entity_id,tenant_id,field_key,parent_identity_id,identity_status
+    FROM metadata.entity_field_identity
+    WHERE entity_id=${input.entityId}::uuid AND tenant_id IS NULL
+    AND id IN (${sql.join(ids.map((id) => sql`${id}::uuid`))})
+    AND entity_command_private.admitted_creation(${input.changeSetId}::uuid,${input.entityId}::uuid)
+    AND current_setting('app.current_principal_id',true)=${input.actorId}`.execute(
+      tx,
+    )
+  ).rows;
+  if (
+    rows.length !== ids.length ||
+    new Set(rows.map((row) => row.id)).size !== ids.length
+  )
+    fail();
+  return ids.map((id) => {
+    const row = rows.find((row) => row.id === id);
+    if (
+      !row ||
+      row.entity_id !== input.entityId ||
+      row.tenant_id !== null ||
+      !["active", "reserved"].includes(row.identity_status) ||
+      !row.field_key
+    )
+      return fail();
+    return {
+      id: row.id,
+      entityId: row.entity_id,
+      tenantId: row.tenant_id,
+      fieldKey: row.field_key,
+      parentIdentityId: row.parent_identity_id,
+    };
+  });
 }
