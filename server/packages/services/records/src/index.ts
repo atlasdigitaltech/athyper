@@ -69,11 +69,15 @@ export * from "./snapshots/collection-capture.js";
 export * from "./snapshots/collection-comparison.js";
 
 export { createParentCollectionScopeResolver } from "./parent-collection-scope.js";
-export { createRecordOwnerAccessAdapter, scopeRecordOwnerRead } from "./record-owner-access.js";
+export {
+  createRecordOwnerAccessAdapter,
+  scopeRecordOwnerRead,
+} from "./record-owner-access.js";
 
 export * from "./record-mutation-policy.js";
-
 
 export * from "./governed-amendment-target.js";
 
 export * from "./entity-effective-security.js";
+
+export { GENERIC_RECORD_READ_CAPABILITIES } from "./record-read-capabilities.js";

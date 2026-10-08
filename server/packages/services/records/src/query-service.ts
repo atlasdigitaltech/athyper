@@ -12,7 +12,7 @@ import {
   type RecordOwnerAccessAdapter,
 } from "./record-owner-access.js";
 import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
-import { MAX_LIST_FILTERS } from "./list-limits.js";
+import { MAX_LIST_FILTERS, MAX_LIST_PAGE_SIZE } from "./list-limits.js";
 import { validateFilterValue } from "./filter-value-validation.js";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import { entityAuthorizationProfileHash } from "./entity-authorization-rollout.js";
@@ -186,11 +186,11 @@ export function createRecordListExecutor<Transaction = unknown>(
         ]),
       ];
       const limit = query.limit ?? 50;
-      if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIST_PAGE_SIZE)
         throw new RecordServiceError(
           400,
           "INVALID_LIMIT",
-          "Record list limit must be between 1 and 100",
+          `Record list limit must be between 1 and ${MAX_LIST_PAGE_SIZE}`,
         );
       const maxSortLevels =
         descriptor.listPresentation?.limits?.maxSortLevels ?? 3;

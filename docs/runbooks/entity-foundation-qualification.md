@@ -189,6 +189,33 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native record-provider assembly — 9 October
+
+The production bootstrap wrapper now replaces supplied `compiler.listProviders` with
+capabilities exported by the shared record service. The implementation profile supports
+generic read-only table access, table/compact projections, exact/no counts, 100-row pages,
+20 flat filters and ten sort levels. Page-size enforcement and compiler assembly share
+the same constant. Unsupported provider modes, custom handlers, estimated counts,
+nested filter depth and excess limits reject; no declaration is silently rewritten.
+The fingerprint identifies this implementation contract, not a signed resource approval
+or deployed storage/security evidence. Existing independent resource qualification remains.
+
+Executable checks (from repository root):
+
+```sh
+pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/native-bootstrap-provider.test.ts src/composition/control-plane/product-command-runtime.test.ts
+pnpm --filter @athyper/server-service-records exec vitest run src/kysely-record-repository.test.ts src/__tests__/entity-list-service.test.ts src/__tests__/multi-scope-query.test.ts src/__tests__/records-query-contract.test.ts
+pnpm --filter @athyper/server-platform-host exec tsc -p tsconfig.json --noEmit
+pnpm --filter @athyper/server-service-records exec tsc -p tsconfig.json --noEmit
+```
+
+Results: 31 focused host tests and 42 affected record tests passed; both production
+typechecks passed. These are implementation tests, not authenticated DEV requests.
+No DEV mutations, replacement drafts or activations were performed in this checkpoint.
+The startup entrypoint still does not compose the full native proposal/base resource
+resolver. Complete compiler/schema/initializer assembly, canonical bootstrap/replay,
+approved live resources and deployed F6/F8/F9 remain required before handover.
+
 ### Physical compiler bindings and reference publication — 9 October, 00:06 MYT
 
 The native product-command composition now replaces its supplied storage catalogue with

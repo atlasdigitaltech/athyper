@@ -229,6 +229,30 @@
       "syntaxDiagnostics": []
     },
     {
+      "file": "src/composition/control-plane/native-bootstrap-provider.ts",
+      "lines": 56,
+      "imports": [
+        {
+          "specifier": "@athyper/server-service-records",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-contract-meta-entity-authoring",
+          "typeOnly": true,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-plane-studio-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        }
+      ],
+      "registrations": [],
+      "identifiers": [],
+      "syntaxDiagnostics": []
+    },
+    {
       "file": "src/composition/control-plane/native-bootstrap-resources.ts",
       "lines": 123,
       "imports": [
@@ -322,8 +346,13 @@
     },
     {
       "file": "src/composition/control-plane/product-command-runtime.ts",
-      "lines": 331,
+      "lines": 336,
       "imports": [
+        {
+          "specifier": "./native-bootstrap-provider.js",
+          "typeOnly": false,
+          "missing": false
+        },
         {
           "specifier": "./native-bootstrap-resources.js",
           "typeOnly": false,

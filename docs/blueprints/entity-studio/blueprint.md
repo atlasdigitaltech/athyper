@@ -93,6 +93,13 @@ qualification and replay; a proposal does not supply its own physical facts. The
 product-command composition supports its local Studio connection only and rejects cross-plane
 storage until that connection is independently composed. This catalogue inspection reads no
 business records and does not establish F6 owner authority or F8 access.
+Compiler list-provider capabilities come from the shared record implementation, not a
+proposal-supplied provider context. The bounded generic table/read-only profile supports
+100-row pages, 20 flat filters, ten sort levels, exact/no counts and the shared table/compact
+modes. Unsupported settings reject before persistence rather than being silently reduced
+by the runtime. Its implementation-contract fingerprint is not a signed resource release
+or proof of deployed F6/F8 authority; handler-backed and feature-specific list profiles
+require their own registered composition.
 Publication lowering preserves supported single-target, read-only foreign-key/logical
 references through the shared key-reference representation. It verifies source/compiled
 relation membership and full field-mapping coverage; unsupported mutation, polymorphic,

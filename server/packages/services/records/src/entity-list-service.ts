@@ -1,3 +1,4 @@
+import { MAX_LIST_PAGE_SIZE } from "./list-limits.js";
 import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
 import { resolveListGantt } from "./list-gantt.js";
@@ -1939,7 +1940,8 @@ function normalizePageSizes(
   const sizes = [
     ...new Set(
       (value ?? [25, 50, 100]).filter(
-        (size) => Number.isInteger(size) && size >= 1 && size <= 100,
+        (size) =>
+          Number.isInteger(size) && size >= 1 && size <= MAX_LIST_PAGE_SIZE,
       ),
     ),
   ].sort((left, right) => left - right);

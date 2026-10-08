@@ -1,3 +1,4 @@
+import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
 import { createNativeBootstrapResourceComposition } from "./native-bootstrap-resources.js";
 import { createNativeBootstrapProposalResolver } from "./native-bootstrap-proposals.js";
 import { parseReferenceResourceConfiguration } from "./reference-resource-configuration.js";
@@ -97,6 +98,9 @@ export async function createControlProductCommandRuntime(options: {
           return [catalogue];
         }
         const installedCatalogues = await catalogues();
+        const listProviders = resolveNativeBootstrapListProviders(
+          args[3].graph,
+        );
         return {
           ...resources,
           async qualify(tx, command) {
@@ -117,6 +121,7 @@ export async function createControlProductCommandRuntime(options: {
             ...resources.preparation,
             compiler: {
               ...resources.preparation.compiler,
+              listProviders,
               core: {
                 ...resources.preparation.compiler.core,
                 identities,

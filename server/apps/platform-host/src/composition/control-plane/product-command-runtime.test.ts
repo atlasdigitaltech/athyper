@@ -1,3 +1,4 @@
+import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
 import {
   readNativeStorageCatalogue,
   sha256,
@@ -333,6 +334,8 @@ it("rejects bootstrap resource wiring without proposal composition before databa
 it("binds compiler identities to application rows and revalidates without component composition", async () => {
   const f = await fixture(),
     native = nativeReleaseFixture();
+  native.graph.surfaces.find((s) => s.surfaceKind === "list")!.maxFilterDepth =
+    1;
   const rows = native.c.core.identities.map((i) => ({
     id: i.id,
     entity_id: i.entityId,
@@ -440,6 +443,10 @@ it("binds compiler identities to application rows and revalidates without compon
     const prepared = await resolved.policy.prepare(tx as never, input);
     expect(prepared.compiler.core.identities).toEqual(native.c.core.identities);
     expect(prepared.compiler.core.catalogues).toEqual([installedCatalogue]);
+    expect(prepared.compiler.listProviders).toEqual(
+      resolveNativeBootstrapListProviders(native.graph),
+    );
+    expect(prepared.compiler.listProviders).not.toEqual(native.c.listProviders);
     await resolved.policy.qualify(tx as never, input);
     expect(qualify).toHaveBeenCalledTimes(1);
     rows[0]!.field_key = "changed";
