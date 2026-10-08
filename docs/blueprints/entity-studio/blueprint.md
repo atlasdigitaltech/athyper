@@ -1199,6 +1199,27 @@ The source reader/installer and conditional shared-host composition are implemen
 implementation registry and approved component candidates are still required before
 activation. SQL trusts the restricted publication service to run cryptographic and
 implementation qualification; ledger booleans alone are not cryptographic evidence.
+
+The control API and worker share `createDeployedComponentQualification`. Optional
+operator deployment configuration pins `PUBLICATION_COMPONENT_DEPLOYMENT_ROOT`,
+`PUBLICATION_COMPONENT_DEPLOYMENT_MANIFEST` (relative path), and
+`PUBLICATION_COMPONENT_DEPLOYMENT_HASH` (canonical JSON SHA-256). Partial configuration
+rejects; absent configuration keeps component publication disabled. The closed
+`entity.component-deployment/1` attestation contains `plane`, exact typed `components`,
+and `files` (`path`, `sha256`) for the installed implementation and its required bundle
+dependencies. Initially only Studio is supported. This is deployment evidence, not a
+second authoring source, human approval, or automatic proof of rendering semantics.
+The deployment owner must establish the declared capability/conformance mapping before
+pinning this attestation; arbitrary source-tree inventories do not establish it.
+
+Every qualification call rechecks the pinned document, exact component declaration,
+implementation binding and all listed installed bytes, rejecting path escapes, changed
+files, duplicate registrations and unqualified planes. The same verifier runs during
+proposal/review, compile/sign/dispatch, loading and transactional installation. File/count/
+byte limits bound inspection. Runtime deployment must preserve the pinned installation
+between checks and consumption; this verifier is not an atomic filesystem deployment
+mechanism. No evidence is inferred from the mere presence of a Next development cache.
+
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.
 

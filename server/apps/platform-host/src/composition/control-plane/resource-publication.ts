@@ -1,3 +1,4 @@
+import type { ComponentQualifier } from "../shared/publication/component-qualification.js";
 import { resourceReadTransaction } from "./resource-read-transaction.js";
 import { sql, type Kysely } from "kysely";
 import type { PublicationCanonicalizer } from "@athyper/server-contract-publication";
@@ -30,6 +31,7 @@ export function createResourcePublication(options: {
     ReturnType<typeof readResourcePublicationConfiguration>
   >;
   canonical: PublicationCanonicalizer;
+  componentQualifier?: ComponentQualifier;
 }) {
   const { database, configuration, canonical } = options;
   const eligible = createCurrentResourceReviewEligibility({
@@ -39,6 +41,7 @@ export function createResourcePublication(options: {
   const qualify = createResourceSourceQualification(
     configuration.descriptorHash,
     canonical,
+    options.componentQualifier,
   );
   return createApprovedAuthoringResourcePublication({
     database,

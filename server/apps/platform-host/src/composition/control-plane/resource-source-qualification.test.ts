@@ -130,3 +130,30 @@ it("does not reuse descriptor/identity authority to qualify live-read resources"
   ).rejects.toThrow("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
   expect(query).not.toHaveBeenCalled();
 });
+
+it("routes component sources through the configured deployment qualifier and propagates rejection", async () => {
+  const payload = {
+    schema: "entity.ui-component-resource/1",
+    declaration: { tenantId: null, supportedPlanes: ["studio"] },
+    implementation: {
+      packageName: "fixture",
+      exportName: "Text",
+      runtimeKey: "text",
+      sourceHash: "a".repeat(64),
+    },
+  };
+  const source = { ...base, kind: "entity_ui_component" as const, payload };
+  const component = vi.fn(async () => {});
+  const qualify = createResourceSourceQualification(
+    descriptorHash,
+    { canonicalBytes, sha256 },
+    component,
+  );
+  await qualify(tx, source);
+  expect(component).toHaveBeenCalledWith(payload);
+  component.mockRejectedValueOnce(Error("COMPONENT_DEPLOYMENT_FILE_CHANGED"));
+  await expect(qualify(tx, source)).rejects.toThrow(
+    "COMPONENT_DEPLOYMENT_FILE_CHANGED",
+  );
+  expect(query).not.toHaveBeenCalled();
+});

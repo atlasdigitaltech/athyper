@@ -1,3 +1,4 @@
+import { createDeployedComponentQualification } from "./shared/publication/component-qualification.js";
 import { parseEntityAuthoringResource } from "@athyper/server-contract-publication";
 import {
   createResourcePublication,
@@ -5915,6 +5916,10 @@ function registerPublication(
   const resourceConfiguration = readResourcePublicationConfiguration(
     process.env,
   );
+  const componentQualifier = createDeployedComponentQualification(process.env, {
+    canonicalBytes,
+    sha256,
+  });
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
   const { projections, orchestrators, loaders } = createPublicationTargets({
     authorityDatabase,
@@ -5928,6 +5933,13 @@ function registerPublication(
       verifier: container.adapters.publicationVerifier!,
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
+      ...(componentQualifier
+        ? {
+            uiComponents: {
+              qualify: async (envelope) => componentQualifier(envelope.payload),
+            },
+          }
+        : {}),
       ...(resourceConfiguration
         ? {
             authoringResources: {
@@ -5976,6 +5988,7 @@ function registerPublication(
           database: authorityTransaction,
           configuration: resourceConfiguration,
           canonical: { canonicalBytes, sha256 },
+          componentQualifier,
         });
         const source = await policy.load(deployment.sourceReleaseId);
         if (
@@ -6269,6 +6282,10 @@ function registerPublication(
                 database,
                 configuration: resourceConfiguration,
                 canonical: { canonicalBytes, sha256 },
+                componentQualifier: createDeployedComponentQualification(
+                  process.env,
+                  { canonicalBytes, sha256 },
+                ),
               }),
           }
         : {}),

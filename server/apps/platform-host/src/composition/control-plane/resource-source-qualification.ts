@@ -1,3 +1,4 @@
+import type { ComponentQualifier } from "../shared/publication/component-qualification.js";
 import { sql, type Kysely } from "kysely";
 import {
   parseEntityAuthoringResource,
@@ -9,6 +10,7 @@ import { validateLegacyFieldIdentityPlan } from "@athyper/server-plane-studio-me
 export function createResourceSourceQualification(
   descriptorHash: string,
   canonical: PublicationCanonicalizer,
+  componentQualifier?: ComponentQualifier,
 ) {
   if (!/^[a-f0-9]{64}$/.test(descriptorHash))
     throw Error("RESOURCE_DESCRIPTOR_HASH_REQUIRED");
@@ -26,8 +28,12 @@ export function createResourceSourceQualification(
         throw Error("RESOURCE_DESCRIPTOR_CHANGED");
       return;
     }
-    if (payload.schema === "entity.ui-component-resource/1")
-      throw Error("RESOURCE_COMPONENT_QUALIFICATION_REQUIRED");
+    if (payload.schema === "entity.ui-component-resource/1") {
+      if (!componentQualifier)
+        throw Error("RESOURCE_COMPONENT_QUALIFICATION_REQUIRED");
+      await componentQualifier(payload);
+      return;
+    }
     if (payload.schema === "entity.installed-live-read-resource/1")
       throw Error("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
     if (payload.authoringSchemaHash !== descriptorHash)

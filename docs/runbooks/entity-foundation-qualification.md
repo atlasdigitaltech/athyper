@@ -253,6 +253,22 @@ F6/F8/F9 live-read composition remain open. No replacement draft/publication/act
 
 ### Restricted component installer and host evidence adapter — 8 October
 
+Continuation: the control API proposal/review qualifier and worker compile/sign/dispatch,
+loader and installer now share the optional pinned deployment-evidence verifier. It
+requires an exact typed component source and hashes every listed installed bundle file
+on each call. Missing configuration stays disabled; changed hashes, capability escalation,
+path/symlink escapes, duplicate registrations and additional unqualified planes reject.
+`PUBLICATION_COMPONENT_DEPLOYMENT_{ROOT,MANIFEST,HASH}` is operator configuration, not an
+HTTP input or resource approval. Its closed attestation schema is documented in the
+blueprint's component catalogue section. An operator-pinned capability attestation must
+be backed by renderer conformance evidence; tests of the verifier do not establish that
+attestation for the actual candidates.
+
+DEV inspection found Studio running from a writable bind-mounted source checkout with a
+Next development cache. No pinned deployed component attestation was installed. Therefore
+this continuation does not enable the qualifier, approve candidates, or claim deployed
+renderer/F6/F8/F9 qualification. The package-local candidate hashes remain review inputs.
+
 `createComponentCatalogueInstaller` now binds the existing publication loader to the
 transactional catalogue installer. It reads exact active/reviewed source evidence through
 a restricted routine, verifies source/payload/artifact hashes, re-verifies the retained

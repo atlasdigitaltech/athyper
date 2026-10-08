@@ -1,3 +1,4 @@
+import { createDeployedComponentQualification } from "../composition/shared/publication/component-qualification.js";
 import { createResourceVerifier } from "../composition/control-plane/resource-verifier.js";
 import { createControlResourceReview } from "../composition/control-plane/resource-review.js";
 import { createResourceSourceQualification } from "../composition/control-plane/resource-source-qualification.js";
@@ -293,6 +294,10 @@ export async function startControlApi() {
                   qualify: createResourceSourceQualification(
                     config.resourceProducer.descriptorHash,
                     { canonicalBytes, sha256 },
+                    createDeployedComponentQualification(process.env, {
+                      canonicalBytes,
+                      sha256,
+                    }),
                   ),
                 }),
               }
