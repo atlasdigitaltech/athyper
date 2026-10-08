@@ -623,6 +623,17 @@ Compatibility compares the first and all retained published contracts, including
 
 Retirement/replacement is a governed lifecycle operation applied after the exact authorizing release is approved and sealed; ordinary draft saves cannot change these server-owned columns. Reserved and active identities have no retirement payload; reserved has no first_release_id and active/retired require one. New enrollment in a retired identity rejects; existing values and immutable releases retain the original identity and are not reinterpreted or cascade-deleted. Retirement alone does not revoke an otherwise valid pinned historical reader; revocation remains a separate control. Replacing a field never copies/converts values implicitly. The replacement must have its own qualified definition, and any value conversion is an explicit governed operation. The draft revision replacement_field_id is the sole authored successor proposal; identity.replacement_identity_id is server-derived from that exact reviewed proposal only when the authorizing retirement release commits. It is never independently editable. Before commitment, show proposed versus committed successor separately; neither compiler nor UI silently overwrites a historical revision from current identity state. Publication verifies proposal identity, chain and predecessor under the identity lock; conflicting concurrent proposals reject. This is proposal versus committed lifecycle evidence, not two writable authorities. Field hub › Lifecycle selects a qualified replacement proposal; Technical details shows committed evidence.
 
+**Field trigger compatibility:** Forward migration `52_native_field_contract_trigger.sql`
+retains the original legacy field-contract validator and introduces a scoped native branch
+only for an exact entity/tenant/change-set match with native layout version 1 or 2. That
+branch rejects non-NULL retired key/JSON payloads and relies on the mandatory deferred
+native graph guards for typed completeness. The migration pins its predecessor definition
+and requires the enabled deferred snapshot guard; it does not remove cutover checks.
+Native NULL support must also have a compatible uniqueness disposition: the historical
+`entity_field_key_uq` uses NULLS NOT DISTINCT and cannot admit multiple native NULL legacy
+keys. Preserve legacy key uniqueness and canonical native identity/key uniqueness in a
+forward replacement before declaring whole-graph cutover qualified.
+
 ### `metadata.entity_field_identity_adoption`
 
 Server-owned evidence for explicit reserved-identity reuse by a fresh native product

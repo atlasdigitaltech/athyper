@@ -251,6 +251,35 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Native field-trigger compatibility installed — 8 October
+
+Forward migration `20261008_entity_native_field_contract_trigger.sql` is installed in
+DEV with migration-ledger replay. It pins the exact legacy function definition, requires
+the typed/snapshot guard infrastructure and an enabled deferred field snapshot trigger,
+and changes only the explicitly native-root branch. Native fields require all retired
+field JSON/key columns to be NULL; legacy roots retain the original contract validation.
+It changes no authoring rows, grants, protected state or pending cutover checks.
+SHA-256: `4ea65e290ad185254a2895897f747696a0ef7256f9514a3e3dd315a123593fd5`.
+
+The canonical restored-DEV rehearsal under the application role now passes the legacy
+trigger. Its next failure is `entity_field_key_uq`: the legacy NULLS NOT DISTINCT
+constraint treats multiple native NULL `field_key` values as duplicates within a draft.
+A forward constraint disposition must preserve legacy key uniqueness and native stable
+identity/key uniqueness before cutover. Pending checks were removed only in that disposable
+copy to reach downstream validation; its synthetic admission/resources are not deployed
+qualification. The transaction rolled back. No replacement drafts or adoption rows were
+committed in DEV; no publication or activation occurred.
+
+Validation: the opt-in canonical PostgreSQL constraint suite passes, including the actual
+legacy trigger body, native NULL acceptance, native legacy-payload rejection, unchanged
+legacy validation, disabled guard rejection and unexpected predecessor rejection. Its
+trigger probe isolates BEFORE validation; aggregate deferred-validation cases are tested
+separately in the same suite. All 21 migration-runner tests and migration layout pass
+(164 classified files, 156 retained SQL). Installation/replay receipts report unchanged
+authorization and activation heads in `native-field-trigger-{rehearsal,installation,replay}.json`
+in the existing private backup directory. Installed proposal resolution and deployed
+F6/F8/F9 remain unfinished; this correction does not establish whole-graph qualification.
+
 ### Fresh-root identity adoption installed — 8 October
 
 `native-bootstrap-identities.ts` now runs inside the canonical bootstrap after root

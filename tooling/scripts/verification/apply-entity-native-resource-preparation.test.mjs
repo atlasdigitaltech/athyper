@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  nativeFieldContractTriggerMigrationName,
   nativeIdentityAdoptionMigrationName,
   productCreationEntityReadMigrationName,
   nativeBootstrapPrivilegesMigrationName,
@@ -644,6 +645,57 @@ test("identity adoption retains introduction/history and all cutover checks", ()
   );
   assert.match(
     preparationSql(source, digest, true, nativeIdentityAdoptionMigrationName),
+    /COMMIT;/,
+  );
+});
+
+test("native field trigger replaces legacy payload validation only behind typed guards", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/52_native_field_contract_trigger.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        nativeFieldContractTriggerMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  for (const guard of [
+    "NATIVE_FIELD_CONTRACT_PREDECESSOR_CHANGED",
+    "NATIVE_FIELD_TYPED_GUARDS_REQUIRED",
+    "NATIVE_FIELD_LEGACY_PAYLOAD_FORBIDDEN",
+    "c.native_core_layout_version IN (1,2)",
+    "c.tenant_id IS NOT DISTINCT FROM NEW.tenant_id",
+    "tgdeferrable AND tginitdeferred",
+  ])
+    assert.ok(canonical.includes(guard));
+  assert.doesNotMatch(
+    canonical,
+    /DROP CONSTRAINT|DISABLE TRIGGER|GRANT|requires_mfa/,
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      nativeFieldContractTriggerMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      nativeFieldContractTriggerMigrationName,
+    ),
     /COMMIT;/,
   );
 });

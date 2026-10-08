@@ -2140,6 +2140,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/51_native_identity_adoption.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_field_contract_trigger.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_field_contract_trigger.sql",
+      "sha256": "4ea65e290ad185254a2895897f747696a0ef7256f9514a3e3dd315a123593fd5",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Keep legacy JSON field validation for legacy roots and delegate native roots to installed typed graph guards; no cutover or data rewrite.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/52_native_field_contract_trigger.sql"
+      ]
     }
   ]
 }

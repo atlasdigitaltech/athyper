@@ -471,6 +471,53 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
       query(
         `BEGIN;SAVEPOINT invalid_edit;UPDATE metadata.entity_ai_profile SET entity_id='${randomUUID()}';ROLLBACK TO SAVEPOINT invalid_edit;${aggregateCheck}COMMIT;`,
       );
+      // Exercise the actual legacy trigger body and forward replacement against
+      // canonical root/guard definitions. The probe isolates the BEFORE trigger;
+      // aggregate invalid-row/commit checks above remain separate evidence.
+      for (const fn of [
+        "fn_jsonb_object_has_only_keys",
+        "fn_entity_key_reference_valid",
+        "trg_validate_entity_field_contract",
+      ]) {
+        const declaration = read("07_functions.sql").match(
+          new RegExp(
+            "CREATE OR REPLACE FUNCTION metadata\\." +
+              fn +
+              "\\([\\s\\S]*?\\$\\$;",
+          ),
+        );
+        expect(declaration).not.toBeNull();
+        query(declaration![0]);
+      }
+      reject(
+        "ALTER TABLE metadata.entity_field DISABLE TRIGGER native_snapshot_final_guard;" +
+          read("52_native_field_contract_trigger.sql"),
+        "NATIVE_FIELD_TYPED_GUARDS_REQUIRED",
+      );
+      query(read("52_native_field_contract_trigger.sql"));
+      reject(
+        read("52_native_field_contract_trigger.sql"),
+        "NATIVE_FIELD_CONTRACT_PREDECESSOR_CHANGED",
+      );
+      query(
+        "CREATE TABLE metadata.field_trigger_probe AS SELECT * FROM metadata.entity_field WITH NO DATA;CREATE TRIGGER probe BEFORE INSERT ON metadata.field_trigger_probe FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_field_contract();",
+      );
+      const probe = (root: string, payload: string) =>
+        `INSERT INTO metadata.field_trigger_probe(entity_id,change_set_id,data_type,type_config) VALUES('${id}','${root}','string',${payload});`;
+      query(probe(draft, "NULL"));
+      reject(
+        probe(draft, "'{}'::jsonb"),
+        "NATIVE_FIELD_LEGACY_PAYLOAD_FORBIDDEN",
+      );
+      reject(
+        probe(randomUUID(), "NULL"),
+        "type_config contains properties not allowed",
+      );
+      query(probe(randomUUID(), `'{"kind":"string"}'::jsonb`));
+      reject(
+        probe(randomUUID(), `'{"kind":"string","unexpected":true}'::jsonb`),
+        "type_config contains properties not allowed",
+      );
     } finally {
       if (created) docker("rm", "-f", name);
     }
