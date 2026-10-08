@@ -114,6 +114,7 @@ export interface EntityFieldDescriptor {
    */
   readonly retentionPolicyCode?: string;
   readonly validation?: Readonly<Record<string, unknown>>;
+  readonly detail?: { readonly rendererKey: "text" };
   readonly list?: {
     readonly label?: string;
     /** Human-readable section used to organize large field catalogues. */
@@ -245,7 +246,10 @@ export interface EntityListCalendarDescriptor {
 
 /** Compiled projection of the surface's binding_kind = summary placements. */
 export interface EntityListCardContentDescriptor {
-  readonly fields: readonly { readonly field: string; readonly rendererKey?: string }[];
+  readonly fields: readonly {
+    readonly field: string;
+    readonly rendererKey?: string;
+  }[];
 }
 
 export interface EntityListPresentationDescriptor {
@@ -382,7 +386,9 @@ export interface EntityRuntimeDescriptor {
   readonly authorizationRuntime?: EntityAuthorizationRuntime;
   readonly authorization?: import("./entity-authorization.js").EntityAuthorizationProfileV1;
   readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;
-  readonly schema: "athyper.entity-runtime-descriptor/1.0" | "athyper.entity-runtime-descriptor/1.1";
+  readonly schema:
+    | "athyper.entity-runtime-descriptor/1.0"
+    | "athyper.entity-runtime-descriptor/1.1";
   readonly entityCode: string;
   readonly detailRouteTemplate?: string;
   readonly planeKey: PlaneKey;

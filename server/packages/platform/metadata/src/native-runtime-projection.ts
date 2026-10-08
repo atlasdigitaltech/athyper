@@ -324,6 +324,22 @@ export function compileNativeRuntimeProjection(input: {
       binding.status !== "deprecated" &&
       binding.entitySurfaceId === defaultSurface?.id,
   );
+  const detailSurfaces = rows("surfaces").filter(
+    (surface) =>
+      surface.surfaceKind === "detail" && surface.status !== "deprecated",
+  );
+  const detailDefaults = detailSurfaces.filter((surface) => surface.isDefault);
+  if (
+    detailDefaults.length > 1 ||
+    (detailSurfaces.length > 1 && detailDefaults.length !== 1)
+  )
+    throw Error("NATIVE_PROJECTION_DETAIL_SURFACE_AMBIGUOUS");
+  const detailSurface = detailDefaults[0] ?? detailSurfaces[0];
+  const detailBindings = rows("surfaceFieldBindings").filter(
+    (binding) =>
+      binding.status !== "deprecated" &&
+      binding.entitySurfaceId === detailSurface?.id,
+  );
   const intakeFlows = compileEntityIntakeFlows(native);
   const intakeSurfaces = compileEntityIntakeSurfaces(native);
   const runtimeInputs = new Set(
@@ -454,7 +470,18 @@ export function compileNativeRuntimeProjection(input: {
             (!keyReference && !["uuid", "reference"].includes(field.dataType)))
         )
           throw Error("NATIVE_PROJECTION_REFERENCE_ADAPTER_REQUIRED");
+        const detailMatches = detailBindings.filter(
+          (binding) => binding.entityFieldId === field.id,
+        );
+        if (detailMatches.length > 1)
+          throw Error("NATIVE_PROJECTION_DETAIL_BINDING_AMBIGUOUS");
+        const detailDisplay = detailMatches[0]?.displayConfig as
+          Record<string, unknown> | undefined;
+        const detailRenderer = detailDisplay?.rendererKey;
         return {
+          ...(detailRenderer === undefined
+            ? {}
+            : { detail: { rendererKey: detailRenderer } }),
           ...(keyReference ? { keyReference } : {}),
           ...(reference || canonicalReference
             ? {

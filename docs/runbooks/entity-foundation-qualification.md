@@ -189,6 +189,28 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Explicit detail field-renderer binding — 8 October
+
+The native runtime projection now carries detail bindings independently of list bindings.
+The metadata parser validates the closed detail selection, the records service copies it
+only for authorized detail fields, and the public descriptor/parser and shared record
+fields renderer retain it. Unknown renderers and unsupported field kinds reject; ambiguous
+detail defaults and duplicate placements reject instead of selecting an arbitrary binding.
+The bounded text renderer preserves escaped formatted content and the existing reference
+link element. No new permission, MFA behavior or entity-specific dispatch was introduced.
+
+Validation: 206 metadata tests passed (two opt-in skips), 30 records-service tests
+passed, and eight renderer checks passed. Metadata, records and form/detail typechecks
+and changed-file formatting passed. DEV still reports revision 4 for both drafts.
+
+Evidence: metadata projection tests cover separate list/detail choices and ambiguous or
+unsupported bindings; records-service tests cover authorized delivery and exclusion of a
+denied field; foundation renderer tests cover escaping, Unicode and reference preservation.
+This is source implementation evidence, not deployed component qualification. The installed
+text component remains list-only. The control API still lacks nativeBootstrap composition;
+the live-read resource qualifier explicitly rejects absent semantic qualification.
+No proposal resolver, F6/F8/F9 adapter or new Entity activation is claimed by this change.
+
 ### Native bootstrap control boundary — 8 October
 
 The existing product reference command service and control host now accept an optional

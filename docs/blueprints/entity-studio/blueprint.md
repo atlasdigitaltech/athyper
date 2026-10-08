@@ -1224,9 +1224,16 @@ served renderer bytes against that bundle; the runbook records its exact evidenc
 The three bounded component candidates have independent approval and active Studio
 catalogue projections (exact release/deployment IDs are recorded in the runbook).
 The initial explicit text registration is
-string/list-only; the current detail field descriptor cannot express that renderer
-binding, so detail text capability remains an implementation gap rather than an assumed
-fallback. Serving this bundle does not qualify native authoring or F6/F8/F9.
+string/list-only. The shared reader now preserves explicit detail field display bindings
+separately from list presentation, through the records descriptor and shared detail
+renderer. Multiple detail surfaces require an unambiguous default; duplicate field
+bindings and unsupported renderers fail explicitly. The bounded text reader accepts
+string display and framework-resolved reference content; it does not format technical
+identities as labels or alter field authorization. Absence retains legacy rendering,
+but never selects a list renderer as a detail default. This implementation does not widen
+the installed list-only component resource. A separately reviewed detail-capable resource
+and deployed conformance evidence remain required. Serving the existing bundle does not
+qualify native authoring or F6/F8/F9.
 
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.

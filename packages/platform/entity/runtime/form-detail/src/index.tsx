@@ -87,3 +87,5 @@ export type {
   RecordRevealHandler,
   RecordActionHandler,
 } from "./record/record-contracts";
+
+export { renderDetailFieldValue } from "./detail-field-renderer";

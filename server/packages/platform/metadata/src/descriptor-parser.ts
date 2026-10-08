@@ -1,6 +1,19 @@
-import { parsePublishedCardContent, parsePublishedListBoard, validatePublishedListBoard } from "./list-board-descriptor.js";
-import { parsePublishedListCalendar, validatePublishedListCalendar } from "./list-calendar-descriptor.js";
-import { validateEntityLiveReadContractV1, parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
+import { parseDetailFieldRenderer } from "@athyper/contract-platform-entity-runtime";
+import {
+  parsePublishedCardContent,
+  parsePublishedListBoard,
+  validatePublishedListBoard,
+} from "./list-board-descriptor.js";
+import {
+  parsePublishedListCalendar,
+  validatePublishedListCalendar,
+} from "./list-calendar-descriptor.js";
+import {
+  validateEntityLiveReadContractV1,
+  parseStructuredProjection,
+  validateDirectoryScopeFields,
+  parseEntityKeyReference,
+} from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
   parseRecordMutationPolicy,
@@ -18,7 +31,10 @@ import {
 } from "@athyper/server-contract-metadata";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityAuthorizationRuntime } from "@athyper/server-contract-metadata";
-import { parseEntityAiDescriptor, parseEntityAiManifestBindings } from "@athyper/server-contract-metadata";
+import {
+  parseEntityAiDescriptor,
+  parseEntityAiManifestBindings,
+} from "@athyper/server-contract-metadata";
 import { parseEntityAuthorizationProfile } from "@athyper/server-contract-metadata";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import {
@@ -58,13 +74,18 @@ export function parseEntityRuntimeDescriptor(
 ): EntityRuntimeDescriptor {
   const value = object(row.compiled_json, "compiled_json");
   const schema = value["schema"];
-  if (schema !== "athyper.entity-runtime-descriptor/1.0" && schema !== "athyper.entity-runtime-descriptor/1.1")
+  if (
+    schema !== "athyper.entity-runtime-descriptor/1.0" &&
+    schema !== "athyper.entity-runtime-descriptor/1.1"
+  )
     throw new Error("Unsupported entity descriptor schema");
   const liveReadContract = value["liveReadContract"];
   if (schema === "athyper.entity-runtime-descriptor/1.1") {
     validateEntityLiveReadContractV1(liveReadContract);
-    if (liveReadContract.source.releaseId !== row.release_id ||
-        liveReadContract.source.contractHash !== row.entity_contract_hash)
+    if (
+      liveReadContract.source.releaseId !== row.release_id ||
+      liveReadContract.source.contractHash !== row.entity_contract_hash
+    )
       throw new TypeError("ENTITY_LIVE_READ_SOURCE_MISMATCH");
   } else if (liveReadContract !== undefined) {
     throw new TypeError("ENTITY_LIVE_READ_SCHEMA_TRANSITION_REQUIRED");
@@ -112,9 +133,14 @@ export function parseEntityRuntimeDescriptor(
         key,
         {
           code: string(item["code"], `operations.${key}.code`),
-          ...(item["permissionCode"] === undefined ? {} : {
-            permissionCode: string(item["permissionCode"], `operations.${key}.permissionCode`),
-          }),
+          ...(item["permissionCode"] === undefined
+            ? {}
+            : {
+                permissionCode: string(
+                  item["permissionCode"],
+                  `operations.${key}.permissionCode`,
+                ),
+              }),
           ...(item["authorizationMode"] === undefined
             ? {}
             : {
@@ -194,7 +220,13 @@ export function parseEntityRuntimeDescriptor(
     )
   )
     throw Error("Record predicate requires a stored field");
-  const formPresentation = value["formPresentation"] === undefined ? undefined : parseEntityFormPresentation(value["formPresentation"], fields.map(field => field.key));
+  const formPresentation =
+    value["formPresentation"] === undefined
+      ? undefined
+      : parseEntityFormPresentation(
+          value["formPresentation"],
+          fields.map((field) => field.key),
+        );
   const parsedRecordPresentation =
     value["recordPresentation"] === undefined
       ? undefined
@@ -205,11 +237,15 @@ export function parseEntityRuntimeDescriptor(
   // Omit them here too, before executable relationship validation: never infer
   // a join or resurrect their retired rendering path. Explicit bindings remain
   // strict, and the authoring compiler still rejects unbound new declarations.
-  const recordPresentation: ReturnType<typeof parseEntityRecordPresentation> | undefined =
+  const recordPresentation:
+    ReturnType<typeof parseEntityRecordPresentation> | undefined =
     parsedRecordPresentation?.entityRelationships === undefined &&
-    parsedRecordPresentation?.related?.every(profile => profile.relationshipKey === undefined)
+    parsedRecordPresentation?.related?.every(
+      (profile) => profile.relationshipKey === undefined,
+    )
       ? (() => {
-          const { related: _legacyHints, ...presentation } = parsedRecordPresentation;
+          const { related: _legacyHints, ...presentation } =
+            parsedRecordPresentation;
           return presentation;
         })()
       : parsedRecordPresentation;
@@ -283,9 +319,14 @@ export function parseEntityRuntimeDescriptor(
     value["lifecycle"] === undefined
       ? undefined
       : object(value["lifecycle"], "lifecycle");
-  const directoryScope = value["directoryScope"] === undefined
-    ? undefined : parseEntityDirectoryScope(value["directoryScope"]);
-  if (directoryScope?.fieldBinding && (planeKey !== "neon" || !storage["tenantField"]))
+  const directoryScope =
+    value["directoryScope"] === undefined
+      ? undefined
+      : parseEntityDirectoryScope(value["directoryScope"]);
+  if (
+    directoryScope?.fieldBinding &&
+    (planeKey !== "neon" || !storage["tenantField"])
+  )
     throw new TypeError("Directory field scope requires Neon tenant storage");
   validateDirectoryScopeFields(directoryScope, fields);
   const releaseNo = Number(row.release_no);
@@ -293,7 +334,12 @@ export function parseEntityRuntimeDescriptor(
     throw new Error("Invalid descriptor release number");
   return Object.freeze({
     schema,
-    ...(schema === "athyper.entity-runtime-descriptor/1.1" ? { liveReadContract: liveReadContract as import("@athyper/server-contract-metadata").EntityLiveReadContractV1 } : {}),
+    ...(schema === "athyper.entity-runtime-descriptor/1.1"
+      ? {
+          liveReadContract:
+            liveReadContract as import("@athyper/server-contract-metadata").EntityLiveReadContractV1,
+        }
+      : {}),
     ...(value["referenceCapability"] === COMMON_REFERENCE_VIEW_PERMISSION
       ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION }
       : {}),
@@ -352,9 +398,15 @@ export function parseEntityRuntimeDescriptor(
     ...(authorization ? { authorization } : {}),
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
-    ...(value["aiManifestBindings"] === undefined ? {} : {
-      aiManifestBindings: parseEntityAiManifestBindings(value["aiManifestBindings"], ai, planeKey),
-    }),
+    ...(value["aiManifestBindings"] === undefined
+      ? {}
+      : {
+          aiManifestBindings: parseEntityAiManifestBindings(
+            value["aiManifestBindings"],
+            ai,
+            planeKey,
+          ),
+        }),
     ...(recordPresentation ? { recordPresentation } : {}),
     ...(formPresentation ? { formPresentation } : {}),
     ...(ownerAccess ? { ownerAccess } : {}),
@@ -887,9 +939,15 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
           ),
         }),
     ...(dataOperations ? { dataOperations } : {}),
-    ...(item["board"] === undefined ? {} : { board: parsePublishedListBoard(item["board"]) }),
-    ...(item["cardContent"] === undefined ? {} : { cardContent: parsePublishedCardContent(item["cardContent"]) }),
-    ...(item["calendar"] === undefined ? {} : { calendar: parsePublishedListCalendar(item["calendar"]) }),
+    ...(item["board"] === undefined
+      ? {}
+      : { board: parsePublishedListBoard(item["board"]) }),
+    ...(item["cardContent"] === undefined
+      ? {}
+      : { cardContent: parsePublishedCardContent(item["cardContent"]) }),
+    ...(item["calendar"] === undefined
+      ? {}
+      : { calendar: parsePublishedListCalendar(item["calendar"]) }),
   };
 }
 
@@ -1109,15 +1167,24 @@ function parseField(raw: unknown): EntityFieldDescriptor {
     item["keyReference"] === undefined
   )
     throw new Error("Entity references require a UUID field");
-  if (item["structuredProjection"] !== undefined && (
-    type !== "json" || item["filterable"] === true || item["sortable"] === true ||
-    item["searchable"] === true || (item["list"] && typeof item["list"] === "object" &&
-      Reflect.get(item["list"], "groupable") === true)
-  )) throw new TypeError("Structured projection requires non-queryable JSON field");
+  if (
+    item["structuredProjection"] !== undefined &&
+    (type !== "json" ||
+      item["filterable"] === true ||
+      item["sortable"] === true ||
+      item["searchable"] === true ||
+      (item["list"] &&
+        typeof item["list"] === "object" &&
+        Reflect.get(item["list"], "groupable") === true))
+  )
+    throw new TypeError(
+      "Structured projection requires non-queryable JSON field",
+    );
   const writableOn = array(item["writableOn"], "field.writableOn").map(
     (entry) => string(entry, "field.writableOn"),
   );
-  if (item["structuredProjection"] !== undefined && writableOn.length) throw new TypeError("Structured projection is read-only");
+  if (item["structuredProjection"] !== undefined && writableOn.length)
+    throw new TypeError("Structured projection is read-only");
   if (writableOn.some((entry) => entry !== "create" && entry !== "patch"))
     throw new Error("Invalid field write mode");
   const listValue =
@@ -1234,9 +1301,31 @@ function parseField(raw: unknown): EntityFieldDescriptor {
     throw new Error(
       `Duplicate aggregation configured for field: ${item["key"]}`,
     );
-  const keyReference = item["keyReference"] === undefined ? undefined : parseEntityKeyReference(item["keyReference"], String(item["key"]));
-  if (keyReference && item["referenceTargetEntity"] !== keyReference.targetEntity) throw Error("ENTITY_KEY_REFERENCE_TARGET_MISMATCH");
+  const detail =
+    item["detail"] === undefined
+      ? undefined
+      : object(item["detail"], "field.detail");
+  if (detail && Object.keys(detail).some((key) => key !== "rendererKey"))
+    throw new TypeError("DETAIL_FIELD_RENDERER_UNSUPPORTED");
+  const detailPresentation = detail
+    ? {
+        rendererKey: parseDetailFieldRenderer(
+          detail["rendererKey"],
+          item["type"],
+        ),
+      }
+    : undefined;
+  const keyReference =
+    item["keyReference"] === undefined
+      ? undefined
+      : parseEntityKeyReference(item["keyReference"], String(item["key"]));
+  if (
+    keyReference &&
+    item["referenceTargetEntity"] !== keyReference.targetEntity
+  )
+    throw Error("ENTITY_KEY_REFERENCE_TARGET_MISMATCH");
   return {
+    ...(detailPresentation ? { detail: detailPresentation } : {}),
     ...(keyReference ? { keyReference } : {}),
     ...(item["referenceTargetEntity"] === undefined
       ? {}
@@ -1287,7 +1376,13 @@ function parseField(raw: unknown): EntityFieldDescriptor {
         }),
     key: identifier(item["key"], "field.key"),
     storagePath: identifier(item["storagePath"], "field.storagePath"),
-    ...(item["structuredProjection"] === undefined ? {} : {structuredProjection:parseStructuredProjection(item["structuredProjection"])}),
+    ...(item["structuredProjection"] === undefined
+      ? {}
+      : {
+          structuredProjection: parseStructuredProjection(
+            item["structuredProjection"],
+          ),
+        }),
     type,
     required: item["required"] === true,
     writableOn: writableOn as ("create" | "patch")[],
