@@ -3303,7 +3303,7 @@ Selecting a surface in the Experience surface tree opens only the editors applic
 | Layout tree | entity_surface_section rows; bindings of kind field; entity_surface_component_field | — | ✓ | ✓ | ✓ (sectioned) | — |
 | Columns and views | entity_surface_view, entity_surface_view_field; identity_field_id; list field bindings | ✓ | — | — | ✓ (collection) | — |
 | Cards and summaries | binding_kind=summary placements and their display/format selections | qualified card/summary mode | — | — | qualified collection card/summary mode | — |
-| Board (proposed, [Entity list Board blueprint](../entity-list-board/blueprint.md)) | entity_surface_board_lane_field, entity_surface_board_lane, entity_surface_board_lane_value rows | qualified `board` mode | — | — | — (collection from Board Phase 2) | — |
+| Board (proposed, [Entity list Board blueprint](../entity-list-board/blueprint.md)) | entity_surface_board_lane_field, entity_surface_board_lane (including tone), entity_surface_board_lane_value rows; shows supported_modes read-only (its home is the List settings panel, section 7.7) | ✓ (qualified `board` mode) | — | — | — (collection from Board Phase 2) | — |
 | Filters | binding filter component/operators; entity_predicate purpose list_filter | ✓ | — | — | ✓ (collection) | — |
 | Form behavior | derived create/edit modes (read-only, from submit Actions); meaningful_for_form; entity_predicate purpose editability | — | — | ✓ | — | — |
 | Actions | entity_surface_operation (targets valid for the kind) | toolbar/row/selection | primary/secondary/overflow | submit | collection: row/selection; sectioned: none | — |
