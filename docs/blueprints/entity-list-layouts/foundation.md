@@ -86,3 +86,16 @@ Board and Cards share one card resolution, in this precedence:
 Sort and column comparisons must stay order-sensitive. Normalizing them would hide a reorder that changes the request or the display. The test `tests/foundation/entity-list-draft-comparison.test.ts` (`69b12937b`) locks this against the comparators in `draft-comparison.ts`.
 
 **Clarification (8 October 2026, after approval).** "Normalized" in the table means shape and value normalization, not order. `parseSaveableListState` and `filterInputValue` put values into one form, but neither reorders filters. So today all four comparisons are order-sensitive in practice. For filters this errs safe: reordering filters alone can show "modified", but a real change is never hidden. The rule permits order normalization for filters and saved-view state; it does not require it. This corrects the table's description and changes neither the rule nor the code.
+
+## 7. Renderer traits (added 9 October 2026; describes as-built behaviour)
+
+Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now also carries each renderer's traits: what the layout takes over from the shared list chrome. A new layout declares its traits in the registry; the list reads `listModeTraits(mode)` and never compares mode names for these decisions. The trait record is required for every renderer kind, so a new layout cannot be registered without declaring them, and a mode without a renderer gets no traits.
+
+| Trait              | When true                                                                                                                                       | Table | Cards | Board | Calendar | Gantt |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----- | ----- | -------- | ----- |
+| `adaptsWhenNarrow` | The layout adapts itself at narrow widths instead of becoming cards                                                                             | no    | no    | yes   | yes      | yes   |
+| `ownPaging`        | The list pagination is hidden; the layout pages its own rows                                                                                    | no    | no    | yes   | yes      | yes   |
+| `ownGrouping`      | The Group drawer is hidden; a saved group stays for Table and Cards                                                                             | no    | no    | yes   | yes      | yes   |
+| `ownCounts`        | The list title shows no record count, because the page query is only one of the layout's streams; the layout reports its counts under section 5 | no    | no    | no    | yes      | yes   |
+
+`ownCounts` is where the section 5 title rule lives in code (`7314e12cd`, `9eb1ae1b6`). Layout-specific code that is not policy stays per layout: each layout's own page-query inputs and the choice of its component.
