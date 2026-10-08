@@ -8,6 +8,7 @@ export const ENTITY_LIST_VIEW_MODES = Object.freeze([
   "spreadsheet",
   "calendar",
   "gantt",
+  "tree",
 ] as const);
 
 /** Modes that have a shared renderer and server projection today. Authoring

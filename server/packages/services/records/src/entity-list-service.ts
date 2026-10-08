@@ -2,6 +2,7 @@ import { MAX_LIST_PAGE_SIZE } from "./list-limits.js";
 import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
 import { resolveListGantt } from "./list-gantt.js";
+import { resolveListTree } from "./list-tree.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -1054,6 +1055,10 @@ export function createEntityListService(options: {
           id: String(rawId),
           ...(version !== undefined ? { version } : {}),
           values: Object.freeze(values),
+          // Tree rows (blueprint section 5.3): hasChildren on every row of a
+          // hierarchy response, parentOutsideView on every orphan row.
+          ...(result.hasChildren ? { hasChildren: result.hasChildren[index] === true } : {}),
+          ...(query.hierarchy === "orphans" ? { parentOutsideView: true as const } : {}),
         });
       });
       return Object.freeze({
@@ -1072,6 +1077,7 @@ export function createEntityListService(options: {
           sort: query.sort ?? [],
           group: query.group ?? null,
           groupsOnly: query.groupsOnly === true,
+          hierarchy: query.hierarchy ?? null,
           search: query.search ?? null,
           countMode: query.countMode ?? "none",
         }),
@@ -1468,6 +1474,11 @@ export function compileEntityListDescriptor(
     ganttResolution && "gantt" in ganttResolution
       ? ganttResolution.gantt
       : undefined;
+  const treeResolution = descriptor.hierarchy
+    ? resolveListTree({ hierarchy: descriptor.hierarchy, fields: ordered, masked })
+    : undefined;
+  const tree =
+    treeResolution && "tree" in treeResolution ? treeResolution.tree : undefined;
   const { supported: modes, unavailable: unavailableModes } = resolveModes(
     descriptor.listPresentation?.supportedModes,
     {
@@ -1487,6 +1498,12 @@ export function compileEntityListDescriptor(
         ganttResolution && "unavailable" in ganttResolution
           ? ganttResolution.unavailable
           : gantt
+            ? undefined
+            : "LIST_MODE_UNSUPPORTED",
+      tree:
+        treeResolution && "unavailable" in treeResolution
+          ? treeResolution.unavailable
+          : tree
             ? undefined
             : "LIST_MODE_UNSUPPORTED",
     },
@@ -1541,6 +1558,7 @@ export function compileEntityListDescriptor(
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
+    ...(tree ? { tree } : {}),
     ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
     filterPresentation,
@@ -1603,6 +1621,7 @@ export function compileEntityListDescriptor(
       ...(board ? { board } : {}),
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
+      ...(tree ? { tree } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey

@@ -5,6 +5,7 @@ export * from "./board";
 export * from "./date-range";
 export * from "./calendar";
 export * from "./gantt";
+export * from "./tree";
 export * from "./experience";
 export * from "./parsers";
 export * from "./url-state";

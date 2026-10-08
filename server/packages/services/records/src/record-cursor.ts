@@ -43,6 +43,8 @@ function binding(input: RecordRepositoryListInput): string {
     ...(input.recordIds!==undefined?{recordIds:[...input.recordIds].sort()}:{}),
     sort: input.sort ?? [],
     group: input.group ?? null,
+    // A roots cursor cannot continue an orphans page.
+    ...(input.hierarchy ? { hierarchy: input.hierarchy } : {}),
     search: input.search ?? null,
     projection: input.projection,
   })).digest("hex");

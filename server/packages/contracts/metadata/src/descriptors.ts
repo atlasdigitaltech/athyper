@@ -380,6 +380,26 @@ export interface EntityPolicyBindingDescriptor {
   readonly inputMapping: Readonly<Record<string, unknown>>;
 }
 
+/** Published record hierarchy (Entity list Tree blueprint section 5.2): an
+ * Entity-level declaration used by the Tree layout, pickers, breadcrumbs and
+ * Gantt. Never inferred from field names. */
+export interface EntityHierarchyDescriptor {
+  /** A nullable reference to this same Entity; records without one are roots. */
+  readonly parentField: string;
+  /** An integer sibling order; without it siblings follow the list's default sort. */
+  readonly orderField?: string;
+  readonly nodeKind?: {
+    /** An entity-owned enum. */
+    readonly field: string;
+    /** Choices that may have children; every other choice is a leaf. */
+    readonly branchValues: readonly string[];
+  };
+  /** 1–16. Nothing deeper is requested. */
+  readonly maxDepth: number;
+  /** At most 5; sum or count over visible descendants (Phase B3). */
+  readonly rollups?: readonly { readonly field: string; readonly aggregate: "sum" | "count" }[];
+}
+
 export interface EntityRuntimeDescriptor {
   /** New live contracts require independently installed F6/F8 evidence. */
   readonly liveReadContract?: import("./entity-live-read.js").EntityLiveReadContractV1;
@@ -400,6 +420,7 @@ export interface EntityRuntimeDescriptor {
   readonly authorizationRuntime?: EntityAuthorizationRuntime;
   readonly authorization?: import("./entity-authorization.js").EntityAuthorizationProfileV1;
   readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;
+  readonly hierarchy?: EntityHierarchyDescriptor;
   readonly schema:
     | "athyper.entity-runtime-descriptor/1.0"
     | "athyper.entity-runtime-descriptor/1.1";

@@ -28,12 +28,26 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
   };
   const repository: RecordRepository<MemoryRecordTransaction> = {
     async list(input, transaction) {
-      let rows = [...table(input.descriptor, input.tenantId, transaction?.state).values()].filter((row) => visible(input.descriptor, row));
+      const stored = [...table(input.descriptor, input.tenantId, transaction?.state).values()];
+      // The visible set for hierarchy checks: record predicates and the
+      // trusted collection scope, never the list's own filters.
+      const visibleSet = stored.filter((row) => visible(input.descriptor, row) && input.collectionScope.every((constraint) => collectionScopeMatches(input.descriptor, row, constraint)));
+      let rows = stored.filter((row) => visible(input.descriptor, row));
       if (input.viewRelationships?.length) throw new Error("Standard-view relationships require the database adapter");
       if (input.recordIds !== undefined) { const ids = new Set(input.recordIds); rows = rows.filter((row) => ids.has(String(row[input.descriptor.storage.idField]))); }
       rows = rows.filter((row) => input.collectionScope.every((constraint) => collectionScopeMatches(input.descriptor, row, constraint)));
       rows = rows.filter((row) => (input.filters ?? []).every((filter) => matches(row, input.descriptor, filter)));
       if (input.search) { const needle = input.search.toLowerCase(); const fields = input.descriptor.fields.filter((field) => field.searchable); rows = rows.filter((row) => fields.some((field) => String(row[field.storagePath] ?? "").toLowerCase().includes(needle))); }
+      const hierarchy = input.hierarchy;
+      const idOf = (row: Row) => row[input.descriptor.storage.idField];
+      const parentOf = (row: Row) => (hierarchy ? value(row, input.descriptor, hierarchy.parentField) : undefined);
+      if (hierarchy?.mode === "orphans") {
+        const visibleIds = new Set(visibleSet.map(idOf));
+        rows = rows.filter((row) => parentOf(row) !== null && parentOf(row) !== undefined && !visibleIds.has(parentOf(row)));
+      }
+      const childMatches = (row: Row) =>
+        (input.filters ?? []).filter((filter) => filter.field !== hierarchy?.parentField).every((filter) => matches(row, input.descriptor, filter)) &&
+        (!input.search || input.descriptor.fields.filter((field) => field.searchable).some((field) => String(row[field.storagePath] ?? "").toLowerCase().includes(input.search!.toLowerCase())));
       rows.sort((a, b) => compareRows(a, b, input.descriptor, input.sort ?? []));
       const total = rows.length;
       // Group counts only under exact counts (layout foundation section 5).
@@ -47,8 +61,9 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const page = candidates.slice(0, input.limit);
       const countMode = input.countMode === "exact" ? "exact" : "none";
       const projected = page.map((row) => project(input.descriptor, row, input.projection));
+      const hasChildren = hierarchy ? page.map((row) => visibleSet.some((child) => parentOf(child) === idOf(row) && childMatches(child))) : undefined;
       const last = projected.at(-1);
-      return { data: projected, ...(groups ? { groups } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
+      return { data: projected, ...(groups ? { groups } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projection, transaction) { const row = table(descriptor, tenantId, transaction?.state).get(recordId); return row && visible(descriptor, row) ? project(descriptor, row, projection) : null; },
     async create(descriptor, tenantId, input, transaction) {

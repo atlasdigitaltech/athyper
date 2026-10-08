@@ -313,6 +313,7 @@ const query = {
     },
     group: { type: "string", minLength: 1, maxLength: 127 },
     groupsOnly: { type: "string", enum: ["true"] },
+    hierarchy: { type: "string", enum: ["nodes", "orphans"] },
     filter: {
       oneOf: [
         { type: "string" },

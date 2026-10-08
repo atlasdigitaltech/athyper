@@ -50,6 +50,10 @@ export interface ListRecordsQuery {
   /** Groups only, no rows (Tree blueprint section 5.1). Valid only with
    * `group` and exact counts and no cursor. */
   readonly groupsOnly?: boolean;
+  /** A record-hierarchy request (Tree blueprint section 5.3): `nodes` adds
+   * hasChildren to every row; `orphans` selects visible records whose parent
+   * the viewer cannot read. */
+  readonly hierarchy?: "nodes" | "orphans";
   readonly search?: string;
   readonly countMode?: RecordCountMode;
   readonly hydrateReferences?: boolean;
@@ -69,6 +73,8 @@ export interface GetRecordQuery {
 
 export interface RecordListResult {
   readonly data: readonly Readonly<Record<string, unknown>>[];
+  /** Per row of a hierarchy request: has at least one child the viewer can read. */
+  readonly hasChildren?: readonly boolean[];
   readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
   readonly pagination: {
     readonly pageSize: number;

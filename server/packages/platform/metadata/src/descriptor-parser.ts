@@ -12,6 +12,7 @@ import {
   parsePublishedListGantt,
   validatePublishedListGantt,
 } from "./list-gantt-descriptor.js";
+import { parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
 import {
   validateEntityLiveReadContractV1,
   parseStructuredProjection,
@@ -129,6 +130,14 @@ export function parseEntityRuntimeDescriptor(
       ? undefined
       : parseListPresentation(value["listPresentation"]);
   if (listPresentation) validateListPresentation(listPresentation, fields);
+  const hierarchy =
+    value["hierarchy"] === undefined ? undefined : parseEntityHierarchy(value["hierarchy"]);
+  validateEntityHierarchy(
+    row.entity_code,
+    hierarchy,
+    listPresentation?.supportedModes,
+    new Map(fields.map((field) => [field.key, field])),
+  );
   const operationsValue = object(value["operations"], "operations");
   const operations = Object.fromEntries(
     Object.entries(operationsValue).map(([key, operation]) => {
@@ -420,6 +429,7 @@ export function parseEntityRuntimeDescriptor(
       : { mutationPolicy: parseRecordMutationPolicy(value["mutationPolicy"]) }),
     ...(directoryScope ? { directoryScope } : {}),
     ...(collectionRelationship ? { collectionRelationship } : {}),
+    ...(hierarchy ? { hierarchy } : {}),
     operations,
     ...(lifecycleValue
       ? {

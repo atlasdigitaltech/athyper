@@ -321,6 +321,8 @@ export interface EntityListDescriptorV1 {
     readonly calendar?: import("./calendar").ListCalendarV1;
     /** Date ranges, zoom, group and progress this viewer can use; present only when Gantt is supported. */
     readonly gantt?: import("./gantt").ListGanttV1;
+    /** The record hierarchy this viewer can browse; present only when Tree is supported. */
+    readonly tree?: import("./tree").ListTreeV1;
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;
@@ -371,6 +373,11 @@ export interface EntityListRowV1 {
     readonly hasOpenComment?: boolean;
     readonly bookmarked?: boolean;
   };
+  /** Only on rows of a `hierarchy` response: the row has at least one child
+   * the viewer can read (Tree blueprint section 5.3). */
+  readonly hasChildren?: boolean;
+  /** Only on rows of a `hierarchy=orphans` response; says nothing about the parent. */
+  readonly parentOutsideView?: true;
 }
 
 export interface EntityListResultV1 {

@@ -202,6 +202,8 @@ export interface RecordRepositoryListInput {
   readonly group?: string;
   /** Skip the row query and return only the group buckets. */
   readonly groupsOnly?: boolean;
+  /** Record hierarchy: child existence per row, or orphans only. */
+  readonly hierarchy?: { readonly mode: "nodes" | "orphans"; readonly parentField: string };
   readonly search?: string;
   readonly countMode: ListRecordsQuery["countMode"];
   readonly projection: readonly string[];

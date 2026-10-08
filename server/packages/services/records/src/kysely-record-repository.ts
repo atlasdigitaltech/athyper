@@ -45,6 +45,8 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
         conditions.push(filterCondition(input.descriptor, filter));
       }
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));
+      const tree = input.hierarchy ? hierarchySql(input, scopeCompilers) : undefined;
+      if (tree?.orphanCondition) conditions.push(tree.orphanCondition);
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
         const buckets = await groupBuckets(input, conditions, executor);
@@ -54,12 +56,15 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const cursor = decodeRecordCursor(input);
       const pageConditions = cursor ? [...conditions, cursorCondition(input, cursor)] : conditions;
       const result = await sql<Record<string, unknown>>`
-        SELECT ${projection(input.descriptor, input.projection)} FROM ${table(input.descriptor)}
+        SELECT ${projection(input.descriptor, input.projection)}${tree ? sql`, ${tree.hasChildren} AS ${sql.ref(HAS_CHILDREN)}` : sql``} FROM ${tree ? sql`${table(input.descriptor)} AS ${sql.ref(TREE_ROW)}` : table(input.descriptor)}
          WHERE ${sql.join(pageConditions, sql` AND `)}
          ${order} LIMIT ${input.limit + 1}
       `.execute(executor);
       const hasMore = result.rows.length > input.limit;
-      const rows = result.rows.slice(0, input.limit);
+      const page = result.rows.slice(0, input.limit);
+      // Child existence travels beside the rows, never as a record field.
+      const hasChildren = tree ? page.map((row) => row[HAS_CHILDREN] === true) : undefined;
+      const rows = tree ? page.map(({ [HAS_CHILDREN]: _flag, ...row }) => row) : page;
       // Group counts follow the count-mode rule (layout foundation section 5): the
       // full-set GROUP BY runs only under exact counts.
       const groups = input.group && input.countMode === "exact" ? await groupBuckets(input, conditions, executor) : undefined;
@@ -67,12 +72,12 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.countMode === "exact" && groups) {
         total = groups.reduce((sum, bucket) => sum + bucket.count, 0);
       } else if (input.countMode === "exact") {
-        const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
+        const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${tree ? sql`${table(input.descriptor)} AS ${sql.ref(TREE_ROW)}` : table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
         total = Number(count.rows[0]?.count ?? 0);
       }
       const countMode = input.countMode === "exact" ? "exact" : "none";
       const last = rows.at(-1);
-      return { data: rows, ...(groups ? { groups } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
+      return { data: rows, ...(groups ? { groups } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projectionKeys, transaction) {
       const executor = transaction ?? databaseFor(descriptor);
@@ -144,6 +149,39 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
     ))`;
   }
   throw new Error("Unsupported record collection scope kind");
+}
+const TREE_ROW = "__tree_row";
+const HAS_CHILDREN = "__tree_has_children";
+
+/** Record-hierarchy SQL (Entity list Tree blueprint sections 5.3 and 7.2).
+ * The outer row is aliased; each correlated subquery reads its own alias of
+ * the same table, so the unqualified conditions inside it apply to the child
+ * or parent being tested. Both stay inside the visible set: tenant and record
+ * predicates and the trusted collection scope, never through hidden rows.
+ * - hasChildren: a child exists that the viewer can read and that matches the
+ *   list's own filters and search (the same set expanding would show), with
+ *   the filter on the parent field itself left out.
+ * - orphans: the parent field is set but no parent is in the visible set. */
+function hierarchySql(input: RecordRepositoryListInput, compilers: ReadonlyMap<string, RecordCollectionScopeSqlCompiler>) {
+  const { descriptor, tenantId } = input;
+  const hierarchy = input.hierarchy!;
+  const parentPath = fieldPath(descriptor, hierarchy.parentField);
+  const idPath = descriptor.storage.idField;
+  const visible = [
+    ...baseConditions(descriptor, tenantId, "read"),
+    ...input.collectionScope.map((constraint) => compileRecordCollectionScopeCondition(descriptor, tenantId, constraint, compilers)),
+  ];
+  const childConditions = [
+    ...visible,
+    ...(input.viewRelationships ?? []).map((relationship) => compileStandardViewRelationship(descriptor, tenantId, relationship)),
+    ...(input.filters ?? []).filter((filter) => filter.field !== hierarchy.parentField).map((filter) => filterCondition(descriptor, filter)),
+    ...(input.search ? [searchCondition(descriptor, input.search)] : []),
+  ];
+  const hasChildren = sql`EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_child")} WHERE ${sql.ref(`__tree_child.${parentPath}`)} = ${sql.ref(`${TREE_ROW}.${idPath}`)} AND ${sql.join(childConditions, sql` AND `)})`;
+  const orphanCondition = hierarchy.mode === "orphans"
+    ? sql`(${sql.ref(`${TREE_ROW}.${parentPath}`)} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_parent")} WHERE ${sql.ref(`__tree_parent.${idPath}`)} = ${sql.ref(`${TREE_ROW}.${parentPath}`)} AND ${sql.join(visible, sql` AND `)}))`
+    : undefined;
+  return { hasChildren, orphanCondition };
 }
 function fieldPath(descriptor: EntityRuntimeDescriptor, key: string): string { const field = descriptor.fields.find((item) => item.key === key); if (!field) throw new Error(`Unknown descriptor field: ${key}`); return field.storagePath; }
 function filterCondition(descriptor: EntityRuntimeDescriptor, filter: RecordFilter): RawBuilder<unknown> { const ref = sql.ref(fieldPath(descriptor, filter.field)); switch (filter.operator) { case "eq": return sql`${ref} = ${filter.value}`; case "ne": return sql`${ref} IS DISTINCT FROM ${filter.value}`; case "contains": return sql`${ref}::text ILIKE ${`%${escapeLike(String(filter.value ?? ""))}%`} ESCAPE '\\'`; case "starts_with": return sql`${ref}::text ILIKE ${`${escapeLike(String(filter.value ?? ""))}%`} ESCAPE '\\'`; case "gt": return sql`${ref} > ${filter.value}`; case "gte": return sql`${ref} >= ${filter.value}`; case "lt": return sql`${ref} < ${filter.value}`; case "lte": return sql`${ref} <= ${filter.value}`; case "between": { if (!Array.isArray(filter.value) || filter.value.length !== 2) return sql`FALSE`; return sql`${ref} BETWEEN ${filter.value[0]} AND ${filter.value[1]}`; } case "is_null": return sql`${ref} IS NULL`; case "is_not_null": return sql`${ref} IS NOT NULL`; case "in": { if (!Array.isArray(filter.value) || !filter.value.length) return sql`FALSE`; return sql`${ref} IN (${sql.join(filter.value.map((value) => sql`${value}`))})`; } case "relative": return relativeDateCondition(ref, filter.value); } }

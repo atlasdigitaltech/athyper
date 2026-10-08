@@ -42,7 +42,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 404: { description: "Record not found" }, 423: { description: "Record lock required" }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, groupsOnly: { type: "string", enum: ["true"] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans"] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({
     method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get",
     summary: "Get a record", tags: ["Records"], authenticated: true,
@@ -82,6 +82,9 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   // counts it did not (Tree blueprint section 5.1).
   if (groupsOnly && (!group || countMode !== "exact" || cursor))
     throw new RecordServiceError(400, "LIST_GROUPS_ONLY_INVALID", "groupsOnly requires group and countMode=exact, without a cursor");
+  const hierarchy = query["hierarchy"] === undefined ? undefined : oneOfQuery(query["hierarchy"], ["nodes", "orphans"] as const, "hierarchy");
+  // A tree level is never also grouped.
+  if (hierarchy && group) throw new RecordServiceError(400, "LIST_HIERARCHY_INVALID", "hierarchy cannot be combined with group");
   const hydrateReferences = query["hydrateReferences"] === undefined ? undefined : oneOfQuery(query["hydrateReferences"], ["true", "false"] as const, "hydrateReferences") === "true";
   return {
     ...(recordIds ? { recordIds: Object.freeze([...new Set(recordIds)]) } : {}),
@@ -91,6 +94,7 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     ...(fields.length ? { fields: Object.freeze([...new Set(fields)]) } : {}),
     ...(group ? { group } : {}),
     ...(groupsOnly ? { groupsOnly } : {}),
+    ...(hierarchy ? { hierarchy } : {}),
     ...(filters.length ? { filters } : {}),
     ...(sort.length ? { sort } : {}),
     ...(countMode ? { countMode } : {}),

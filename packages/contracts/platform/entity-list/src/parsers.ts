@@ -50,6 +50,7 @@ import {
 } from "./calendar";
 import { isListDateAnchor } from "./date-range";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
+import { parseListTree } from "./tree";
 import {
   parseListBoard,
   parseListBoardState,
@@ -229,6 +230,12 @@ export function parseEntityListDescriptor(
     throw new TypeError(
       "surface.gantt is required exactly when Gantt is supported",
     );
+  const tree =
+    surfaceRecord.tree === undefined
+      ? undefined
+      : parseListTree(surfaceRecord.tree, fieldByKey);
+  if (Boolean(tree) !== supportedModes.includes("tree"))
+    throw new TypeError("surface.tree is required exactly when Tree is supported");
   const cardContent =
     surfaceRecord.cardContent === undefined
       ? undefined
@@ -341,6 +348,7 @@ export function parseEntityListDescriptor(
       ...(board ? { board } : {}),
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
+      ...(tree ? { tree } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")
@@ -683,6 +691,12 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
               ),
             }),
         ...(decoration ? { decoration } : {}),
+        ...(row.hasChildren === undefined ? {} : { hasChildren: boolean(row.hasChildren, `rows[${index}].hasChildren`) }),
+        ...(row.parentOutsideView === undefined
+          ? {}
+          : row.parentOutsideView === true
+            ? { parentOutsideView: true as const }
+            : (() => { throw new TypeError(`rows[${index}].parentOutsideView must be true when present`); })()),
       });
     }),
   );

@@ -130,6 +130,16 @@ export function createRecordListExecutor<Transaction = unknown>(
       );
       const readableKeys = new Set(readableFields.map((field) => field.key));
       validateQueryFields(descriptor.fields, query, readableKeys);
+      if (query.hierarchy) {
+        // Tree requests (blueprint section 5.3): the Entity declares a
+        // hierarchy and the viewer can read and filter its parent field.
+        const parent = descriptor.hierarchy
+          ? descriptor.fields.find((field) => field.key === descriptor.hierarchy!.parentField)
+          : undefined;
+        const operators = parent ? recordFieldFilterOperators(parent) : [];
+        if (!parent || !parent.filterable || !readableKeys.has(parent.key) || !["eq", "in", "is_null"].every((operator) => operators.includes(operator as never)))
+          throw new RecordServiceError(400, "LIST_TREE_PARENT_FIELD_UNAVAILABLE", "This list has no hierarchy the viewer can browse");
+      }
       const responseFields = responseProjection(
         descriptor,
         readableFields,
@@ -244,6 +254,12 @@ export function createRecordListExecutor<Transaction = unknown>(
             descriptor,
           ),
         );
+      // Child existence and orphans are computed in SQL over the visible set.
+      // When per-record authorization is not covered by that SQL scope, the
+      // visible set is not expressible there, so Tree fails closed rather
+      // than risk disclosing hidden records (Tree blueprint principle 5).
+      if (query.hierarchy && enforced && !aggregateAuthorizationCovered)
+        throw new RecordServiceError(400, "LIST_TREE_RECORD_AUTHORIZATION_UNSUPPORTED", "Tree is not available for this list's record authorization");
       const repositoryResult = await options.transactions.run(
         query.context.planeKey,
         {
@@ -328,6 +344,9 @@ export function createRecordListExecutor<Transaction = unknown>(
                   : {}),
                 ...(query.group ? { group: query.group } : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
+                ...(query.hierarchy && descriptor.hierarchy
+                  ? { hierarchy: { mode: query.hierarchy, parentField: descriptor.hierarchy.parentField } }
+                  : {}),
                 ...(query.cursor ? { cursor: query.cursor } : {}),
                 ...(query.search ? { search: query.search } : {}),
               };
