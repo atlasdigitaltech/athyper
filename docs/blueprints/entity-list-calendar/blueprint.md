@@ -1,6 +1,6 @@
 # Entity list Calendar — blueprint
 
-**Status:** proposed, revision 3 (8 October 2026). Not implementation authority. It incorporates five design-review rounds (section 16). Owner decisions are listed in section 14; none is recorded yet.
+**Status:** proposed, revision 3 (8 October 2026). Not implementation authority. It incorporates five design-review rounds (section 16). Owner decisions are listed in section 14. Decisions 1, 3 and 4 were approved by the project owner (nchandravel-atlas) on 8 October 2026: "Approve decisions 1, 3 and 4 of the Calendar blueprint". The remaining decisions are open, and the blueprint as a whole is not implementation authority beyond P1 and P2.
 
 **Scope and authority.**
 
@@ -421,10 +421,10 @@ tests/foundation-browser/entity-list-calendar.spec.ts              registered in
 
 Each decision needs the owner's own wording and date, recorded in this document, as Board's were. A reviewer's sign-off does not count as approval.
 
-1. **P1, foundation restructure.** Approve creating the shared list layout foundation by a move-only commit, independent verification, an owner approval commit, and then the count-mode rule as its own commit.
+1. **Approved 8 October 2026 by the project owner (nchandravel-atlas): "Approve decisions 1, 3 and 4 of the Calendar blueprint".** **P1, foundation restructure.** Approve creating the shared list layout foundation by a move-only commit, independent verification, an owner approval commit, and then the count-mode rule as its own commit.
 2. **P1, Board approval carries over.** After the move-only commit and its verification, confirm that Board's revision-4 approval covers the moved text. (This decision can only be made after step 3 of P1.)
-3. **P2, typed date filter values.** Approve the server-side rule (date `YYYY-MM-DD`; datetime with a required offset) as a shared-framework prerequisite.
-4. **P2, stored views applied exactly or retired whole.** Approve retiring a stored view whose filters cannot be applied exactly as saved (unknown field, disallowed operator or malformed value). This changes today's silent dropping for stored views; URL state keeps today's behaviour.
+3. **Approved 8 October 2026 by the project owner (same wording).** **P2, typed date filter values.** Approve the server-side rule (date `YYYY-MM-DD`; datetime with a required offset) as a shared-framework prerequisite.
+4. **Approved 8 October 2026 by the project owner (same wording).** **P2, stored views applied exactly or retired whole.** Approve retiring a stored view whose filters cannot be applied exactly as saved (unknown field, disallowed operator or malformed value). This changes today's silent dropping for stored views; URL state keeps today's behaviour.
 5. **Calendar runtime contract.** Approve sections 5.1, 5.5 and 5.6 (including the query contract and the page-size override) and the section 6 codes.
 6. **Open-ended rule.** Approve that a null end date means open-ended (section 7), with two disjoint queries rather than an OR in the query contract.
 7. **Calendar authoring contract.** Approve sections 5.2–5.4; implementation waits behind the metadata-cleanup gate.
