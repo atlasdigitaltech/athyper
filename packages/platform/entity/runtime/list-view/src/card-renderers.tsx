@@ -1,5 +1,8 @@
 import React, { type ReactNode } from "react";
-import type { JsonValue, ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
+import type {
+  JsonValue,
+  ListFieldDescriptorV1,
+} from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 /** Presentation context a card supplies to its value renderers. */
@@ -18,8 +21,16 @@ export function renderCardValue(
   context: CardValueContext | undefined,
   today: string = localDate(new Date()),
 ): ReactNode | undefined {
+  // Explicit plain-text component reuses the already formatted/escaped display.
+  // It deliberately does not infer status/date/number decoration.
+  if (field.rendererKey === "text") return display;
   if (field.rendererKey === "number.progress") {
-    const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    const number =
+      typeof value === "number"
+        ? value
+        : typeof value === "string"
+          ? Number(value)
+          : Number.NaN;
     if (!Number.isFinite(number)) return undefined;
     const percent = Math.max(0, Math.min(100, Math.round(number)));
     return (
@@ -27,17 +38,24 @@ export function renderCardValue(
         <span className="a-entity-list__progress-track" aria-hidden="true">
           <span style={{ inlineSize: `${percent}%` }} />
         </span>
-        <span>{intl ? intl.number(percent / 100, { style: "percent" }) : `${percent}%`}</span>
+        <span>
+          {intl
+            ? intl.number(percent / 100, { style: "percent" })
+            : `${percent}%`}
+        </span>
       </span>
     );
   }
   if (field.rendererKey === "date.due") {
-    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) return undefined;
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value))
+      return undefined;
     const overdue = !context?.terminal && value.slice(0, 10) < today;
     return overdue ? (
       <span className="a-entity-list__due a-entity-list__due--overdue">
         {display}
-        <span className="a-visually-hidden">{intl?.message("list.board.overdue") ?? "Overdue"}</span>
+        <span className="a-visually-hidden">
+          {intl?.message("list.board.overdue") ?? "Overdue"}
+        </span>
       </span>
     ) : (
       <span className="a-entity-list__due">{display}</span>

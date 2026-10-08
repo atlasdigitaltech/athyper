@@ -10,7 +10,9 @@ import { sql, type Kysely } from "kysely";
 import { deployHumanPublicationGroup } from "./human-publication-activation.js";
 import type { PublicationWorkloadConfiguration } from "./workload-configuration.js";
 type Database = Record<string, never>;
-type ActivationGuard = NonNullable<ConstructorParameters<typeof PublicationOrchestrator>[3]>;
+type ActivationGuard = NonNullable<
+  ConstructorParameters<typeof PublicationOrchestrator>[3]
+>;
 
 /** Preserve tenant RLS on both sides of the existing resumable apply protocol. */
 export class TenantPublicationOrchestrator extends PublicationOrchestrator {
@@ -22,10 +24,17 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
       ...args: [...Parameters<ActivationGuard>, Kysely<Database>]
     ) => ReturnType<ActivationGuard>,
     private readonly coordinatedWorkload?: PublicationWorkloadConfiguration,
+    private readonly componentInstaller?: ConstructorParameters<
+      typeof KyselyLocalProjectionRepository
+    >[2],
   ) {
     super(
       new KyselyPublicationAuthorityRepository(authorityDatabase),
-      new KyselyLocalProjectionRepository(localDatabase),
+      new KyselyLocalProjectionRepository(
+        localDatabase,
+        false,
+        componentInstaller,
+      ),
       artifactLoader,
     );
   }
@@ -44,15 +53,26 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
           await stamp(authority);
           const apply = async (local: Kysely<Database>) => {
             await stamp(local);
-            const coordinated = await deployHumanPublicationGroup({ deploymentId, authority, local,
-              loader: this.artifactLoader, workload: this.coordinatedWorkload, activationGuard: this.activationGuard });
+            const coordinated = await deployHumanPublicationGroup({
+              deploymentId,
+              authority,
+              local,
+              loader: this.artifactLoader,
+              workload: this.coordinatedWorkload,
+              activationGuard: this.activationGuard,
+            });
             if (coordinated) return coordinated;
             return new PublicationOrchestrator(
               new KyselyPublicationAuthorityRepository(authority),
-              new KyselyLocalProjectionRepository(local),
+              new KyselyLocalProjectionRepository(
+                local,
+                false,
+                this.componentInstaller,
+              ),
               this.artifactLoader,
               this.activationGuard
-                ? (deployment, loaded) => this.activationGuard!(deployment, loaded, authority)
+                ? (deployment, loaded) =>
+                    this.activationGuard!(deployment, loaded, authority)
                 : undefined,
               "after_rollback",
             ).deploy(deploymentId);
@@ -73,10 +93,13 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
             .transaction()
             .execute(async (authority) => {
               await stamp(authority);
-              const visible = await sql`SELECT d.id FROM publication.deployment d
+              const visible =
+                await sql`SELECT d.id FROM publication.deployment d
               JOIN publication.artifact a ON a.id=d.artifact_id
               JOIN publication.release r ON r.id=a.publication_release_id
-              WHERE d.id=${deploymentId}::uuid AND r.tenant_id=${context.tenantId!}::uuid`.execute(authority);
+              WHERE d.id=${deploymentId}::uuid AND r.tenant_id=${context.tenantId!}::uuid`.execute(
+                  authority,
+                );
               if (!visible.rows.length) return;
               // fn_transition_deployment locks and validates the row atomically.
               // A direct FOR UPDATE requires table UPDATE rights that this role
@@ -106,7 +129,10 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
           // Keep the apply rejection as the job/DLQ failure. A second failure in
           // persistence must not replace its category, code or retry semantics.
           Object.assign(failure, {
-            failureRecordingEvidence: classifyPublicationFailure(recordingError, "stage").evidence(),
+            failureRecordingEvidence: classifyPublicationFailure(
+              recordingError,
+              "stage",
+            ).evidence(),
           });
         }
       }

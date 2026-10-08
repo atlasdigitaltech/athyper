@@ -1186,7 +1186,19 @@ transaction; installation failure propagates so the caller rolls both back. The 
 installer requires a trusted active-source callback holding exact head/evidence scope,
 inserts immutable columns, and compares full readback. Exact replay is allowed; conflict
 never updates an existing resource. This adapter boundary is not an installation grant:
-restricted database installation authority and concrete host evidence remain required.
+the publication service receives EXECUTE on `publication.read_active_ui_component` and
+`publication.install_active_ui_component`, not direct catalogue write grants. The reader
+locks the exact active head, payload, reviewed release, deployment and artifact; product
+scope, tenant authority, independent review and byte correspondence must match. The host
+adapter re-verifies the retained signed artifact against current signing trust and the
+configured implementation qualifier while those locks remain held. The installer derives
+all catalogue columns from that source and rejects non-identical existing rows.
+
+The source reader/installer and conditional shared-host composition are implemented;
+`35_component_catalogue_installation.sql` is installed in DEV. A configured, verified
+implementation registry and approved component candidates are still required before
+activation. SQL trusts the restricted publication service to run cryptographic and
+implementation qualification; ledger booleans alone are not cryptographic evidence.
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.
 

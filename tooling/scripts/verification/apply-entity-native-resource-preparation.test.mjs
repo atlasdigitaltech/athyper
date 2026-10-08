@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   preparationSql,
   componentResourceReviewMigrationName,
+  componentCatalogueInstallationMigrationName,
   productComponentValidationReadMigrationName,
   nativeFieldKeyUniquenessMigrationName,
   nativeFieldContractTriggerMigrationName,
@@ -824,6 +825,49 @@ test("component resource migration extends pinned kind lists without installatio
   );
   assert.match(
     preparationSql(source, digest, true, componentResourceReviewMigrationName),
+    /COMMIT;/,
+  );
+});
+
+test("component installation grants only reviewed active-source routines", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/publication/35_component_catalogue_installation.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        componentCatalogueInstallationMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  assert.match(canonical, /FOR SHARE OF h,r,p,s,d,a/);
+  assert.match(canonical, /s.approved_by<>s.created_by/);
+  assert.match(canonical, /s.tenant_id=shared.current_tenant_id_soft\(\)/);
+  assert.match(canonical, /UI_COMPONENT_INSTALLATION_CONFLICT/);
+  assert.doesNotMatch(canonical, /GRANT (?:INSERT|UPDATE|DELETE|SELECT|ALL)/);
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      componentCatalogueInstallationMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      componentCatalogueInstallationMigrationName,
+    ),
     /COMMIT;/,
   );
 });

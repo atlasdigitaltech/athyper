@@ -266,6 +266,12 @@ jobs:
           ATHYPER_NATIVE_CONSTRAINT_POSTGRES: "1"
         run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts src/native-constraint-compatibility.postgres.test.ts
 
+      - name: Rehearse restricted component installation on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          ATHYPER_COMPONENT_INSTALLATION_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-component-installation.postgres.test.ts
+
       - name: Rehearse generated native row guards on PostgreSQL
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:

@@ -41,12 +41,12 @@ const policy: UiComponentInstallationPolicy = {
 beforeEach(() =>
   mock.execute
     .mockReset()
-    .mockResolvedValueOnce({ rows: [] })
+
     .mockResolvedValueOnce({ rows: [{ row }] }),
 );
 it("inserts only derived typed columns and accepts exact readback/replay", async () => {
   await installNativeComponentCatalogue(tx, id, policy);
-  expect(mock.execute).toHaveBeenCalledTimes(2);
+  expect(mock.execute).toHaveBeenCalledTimes(1);
 });
 it("requires transaction and active-source qualification before any write", async () => {
   await expect(
@@ -68,14 +68,14 @@ it("requires transaction and active-source qualification before any write", asyn
 it("rejects conflicting immutable readback without updating it", async () => {
   mock.execute
     .mockReset()
-    .mockResolvedValueOnce({ rows: [] })
+
     .mockResolvedValueOnce({
       rows: [{ row: { ...row, manifest_hash: "c".repeat(64) } }],
     });
   await expect(installNativeComponentCatalogue(tx, id, policy)).rejects.toThrow(
     "UI_COMPONENT_INSTALLATION_CONFLICT",
   );
-  expect(mock.execute).toHaveBeenCalledTimes(2);
+  expect(mock.execute).toHaveBeenCalledTimes(1);
 });
 it("rejects mismatched approved source before installation", async () => {
   await expect(

@@ -2196,6 +2196,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/34_component_resource_review.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_component_catalogue_installation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_component_catalogue_installation.sql",
+      "sha256": "b4bced1b97b948b345b0e84d3b07d9cd72e05a1bac624e052577e9bb705f65df",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Publication-role execution of locked reviewed active component evidence and immutable catalogue installation; no direct catalogue writes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/35_component_catalogue_installation.sql"
+      ]
     }
   ]
 }

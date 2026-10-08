@@ -53,13 +53,9 @@ export async function installNativeComponentCatalogue(
       const entries = Object.entries(uiComponentColumns).map(
         ([key, column]) => [column.name, row[key as keyof typeof row]] as const,
       );
-      await sql`INSERT INTO metadata.ui_component_contract (${sql.join(entries.map(([name]) => sql.ref(name)))})
-      VALUES (${sql.join(entries.map(([, value]) => sql`${value}`))}) ON CONFLICT(id) DO NOTHING`.execute(
-        tx,
-      );
       const stored = await sql<{
         row: Record<string, unknown>;
-      }>`SELECT to_jsonb(c) AS row FROM metadata.ui_component_contract c WHERE c.id=${row.id}::uuid`.execute(
+      }>`SELECT publication.install_active_ui_component(${appliedReleaseId}::uuid) AS row`.execute(
         tx,
       );
       const expected = Object.fromEntries(entries);

@@ -1,3 +1,4 @@
+import { createComponentCatalogueInstaller } from "./component-installation.js";
 import type { Kysely } from "kysely";
 import type { PublicationPlane } from "@athyper/server-contract-publication";
 import {
@@ -18,7 +19,9 @@ export interface PublicationTargetOptions {
   readonly activationGuard?: ConstructorParameters<
     typeof TenantPublicationOrchestrator
   >[3];
-  readonly coordinatedWorkload?: ConstructorParameters<typeof TenantPublicationOrchestrator>[4];
+  readonly coordinatedWorkload?: ConstructorParameters<
+    typeof TenantPublicationOrchestrator
+  >[4];
 }
 
 /** Only selected apply targets receive projection, verification and orchestration bindings. */
@@ -36,7 +39,15 @@ export function createPublicationTargets(options: PublicationTargetOptions) {
     const database = options.databases[plane];
     if (!database)
       throw new Error(`Publication target database is unavailable: ${plane}`);
-    projections[plane] = new KyselyLocalProjectionRepository(database);
+    const componentInstaller =
+      plane === "studio" && options.artifactLoader.uiComponents
+        ? createComponentCatalogueInstaller(options.artifactLoader)
+        : undefined;
+    projections[plane] = new KyselyLocalProjectionRepository(
+      database,
+      false,
+      componentInstaller,
+    );
     const loader = new VerifiedPublicationArtifactLoader(
       options.artifactLoader,
     );
@@ -47,6 +58,7 @@ export function createPublicationTargets(options: PublicationTargetOptions) {
       loader,
       options.activationGuard,
       options.coordinatedWorkload,
+      componentInstaller,
     );
   }
   return { projections, orchestrators, loaders };

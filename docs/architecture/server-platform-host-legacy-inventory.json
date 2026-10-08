@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 252,
+    "configuration:new": 253,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 401,
+    "operational-scripts:new": 402,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -889,6 +889,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "configuration:athyper_component_installation_postgres",
+      "category": "configuration",
+      "key": "athyper_component_installation_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-component-installation.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_config",
       "category": "configuration",
       "key": "athyper_config",
@@ -1746,6 +1758,7 @@
         "server/packages/contracts/meta-entity-authoring/src/native-row-guards.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-ai-reconciliation.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/native-component-installation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-constraint-compatibility.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-identity-adoption.postgres.test.ts",
@@ -12908,6 +12921,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_worker_reads.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_component_catalogue_installation",
+      "category": "operational-scripts",
+      "key": "20261008_entity_component_catalogue_installation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_component_catalogue_installation.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

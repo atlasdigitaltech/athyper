@@ -251,6 +251,51 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Restricted component installer and host evidence adapter — 8 October
+
+`createComponentCatalogueInstaller` now binds the existing publication loader to the
+transactional catalogue installer. It reads exact active/reviewed source evidence through
+a restricted routine, verifies source/payload/artifact hashes, re-verifies the retained
+Ed25519 document with the host's current verifier, and reruns component qualification.
+Shared Studio publication composition carries this installer into the activation transaction
+only when an implementation qualifier is configured. A missing qualifier still rejects.
+
+Forward migration `20261008_entity_component_catalogue_installation.sql` installs two
+SECURITY DEFINER routines with fixed search paths, PUBLIC execution revoked and EXECUTE
+only for `athyper_publication_service`. No direct catalogue INSERT/UPDATE/DELETE grants
+are added. The locked reader joins the current activation head, payload, independently
+reviewed release, deployment and artifact under the current tenant. Installation derives
+all typed columns from that source and accepts only exact immutable replay. This boundary
+trusts the publication service's cryptographic/implementation checks; it does not treat
+persisted verification flags as a substitute for those checks.
+
+DEV rollback rehearsal, installation and ledger replay passed, with authorization and
+activation fingerprints unchanged. Migration SHA-256:
+`b4bced1b97b948b345b0e84d3b07d9cd72e05a1bac624e052577e9bb705f65df`.
+Receipts: `catalogue-installation-{rehearsal,applied,replay}.json` in
+`~/.athyper/instances/dev/workspace/component-resource-candidates-20261008/`.
+
+The separate opt-in `ATHYPER_COMPONENT_INSTALLATION_POSTGRES=1` rehearsal uses an
+isolated Docker PostgreSQL 16 instance and the canonical catalogue/routines. It proves
+rollback, exact replay, direct-write denial, wrong-tenant denial, self-review rejection,
+inactive/changed source rejection and immutable conflicts using synthetic publication
+rows. Six host tests separately use real Ed25519 signatures and cover source tampering,
+revoked signing trust, implementation rejection and transaction/qualifier requirements.
+Neither substitutes for approved DEV resources or combined deployed activation evidence. The opt-in
+rehearsal is explicitly enabled in CI. Local checks also passed: 880 authoring tests
+(ten opt-in exclusions), 18 host composition tests, 25 migration-runner tests, host/native
+test typechecks, migration-layout validation and the changed-file formatting gate.
+
+The shared list renderer now explicitly handles the `text` key, preserving preformatted
+text/highlighting without inferred status/date decoration. Seven existing board/card
+foundation cases pass with the added assertions. Detail display and deployed bundle/
+implementation evidence remain unqualified; no approved field-display resource is claimed.
+
+The DEV catalogue is still empty. Both existing drafts remain revision 4, with all seven
+pending native-cutover checks retained. Candidate approval/activation, installed proposal
+resolution and deployed F6/F8/F9 remain open. No replacement draft, cleanup or new
+component/entity publication or activation occurred.
+
 ### Component publication and installation integration — 8 October
 
 Implemented `entity_ui_component` through the existing artifact parser, approved-source
