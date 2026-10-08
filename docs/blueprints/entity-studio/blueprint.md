@@ -1235,6 +1235,26 @@ the installed list-only component resource. A separately reviewed detail-capable
 and deployed conformance evidence remain required. Serving the existing bundle does not
 qualify native authoring or F6/F8/F9.
 
+The subsequent detail deployment checkpoint serves a new pinned standalone bundle,
+including the explicit detail field renderer. New component versions are proposals only;
+old component approvals do not qualify the changed implementation inventory. HTTPS byte
+verification and shared-renderer conformance are recorded separately from authenticated
+browser acceptance, resource approval and catalogue installation in the runbook.
+
+**Native bootstrap proposal input:** the shared control host has a bounded immutable-file
+proposal reader and resolver composed through the existing product-command runtime. A
+pinned `entity.native-bootstrap-proposals/1` manifest binds author, entity, target draft,
+graph hash, complete proposal document hash and relative filename. The closed proposal
+contains only its schema, root title/branch/base-release metadata and the native graph.
+It is an import input, never a second live authoring store. Files cannot provide compiler,
+provider, schema, operation-initializer or review authority. Resolution checks the current
+authenticated actor, exact transaction/command and re-reads pinned bytes during qualification
+(including replay) and preparation. Canonical graph/resource validation and SQL readback
+remain mandatory. The installed resource resolver must supply qualified schema, host,
+compiler/reader and existing approved initializer evidence before the endpoint is enabled;
+this proposal reader alone does not establish B0 or F6/F8/F9. Competing bootstrap
+compositions reject rather than select one implicitly.
+
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.
 

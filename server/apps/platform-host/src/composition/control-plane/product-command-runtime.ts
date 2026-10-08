@@ -1,3 +1,4 @@
+import { createNativeBootstrapProposalResolver } from "./native-bootstrap-proposals.js";
 import { parseReferenceResourceConfiguration } from "./reference-resource-configuration.js";
 import { sql, type Kysely } from "kysely";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
@@ -23,6 +24,9 @@ export async function createControlProductCommandRuntime(options: {
   labels: NormalizedAuthoringPolicy;
   audit: AuditRecorder<Database>;
   nativeBootstrap?: ProductReferenceEnrollmentOptions["nativeBootstrap"];
+  nativeBootstrapProposals?: Parameters<
+    typeof createNativeBootstrapProposalResolver
+  >[0];
   nativeConversion?: Pick<
     NonNullable<ProductReferenceEnrollmentOptions["nativeConversion"]>,
     "resolve"
@@ -35,6 +39,11 @@ export async function createControlProductCommandRuntime(options: {
     referenceEnrollment?: ProductReferenceEnrollmentOptions;
   }
 > {
+  if (options.nativeBootstrap && options.nativeBootstrapProposals)
+    throw Error("PRODUCT_NATIVE_BOOTSTRAP_COMPOSITION_AMBIGUOUS");
+  const nativeBootstrap = options.nativeBootstrapProposals
+    ? createNativeBootstrapProposalResolver(options.nativeBootstrapProposals)
+    : options.nativeBootstrap;
   async function role(db: Database) {
     const result = await sql<{
       login: string;
@@ -143,7 +152,7 @@ export async function createControlProductCommandRuntime(options: {
     },
   };
   if (
-    (options.nativeConversion || options.nativeBootstrap) &&
+    (options.nativeConversion || nativeBootstrap) &&
     !options.referenceResources
   )
     throw Error("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
@@ -170,7 +179,7 @@ export async function createControlProductCommandRuntime(options: {
     runtime.referenceEnrollment = {
       database: runtime.database,
       authority: runtime.authority,
-      nativeBootstrap: options.nativeBootstrap,
+      nativeBootstrap,
       ...(options.nativeConversion
         ? {
             nativeConversion: {

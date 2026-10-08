@@ -189,6 +189,51 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Detail deployment and native proposal composition — 8 October
+
+Studio now serves `component-deployment-20261008-v3/bundle` from the private DEV workspace.
+The manifest pin is `dd4a3ad7f200efdebb79673b3f64e4668af9cb1ead3af7af1264fff4d689d428`.
+All four declarations and 1,634 files pass the actual deployed-component verifier.
+The shared detail-renderer chunk was fetched over HTTPS with status 200 and SHA-256
+`71f4746e0d88c7914444f530e550603a993eb2e0cb0e02b3b4532c378b04164c` matching installed bytes;
+readyz returns 200. The prior deployment configuration is retained in
+`component-deployment-20261008-v3/source.compose.before.json`. No catalogue rows were
+rewritten. The old three component rows remain installed; their previous approvals do
+not qualify these changed implementation inventories under the new deployment pin.
+
+Four immutable, **unsubmitted/unapproved** candidates are prepared:
+
+| Component                 | Version | Source release                       |
+| ------------------------- | ------- | ------------------------------------ |
+| shared.entity.list        | 2       | e8e4dc0c-3658-41fe-9a02-3a55b6b5e533 |
+| shared.entity.detail      | 2       | a40a14b0-d2be-4a32-a1d1-1cfa66093a68 |
+| shared.entity.text        | 2       | 45569947-da4c-46a4-9d69-9acd3bbc6fa0 |
+| shared.entity.detail-text | 1       | 5057aa47-cc7c-4dbe-aee8-cf5a91cd803a |
+
+`review-candidates.json`, per-component source inventories, `conformance.log` and
+`http-evidence.json` are in that directory. Text remains string-only, with separate
+list/detail declarations and no masked-representation qualification. Twenty conformance
+checks cover explicit text, actual shared record-fields rendering, list modes and the
+existing Country read path across three planes. They are executable source tests plus
+deployed byte evidence, not authenticated native Entity acceptance. Admin and Owner
+sessions were expired at this checkpoint; refreshed Admin authentication was requested
+for proposals, with independent Owner review still required afterward.
+
+`native-bootstrap-proposals.ts` implements the pinned, author/coordinate-bound proposal
+reader and the native bootstrap policy adapter. The shared product-command composition
+accepts it only alongside installed reference resources, rejects competing compositions,
+and preserves canonical transaction admission. Twenty-five focused host tests pass,
+including tampering, unknown authority fields, traversal/symlink escape, byte limits,
+duplicate pins, changed author/transaction and replay revalidation. This does **not**
+configure DEV with fixture resources: actual compiler/schema/host/initializer bindings
+are still required before enabling the endpoint.
+
+DEV verification: both existing drafts remain revision 4, three component catalogue rows
+exist, and there are zero security/storage resource releases in the authoring-resource
+ledger. No replacement Entity drafts or new Entity activations occurred. The installed
+bootstrap resource composition, component review/installation and F6/F8/F9 deployment
+remain open. No data reset or cutover constraint removal ran.
+
 ### Explicit detail field-renderer binding — 8 October
 
 The native runtime projection now carries detail bindings independently of list bindings.

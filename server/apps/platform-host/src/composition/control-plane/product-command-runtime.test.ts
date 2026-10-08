@@ -259,3 +259,43 @@ it("does not enable native bootstrap without installed reference resources", asy
     await f.close();
   }
 });
+
+it("rejects competing native bootstrap compositions before querying roles", async () => {
+  const f = await fixture();
+  try {
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        nativeBootstrap: { resolve: vi.fn() },
+        nativeBootstrapProposals: {
+          readProposal: vi.fn(),
+          resolveResources: vi.fn(),
+          audit: vi.fn(),
+          maximumBytes: 1000,
+        },
+      }),
+    ).rejects.toThrow("PRODUCT_NATIVE_BOOTSTRAP_COMPOSITION_AMBIGUOUS");
+  } finally {
+    await f.issuerDatabase.destroy();
+    await f.commandDatabase.destroy();
+  }
+});
+it("proposal composition still requires installed reference resources", async () => {
+  const f = await fixture();
+  try {
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        nativeBootstrapProposals: {
+          readProposal: vi.fn(),
+          resolveResources: vi.fn(),
+          audit: vi.fn(),
+          maximumBytes: 1000,
+        },
+      }),
+    ).rejects.toThrow("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
+  } finally {
+    await f.issuerDatabase.destroy();
+    await f.commandDatabase.destroy();
+  }
+});
