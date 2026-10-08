@@ -187,3 +187,104 @@ it("decodes PostgreSQL bigint release numbers without accepting unsafe coordinat
     code: "REFERENCE_RESOURCE_NOT_QUALIFIED",
   });
 });
+
+it("native bootstrap host requires creation admission before reading the signed descriptor, including replay", async () => {
+  const { createProductNativeBootstrapHost } =
+    await import("./product-native-bootstrap-host.js");
+  const f = fixture();
+  const additionalAdmission = vi.fn(async () => {});
+  const host = createProductNativeBootstrapHost({
+    authorityTenantId: "00000000-0000-4000-8000-000000000003",
+    maximumBytes: 10000,
+    descriptorPin: f.pin,
+    additionalAdmission,
+    commands: {
+      authoringSchemaHash: sha256(descriptor),
+      maxMembers: 1000,
+      maxBatchBytes: 10000,
+      maxCommands: 1,
+    },
+    verifier: f.verifier,
+    authorizeReview: f.authorizeReview,
+  });
+  const input = {
+    actorId: "00000000-0000-4000-8000-000000000004",
+    entityId: "00000000-0000-4000-8000-000000000005",
+    changeSetId: "00000000-0000-4000-8000-000000000006",
+    tenantId: null,
+    batch: { contract: "entity.authoring-native-bootstrap/1" },
+  };
+  query.mockResolvedValueOnce({ rows: [{ admitted: false }] });
+  await expect(host.admit(tx, input, "write")).rejects.toMatchObject({
+    code: "PRODUCT_NATIVE_BOOTSTRAP_HOST_DENIED",
+  });
+  expect(f.verifier.verify).not.toHaveBeenCalled();
+  query.mockResolvedValueOnce({ rows: [{ admitted: true }] });
+  await host.admit(tx, input, "write");
+  expect(f.authorizeReview).toHaveBeenCalledTimes(1);
+  f.authorizeReview.mockRejectedValueOnce(Error("REVIEW_REVOKED"));
+  query.mockResolvedValueOnce({ rows: [{ admitted: true }] });
+  await expect(host.admit(tx, input, "write")).rejects.toThrow(
+    "REVIEW_REVOKED",
+  );
+  expect(f.authorizeReview).toHaveBeenCalledTimes(2);
+  expect(additionalAdmission).toHaveBeenCalledTimes(1);
+  additionalAdmission.mockRejectedValueOnce(Error("OWNER_ADMISSION_REVOKED"));
+  query.mockResolvedValueOnce({ rows: [{ admitted: true }] });
+  await expect(host.admit(tx, input, "write")).rejects.toThrow(
+    "OWNER_ADMISSION_REVOKED",
+  );
+
+  for (const altered of [
+    { ...input, tenantId: input.actorId },
+    { ...input, batch: { contract: "entity.authoring-label-commands/1" } },
+    { ...input, batch: { ...input.batch, allow: true } },
+  ])
+    await expect(host.admit(tx, altered, "write")).rejects.toMatchObject({
+      code: "PRODUCT_NATIVE_BOOTSTRAP_HOST_DENIED",
+    });
+  await expect(host.admit(tx, input, "history")).rejects.toMatchObject({
+    code: "PRODUCT_NATIVE_BOOTSTRAP_HOST_DENIED",
+  });
+  await expect(host.admit(tx, input, "read")).rejects.toMatchObject({
+    code: "PRODUCT_NATIVE_BOOTSTRAP_HOST_DENIED",
+  });
+  await expect(host.resolveInitializer(tx, input)).rejects.toMatchObject({
+    code: "PRODUCT_NATIVE_BOOTSTRAP_HOST_ONLY",
+  });
+  expect(host.snapshotVersions).toEqual([2]);
+});
+
+it("native bootstrap host rejects another descriptor even when signed and installed", async () => {
+  const { createProductNativeBootstrapHost } =
+    await import("./product-native-bootstrap-host.js");
+  const f = fixture();
+  const host = createProductNativeBootstrapHost({
+    authorityTenantId: "00000000-0000-4000-8000-000000000003",
+    maximumBytes: 10000,
+    descriptorPin: f.pin,
+    additionalAdmission: vi.fn(async () => {}),
+    commands: {
+      authoringSchemaHash: "f".repeat(64),
+      maxMembers: 1000,
+      maxBatchBytes: 10000,
+      maxCommands: 1,
+    },
+    verifier: f.verifier,
+    authorizeReview: f.authorizeReview,
+  });
+  query.mockResolvedValueOnce({ rows: [{ admitted: true }] });
+  await expect(
+    host.admit(
+      tx,
+      {
+        actorId: "00000000-0000-4000-8000-000000000004",
+        entityId: "00000000-0000-4000-8000-000000000005",
+        changeSetId: "00000000-0000-4000-8000-000000000006",
+        tenantId: null,
+        batch: { contract: "entity.authoring-native-bootstrap/1" },
+      },
+      "write",
+    ),
+  ).rejects.toMatchObject({ code: "REFERENCE_RESOURCE_NOT_QUALIFIED" });
+});

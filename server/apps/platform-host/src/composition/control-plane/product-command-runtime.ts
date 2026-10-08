@@ -7,6 +7,7 @@ import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-en
 import {
   createProductCommandAuthority,
   createProductLabelHost,
+  createProductNativeBootstrapHost,
   createProductReferenceResourcePolicies,
   type ProductReferenceEnrollmentOptions,
   type createProductLabelEnrollment,
@@ -48,15 +49,45 @@ export async function createControlProductCommandRuntime(options: {
     throw Error("PRODUCT_NATIVE_BOOTSTRAP_COMPOSITION_AMBIGUOUS");
   if (options.nativeBootstrapResources && !options.nativeBootstrapProposals)
     throw Error("PRODUCT_NATIVE_BOOTSTRAP_PROPOSALS_REQUIRED");
-  const nativeBootstrap = options.nativeBootstrapProposals
+  const proposals = options.nativeBootstrapProposals;
+  if (proposals && !options.referenceResources)
+    throw Error("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
+  const resolveBootstrapResources:
+    NonNullable<typeof proposals>["resolveResources"] | undefined = proposals
+    ? async (...args) => {
+        const resources = await proposals.resolveResources(...args);
+        const installed = options.referenceResources!;
+        if (
+          resources.host.commands.authoringSchemaHash !==
+          installed.descriptorHash
+        )
+          throw Error("PRODUCT_NATIVE_DESCRIPTOR_MISMATCH");
+        if (!resources.host.snapshotVersions?.includes(2))
+          throw Error("PRODUCT_NATIVE_SNAPSHOT_VERSION_REQUIRED");
+        return {
+          ...resources,
+          host: createProductNativeBootstrapHost({
+            authorityTenantId: options.authority.tenantId,
+            descriptorPin: installed.descriptorPin,
+            maximumBytes: installed.maximumBytes,
+            verifier: installed.verifier,
+            authorizeReview: installed.authorizeReview,
+            commands: resources.host.commands,
+            additionalAdmission: (tx, command, intent) =>
+              resources.host.admit(tx, command, intent),
+          }),
+        };
+      }
+    : undefined;
+  const nativeBootstrap = proposals
     ? createNativeBootstrapProposalResolver({
-        ...options.nativeBootstrapProposals,
+        ...proposals,
         resolveResources: options.nativeBootstrapResources
           ? createNativeBootstrapResourceComposition({
               ...options.nativeBootstrapResources,
-              resolve: options.nativeBootstrapProposals.resolveResources,
+              resolve: resolveBootstrapResources!,
             })
-          : options.nativeBootstrapProposals.resolveResources,
+          : resolveBootstrapResources!,
       })
     : options.nativeBootstrap;
   async function role(db: Database) {

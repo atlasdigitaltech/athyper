@@ -189,6 +189,31 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native command-host integration and push recovery — 8 October
+
+Formatting-only commit `40d34fd74` repaired the committed shared Entity files without
+staging ongoing implementation. Push checks passed from an isolated committed checkout
+with the remote branch as the formatting comparison base; the branch was pushed through
+that commit. Existing working files were formatted separately, preserving their changes.
+
+`createProductNativeBootstrapHost` is now composed by the production proposal resolver.
+It requires the current entity-bound creation ticket, actor and platform authority tenant,
+then reads the exact installed descriptor through the existing signed publication reader
+and current human-review eligibility adapter. The original host admission also executes;
+its denial and snapshot-version restrictions are preserved. No general editing or operation
+initializer is supplied. This is implementation evidence, not an installed DEV bootstrap.
+
+Targeted verification: 16 authoring resource/bootstrap tests and 25 host composition tests
+passed. The signed-resource cases reject absent admission, wrong descriptor, revoked review,
+revoked original host admission, tenant scope, extra batch properties and unsupported intent.
+Host and authoring typechecks passed. Existing native graph resources are still required:
+this command-host composition does not make test compiler/provider/identity fixtures trusted.
+
+**Open execution boundary:** the control API startup still lacks complete native proposals
+and their production compiler/provider/identity resolver configuration. Consequently actual
+bootstrap/replay, deployed F6/F8/F9 and new Entity publication/activation are not attested.
+No new credentials or human approval can substitute for that unfinished engineering.
+
 ### Complete-graph persistence and reader corrections — 8 October, 15:03 UTC
 
 The reference definitions contain nonempty entity-facing AI declarations. The canonical

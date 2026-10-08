@@ -1324,6 +1324,14 @@ qualification, including replay. Changed evidence or current owner rejection abo
 transaction. This composition does not manufacture the non-component resource resolvers
 or enable an unconfigured DEV endpoint; canonical schema qualification remains in the
 command executor.
+The production proposal resolver composes a concrete command-host admission: the exact
+creation ticket must match entity, draft, authenticated actor and platform authority tenant,
+and the installed signed authoring descriptor is re-read with current independent-review
+eligibility on every attempt. Existing resource-owner admission runs in addition, never as
+a replaced callback. The host supports only bootstrap/replay with explicit snapshot version
+2; it does not enable general native edits or provide an operation initializer. This closes
+the command-host implementation boundary, not the still-required complete proposal,
+compiler/provider/identity startup configuration or deployed acceptance.
 
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.

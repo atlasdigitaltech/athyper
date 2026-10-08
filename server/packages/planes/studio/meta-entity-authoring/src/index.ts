@@ -156,6 +156,7 @@ export { createProductLabelEnrollment } from "./product-label-enrollment.js";
 export { registerProductLabelEnrollmentRoutes } from "./product-label-enrollment-routes.js";
 
 export { createProductLabelHost } from "./product-label-host.js";
+export { createProductNativeBootstrapHost } from "./product-native-bootstrap-host.js";
 
 export {
   createProductReferenceEnrollment,
