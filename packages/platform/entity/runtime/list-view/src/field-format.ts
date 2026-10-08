@@ -14,6 +14,8 @@ export function formatFieldValue(
 ): string {
   if (intl) return formatEntityValue(value, field, intl);
   if (value === undefined || value === null || value === "") return "—";
+  // An unresolved reference never shows its raw identifier.
+  if (field?.valueKind === "reference") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "object") return JSON.stringify(value);
   if (field?.valueKind === "datetime" || field?.valueKind === "date") {

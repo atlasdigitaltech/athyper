@@ -19,12 +19,18 @@ export function groupedRows(
   // order their first row appears.
   for (const bucket of page.groups ?? []) {
     const key = keyFor(bucket.value);
-    buckets.set(key, { key, label: formatFieldValue(bucket.value, field, intl), count: bucket.count, rows: [] });
+    // A reference bucket carries the server's authorized label; never format its raw value.
+    const label = field?.valueKind === "reference" ? bucket.label : formatFieldValue(bucket.value, field, intl);
+    buckets.set(key, { key, label, count: bucket.count, rows: [] });
   }
   for (const row of page.rows) {
     const value = row.values[group];
     const key = keyFor(value);
     const bucket = buckets.get(key) ?? { key, label: formatFieldValue(value, field, intl), rows: [] };
+    // Prefer the server-resolved display value (reference labels), so a heading
+    // never shows a raw identifier.
+    const display = row.displayValues?.[group];
+    if (display) bucket.label = display;
     bucket.rows.push(row);
     buckets.set(key, bucket);
   }

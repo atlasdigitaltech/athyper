@@ -34,3 +34,24 @@ test("grouping keeps missing, null and empty values distinct and preserves row o
   // No server buckets (counts not exact): no group count, never a page count.
   assert.deepEqual(output.map(group => group.count), [undefined, undefined, undefined]);
 });
+
+test("a reference group heading never shows the raw identifier", async () => {
+  const base = await referenceList();
+  const descriptor = { ...base, fields: [...base.fields, { key: "owner", label: "Owner", valueKind: "reference", defaultVisible: true, defaultOrder: 99, filterOperators: ["eq"], sortable: false, groupable: true, aggregations: [] }] } as typeof base;
+  const id = "7f3c2e1d-4b5a-4c6d-8e9f-000000000001";
+  const other = "7f3c2e1d-4b5a-4c6d-8e9f-000000000002";
+  const result: EntityListResultV1 = {
+    ...page([]),
+    rows: [
+      { id: "1", values: { owner: id }, displayValues: { owner: "Acme Holdings" } },
+      { id: "2", values: { owner: other } },
+    ],
+  };
+  const output = groupedRows(result, "owner", descriptor, intl("en"));
+  // The resolved label wins; an unresolved reference shows a neutral placeholder.
+  assert.deepEqual(output.map(group => group.label), ["Acme Holdings", intl("en").message("entity.value.referenceUnavailable")]);
+  // A server bucket for a reference carries the server's authorized label.
+  const counted = groupedRows({ ...result, groups: [{ value: other, label: "Beta Ltd", count: 4 }] }, "owner", descriptor, intl("en"));
+  assert.equal(counted[0]!.label, "Beta Ltd");
+  assert.equal(JSON.stringify(output.concat(counted).map(group => group.label)).includes("7f3c2e1d"), false);
+});

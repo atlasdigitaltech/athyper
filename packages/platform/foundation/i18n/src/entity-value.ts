@@ -30,6 +30,9 @@ export function formatEntityValue(
   if (typeof value !== "string") return String(value);
 
   const kind = field?.valueKind ?? field?.kind;
+  // A reference reaches here only when its readable label could not be
+  // resolved (deleted or unreadable target): never show the raw identifier.
+  if (kind === "reference") return intl.message("entity.value.referenceUnavailable");
   if ((kind === "integer" || kind === "decimal" || kind === "money") && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value))
     return formatExactDecimal(value, intl);
   if (kind === "date" || kind === "datetime") {

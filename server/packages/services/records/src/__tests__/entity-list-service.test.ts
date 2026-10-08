@@ -706,6 +706,46 @@ describe("safe entity list service", () => {
     expect(uncounted.groups).toBeUndefined();
   });
 
+  it("never labels a reference group with its raw value", async () => {
+    const ownerId = "7f3c2e1d-4b5a-4c6d-8e9f-000000000001";
+    const presented: EntityRuntimeDescriptor = {
+      ...descriptor,
+      fields: [
+        ...descriptor.fields,
+        {
+          key: "owner",
+          storagePath: "owner_id",
+          type: "reference",
+          required: false,
+          writableOn: [],
+          filterable: true,
+          list: { groupable: true },
+        },
+      ],
+      listPresentation: {
+        schemaVersion: 1,
+        identityField: "code",
+        defaultState: { filters: [], sort: [{ field: "name", direction: "asc" }], columns: ["code", "name"], density: "comfortable", mode: "table" },
+        supportedModes: ["table"],
+        search: { minimumQueryLength: 1 },
+        limits: { defaultPageSize: 10, allowedPageSizes: [10], maxSortLevels: 2, countMode: "exact" },
+      },
+    };
+    const lists = createTestListService({
+      metadata: { getEntityDescriptor: async () => presented },
+      descriptor: presented,
+      authorizer: allowReadOnly(),
+      rows: [{ partner_uuid: "partner-1", tenant_id: context.tenantId, partner_code: "ACME", display_name: "Acme", owner_id: ownerId, row_version: 1 }],
+    });
+    const page = parseEntityListResult(
+      await lists.list({ context, entityCode: presented.entityCode, fields: ["code"], group: "owner", sort: [{ field: "name", direction: "asc" }], countMode: "exact" }),
+    );
+    // The target is not resolvable in this fixture, so no label is admitted:
+    // the heading falls back to a neutral mark, never the raw ID.
+    expect(page.groups?.map((group) => group.label)).toEqual(["—"]);
+    expect(JSON.stringify(page.groups?.map((group) => group.label))).not.toContain(ownerId);
+  });
+
   it("binds field authorization to tenant, entity, operation, and field coordinates", async () => {
     const authorize = vi.fn<Authorizer["authorize"]>(
       async ({ permissionCode }) =>

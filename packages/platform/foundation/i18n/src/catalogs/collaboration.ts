@@ -128,6 +128,7 @@ export const collaborationMessages = {
   "activity.null": ["Empty value", "Nilai kosong", "قيمة فارغة"],
 
   "entity.value.yes": ["Yes", "Ya", "نعم"],
+  "entity.value.referenceUnavailable": ["Unavailable reference", "Rujukan tidak tersedia", "مرجع غير متاح"],
   "entity.value.no": ["No", "Tidak", "لا"],
   "summary.title": ["Record summary", "Ringkasan rekod", "ملخص السجل"],
   "summary.loading": ["Loading…", "Memuatkan…", "جارٍ التحميل…"],

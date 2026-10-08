@@ -1016,6 +1016,19 @@ export function createEntityListService(options: {
         descriptor,
         result.data,
       );
+      // Group headings never show a raw reference value: a reference group's
+      // label comes from the same authorized label service as row cells.
+      const groupField = query.group
+        ? descriptor.fields.find((field) => field.key === query.group)
+        : undefined;
+      const groupLabels =
+        result.groups && groupField?.type === "reference"
+          ? await references.labelsMany(
+              query.context,
+              descriptor,
+              result.groups.map((group) => ({ [groupField.key]: group.value })),
+            )
+          : undefined;
       const rows = result.data.map((source, index) => {
         const rawId = source[descriptor.storage.idField];
         if (typeof rawId !== "string" && typeof rawId !== "number")
@@ -1080,10 +1093,12 @@ export function createEntityListService(options: {
         ...(result.groups
           ? {
               groups: Object.freeze(
-                result.groups.map((group) =>
+                result.groups.map((group, index) =>
                   Object.freeze({
                     value: jsonValue(group.value) ?? null,
-                    label: formatGroupLabel(group.value),
+                    label: groupLabels
+                      ? (groupLabels[index]?.[groupField!.key] ?? "—")
+                      : formatGroupLabel(group.value),
                     count: group.count,
                   }),
                 ),
