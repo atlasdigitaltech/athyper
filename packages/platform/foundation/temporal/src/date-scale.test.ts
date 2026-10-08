@@ -11,7 +11,7 @@ import {
   weekRows,
   zonedDay,
   zonedDayStart,
-} from "./calendar-math.js";
+} from "./date-scale.js";
 
 test("calendar days move without a time zone", () => {
   assert.equal(addDays("2026-02-28", 1), "2026-03-01");
