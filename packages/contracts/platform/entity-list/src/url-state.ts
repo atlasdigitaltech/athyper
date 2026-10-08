@@ -177,6 +177,8 @@ export function decodeListLocationState(
     });
   if (parameters.has("gantt"))
     apply({ ganttAnchor: parameters.get("gantt") || undefined });
+  if (parameters.has("tree.node"))
+    apply({ treeNode: parameters.get("tree.node") || undefined });
   if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
   else if (
     parameters.get("sheet") === "custom" ||
@@ -258,6 +260,7 @@ export function encodeListLocationState(
       parameters.set("gantt.zoom", normalized.gantt.zoom);
   }
   if (normalized.ganttAnchor) parameters.set("gantt", normalized.ganttAnchor);
+  if (normalized.treeNode) parameters.set("tree.node", normalized.treeNode);
   if (normalized.board && base.board) {
     if (normalized.board.laneField !== base.board.laneField)
       parameters.set("lane", normalized.board.laneField);

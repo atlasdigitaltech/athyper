@@ -101,6 +101,14 @@ import {
 } from "./tree/grouped-tree";
 import { handleTreeKeyDown } from "./tree/tree-keyboard";
 import { groupedPageState } from "./tree/grouped-tree-model";
+import { treeOrdered, treePageState } from "./tree/tree-model";
+import {
+  HierarchyTreeChrome,
+  HierarchyTreeLines,
+  TreeNodeLabel,
+  treeNodeAttributes,
+  useHierarchyTree,
+} from "./tree/hierarchy-tree";
 import { TreeStrip } from "./tree/tree-parts";
 import { ganttRange } from "./gantt/gantt-model";
 import { EntityGantt } from "./gantt/gantt-view";
@@ -812,6 +820,8 @@ function EntityCollectionRuntime({
           columns: state.columns,
           cursor: state.cursor ?? null,
           pageSize: state.pageSize ?? null,
+          // Tree's page query is the roots query.
+          tree: state.mode === "tree" ? true : null,
           // Board's summary query groups by the lane field instead.
           boardLaneField:
             state.mode === "board" ? (state.board?.laneField ?? null) : null,
@@ -909,6 +919,7 @@ function EntityCollectionRuntime({
     { entityCode: string; pathname: string } | undefined
   >(undefined);
   const [loadedAuthorityKey, setLoadedAuthorityKey] = useState<string>();
+  const [treeRows, setTreeRows] = useState<readonly EntityListRowV1[]>([]);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -995,6 +1006,7 @@ function EntityCollectionRuntime({
           board: !embedding,
           calendar: !embedding,
           gantt: !embedding,
+          tree: !embedding,
         });
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
@@ -1140,7 +1152,10 @@ function EntityCollectionRuntime({
       .request(entityListOperation, {
         params: { entityCode },
         query: entityListQuery(
-          listModeTraits(state.mode).ownGrouping
+          state.mode === "tree"
+            ? // Tree: the roots query (Tree blueprint section 7.2).
+              treePageState(state, descriptor)
+            : listModeTraits(state.mode).ownGrouping
             ? dateRangePageState(
                 boardSummaryState(state, descriptor),
                 descriptor,
@@ -1564,8 +1579,14 @@ function EntityCollectionRuntime({
     ? embedding.options.mode === "choose" &&
       embedding.selectionAllowed !== false
     : true;
-  const selectedRows =
-    page?.rows.filter((row) => selectedIds.has(row.id)) ?? [];
+  // Tree rows load outside the page; selection covers every loaded record.
+  const selectedRows = [
+    ...new Map(
+      [...(page?.rows ?? []), ...(state?.mode === "tree" ? treeRows : [])].map(
+        (row) => [row.id, row],
+      ),
+    ).values(),
+  ].filter((row) => selectedIds.has(row.id));
   const mutateBookmarks = async (
     operation: "add" | "remove",
     rows: readonly EntityListRowV1[],
@@ -1922,6 +1943,12 @@ function EntityCollectionRuntime({
                     query: pageState ?? state,
                     exact: descriptor.limits.countMode === "exact",
                   }}
+                  pageCurrent={resultsCurrent}
+                  revealId={state.treeNode}
+                  onRevealed={() =>
+                    update({ ...state, treeNode: undefined }, "replace")
+                  }
+                  onTreeRows={setTreeRows}
                   query={(pageState ?? state).query}
                   filtered={(pageState?.filters ?? state.filters).length > 0}
                   loading={loading || (!error && !resultsCurrent)}
@@ -4347,6 +4374,10 @@ function EntityRows({
   onSelectionChange,
   onSort,
   groupedSource,
+  pageCurrent = true,
+  revealId,
+  onRevealed,
+  onTreeRows,
 }: {
   readonly emptyContent?: EntityDirectoryEmbedding["emptyContent"];
   readonly emptyAction?: React.ReactNode;
@@ -4377,9 +4408,29 @@ function EntityRows({
   /** With grouping levels, groups load their own content through this
    * source (Tree blueprint section 7.1) instead of grouping one page. */
   readonly groupedSource?: GroupedTreeSource;
+  /** Whether `page` answers the current state (the Tree's roots arrive with it). */
+  readonly pageCurrent?: boolean;
+  /** Tree deep link (`tree.node`) and its completion. */
+  readonly revealId?: string;
+  readonly onRevealed?: () => void;
+  /** The records the Tree has loaded, for selection. */
+  readonly onTreeRows?: (rows: readonly EntityListRowV1[]) => void;
 }) {
-  const group = groups?.[0];
-  const grouped = Boolean(groups?.length && groupedSource);
+  // Layouts with their own grouping (Tree) keep a saved group for Table and Cards.
+  const ownGrouping = listModeTraits(mode).ownGrouping;
+  const group = ownGrouping ? undefined : groups?.[0];
+  const grouped = Boolean(groups?.length && groupedSource) && !ownGrouping;
+  const hierarchy = useHierarchyTree({
+    descriptor,
+    source: mode === "tree" ? groupedSource : undefined,
+    rootsPage: pageCurrent ? page : undefined,
+    revealId,
+    onRevealed,
+  });
+  const treeLoadedRows = hierarchy?.loadedRows;
+  useEffect(() => {
+    onTreeRows?.(treeLoadedRows ?? []);
+  }, [treeLoadedRows, onTreeRows]);
   const [treeCommand, setTreeCommand] = useState<TreeCommand>();
   const sendTreeCommand = (
     command:
@@ -4438,7 +4489,9 @@ function EntityRows({
       {item.count !== undefined ? <span>{intl.number(item.count)}</span> : null}
     </button>
   );
-  const empty = grouped
+  const empty = hierarchy
+    ? hierarchy.empty
+    : grouped
     ? groupedSource!.exact
       ? !page.groups?.length
       : !page.rows.length
@@ -4451,7 +4504,11 @@ function EntityRows({
           <SearchIcon size={22} />
         </span>
         <h2>
-          {(constrained
+          {hierarchy
+            ? intl.message(
+                constrained ? "list.tree.noRootsFiltered" : "list.tree.noRoots",
+              )
+            : (constrained
             ? emptyContent?.noMatchesTitle
             : emptyContent?.emptyTitle) ??
             (query?.trim()
@@ -4481,8 +4538,25 @@ function EntityRows({
     else next.delete(id);
     onSelectionChange(next);
   };
+  // In Tree, selection covers the records loaded so far (Tree blueprint section 8).
+  const selectableRows = hierarchy ? hierarchy.loadedRows : page.rows;
   const pageSelected =
-    page.rows.length > 0 && page.rows.every((row) => selectedIds.has(row.id));
+    selectableRows.length > 0 &&
+    selectableRows.every((row) => selectedIds.has(row.id));
+  // Tree draws the readable identity and title in its label column.
+  const titleKey = descriptor.fields.find(
+    (field) =>
+      field.semanticRole === "title" &&
+      field.key !== descriptor.entity.identityField,
+  )?.key;
+  const columnFields = hierarchy
+    ? fields.filter(
+        (field) =>
+          field.key !== descriptor.entity.identityField &&
+          field.key !== titleKey,
+      )
+    : fields;
+  const sortableInTree = !hierarchy || !treeOrdered(hierarchy.tree, descriptor);
   const pageGroups = groupedRows(page, group, descriptor, intl),
     layout = recordCardLayout(descriptor, fields),
     cards = (rows: readonly EntityListRowV1[], headingLevel: 2 | 3 = 2) => (
@@ -4531,6 +4605,94 @@ function EntityRows({
     );
   const rendererKind = listRendererKind(mode, widthTier);
   if (!rendererKind) return null;
+  if (hierarchy && !hierarchy.ready)
+    return <LoadingTable columns={fields.length} />;
+  const treeChrome = hierarchy ? (
+    <HierarchyTreeChrome
+      hierarchy={hierarchy}
+      descriptor={descriptor}
+      filtered={Boolean(query?.trim()) || filtered}
+      selecting={selectedIds.size > 0}
+      intl={intl}
+    />
+  ) : null;
+  if (hierarchy && widthTier === "narrow") {
+    // Narrow: an indented list with the label and expand control; the other
+    // columns follow as the record's details.
+    const detailFields = fields.filter(
+      (field) =>
+        field.key !== descriptor.entity.identityField && field.key !== titleKey,
+    );
+    return (
+      <>
+        {treeChrome}
+        <div
+          ref={hierarchy.gridRef as React.RefObject<HTMLDivElement>}
+          className="a-entity-tree__list"
+          role="treegrid"
+          tabIndex={-1}
+          aria-label={descriptor.surface.title}
+          aria-busy={loading}
+          onKeyDown={handleTreeKeyDown}
+          onFocus={hierarchy.onFocus}
+        >
+          <HierarchyTreeLines
+            hierarchy={hierarchy}
+            variant="list"
+            columnCount={1}
+            intl={intl}
+            renderNode={(entry, focusable) => {
+              const row = entry.row,
+                href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
+              return (
+                <div
+                  {...treeNodeAttributes(entry, focusable)}
+                  className="a-entity-tree__item"
+                >
+                  <div role="gridcell" className="a-entity-tree__item-cell">
+                    <TreeNodeLabel
+                      entry={entry}
+                      hierarchy={hierarchy}
+                      descriptor={descriptor}
+                      intl={intl}
+                      href={href}
+                      onOpen={recordClick(row)}
+                    />
+                    {detailFields.length ? (
+                      <dl
+                        className="a-entity-tree__details"
+                        style={{ marginInlineStart: `calc(${entry.level - 1} * var(--tree-indent) + 1.5rem)` }}
+                      >
+                        {detailFields.map((field) => (
+                          <div key={field.key}>
+                            <dt>{field.label}</dt>
+                            <dd>
+                              {renderFieldValue(
+                                row.values[field.key],
+                                field,
+                                query,
+                                intl,
+                                row.displayValues?.[field.key],
+                              )}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+                    {!chooser ? (
+                      <span className="a-entity-tree__item-actions">
+                        <RowMenu descriptor={descriptor} row={row} intl={intl} />
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            }}
+          />
+        </div>
+      </>
+    );
+  }
   const treeControls = grouped ? (
     <div className="a-entity-tree">
       <TreeStrip
@@ -4587,9 +4749,16 @@ function EntityRows({
     const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
     if (href) navigate(href);
   };
-  // `level` places record rows inside the grouped tree grid.
-  const tableRows = (rows: readonly EntityListRowV1[], level?: number) =>
-    rows.map((row) => {
+  // `level` places record rows inside the grouped tree grid; `node` makes the
+  // row a Tree node, led by its label cell.
+  const tableRow = (
+    row: EntityListRowV1,
+    level?: number,
+    node?: {
+      readonly entry: Parameters<typeof treeNodeAttributes>[0];
+      readonly focusable: boolean;
+    },
+  ) => {
       const href = chooser ? recordLink?.(row) : recordHref(descriptor, row),
         identity = formatFieldValue(
           row.values[descriptor.entity.identityField],
@@ -4599,10 +4768,15 @@ function EntityRows({
       return (
         <tr
           key={row.id}
-          tabIndex={href ? 0 : undefined}
-          aria-level={level}
-          data-tree-key={level ? row.id : undefined}
-          onKeyDown={(event) => {
+          {...(node
+            ? treeNodeAttributes(node.entry, node.focusable)
+            : {
+                tabIndex: href ? 0 : undefined,
+                "aria-level": level,
+                "data-tree-key": level ? row.id : undefined,
+              })}
+          // A Tree node follows the tree-grid keyboard model alone.
+          onKeyDown={node ? undefined : (event) => {
             if (
               event.key === "Enter" &&
               !(
@@ -4640,7 +4814,19 @@ function EntityRows({
               />
             </td>
           ) : null}
-          {fields.map((field) => (
+          {node && hierarchy ? (
+            <td className="a-entity-tree__label-cell">
+              <TreeNodeLabel
+                entry={node.entry}
+                hierarchy={hierarchy}
+                descriptor={descriptor}
+                intl={intl}
+                href={href}
+                onOpen={recordClick(row)}
+              />
+            </td>
+          ) : null}
+          {columnFields.map((field) => (
             <td
               key={field.key}
               data-label={field.label}
@@ -4691,17 +4877,28 @@ function EntityRows({
           </td>
         </tr>
       );
-    });
-  const columnCount = fields.length + 2 + Number(selectionEnabled);
+    };
+  const tableRows = (rows: readonly EntityListRowV1[], level?: number) =>
+    rows.map((row) => tableRow(row, level));
+  const columnCount =
+    columnFields.length + 2 + Number(selectionEnabled) + Number(Boolean(hierarchy));
   return (
     <>
     {treeControls}
+    {treeChrome}
     <StickyListTable sticky={!chooser} aria-busy={loading}>
       <table
         className="a-entity-list__table"
         {...(grouped
           ? { role: "treegrid", onKeyDown: handleTreeKeyDown }
-          : {})}
+          : hierarchy
+            ? {
+                role: "treegrid",
+                onKeyDown: handleTreeKeyDown,
+                onFocus: hierarchy.onFocus,
+                ref: hierarchy.gridRef as React.RefObject<HTMLTableElement>,
+              }
+            : {})}
       >
         <caption className="a-visually-hidden">
           {descriptor.surface.title}
@@ -4721,7 +4918,7 @@ function EntityRows({
                     checked={pageSelected}
                     onChange={(event) => {
                       const next = new Set(singleSelection ? [] : selectedIds);
-                      for (const row of page.rows)
+                      for (const row of selectableRows)
                         if (event.currentTarget.checked) next.add(row.id);
                         else next.delete(row.id);
                       onSelectionChange(next);
@@ -4730,10 +4927,23 @@ function EntityRows({
                 )}
               </th>
             ) : null}
-            {fields.map((field) => {
-              const sortIndex = sort.findIndex(
-                  (item) => item.field === field.key,
-                ),
+            {hierarchy ? (
+              <th scope="col" className="a-entity-tree__label-heading">
+                {[descriptor.entity.identityField, titleKey]
+                  .map(
+                    (key) =>
+                      descriptor.fields.find((field) => field.key === key)
+                        ?.label,
+                  )
+                  .filter(Boolean)
+                  .join(" · ")}
+              </th>
+            ) : null}
+            {columnFields.map((field) => {
+              // A declared order field decides sibling order in Tree.
+              const sortIndex = sortableInTree
+                  ? sort.findIndex((item) => item.field === field.key)
+                  : -1,
                 active = sortIndex >= 0 ? sort[sortIndex] : undefined;
               return (
                 <th
@@ -4756,7 +4966,7 @@ function EntityRows({
                   }
                 >
                   <div className="a-entity-list__column-heading">
-                    {field.sortable ? (
+                    {field.sortable && sortableInTree ? (
                       <button
                         type="button"
                         className="a-entity-list__sort-header"
@@ -4806,7 +5016,17 @@ function EntityRows({
           </tr>
         </thead>
         <tbody>
-          {grouped ? (
+          {hierarchy ? (
+            <HierarchyTreeLines
+              hierarchy={hierarchy}
+              variant="table"
+              columnCount={columnCount}
+              intl={intl}
+              renderNode={(entry, focusable) =>
+                tableRow(entry.row, undefined, { entry, focusable })
+              }
+            />
+          ) : grouped ? (
             <GroupedTree
               descriptor={descriptor}
               groups={groups!}
@@ -5350,6 +5570,8 @@ function modeUnavailableReasonKey(code: string): string {
     return "list.mode.reason.laneFieldUnavailable";
   if (code === "LIST_BOARD_COUNTS_UNAVAILABLE")
     return "list.mode.reason.countsUnavailable";
+  if (code === "LIST_TREE_PARENT_FIELD_UNAVAILABLE")
+    return "list.mode.reason.parentFieldUnavailable";
   if (
     code === "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE" ||
     code === "LIST_GANTT_DATE_FIELD_UNAVAILABLE"

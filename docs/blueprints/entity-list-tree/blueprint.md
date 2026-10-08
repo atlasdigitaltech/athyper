@@ -283,6 +283,19 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 
 **Fixture boundary.** Synthetic fixtures are test data. Chart of Accounts, Cost Center, Project Task and Budget pilots are Entity onboarding with their own approval; each then needs only its hierarchy declaration.
 
+**Delivery status (9 October 2026).** Implementation, not publication: no real entity publishes a hierarchy or the `tree` mode yet.
+
+- A1 (grouped tree, sections 5.1 and 7.1): `0aa3c3d4d`, `02af7c5c3`, `541c4bd96`. P-T1 (shared tree grid): `fd6e20f76`. Both verified on synthetic fixtures (`tests/foundation-browser/entity-list-tree.spec.ts`, `tests/foundation/entity-list-grouped-tree.test.ts`, `tests/foundation/entity-list-tree-keyboard.test.ts`).
+- B1 (sections 5.2, 5.3 and 7.2): part 1, the published declaration, per-viewer resolution, the `hierarchy` parameter and the child-existence and orphan SQL, `2f56f8502`; part 2, the Tree layout runtime, "Tree layout runtime (Tree blueprint B1, part 2)". Verified on a synthetic Chart of Accounts (5 levels, summary and posting accounts) in `tests/foundation-browser/entity-list-tree.spec.ts`, now registered in `test:country-browser`, and `tests/foundation/entity-list-tree-model.test.ts`: acceptance (a)–(g), plus the node ceiling. As built, within the approved scope:
+  - The roots query is the list's own page query, so the list's error, retry and authority checks cover the top level; the orphans query loads beside it; each expansion sends one children query. Every tree query also asks for the identity, title, parent and node-kind fields, because the server returns only requested fields.
+  - Sibling order is the declared order field and then the identity; column sorting is then not offered in Tree. Without an order field, siblings follow the list's sort.
+  - The label column shows the identity and title and replaces those two columns; the other visible columns, the favourite and the row menu behave as in Table. Selection covers loaded records only, and the list says so while records are selected.
+  - Presentation additions from the prototype review that send no request: a path bar built from loaded nodes, "Show to level n" over loaded nodes, a "Depth limit" marker on a node with visible children at `maxDepth` (it does not expand), and a caption, while search or filters are active, that they apply level by level until Phase B2.
+  - Deep link: `tree.node` carries the record's routing ID, never displayed. The runtime resolves the path upwards with one `recordIds` request per level (never past `maxDepth`), distinguishes a parent hidden by the search and filters from one the viewer cannot read (then the path starts in the orphans group), loads pages downwards until each node on the path is loaded, focuses the node and then drops `tree.node` from the location. A record deeper than `maxDepth`, or not in the tree as shown, gets a notice instead.
+  - Narrow widths: an indented list with the label, expand control, row menu and the other columns as label–value details.
+  - The result parser accepts `hasChildren` and `parentOutsideView` on any response; the server emits them only on `hierarchy` responses. Rejecting them elsewhere (section 5.3, last row) is not built.
+- Not landed: the component catalogue row for the list host (a publication gate, as for Calendar and Gantt); authoring storage (decision 9, behind the metadata-cleanup gate); B2–B5, A2 and A3 (each needs its own approval).
+
 ## 13. Dependencies and risks
 
 | Dependency or risk                       | Consequence                                   | Handling                                                                                                                                                             |

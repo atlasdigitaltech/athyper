@@ -22,6 +22,11 @@ export const LIST_TREE_MAX_DEPTH = 16;
 /** Loaded nodes the Tree layout draws at most (section 7.2). */
 export const LIST_TREE_NODE_CEILING = 500;
 
+/** A `tree.node` deep-link value: a routing identity, never displayed. */
+export function isListTreeNode(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
 /** Parses the browser Tree projection. */
 export function parseListTree(
   raw: unknown,

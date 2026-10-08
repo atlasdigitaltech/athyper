@@ -32,11 +32,14 @@ const script = buildSync({
       ['1131','Raw materials','active','asset','posting',50000,'1130'],
       ...Array.from({length:cfg.many??0},(_,i)=>['9'+String(i).padStart(3,'0'),'Bulk '+i,'active','asset','posting',1,null])];
     const idOf=Object.fromEntries(accounts.map(([code],i)=>[code,uuid(i)]));
-    const rows=accounts.map(([code,name,status,account_type,kind,budget,parent],i)=>({id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[parent]:null},...(parent?{displayValues:{parent:accounts.find(a=>a[0]===parent)[1]}}:{})}));
+    const rows=accounts.map(([code,name,status,account_type,kind,budget,parent],i)=>({id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[parent]:null},...(parent&&!(cfg.hidden??[]).includes(parent)?{displayValues:{parent:accounts.find(a=>a[0]===parent)[1]}}:{})}));
     const descriptor={schemaVersion:1,plane:'neon',
       entity:{code:'gl_account',label:'gl_account',pluralLabel:'Chart of Accounts',identityField:'code',detailRouteTemplate:'/gl_account/:recordId'},
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
-      surface:{key:'list',title:'Chart of Accounts',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','name','status','account_type','kind','budget'],density:'comfortable',mode:cfg.defaultMode??'table'},search:{minimumQueryLength:1},filterPresentation:{quickFields:[],source:'metadata',allowUserPinning:true},supportedModes:['table','compact']},
+      surface:{key:'list',title:'Chart of Accounts',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','name','status','account_type','kind','budget'],density:'comfortable',mode:cfg.defaultMode??'table'},search:{minimumQueryLength:1},filterPresentation:{quickFields:[],source:'metadata',allowUserPinning:true},
+        ...(cfg.tree?{supportedModes:['table','compact','tree'],tree:{parentField:'parent',nodeKind:{field:'kind',branchValues:['summary'],tones:{summary:'success'}},maxDepth:cfg.maxDepth??5}}
+          :cfg.treeUnavailable?{supportedModes:['table','compact'],unavailableModes:[{mode:'tree',code:'LIST_TREE_PARENT_FIELD_UNAVAILABLE'}]}
+          :{supportedModes:['table','compact']})},
       fields:fields.map((f,i)=>({...f,defaultOrder:i})),actions:[],
       scope:{status:'ready',labels:[{key:'access',label:'Scope',value:'All permitted tenant records'}],fingerprint:'c'.repeat(64)},
       limits:{defaultPageSize:cfg.pageSize??4,allowedPageSizes:[cfg.pageSize??4,25],maxSortLevels:2,countMode:cfg.exact?'exact':'none'}};
@@ -46,14 +49,25 @@ const script = buildSync({
       if(op===entityListDescriptorOperation)return descriptor;
       if(op!==entityListOperation)throw Error('Unexpected fixture operation');
       const q=options.query??{};window.treeRequests.push(q);
-      let matched=rows;
-      for(const f of (q.filter??[]).map(f=>JSON.parse(f))){
+      // Records the viewer cannot read are never returned or counted.
+      const visible=rows.filter(r=>!(cfg.hidden??[]).includes(r.values.code));
+      const visibleIds=new Set(visible.map(r=>r.id));
+      let matched=visible;
+      const ids=q.recordIds?[].concat(q.recordIds):undefined;
+      if(ids)matched=matched.filter(r=>ids.includes(r.id));
+      if(q.hierarchy==='orphans')matched=matched.filter(r=>r.values.parent&&!visibleIds.has(r.values.parent));
+      const filters=(q.filter??[]).map(f=>JSON.parse(f));
+      const apply=(list,fs)=>{for(const f of fs){
         const v=r=>r.values[f.field];
-        if(f.operator==='is_null')matched=matched.filter(r=>v(r)==null);
-        else if(f.operator==='is_not_null')matched=matched.filter(r=>v(r)!=null);
-        else if(f.operator==='eq')matched=matched.filter(r=>v(r)===f.value);
-        else if(f.operator==='in')matched=matched.filter(r=>f.value.includes(v(r)));
-      }
+        if(f.operator==='is_null')list=list.filter(r=>v(r)==null);
+        else if(f.operator==='is_not_null')list=list.filter(r=>v(r)!=null);
+        else if(f.operator==='eq')list=list.filter(r=>v(r)===f.value);
+        else if(f.operator==='in')list=list.filter(r=>f.value.includes(v(r)));
+      }return list};
+      matched=apply(matched,filters);
+      // hasChildren: a visible child that matches the list's filters other than the parent filter.
+      if(q.hierarchy){const others=filters.filter(f=>f.field!=='parent');
+        matched=matched.map(r=>({...r,hasChildren:apply(visible.filter(c=>c.values.parent===r.id),others).length>0,...(q.hierarchy==='orphans'?{parentOutsideView:true}:{})}));}
       const sortField=(q.sort??[])[0]?.split(':')[0];
       if(sortField)matched=[...matched].sort((a,b)=>cmp(a.values[sortField],b.values[sortField])||a.id.localeCompare(b.id));
       const exact=q.countMode==='exact';
@@ -71,8 +85,8 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number };
-type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string };
+type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[] };
+type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 async function mount(page: Page, width: number, fixture: Fixture = {}, path = "", dir?: "rtl") {
@@ -158,5 +172,142 @@ test.describe("A1 grouped tree", () => {
     await expect(dialog.getByText("Grouping field", { exact: true })).toBeVisible();
     // "Then by" appears once a level is chosen, up to three levels.
     await expect(dialog.getByText("Then by", { exact: true })).toHaveCount(0);
+  });
+});
+
+const idOf = (index: number) => `7f3c2e1d-4b5a-4c6d-8e9f-${String(100000000000 + index).slice(-12)}`;
+const node = (page: Page, code: string) => page.locator("[role=row][aria-posinset]", { hasText: code });
+const parentFilters = (queries: Query[]) =>
+  queries.flatMap(q => (q.filter ?? []).map(f => JSON.parse(f) as { field: string; operator: string; value?: string }).filter(f => f.field === "parent"));
+
+test.describe("B1 Tree layout", () => {
+  test("roots, one request per expansion, leaves without an expand control, node kinds, path, no UUID", async ({ page }) => {
+    await mount(page, 1440, { tree: true }, "?view=tree");
+    const grid = page.getByRole("treegrid");
+    await expect(grid).toBeVisible();
+    await expect(page.locator('[role=row][aria-level="1"][aria-posinset] .a-entity-tree__identity')).toHaveText(["1000", "2000", "3000"]);
+    // The roots are the list's own page: parent is null, hierarchy=nodes.
+    const first = await requests(page);
+    expect(first.some(q => q.hierarchy === "nodes" && parentFilters([q]).some(f => f.operator === "is_null"))).toBe(true);
+    expect(first.some(q => q.hierarchy === "orphans")).toBe(true);
+    // A leaf (3000, no children) has no expand control; a branch has one.
+    await expect(node(page, "3000").locator("[data-tree-toggle]")).toHaveCount(0);
+    await expect(node(page, "3000")).not.toHaveAttribute("aria-expanded", /.*/);
+    await expect(node(page, "1000")).toHaveAttribute("aria-expanded", "false");
+    // Node kind: hidden text, round for a branch kind and a diamond for a leaf kind.
+    await expect(node(page, "1000").locator(".a-entity-tree__kind")).toHaveAttribute("data-shape", "branch");
+    await expect(node(page, "3000").locator(".a-entity-tree__kind")).toHaveAttribute("data-shape", "leaf");
+    await expect(node(page, "1000").locator(".a-entity-tree__kind")).toHaveText("Summary account");
+    const before = (await requests(page)).length;
+    await node(page, "1000").getByRole("button", { name: "Expand 1000 Assets" }).click();
+    await expect(node(page, "1100")).toHaveAttribute("aria-level", "2");
+    await expect(node(page, "1200")).toHaveAttribute("aria-level", "2");
+    const after = await requests(page);
+    expect(after.length).toBe(before + 1);
+    expect(after.at(-1)!.hierarchy).toBe("nodes");
+    expect(parentFilters([after.at(-1)!])).toEqual([{ field: "parent", operator: "eq", value: idOf(0) }]);
+    // Collapse and reopen: the loaded level is kept, no request.
+    await node(page, "1000").getByRole("button", { name: "Collapse 1000 Assets" }).click();
+    await expect(node(page, "1100")).toHaveCount(0);
+    await node(page, "1000").getByRole("button", { name: "Expand 1000 Assets" }).click();
+    await expect(node(page, "1100")).toBeVisible();
+    expect((await requests(page)).length).toBe(before + 1);
+    // The path bar shows where the focused row sits, from loaded nodes.
+    await node(page, "1200").focus();
+    await expect(page.getByRole("navigation", { name: "Path" })).toContainText("1000 Assets");
+    await expect(page.getByRole("navigation", { name: "Path" }).locator("[aria-current=location]")).toHaveText("1200 Non-current assets");
+    // Tree pages itself and shows no list pagination or title count.
+    await expect(page.locator(".a-entity-list__pagination")).toHaveCount(0);
+    expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+    await page.screenshot({ path: "tooling/config/test-results/entity-list-tree-layout.png", fullPage: true });
+  });
+
+  test("records whose parent is hidden form their own group with a marker and never the parent's identity", async ({ page }) => {
+    await mount(page, 1440, { tree: true, hidden: ["1100"] }, "?view=tree");
+    const heading = page.locator(".a-entity-tree__group-row", { hasText: "Records whose parent is outside your view" });
+    await expect(heading).toHaveAttribute("aria-level", "1");
+    await expect(page.locator('[role=row][aria-level="2"][aria-posinset] .a-entity-tree__identity')).toHaveText(["1110", "1130"]);
+    await expect(node(page, "1110").locator(".a-entity-tree__marker")).toHaveText("Parent outside your view");
+    // Expanding Assets shows only the visible child; the hidden one is not inferred.
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await expect(page.locator('[role=row][aria-level="2"][aria-posinset]', { hasText: "1200" })).toBeVisible();
+    await expect(page.locator(".a-entity-list")).not.toContainText("Current assets");
+    // An orphan's own children browse normally.
+    await node(page, "1110").getByRole("button", { name: /Expand 1110/ }).click();
+    await expect(node(page, "1111")).toHaveAttribute("aria-level", "3");
+  });
+
+  test("nothing deeper than the maximum depth is requested; the depth limit is marked", async ({ page }) => {
+    await mount(page, 1440, { tree: true, maxDepth: 2 }, "?view=tree");
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await expect(node(page, "1100")).toHaveAttribute("aria-level", "2");
+    await expect(node(page, "1100").locator(".a-entity-tree__marker--limit")).toHaveText("Depth limit");
+    await expect(node(page, "1100").locator("[data-tree-toggle]")).toHaveCount(0);
+    await page.getByRole("button", { name: "Expand all loaded" }).click();
+    expect(parentFilters(await requests(page)).some(f => f.value === idOf(1))).toBe(false);
+  });
+
+  test("an unavailable Tree is a disabled, explained layout option", async ({ page }) => {
+    await mount(page, 1440, { treeUnavailable: true }, "?view=tree");
+    await expect(page.locator(".a-entity-list__table")).toBeVisible();
+    await expect(page.getByRole("treegrid")).toHaveCount(0);
+    await page.getByRole("button", { name: "Controls", exact: true }).click();
+    await page.getByRole("menuitem", { name: /^Display settings/ }).click();
+    const layout = page.getByRole("dialog").getByRole("radiogroup", { name: "Layout" });
+    await expect(layout.getByRole("radio", { name: "Tree, unavailable" })).toBeDisabled();
+    await expect(layout).toHaveAccessibleDescription("Tree is unavailable: its parent field is not available to you.");
+  });
+
+  test("a deep link reveals and focuses its node, expanding the path", async ({ page }) => {
+    await mount(page, 1440, { tree: true }, `?view=tree&tree.node=${idOf(5)}`);
+    await expect(node(page, "1113")).toBeFocused();
+    await expect(node(page, "1113")).toHaveAttribute("aria-level", "5");
+    for (const code of ["1000", "1100", "1110", "1111"]) await expect(node(page, code)).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("navigation", { name: "Path" }).locator("[aria-current=location]")).toHaveText("1113 USD collection account");
+    // Applied once: the location drops the link.
+    await expect.poll(() => page.url()).not.toContain("tree.node");
+    expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+  });
+
+  test("a deep link deeper than the maximum depth explains itself", async ({ page }) => {
+    await mount(page, 1440, { tree: true, maxDepth: 3 }, `?view=tree&tree.node=${idOf(5)}`);
+    await expect(page.getByRole("status").filter({ hasText: "deeper than the 3 levels" })).toBeVisible();
+  });
+
+  test("keyboard follows the tree grid, mirrored right to left", async ({ page }) => {
+    await mount(page, 1440, { tree: true }, "?view=tree", "rtl");
+    const assets = node(page, "1000");
+    await assets.focus();
+    await page.keyboard.press("ArrowLeft"); // forward in right-to-left
+    await expect(assets).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("ArrowLeft");
+    await expect(node(page, "1100")).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(assets).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(node(page, "3000")).toBeFocused();
+  });
+
+  test("phones show an indented list with labels, expand controls and details", async ({ page }) => {
+    await mount(page, 390, { tree: true }, "?view=tree");
+    const list = page.locator(".a-entity-tree__list[role=treegrid]");
+    await expect(list).toBeVisible();
+    await expect(page.locator(".a-entity-list__table")).toHaveCount(0);
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await expect(node(page, "1200")).toHaveAttribute("aria-level", "2");
+    await expect(node(page, "1200").locator(".a-entity-tree__details")).toContainText("Annual budget");
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+    await page.screenshot({ path: "tooling/config/test-results/entity-list-tree-narrow.png", fullPage: true });
+  });
+
+  test("at most 500 nodes load; the ceiling is announced and Load more stops", async ({ page }) => {
+    await mount(page, 1440, { tree: true, many: 700, pageSize: 250 }, "?view=tree");
+    await expect(page.getByRole("button", { name: "Load more" })).toBeVisible();
+    await page.getByRole("button", { name: "Load more" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Showing the first 500 records of this tree" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
+    await expect(page.locator("[role=row][aria-posinset]")).toHaveCount(500);
   });
 });

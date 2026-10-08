@@ -49,6 +49,7 @@ import {
   type ListCalendarV1,
 } from "./calendar";
 import { isListDateAnchor } from "./date-range";
+import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
 import {
@@ -810,6 +811,7 @@ function stateRules(
       ? { calendar: descriptor.surface.calendar }
       : {}),
     ...(descriptor.surface.gantt ? { gantt: descriptor.surface.gantt } : {}),
+    ...(descriptor.surface.tree ? { tree: true } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -826,6 +828,7 @@ interface StateRules {
   readonly board?: ListBoardV1;
   readonly calendar?: ListCalendarV1;
   readonly gantt?: ListGanttV1;
+  readonly tree?: true;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -989,6 +992,9 @@ function parseState(
       : {}),
     ...(rules.gantt && isListDateAnchor(record.ganttAnchor)
       ? { ganttAnchor: record.ganttAnchor }
+      : {}),
+    ...(rules.tree && isListTreeNode(record.treeNode)
+      ? { treeNode: record.treeNode }
       : {}),
   });
 }

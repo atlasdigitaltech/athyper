@@ -191,6 +191,9 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
   readonly calendarAnchor?: string;
   /** Gantt position (`YYYY-MM-DD`). Location only: never saved with a view. */
   readonly ganttAnchor?: string;
+  /** Tree deep link (`tree.node`): the record to reveal. Location only, an
+   * internal routing identity that is never displayed. */
+  readonly treeNode?: string;
 }
 
 export interface ListFieldDescriptorV1 {

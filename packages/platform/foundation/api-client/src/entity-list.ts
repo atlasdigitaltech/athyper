@@ -81,6 +81,9 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
   /** Groups only, no rows; valid only with `group` and exact counts. */
   readonly groupsOnly?: boolean;
   readonly hierarchy?: "nodes" | "orphans";
+  /** Restricts the request to these records (at most 100), for example the
+   * Tree layout resolving a deep link's ancestors. */
+  readonly recordIds?: readonly string[];
 };
 
 export function entityListQuery(state: EntityListQueryState, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
@@ -94,6 +97,7 @@ export function entityListQuery(state: EntityListQueryState, descriptor: EntityL
     ...(state.group ? { group: state.group } : {}),
     ...(state.groupsOnly ? { groupsOnly: "true" } : {}),
     ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),
+    ...(state.recordIds?.length ? { recordIds: Object.freeze([...state.recordIds]) } : {}),
     ...(state.filters.length ? { filter: Object.freeze(state.filters.map((filter) => JSON.stringify(filter))) } : {}),
     ...(state.sort.length ? { sort: Object.freeze(state.sort.map((sort) => [sort.field, sort.direction, sort.nulls].filter(Boolean).join(":"))) } : {}),
     countMode: descriptor.limits.countMode,
