@@ -409,7 +409,12 @@ tests/foundation-browser/entity-list-calendar.spec.ts              registered in
 
 - P1: the move-only commit landed as `f3cfd6783` (`docs/blueprints/entity-list-layouts/foundation.md`). **Reviewer attestation (8 October 2026):** the independent diff verification of `f3cfd6783` against Board revision 4 found no substantive change to the moved text; the only differences are table-column padding. This is a verification finding, not an approval. Next: the owner's decision 2, then the count-mode rule as its own commit.
 - P2: landed as `624522195`. That commit also fixed a step-A defect: state parsing now tolerates a descriptor without `defaultState`.
-- Calendar runtime: not started; it waits for decisions 5, 6, 8 and 9.
+- P1 completed: decision 2 recorded in `fb6827aed`, and the count-mode rule landed separately in `84e8a5b0c`.
+- Calendar runtime (decisions 5, 6, 8, 9): landed as `27b9d74db`, verified on fixtures, including the owner's interim Country-shaped `updated_at` rehearsal. As-built notes:
+  - **Open-ended query.** It is sent whenever an end field is declared, rather than only when the end is nullable: the approved browser shape (section 5.6) has no end-nullability flag. A required end field simply returns no open-ended rows, and the budget stays within two window queries.
+  - **Agenda.** Each record appears once, on its first day inside the window. A long or open-ended record is not repeated on every day. The month grid still shows its span with continuation markers.
+  - **Page query.** In Calendar mode, the list's own page query is the window query, so the list's authority, error and retry handling cover it.
+  - **Not landed.** The component catalogue row (section 5.4) is Studio catalogue data, which is in the area under cleanup. It is not needed for fixture-based verification.
 
 ## 13. Dependencies and risks
 
