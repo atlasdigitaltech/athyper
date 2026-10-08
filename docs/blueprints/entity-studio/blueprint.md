@@ -100,6 +100,13 @@ modes. Unsupported settings reject before persistence rather than being silently
 by the runtime. Its implementation-contract fingerprint is not a signed resource release
 or proof of deployed F6/F8 authority; handler-backed and feature-specific list profiles
 require their own registered composition.
+Native compiler authorization assembly selects from the shared record read-registration
+inventory and derives field keys from installed identities. It preserves exact authored
+permission codes (or the explicit valid absent-permission state); missing, duplicate,
+deprecated or unsupported scope bindings reject. This bounded profile admits only the
+existing list/read callables and tenant-context scope semantics. Its implementation
+fingerprint is compatibility evidence, not a permission grant, current policy approval,
+protected-state initializer or F8 deployment receipt.
 Publication lowering preserves supported single-target, read-only foreign-key/logical
 references through the shared key-reference representation. It verifies source/compiled
 relation membership and full field-mapping coverage; unsupported mutation, polymorphic,

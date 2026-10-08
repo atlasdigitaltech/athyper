@@ -189,6 +189,36 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native authorization assembly — 9 October
+
+`resolveNativeBootstrapAuthorization` now assembles compiler authorization from the
+shared read-callable inventory, exact native permission/scope declarations and the
+application-resolved stable identities. The bootstrap wrapper replaces caller-supplied
+handler/resolver/permission rosters. Valid absence remains `none`; a defined permission
+keeps its exact code. Duplicate/foreign/deprecated permission rows, missing or duplicate
+scope bindings, alternate scope coordinates, unsupported handlers and altered operation
+semantics reject. No MFA initialization or enforcement changed.
+
+The implementation inventory is shared with real runtime handler registration. Its
+fingerprint describes compatibility, not a signed resource or evidence of permission
+catalogue availability, current grants, storage ownership or deployed F8 enforcement.
+Those checks remain independently required. Tests compile both absent and defined
+permissions, qualify the result against the actual runtime registry and invoke the
+registered list/read callables; negative cases verify scope and semantics rejection.
+
+Executed from repository root:
+
+```sh
+pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/native-bootstrap-authorization.test.ts src/composition/control-plane/product-command-runtime.test.ts src/composition/shared/entity-runtime/__tests__/entity-read-registrations.test.ts src/composition/shared/entity-runtime/__tests__/country-authorization-boundary.test.ts src/composition/control-plane/native-bootstrap-provider.test.ts
+pnpm --filter @athyper/server-platform-host exec tsc -p tsconfig.json --noEmit
+```
+
+Results: 55 tests passed and host production typecheck passed. No database command,
+resource publication, new draft or activation ran. Full startup assembly remains
+incomplete: complete native proposals, schema/initializer/component and remaining
+compiler resource composition, application bootstrap/replay and deployed F6/F8/F9
+are not established by these tests. The control API bootstrap option remains unbound.
+
 ### Native record-provider assembly — 9 October
 
 The production bootstrap wrapper now replaces supplied `compiler.listProviders` with

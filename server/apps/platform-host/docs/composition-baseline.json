@@ -163,6 +163,30 @@
       "syntaxDiagnostics": []
     },
     {
+      "file": "src/composition/control-plane/native-bootstrap-authorization.ts",
+      "lines": 175,
+      "imports": [
+        {
+          "specifier": "@athyper/server-contract-meta-entity-authoring",
+          "typeOnly": true,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-plane-studio-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "../shared/entity-runtime/read-registrations.js",
+          "typeOnly": false,
+          "missing": false
+        }
+      ],
+      "registrations": [],
+      "identifiers": [],
+      "syntaxDiagnostics": []
+    },
+    {
       "file": "src/composition/control-plane/native-bootstrap-components.ts",
       "lines": 100,
       "imports": [
@@ -346,8 +370,13 @@
     },
     {
       "file": "src/composition/control-plane/product-command-runtime.ts",
-      "lines": 336,
+      "lines": 343,
       "imports": [
+        {
+          "specifier": "./native-bootstrap-authorization.js",
+          "typeOnly": false,
+          "missing": false
+        },
         {
           "specifier": "./native-bootstrap-provider.js",
           "typeOnly": false,
@@ -5332,7 +5361,7 @@
     },
     {
       "file": "src/composition/shared/entity-runtime/read-registrations.ts",
-      "lines": 34,
+      "lines": 154,
       "imports": [
         {
           "specifier": "@athyper/server-contract-metadata",
@@ -5351,7 +5380,11 @@
         }
       ],
       "registrations": [],
-      "identifiers": [],
+      "identifiers": [
+        "entity.record.list.v1",
+        "entity.record.read-registration",
+        "entity.record.read.v1"
+      ],
       "syntaxDiagnostics": []
     },
     {

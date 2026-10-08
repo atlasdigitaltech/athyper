@@ -427,6 +427,12 @@ it("binds compiler identities to application rows and revalidates without compon
             compiler: {
               ...native.c,
               core: { ...native.c.core, identities: [] },
+              authorization: {
+                ...native.c.authorization,
+                handlers: [],
+                resolvers: [],
+                permissions: [],
+              },
             },
             operations: {} as never,
             reader: {} as never,
@@ -447,6 +453,13 @@ it("binds compiler identities to application rows and revalidates without compon
       resolveNativeBootstrapListProviders(native.graph),
     );
     expect(prepared.compiler.listProviders).not.toEqual(native.c.listProviders);
+    expect(prepared.compiler.authorization.handlers.map((h) => h.key)).toEqual([
+      "entity.record.list.v1",
+      "entity.record.read.v1",
+    ]);
+    expect(
+      prepared.compiler.authorization.permissions.map((p) => p.state),
+    ).toEqual(["none", "none"]);
     await resolved.policy.qualify(tx as never, input);
     expect(qualify).toHaveBeenCalledTimes(1);
     rows[0]!.field_key = "changed";

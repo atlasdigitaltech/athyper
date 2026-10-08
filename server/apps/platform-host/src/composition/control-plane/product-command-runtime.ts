@@ -1,3 +1,4 @@
+import { resolveNativeBootstrapAuthorization } from "./native-bootstrap-authorization.js";
 import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
 import { createNativeBootstrapResourceComposition } from "./native-bootstrap-resources.js";
 import { createNativeBootstrapProposalResolver } from "./native-bootstrap-proposals.js";
@@ -101,6 +102,11 @@ export async function createControlProductCommandRuntime(options: {
         const listProviders = resolveNativeBootstrapListProviders(
           args[3].graph,
         );
+        const authorization = resolveNativeBootstrapAuthorization(
+          args[3].graph,
+          identities,
+          resources.host.commands.maxMembers,
+        );
         return {
           ...resources,
           async qualify(tx, command) {
@@ -122,6 +128,7 @@ export async function createControlProductCommandRuntime(options: {
             compiler: {
               ...resources.preparation.compiler,
               listProviders,
+              authorization,
               core: {
                 ...resources.preparation.compiler.core,
                 identities,
