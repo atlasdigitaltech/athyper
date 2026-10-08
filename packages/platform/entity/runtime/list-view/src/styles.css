@@ -2,6 +2,7 @@
 @import "./date-range/date-range.css";
 @import "./calendar/calendar.css";
 @import "./gantt/gantt.css";
+@import "./tree/tree.css";
 .a-entity-list{display:grid;gap:var(--a-space-3);min-width:0}
 /* Header band: the same 20px below the header as workspace, module and record pages. */
 .a-entity-list__header{position:relative;padding-block-end:var(--a-space-5)}
