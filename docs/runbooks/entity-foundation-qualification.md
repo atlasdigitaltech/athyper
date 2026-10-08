@@ -209,6 +209,48 @@ pass, covering creation scope, failed admission, schema rejection on replay, aut
 closed request validation and missing bindings. These tests use mocked database transport;
 they are not canonical database or live-read evidence.
 
+### Canonical rehearsal: fresh-root visibility corrected — 8 October
+
+A complete DEV Studio dump was restored into disposable PostgreSQL 16.15, preserving
+canonical triggers, RLS, grants and existing data. The native repository command ran
+under a separate application login with a synthetic issuer ticket and synthetic graph.
+It reproduced `Change-set scope must match its Entity scope`: the root INSERT trigger
+could not read its Entity because the old read policy required an existing admitted
+draft. This was an actual canonical-schema integration defect missed by the reduced
+root fixture, not a failure of human review or a reason to bypass authorization.
+
+Forward migration `20261008_entity_product_creation_entity_read.sql` adds a private
+creation-entity predicate bound to login, transaction, backend, actor, authority tenant,
+expiry and revocation. Both permissive and restrictive Entity SELECT policies retain
+their prior draft/relation paths and add only exact admitted system-entity creation.
+The next rehearsal failure was missing SELECT on the five AI tables used for whole-graph
+emptiness/readback. The same migration adds admission-scoped reads, with no AI writes.
+It changes no protected state or pending cutover constraint. Migration SHA-256:
+`c7a49bb38d64328dede529cdade13912112ff0d51c573aede546fcb4cab727a8`.
+
+DEV rollback rehearsal, installation and no-op ledger replay succeeded; authorization
+assignments and activation-head fingerprints were unchanged. Receipts are
+`native-read-scope-{rehearsal,installation,replay}.json` in the existing private backup
+directory. `studio-before-native-read-scope.dump` is the newly restored backup;
+`canonical-bootstrap-rehearsal-20261008.json` records its checksum and limitations.
+The disposable container was removed. DEV retains all seven pending constraints.
+
+After removing pending checks only in that disposable copy, the synthetic graph reached
+the field-identity guard and rejected its uninstalled fixture identity. This is not a
+whole-graph success or proof that the actual two onboarding graphs are ready. Separately,
+DEV inspection confirms all 31 installed identities are reserved to older drafts; the
+current guard rejects reuse from another root. The native proposal/reset implementation
+must resolve this explicitly, preserving the approved source operations and security
+controls. No identity lifecycle guard or source row was changed here.
+
+The existing opt-in product-creation PostgreSQL test now loads the canonical root scope
+trigger and original Entity read policies, reproduces the pre-fix failure, and verifies
+the correction, wrong actor/tenant denial, missing admission, scope isolation, rollback,
+replay rejection and AI read-only boundaries. This regression test passed. The 19 migration
+runner tests and migration layout check passed (162 classified files, 154 retained SQL).
+Installed proposal resolution, complete native graph persistence/compiler proof and
+F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`

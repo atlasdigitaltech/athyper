@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  productCreationEntityReadMigrationName,
   nativeBootstrapPrivilegesMigrationName,
   operationReservationMigrationName,
   productDraftCreationMigrationName,
@@ -547,5 +548,58 @@ test("native insert privileges retain pending cutover and canonical source check
   assert.doesNotMatch(
     canonical,
     /DROP CONSTRAINT|INSERT INTO metadata|GRANT ALL|GRANT DELETE/,
+  );
+});
+
+test("fresh-root Entity reads preserve transaction scope and grant no AI writes or cutover", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/50_product_creation_entity_read.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        productCreationEntityReadMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  for (const required of [
+    "transaction_id=pg_current_xact_id()",
+    "backend_pid=pg_backend_pid()",
+    "login_role=session_user",
+    "NOT revoked",
+    "expires_at>clock_timestamp()",
+    "app.current_principal_id",
+    "app.current_tenant_id",
+    "creation_entity_id=p_entity",
+  ])
+    assert.ok(canonical.includes(required));
+  assert.doesNotMatch(
+    canonical,
+    /DROP CONSTRAINT|GRANT ALL|GRANT INSERT|GRANT UPDATE|GRANT DELETE|requires_mfa/,
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      productCreationEntityReadMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      productCreationEntityReadMigrationName,
+    ),
+    /COMMIT;/,
   );
 });

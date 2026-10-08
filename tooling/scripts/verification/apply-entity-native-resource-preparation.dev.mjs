@@ -1,3 +1,5 @@
+export const productCreationEntityReadMigrationName =
+  "20261008_entity_product_creation_entity_read.sql";
 export const liveReadResourceProjectionMigrationName =
   "20261008_entity_live_read_resource_projection.sql";
 export const liveReadResourceReviewMigrationName =
@@ -73,6 +75,7 @@ export function preparationSql(
 ) {
   assert.ok(
     [
+      productCreationEntityReadMigrationName,
       nativeBootstrapPrivilegesMigrationName,
       operationReservationMigrationName,
       productDraftCreationMigrationName,
@@ -141,6 +144,7 @@ export function runPreparation(args) {
     "--reference-resource-reads",
     "--authoring-resource-review",
     "--live-read-resource-review",
+    "--product-creation-entity-read",
     "--native-bootstrap-privileges",
     "--operation-reservation",
     "--product-draft-creation",
@@ -188,6 +192,7 @@ export function runPreparation(args) {
       "--reference-resource-reads",
       "--authoring-resource-review",
       "--live-read-resource-review",
+      "--product-creation-entity-read",
       "--native-bootstrap-privileges",
       "--operation-reservation",
       "--product-draft-creation",
@@ -205,91 +210,97 @@ export function runPreparation(args) {
     ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--native-bootstrap-privileges")
-    ? nativeBootstrapPrivilegesMigrationName
-    : !allowed.has("--operation-reservation")
-      ? operationReservationMigrationName
-      : !allowed.has("--product-draft-creation")
-        ? productDraftCreationMigrationName
-        : !allowed.has("--operation-bootstrap")
-          ? operationBootstrapMigrationName
-          : !allowed.has("--live-read-resource-projection")
-            ? liveReadResourceProjectionMigrationName
-            : !allowed.has("--live-read-resource-review")
-              ? liveReadResourceReviewMigrationName
-              : !allowed.has("--authoring-identity-policy-validation")
-                ? authoringIdentityPolicyValidationMigrationName
-                : !allowed.has("--authoring-identity-graph-validation")
-                  ? authoringIdentityGraphValidationMigrationName
-                  : !allowed.has("--authoring-identity-constraint-execution")
-                    ? authoringIdentityConstraintExecutionMigrationName
-                    : !allowed.has("--authoring-resource-entitlement-reads")
-                      ? authoringResourceEntitlementReadsMigrationName
-                      : !allowed.has(
-                            "--authoring-resource-entitlement-evaluation",
-                          )
-                        ? authoringResourceEntitlementEvaluationMigrationName
-                        : !allowed.has("--authoring-resource-scope-evaluation")
-                          ? authoringResourceScopeEvaluationMigrationName
-                          : !allowed.has("--authoring-resource-worker-reads")
-                            ? authoringResourceWorkerReadsMigrationName
-                            : !allowed.has(
-                                  "--authoring-resource-current-source",
-                                )
-                              ? authoringResourceCurrentSourceMigrationName
-                              : !allowed.has("--authoring-resource-history")
-                                ? authoringResourceHistoryMigrationName
-                                : !allowed.has("--authoring-resource-review")
-                                  ? authoringResourceReviewMigrationName
-                                  : !allowed.has("--reference-resource-reads")
-                                    ? referenceResourceReadsMigrationName
-                                    : !allowed.has(
-                                          "--authoring-resource-projection",
-                                        )
-                                      ? authoringResourceProjectionMigrationName
+  const selectedMigration = !allowed.has("--product-creation-entity-read")
+    ? productCreationEntityReadMigrationName
+    : !allowed.has("--native-bootstrap-privileges")
+      ? nativeBootstrapPrivilegesMigrationName
+      : !allowed.has("--operation-reservation")
+        ? operationReservationMigrationName
+        : !allowed.has("--product-draft-creation")
+          ? productDraftCreationMigrationName
+          : !allowed.has("--operation-bootstrap")
+            ? operationBootstrapMigrationName
+            : !allowed.has("--live-read-resource-projection")
+              ? liveReadResourceProjectionMigrationName
+              : !allowed.has("--live-read-resource-review")
+                ? liveReadResourceReviewMigrationName
+                : !allowed.has("--authoring-identity-policy-validation")
+                  ? authoringIdentityPolicyValidationMigrationName
+                  : !allowed.has("--authoring-identity-graph-validation")
+                    ? authoringIdentityGraphValidationMigrationName
+                    : !allowed.has("--authoring-identity-constraint-execution")
+                      ? authoringIdentityConstraintExecutionMigrationName
+                      : !allowed.has("--authoring-resource-entitlement-reads")
+                        ? authoringResourceEntitlementReadsMigrationName
+                        : !allowed.has(
+                              "--authoring-resource-entitlement-evaluation",
+                            )
+                          ? authoringResourceEntitlementEvaluationMigrationName
+                          : !allowed.has(
+                                "--authoring-resource-scope-evaluation",
+                              )
+                            ? authoringResourceScopeEvaluationMigrationName
+                            : !allowed.has("--authoring-resource-worker-reads")
+                              ? authoringResourceWorkerReadsMigrationName
+                              : !allowed.has(
+                                    "--authoring-resource-current-source",
+                                  )
+                                ? authoringResourceCurrentSourceMigrationName
+                                : !allowed.has("--authoring-resource-history")
+                                  ? authoringResourceHistoryMigrationName
+                                  : !allowed.has("--authoring-resource-review")
+                                    ? authoringResourceReviewMigrationName
+                                    : !allowed.has("--reference-resource-reads")
+                                      ? referenceResourceReadsMigrationName
                                       : !allowed.has(
-                                            "--reference-command-privileges",
+                                            "--authoring-resource-projection",
                                           )
-                                        ? referencePrivilegesMigrationName
+                                        ? authoringResourceProjectionMigrationName
                                         : !allowed.has(
-                                              "--ownership-initialization",
+                                              "--reference-command-privileges",
                                             )
-                                          ? ownershipInitializationMigrationName
+                                          ? referencePrivilegesMigrationName
                                           : !allowed.has(
-                                                "--component-catalogue",
+                                                "--ownership-initialization",
                                               )
-                                            ? componentCatalogueMigrationName
-                                            : !allowed.has("--snapshot-guards")
-                                              ? snapshotMigrationName
+                                            ? ownershipInitializationMigrationName
+                                            : !allowed.has(
+                                                  "--component-catalogue",
+                                                )
+                                              ? componentCatalogueMigrationName
                                               : !allowed.has(
-                                                    "--core-root-guards",
+                                                    "--snapshot-guards",
                                                   )
-                                                ? coreRootMigrationName
+                                                ? snapshotMigrationName
                                                 : !allowed.has(
-                                                      "--constraint-compatibility",
+                                                      "--core-root-guards",
                                                     )
-                                                  ? constraintMigrationName
+                                                  ? coreRootMigrationName
                                                   : !allowed.has(
-                                                        "--typed-row-guards",
+                                                        "--constraint-compatibility",
                                                       )
-                                                    ? typedRowMigrationName
+                                                    ? constraintMigrationName
                                                     : !allowed.has(
-                                                          "--legacy-nullability",
+                                                          "--typed-row-guards",
                                                         )
-                                                      ? legacyNullabilityMigrationName
+                                                      ? typedRowMigrationName
                                                       : !allowed.has(
-                                                            "--revision-provenance",
+                                                            "--legacy-nullability",
                                                           )
-                                                        ? revisionProvenanceMigrationName
+                                                        ? legacyNullabilityMigrationName
                                                         : !allowed.has(
-                                                              "--revision",
+                                                              "--revision-provenance",
                                                             )
-                                                          ? revisionMigrationName
-                                                          : allowed.has(
-                                                                "--root",
+                                                          ? revisionProvenanceMigrationName
+                                                          : !allowed.has(
+                                                                "--revision",
                                                               )
-                                                            ? migrationName
-                                                            : rootMigrationName;
+                                                            ? revisionMigrationName
+                                                            : allowed.has(
+                                                                  "--root",
+                                                                )
+                                                              ? migrationName
+                                                              : rootMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

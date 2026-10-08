@@ -24,6 +24,8 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
           "-i",
           name,
           "psql",
+          "-h",
+          "127.0.0.1",
           "-X",
           "-At",
           "-v",
@@ -48,7 +50,15 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
       started = true;
       for (let n = 0; n < 100; n++) {
         try {
-          docker("exec", name, "pg_isready", "-U", "postgres");
+          docker(
+            "exec",
+            name,
+            "pg_isready",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "postgres",
+          );
           break;
         } catch {
           if (n === 99) throw Error("POSTGRES_NOT_READY");
@@ -59,7 +69,7 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
  CREATE SCHEMA metadata; CREATE SCHEMA master;
  CREATE FUNCTION master.current_principal_id_soft() RETURNS uuid LANGUAGE sql AS $$ SELECT current_setting('app.current_principal_id',true)::uuid $$;
  CREATE TABLE metadata.entity(id uuid PRIMARY KEY,tenant_id uuid,ownership_model text);
- CREATE TABLE metadata.entity_change_set(id uuid PRIMARY KEY,entity_id uuid REFERENCES metadata.entity(id),tenant_id uuid,change_set_code text,branch_code text,title text,created_by uuid,base_release_id uuid,status text DEFAULT 'draft',lock_version bigint DEFAULT 0,source_kind text,native_core_layout_version integer);
+ CREATE TABLE metadata.entity_change_set(id uuid PRIMARY KEY,entity_id uuid REFERENCES metadata.entity(id),tenant_id uuid,change_set_code text,branch_code text,title text,created_by uuid,base_release_id uuid,parent_change_set_id uuid,status text DEFAULT 'draft',lock_version bigint DEFAULT 0,source_kind text,native_core_layout_version integer);
  ALTER TABLE metadata.entity_change_set ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.entity_change_set FORCE ROW LEVEL SECURITY;
  GRANT USAGE ON SCHEMA metadata,master TO athyper_product_command_app;`);
       const transport = read(
@@ -72,6 +82,44 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
         ),
       );
       q(read("ddl/planes/studio/metadata/47_product_draft_creation.sql"));
+      // Exercise the canonical trigger's Entity read; the old minimal fixture
+      // omitted this RLS dependency and incorrectly proved fresh-root readiness.
+      q(`CREATE TABLE metadata.entity_release(id uuid,entity_id uuid,tenant_id uuid);
+        CREATE TABLE metadata.entity_relation_target(target_entity_id uuid,change_set_id uuid);
+        ALTER TABLE metadata.entity ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.entity FORCE ROW LEVEL SECURITY;
+        GRANT SELECT ON metadata.entity,metadata.entity_change_set,metadata.entity_relation_target TO athyper_product_command_app;
+        CREATE POLICY proof_root_read ON metadata.entity_change_set FOR SELECT TO athyper_product_command_app USING(entity_command_private.admitted(id));`);
+      q(
+        transport.slice(
+          transport.indexOf("CREATE POLICY product_command_entity_read"),
+          transport.indexOf("CREATE POLICY product_command_class_read"),
+        ),
+      );
+      const functions = read("ddl/planes/studio/metadata/07_functions.sql");
+      const rootGuard = functions.slice(
+        functions.indexOf(
+          "CREATE OR REPLACE FUNCTION metadata.trg_guard_entity_change_set()",
+        ),
+      );
+      q(
+        rootGuard.slice(
+          0,
+          rootGuard.indexOf("$$;", rootGuard.indexOf("AS $$") + 5) + 3,
+        ),
+      );
+      q(
+        `CREATE TRIGGER proof_root_scope BEFORE INSERT ON metadata.entity_change_set FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_change_set();`,
+      );
+      for (const table of [
+        "entity_ai_profile",
+        "entity_ai_field",
+        "entity_ai_binding",
+        "entity_ai_reference",
+        "entity_ai_term",
+      ])
+        q(
+          `CREATE TABLE metadata.${table}(id uuid,tenant_id uuid,change_set_id uuid); ALTER TABLE metadata.${table} ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.${table} FORCE ROW LEVEL SECURITY;`,
+        );
       const entity = randomUUID(),
         other = randomUUID(),
         target = randomUUID(),
@@ -86,6 +134,58 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
       const enter = `SELECT entity_command_private.enter('${token}','${hash}');`;
       const insert = (e = entity, t = target, a = actor) =>
         `INSERT INTO metadata.entity_change_set(id,entity_id,tenant_id,change_set_code,branch_code,title,created_by,base_release_id) VALUES('${t}','${e}',NULL,'test','main','Synthetic','${a}',NULL);`;
+      // With the real root trigger, valid creation admission still fails before
+      // the forward fix because no matching draft exists yet.
+      expect(() => q(session + enter + insert() + "ROLLBACK;")).toThrow();
+      q(read("ddl/planes/studio/metadata/50_product_creation_entity_read.sql"));
+      expect(
+        q(session + enter + "SELECT count(*) FROM metadata.entity; ROLLBACK;"),
+      ).toMatch(/^1$/m);
+      expect(
+        q(session + "SELECT count(*) FROM metadata.entity; ROLLBACK;"),
+      ).toMatch(/^0$/m);
+      expect(
+        q(
+          session +
+            enter +
+            `SET LOCAL app.current_principal_id='${randomUUID()}'; SELECT count(*) FROM metadata.entity; ROLLBACK;`,
+        ),
+      ).toMatch(/^0$/m);
+      expect(
+        q(
+          session +
+            enter +
+            `SET LOCAL app.current_tenant_id='${randomUUID()}'; SELECT count(*) FROM metadata.entity; ROLLBACK;`,
+        ),
+      ).toMatch(/^0$/m);
+      for (const table of [
+        "entity_ai_profile",
+        "entity_ai_field",
+        "entity_ai_binding",
+        "entity_ai_reference",
+        "entity_ai_term",
+      ]) {
+        q(
+          `INSERT INTO metadata.${table} VALUES('${randomUUID()}',NULL,'${target}'),('${randomUUID()}',NULL,'${randomUUID()}');`,
+        );
+        expect(
+          q(
+            session +
+              enter +
+              `SELECT count(*) FROM metadata.${table}; ROLLBACK;`,
+          ),
+        ).toMatch(/^1$/m);
+        expect(
+          q(session + `SELECT count(*) FROM metadata.${table}; ROLLBACK;`),
+        ).toMatch(/^0$/m);
+        expect(() =>
+          q(
+            session +
+              enter +
+              `INSERT INTO metadata.${table} VALUES('${randomUUID()}',NULL,'${target}'); COMMIT;`,
+          ),
+        ).toThrow();
+      }
       expect(() => q(session + insert() + "COMMIT;")).toThrow();
       expect(() => q(session + enter + insert(other) + "COMMIT;")).toThrow();
       expect(() =>

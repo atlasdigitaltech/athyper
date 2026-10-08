@@ -3026,6 +3026,15 @@ The repository owns atomic whole-graph persistence, saved snapshots, compiler/re
 verification and transactional audit. The route is absent without its installed binding;
 registration alone is neither cutover evidence nor deployed live-read qualification.
 
+Fresh-root database scope validation must work before the target draft exists.
+The canonical root trigger reads `metadata.entity` under application-role RLS;
+its creation path therefore requires an exact entity-bound, transaction-consumed
+admission read in addition to existing draft/relation visibility. Whole-graph
+emptiness checks require scoped SELECT on deferred AI branches without granting
+AI mutation. Neither read prerequisite authorizes native cutover. A prepared
+bootstrap must also resolve stable-identity introduction/reservation ownership:
+identities reserved to a different draft cannot be silently reused or rebound.
+
 ### 7.1.1 Incremental shared authoring contract
 
 Use the Entity adapter first, backed by the existing authoring services and repository. This contract describes shared capabilities without imposing identical tables or lifecycle details on unrelated resources.

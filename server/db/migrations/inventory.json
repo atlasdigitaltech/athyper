@@ -2112,6 +2112,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/49_native_bootstrap_privileges.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_product_creation_entity_read.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_creation_entity_read.sql",
+      "sha256": "c7a49bb38d64328dede529cdade13912112ff0d51c573aede546fcb4cab727a8",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Permit exact transaction-bound fresh-root entity scope validation without general product visibility; preserve all native cutover checks and existing data.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/50_product_creation_entity_read.sql"
+      ]
     }
   ]
 }
