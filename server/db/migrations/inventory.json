@@ -2126,6 +2126,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/50_product_creation_entity_read.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_identity_adoption.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_identity_adoption.sql",
+      "sha256": "ed3a092a8124cb9c79f725d5ea14002c63add546d67def3ef0fe1352290cd12f",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Immutable source-bound identity adoption for fresh native product roots; preserve original reservations and all pending cutover guards.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/51_native_identity_adoption.sql"
+      ]
     }
   ]
 }

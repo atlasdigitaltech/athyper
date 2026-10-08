@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  nativeIdentityAdoptionMigrationName,
   productCreationEntityReadMigrationName,
   nativeBootstrapPrivilegesMigrationName,
   operationReservationMigrationName,
@@ -600,6 +601,49 @@ test("fresh-root Entity reads preserve transaction scope and grant no AI writes 
       true,
       productCreationEntityReadMigrationName,
     ),
+    /COMMIT;/,
+  );
+});
+
+test("identity adoption retains introduction/history and all cutover checks", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/51_native_identity_adoption.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        nativeIdentityAdoptionMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  assert.doesNotMatch(
+    canonical,
+    /UPDATE metadata.entity_field_identity SET|DROP CONSTRAINT|requires_mfa|GRANT INSERT|GRANT UPDATE|GRANT DELETE/,
+  );
+  for (const text of [
+    "native_bootstrap_writable",
+    "c.lock_version=p_revision",
+    "graph_hash=p_source_hash",
+    "source_snapshot->'fieldIdentities'",
+    "IDENTITY_ADOPTION_GUARD_PREDECESSOR_CHANGED",
+    "s.graph_hash=NEW.proposal_hash",
+    "DEFERRABLE INITIALLY DEFERRED",
+    "IDENTITY_ADOPTION_IMMUTABLE",
+  ])
+    assert.ok(canonical.includes(text));
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(source, digest, false, nativeIdentityAdoptionMigrationName),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(source, digest, true, nativeIdentityAdoptionMigrationName),
     /COMMIT;/,
   );
 });

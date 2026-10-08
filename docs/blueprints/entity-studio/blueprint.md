@@ -623,6 +623,33 @@ Compatibility compares the first and all retained published contracts, including
 
 Retirement/replacement is a governed lifecycle operation applied after the exact authorizing release is approved and sealed; ordinary draft saves cannot change these server-owned columns. Reserved and active identities have no retirement payload; reserved has no first_release_id and active/retired require one. New enrollment in a retired identity rejects; existing values and immutable releases retain the original identity and are not reinterpreted or cascade-deleted. Retirement alone does not revoke an otherwise valid pinned historical reader; revocation remains a separate control. Replacing a field never copies/converts values implicitly. The replacement must have its own qualified definition, and any value conversion is an explicit governed operation. The draft revision replacement_field_id is the sole authored successor proposal; identity.replacement_identity_id is server-derived from that exact reviewed proposal only when the authorizing retirement release commits. It is never independently editable. Before commitment, show proposed versus committed successor separately; neither compiler nor UI silently overwrites a historical revision from current identity state. Publication verifies proposal identity, chain and predecessor under the identity lock; conflicting concurrent proposals reject. This is proposal versus committed lifecycle evidence, not two writable authorities. Field hub › Lifecycle selects a qualified replacement proposal; Technical details shows committed evidence.
 
+### `metadata.entity_field_identity_adoption`
+
+Server-owned evidence for explicit reserved-identity reuse by a fresh native product
+draft. This is not an identity editor or a new publication authority. The original
+identity UUID, introducing draft, creation attribution and historical mappings remain
+unchanged. A successful adoption permits draft membership only; compatibility with
+retained releases, independent publication review and first-release activation remain
+separate requirements. It does not establish deployed F9 resolution or authorize
+business values for a reserved identity.
+
+| Columns | Contract |
+| --- | --- |
+| `change_set_id`, `field_identity_id`, `target_field_id` | Exact target membership; unique identity and field per target; deferred target field FK |
+| `source_change_set_id`, `source_field_id`, `source_revision`, `source_hash` | Same product Entity; exact introducing source, currently locked revision and immutable saved snapshot; verify persisted field binding and snapshot identity/key evidence |
+| `proposal_hash` | Exact prepared native graph; deferred guard requires its revision-1 saved snapshot and matching target field |
+| `created_by`, `created_at` | Authenticated command actor and database timestamp; immutable |
+
+The canonical bootstrap resolves adoption coordinates through trusted preparation,
+checks each installed identity against its compiler context, and invokes the restricted
+adoption routine inside the creation-admitted transaction. Direct adoption-table DML is
+not granted. Wrong source/target, missing snapshots, stale revisions, unused proposals
+and conflicting replay reject. No name-only identity allocation, reservation transfer,
+automatic promotion to active, or history rewriting is allowed. Existing native row,
+core-graph and immediate field guards recognize only this explicit adoption evidence;
+all other reservation boundaries remain. The schema qualifier fingerprints the new
+table, routines and altered guards. Missing evidence continues to block bootstrap.
+
 ### `metadata.entity_runtime_profile`
 
 *Composer home: Overview › Storage.* (Maintained cross-reference to sections 7.2–7.7; not generated output.)

@@ -1,3 +1,7 @@
+import {
+  establishNativeBootstrapIdentities,
+  type NativeIdentityAdoptionSource,
+} from "./native-bootstrap-identities.js";
 import { sql, type Transaction } from "kysely";
 import {
   AuthoringPolicyError,
@@ -59,6 +63,7 @@ export interface NativeBootstrapPolicy {
     branchCode: string;
     baseReleaseId: string | null;
     operations: ApprovedOperationBootstrap;
+    identitySources?: readonly NativeIdentityAdoptionSource[];
     compiler: NativeReleaseCompilationContext;
     reader: {
       registration: NativeProjectionRegistration;
@@ -211,6 +216,7 @@ export async function applyNativeBootstrap(
       baseReleaseId: resolved.baseReleaseId,
       compiler: resolved.compiler,
       reader: resolved.reader,
+      identitySources: resolved.identitySources ?? [],
     }),
     operations: resolved.operations,
   };
@@ -272,6 +278,13 @@ export async function applyNativeBootstrap(
       tx,
     );
   if (initialized.rows.length !== 1) fail("NATIVE_BOOTSTRAP_REVISION_CONFLICT");
+  await establishNativeBootstrapIdentities(
+    tx,
+    input,
+    graph,
+    prepared.compiler.core,
+    prepared.identitySources,
+  );
   // Emptiness includes every mapped family, not just fields/operations.
   for (const plan of plans) {
     const stored = (

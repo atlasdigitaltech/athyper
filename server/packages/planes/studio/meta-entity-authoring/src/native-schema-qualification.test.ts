@@ -41,6 +41,8 @@ function fixture() {
       "metadata.fn_assert_native_layout_graph(uuid)",
       "metadata.fn_assert_native_core_graph(uuid)",
       "metadata.fn_assert_native_root(uuid,text,integer)",
+      "metadata.native_identity_available(uuid,uuid)",
+      "entity_command_private.adopt_native_identity(uuid,uuid,uuid,uuid,uuid,bigint,text,text)",
       "metadata.validate_reference_members(uuid)",
     ].map((signature) => ({
       signature,

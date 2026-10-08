@@ -19,6 +19,7 @@ export const nativeSchemaTables = [
       (member) => `metadata.${member.table}`,
     ),
     "metadata.entity_authoring_command_receipt",
+    "metadata.entity_field_identity_adoption",
     "metadata.ui_component_contract",
     "snapshot.entity_draft_save",
   ]),
@@ -92,6 +93,8 @@ export function canonicalNativeSchemaQuery(applicationRole: string) {
     "metadata.fn_assert_native_layout_graph(uuid)",
     "metadata.fn_assert_native_core_graph(uuid)",
     "metadata.fn_assert_native_root(uuid,text,integer)",
+    "metadata.native_identity_available(uuid,uuid)",
+    "entity_command_private.adopt_native_identity(uuid,uuid,uuid,uuid,uuid,bigint,text,text)",
     "metadata.validate_reference_members(uuid)",
   ];
   return sql<{ evidence: NativeSchemaInspection }>`
@@ -188,6 +191,8 @@ export function nativeSchemaBlockers(
     "metadata.fn_assert_native_layout_graph(uuid)",
     "metadata.fn_assert_native_core_graph(uuid)",
     "metadata.fn_assert_native_root(uuid,text,integer)",
+    "metadata.native_identity_available(uuid,uuid)",
+    "entity_command_private.adopt_native_identity(uuid,uuid,uuid,uuid,uuid,bigint,text,text)",
     "metadata.validate_reference_members(uuid)",
   ]) {
     const matched = evidence.guards.filter((g) => g.signature === signature);

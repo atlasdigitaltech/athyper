@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 251,
+    "configuration:new": 252,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 396,
+    "operational-scripts:new": 397,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -1115,6 +1115,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "configuration:athyper_identity_adoption_postgres",
+      "category": "configuration",
+      "key": "athyper_identity_adoption_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-identity-adoption.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_instance",
       "category": "configuration",
       "key": "athyper_instance",
@@ -1736,6 +1748,7 @@
         "server/packages/planes/studio/meta-entity-authoring/src/native-ai-reconciliation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-constraint-compatibility.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/native-identity-adoption.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-operation-bootstrap.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/product-draft-creation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
@@ -12943,6 +12956,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_native_bootstrap_privileges.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_native_identity_adoption",
+      "category": "operational-scripts",
+      "key": "20261008_entity_native_identity_adoption",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_native_identity_adoption.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

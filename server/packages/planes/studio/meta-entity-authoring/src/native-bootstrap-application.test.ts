@@ -55,6 +55,22 @@ function fixture() {
       for (const [k, v] of checkpoint.histories) histories.set(k, v);
       writes.splice(0, writes.length, ...checkpoint.writes);
     }
+    if (
+      text.includes(
+        "SELECT id,field_key,parent_identity_id,identity_status,introduced_change_set_id",
+      )
+    )
+      return {
+        rows: f.c.core.identities
+          .filter((i) => i.id === values[0])
+          .map((i) => ({
+            id: i.id,
+            field_key: i.fieldKey,
+            parent_identity_id: i.parentIdentityId,
+            identity_status: "reserved",
+            introduced_change_set_id: input.changeSetId,
+          })),
+      };
     if (text.startsWith("SELECT request_hash"))
       return { rows: receipt ? [receipt] : [] };
     if (text.startsWith("SELECT graph,graph_hash"))

@@ -186,3 +186,5 @@ export {
 export { createProductReferenceResourcePolicies } from "./product-reference-resource-policies.js";
 
 export { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
+
+export type { NativeIdentityAdoptionSource } from "./native-bootstrap-identities.js";

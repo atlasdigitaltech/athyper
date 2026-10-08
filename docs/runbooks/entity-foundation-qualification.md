@@ -251,6 +251,49 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Fresh-root identity adoption installed — 8 October
+
+`native-bootstrap-identities.ts` now runs inside the canonical bootstrap after root
+initialization and before any member writes. It resolves every field identity against
+stored entity/tenant/key/parent provenance. Active or same-draft identities need no
+adoption; another draft's reservation requires explicit trusted source coordinates.
+Missing, retired, foreign, duplicate and unused mappings reject. This implementation
+reuses existing identities; first-time identity allocation remains the existing separate
+reservation contract, and no replacement UUID is invented by bootstrap.
+
+Forward migration `20261008_entity_native_identity_adoption.sql` adds immutable adoption
+evidence without changing `introduced_change_set_id` or identity lifecycle state. Its
+restricted command independently checks the creation admission, locked source field and
+revision, immutable snapshot/hash and original identity/key. Deferred constraints require
+the final target field and exact revision-1 proposal snapshot; failed bootstrap rolls all
+adoptions back. No direct adoption writes are granted. The three existing identity guards
+are amended only at their reservation predicates, rejecting unexpected predecessor bodies.
+The native schema fingerprint includes adoption storage and routines.
+Migration SHA-256: `ed3a092a8124cb9c79f725d5ea14002c63add546d67def3ef0fe1352290cd12f`.
+
+DEV rollback rehearsal, installation and ledger replay passed. Original reservation row
+fingerprints, authorization assignments and activation heads were unchanged. Receipts
+`identity-adoption-{rehearsal,installation,replay,verification}.json` are in the existing
+private backup directory. All 31 reservations retain their original provenance, and DEV
+has zero adoption rows: evidence must be committed with each completed replacement graph.
+No replacement root, Entity publication or activation was created. Seven pending checks
+remain intact.
+
+A disposable canonical DEV copy exercised source-bound adoption through the actual
+application-role repository. It passed that stage, then failed on the existing legacy
+`trg_validate_entity_field_contract`: native NULL `type_config` is still rejected. No
+trigger was bypassed and no native graph committed. This identifies the next compatibility
+fix, not a whole-graph or live-read success. The disposable container was removed.
+
+Validation: 865 authoring tests passed, nine opt-in exclusions; the new opt-in PostgreSQL
+adoption test ran separately and passed. It proves positive adoption, rollback for missing
+final target/snapshot, stale hash and wrong-target denial, immutable provenance, matching
+replay and conflicting replay rejection, and retained source references. That focused test
+uses a synthetic admission port and reduced graph; it does not attest authenticated DEV
+execution. Production/native-test typechecks, 20 migration tests and layout checks passed.
+Installed proposal resolution, native legacy-trigger compatibility, whole-graph cutover and
+deployed F6/F8/F9 remain outstanding.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`
