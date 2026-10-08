@@ -1,7 +1,7 @@
 import type { EffectiveEntitySectionV1 } from "./experience";
+import type { ENTITY_LIST_VIEW_MODES } from "./view-modes";
 export type ListPlane = "neon" | "mesh" | "studio";
-export type ListViewMode =
-  "table" | "compact" | "board" | "dashboard" | "spreadsheet";
+export type ListViewMode = (typeof ENTITY_LIST_VIEW_MODES)[number];
 export type ListDensity = "compact" | "comfortable" | "spacious";
 /** Metadata ordering hint for narrow record cards. It orders fields the user
  * can already see; it never widens the authorized list projection. */

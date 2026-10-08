@@ -5,9 +5,15 @@ import {
   validateNormalizedCoreRow,
   type NormalizedCoreRow,
 } from "@athyper/server-contract-meta-entity-authoring";
+import { ENTITY_LIST_RENDERABLE_MODES } from "@athyper/contract-platform-entity-list";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import type { NativeConversionResource } from "./native-graph-conversion.js";
+
+type RenderableListMode = (typeof ENTITY_LIST_RENDERABLE_MODES)[number];
+const renderableModeChoices = ENTITY_LIST_RENDERABLE_MODES.map((mode) => ({
+  const: mode,
+}));
 
 export const optionalListLimits = [
   "maxFilters",
@@ -16,7 +22,7 @@ export const optionalListLimits = [
 ] as const;
 export type OptionalListLimit = (typeof optionalListLimits)[number];
 export interface LegacyListSettings {
-  readonly supportedModes: readonly ("table" | "compact")[];
+  readonly supportedModes: readonly RenderableListMode[];
   readonly limits: {
     readonly defaultPageSize: number;
     readonly allowedPageSizes: readonly number[];
@@ -32,7 +38,7 @@ export interface LegacyListSettings {
 export interface NativeListSettingsContext {
   readonly surfaceId: string;
   readonly provider: NativeConversionResource;
-  readonly modes: readonly ("table" | "compact")[];
+  readonly modes: readonly RenderableListMode[];
   readonly countModes: readonly ("exact" | "estimated" | "none")[];
   readonly maximumPageSize: number;
   readonly maximumPageSizeChoices: number;
@@ -71,7 +77,7 @@ function provider(
         modes: {
           type: "array",
           minItems: 1,
-          items: { anyOf: [{ const: "table" }, { const: "compact" }] },
+          items: { anyOf: renderableModeChoices },
         },
         countModes: {
           type: "array",
@@ -111,7 +117,7 @@ function settings(source: LegacyListSettings, c: NativeListSettingsContext) {
         supportedModes: {
           type: "array",
           minItems: 1,
-          items: { anyOf: [{ const: "table" }, { const: "compact" }] },
+          items: { anyOf: renderableModeChoices },
         },
         limits: {
           type: "object",

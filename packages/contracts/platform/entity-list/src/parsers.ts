@@ -35,14 +35,9 @@ import type {
   ListViewMode,
   SaveableListStateV1,
 } from "./types";
+import { ENTITY_LIST_VIEW_MODES } from "./view-modes";
 
-const MODES = [
-  "table",
-  "compact",
-  "board",
-  "dashboard",
-  "spreadsheet",
-] as const;
+const MODES = ENTITY_LIST_VIEW_MODES;
 const DENSITIES = ["compact", "comfortable", "spacious"] as const;
 const CARD_PRIORITIES = ["primary", "secondary", "hidden"] as const;
 const COUNT_MODES = ["none", "cached", "approximate", "exact"] as const;

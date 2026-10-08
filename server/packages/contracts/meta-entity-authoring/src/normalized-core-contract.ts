@@ -5,6 +5,7 @@ import {
   type ContractNode,
   type ContractValue,
 } from "./foundation-contract.js";
+import { ENTITY_LIST_RENDERABLE_MODES } from "@athyper/server-contract-metadata";
 import { referenceUuid } from "./reference-member-contract.js";
 const nil = { type: "null" } as const;
 const nullable = <const N extends ContractNode>(node: N) =>
@@ -285,7 +286,7 @@ export const normalizedCoreMembers = {
     searchProfileId: ref("search_profile_id", "entity_search_profile"),
     supportedModes: array(
       "supported_modes",
-      enumeration("table", "compact"),
+      enumeration(...ENTITY_LIST_RENDERABLE_MODES),
       "text[]",
     ),
     defaultPageSize: int("default_page_size"),

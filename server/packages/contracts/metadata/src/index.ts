@@ -17,6 +17,8 @@ export * from "./entity-authorization-registry.js";
 export * from "./atlas-learning.js";
 
 export type { EntityWorkContextRequirementV1 } from "@athyper/contract-platform-entity-list";
+/** Re-exported so server contracts without the browser contract dependency share one mode source. */
+export { ENTITY_LIST_RENDERABLE_MODES, ENTITY_LIST_VIEW_MODES } from "@athyper/contract-platform-entity-list";
 
 export * from "./entity-canonical-read-admission.js";
 

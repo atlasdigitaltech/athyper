@@ -68,6 +68,9 @@ import {
 } from "./list-notice";
 import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { formatFieldValue } from "./field-format";
+import { highlightText, renderFieldValue } from "./field-value";
+import { EntityRecordCard } from "./record-card";
+import { listRendererKind } from "./mode-renderers";
 import {
   fallbackQuickFields,
   resolveEntityText,
@@ -3922,7 +3925,6 @@ function EntityRows({
             row={row}
             query={query}
             href={chooser ? recordLink?.(row) : recordHref(descriptor, row)}
-            chooser={chooser}
             selection={
               selectionEnabled
                 ? {
@@ -3933,18 +3935,30 @@ function EntityRows({
                   }
                 : undefined
             }
-            favourite={bookmarkedIds.has(row.id)}
-            favouritePending={pendingBookmarkIds.has(row.id)}
-            onFavourite={(favourite) => onBookmark(row, favourite)}
+            actions={
+              chooser ? undefined : (
+                <>
+                  <BookmarkButton
+                    identity={formatFieldValue(
+                      row.values[descriptor.entity.identityField],
+                      layout.identity,
+                      intl,
+                    )}
+                    favourite={bookmarkedIds.has(row.id)}
+                    pending={pendingBookmarkIds.has(row.id)}
+                    onChange={(favourite) => onBookmark(row, favourite)}
+                  />
+                  <RowMenu descriptor={descriptor} row={row} intl={intl} />
+                </>
+              )
+            }
             onOpenRecord={onOpenRecord}
             intl={intl}
           />
         ))}
       </div>
     );
-  // Narrow lists present the same rows as record cards: geometry changes,
-  // the saved table state (columns, sort, grouping) does not.
-  if (mode === "compact" || widthTier === "narrow")
+  if (listRendererKind(mode, widthTier) === "cards")
     return group ? (
       <div className="a-entity-list__groups">
         {groups.map((item) => (
@@ -4253,132 +4267,6 @@ function SelectionBar({
 }
 /** One record card for compact mode and narrow lists. Slots come from
  * metadata roles via `recordCardLayout`; there are no entity branches. */
-function EntityRecordCard({
-  descriptor,
-  layout,
-  row,
-  query,
-  href,
-  chooser,
-  selection,
-  favourite,
-  favouritePending,
-  onFavourite,
-  onOpenRecord,
-  headingLevel = 2,
-  intl,
-}: {
-  readonly descriptor: EntityListDescriptorV1;
-  readonly layout: RecordCardLayout;
-  readonly row: EntityListRowV1;
-  readonly query?: string;
-  readonly href?: string;
-  readonly chooser: boolean;
-  readonly selection?: {
-    readonly name?: string;
-    readonly type: "radio" | "checkbox";
-    readonly checked: boolean;
-    readonly onChange: (checked: boolean) => void;
-  };
-  readonly favourite: boolean;
-  readonly favouritePending: boolean;
-  readonly onFavourite: (favourite: boolean) => void;
-  readonly onOpenRecord?: (row: EntityListRowV1) => void;
-  readonly headingLevel?: 2 | 3;
-  readonly intl: ReturnType<typeof useEntityI18n>;
-}) {
-  const identity = formatFieldValue(
-      row.values[descriptor.entity.identityField],
-      layout.identity,
-      intl,
-    ),
-    Heading = headingLevel === 3 ? "h3" : "h2",
-    open = (event: React.MouseEvent<HTMLAnchorElement>) => {
-      if (
-        onOpenRecord &&
-        event.button === 0 &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        !event.altKey
-      ) {
-        event.preventDefault();
-        onOpenRecord(row);
-      }
-    },
-    value = (field: ListFieldDescriptorV1) =>
-      renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key]),
-    details = (items: readonly ListFieldDescriptorV1[]) => (
-      <dl>
-        {items.map((field) => (
-          <div key={field.key}>
-            <dt>{field.label}</dt>
-            <dd>{value(field)}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  return (
-    <Card
-      className="a-entity-list__card"
-      data-selected={selection?.checked || undefined}
-    >
-      <div className="a-entity-list__card-header">
-        {selection ? (
-          <input
-            className="a-entity-list__card-select"
-            name={selection.name}
-            type={selection.type}
-            aria-label={intl.message("list.row.selectRecord", { record: identity })}
-            checked={selection.checked}
-            onChange={(event) => selection.onChange(event.currentTarget.checked)}
-          />
-        ) : null}
-        <div className="a-entity-list__card-heading">
-          <Heading>
-            {href ? (
-              <EntityLink
-                className="a-entity-list__record-link"
-                href={href}
-                onClick={open}
-              >
-                {highlightText(identity, query)}
-              </EntityLink>
-            ) : (
-              highlightText(identity, query)
-            )}
-          </Heading>
-          {layout.title ? (
-            <div className="a-entity-list__card-title">{value(layout.title)}</div>
-          ) : null}
-        </div>
-        {!chooser ? (
-          <div className="a-entity-list__card-actions">
-            <BookmarkButton
-              identity={identity}
-              favourite={favourite}
-              pending={favouritePending}
-              onChange={onFavourite}
-            />
-            <RowMenu descriptor={descriptor} row={row} intl={intl} />
-          </div>
-        ) : null}
-      </div>
-      {layout.status ? (
-        <div className="a-entity-list__card-status">{value(layout.status)}</div>
-      ) : null}
-      {layout.body.length ? details(layout.body) : null}
-      {layout.more.length ? (
-        <details className="a-entity-list__card-more">
-          <summary>
-            {intl.message("list.card.moreFields", { count: layout.more.length })}
-          </summary>
-          {details(layout.more)}
-        </details>
-      ) : null}
-    </Card>
-  );
-}
 function BookmarkButton({
   identity,
   favourite,
@@ -4745,28 +4633,6 @@ function sortHeaderTitle(
     : action;
 }
 
-function renderFieldValue(
-  value: JsonValue | undefined,
-  field: ListFieldDescriptorV1,
-  query?: string,
-  intl?: ReturnType<typeof useEntityI18n>,
-  displayLabel?: string,
-): ReactNode {
-  const display = displayLabel ?? formatFieldValue(value, field, intl),
-    highlighted = highlightText(display, query);
-  if (field.semanticRole === "status") {
-    const normalized = String(value ?? "").toLowerCase();
-    return (
-      <span
-        className={`a-entity-list__status a-entity-list__status--${field.statusTones?.[normalized] ?? "neutral"}`}
-      >
-        <span aria-hidden="true" />
-        {highlighted}
-      </span>
-    );
-  }
-  return highlighted;
-}
 async function copyText(value: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
@@ -4788,19 +4654,6 @@ async function copyText(value: string): Promise<boolean> {
     console.debug("Clipboard copy failed", error);
     return false;
   }
-}
-function highlightText(value: string, query?: string): ReactNode {
-  const needle = query?.trim();
-  if (!needle || needle.length < 2) return value;
-  const index = value.toLocaleLowerCase().indexOf(needle.toLocaleLowerCase());
-  if (index < 0) return value;
-  return (
-    <>
-      {value.slice(0, index)}
-      <mark>{value.slice(index, index + needle.length)}</mark>
-      {value.slice(index + needle.length)}
-    </>
-  );
 }
 function searchHint(descriptor: EntityListDescriptorV1): string {
   const priority = (field: ListFieldDescriptorV1) =>

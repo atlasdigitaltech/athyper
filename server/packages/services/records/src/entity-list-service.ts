@@ -29,6 +29,7 @@ import {
   type EntityAttentionCountResolver,
 } from "./list-experience.js";
 import {
+  ENTITY_LIST_RENDERABLE_MODES,
   resolveEntityText,
   type EffectiveListActionV1,
   type EffectiveEntitySectionV1,
@@ -1443,10 +1444,10 @@ function filterOptions(
 function normalizeModes(
   value: readonly ListViewMode[] | undefined,
 ): readonly ListViewMode[] {
-  const allowed = new Set<ListViewMode>(["table", "compact"]);
+  const allowed = new Set<ListViewMode>(ENTITY_LIST_RENDERABLE_MODES);
   const modes = [
     ...new Set(
-      (value ?? ["table", "compact"]).filter((mode) => allowed.has(mode)),
+      (value ?? ENTITY_LIST_RENDERABLE_MODES).filter((mode) => allowed.has(mode)),
     ),
   ];
   return Object.freeze(modes.length ? modes : ["table"]);

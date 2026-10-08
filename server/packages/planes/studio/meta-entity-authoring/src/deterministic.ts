@@ -1,3 +1,4 @@
+import { ENTITY_LIST_RENDERABLE_MODES, ENTITY_LIST_VIEW_MODES } from "@athyper/contract-platform-entity-list";
 import { deriveCanonicalRelations } from "./canonical-relations.js";
 import { parsePublishedLearningFixtureSet } from "./published-learning-fixture-schema.js";
 import { parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
@@ -698,7 +699,7 @@ export function compileListPresentation(
     ? config["defaultState"]
     : {};
   const supportedModes = stringArray(config["supportedModes"]).filter((mode) =>
-    ["table", "compact", "board", "dashboard", "spreadsheet"].includes(mode),
+    (ENTITY_LIST_VIEW_MODES as readonly string[]).includes(mode),
   );
   const searchConfig = isObject(config["search"]) ? config["search"] : {};
   const defaultSearch =
@@ -748,7 +749,7 @@ export function compileListPresentation(
     defaultState: state,
     supportedModes: supportedModes.length
       ? supportedModes
-      : ["table", "compact"],
+      : [...ENTITY_LIST_RENDERABLE_MODES],
     search: {
       ...(typeof searchConfig["profileKey"] === "string"
         ? { profileKey: searchConfig["profileKey"] }

@@ -34,7 +34,7 @@ export type EntityListFilterOperator =
   | "is_not_null"
   | "relative";
 export type EntityListViewMode =
-  "table" | "compact" | "board" | "dashboard" | "spreadsheet";
+  import("@athyper/contract-platform-entity-list").ListViewMode;
 export type EntityListDensity = "compact" | "comfortable" | "spacious";
 
 const PRESENCE_FILTER_OPERATORS = ["is_null", "is_not_null"] as const;

@@ -1,3 +1,4 @@
+import { ENTITY_LIST_RENDERABLE_MODES } from "@athyper/contract-platform-entity-list";
 import { createHash } from "node:crypto";
 import type {
   AuthoringPlane,
@@ -260,7 +261,7 @@ export function buildSharedReferenceGraph(
             density: "comfortable",
             mode: "table",
           },
-          supportedModes: ["table", "compact"],
+          supportedModes: [...ENTITY_LIST_RENDERABLE_MODES],
           limits: {
             defaultPageSize: 25,
             allowedPageSizes: [10, 25, 50, 100],

@@ -10,6 +10,7 @@ import {
 } from "@athyper/contract-platform-entity-runtime";
 import {
   COMMON_REFERENCE_VIEW_PERMISSION,
+  ENTITY_LIST_VIEW_MODES,
   assertCommonReferenceDescriptor,
   compileFieldPattern,
 } from "@athyper/server-contract-metadata";
@@ -435,13 +436,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
           (value) =>
             oneOf(
               value,
-              [
-                "table",
-                "compact",
-                "board",
-                "dashboard",
-                "spreadsheet",
-              ] as const,
+              ENTITY_LIST_VIEW_MODES,
               "listPresentation.supportedModes",
             ),
         );
@@ -535,13 +530,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
           : {
               mode: oneOf(
                 defaultStateItem["mode"],
-                [
-                  "table",
-                  "compact",
-                  "board",
-                  "dashboard",
-                  "spreadsheet",
-                ] as const,
+                ENTITY_LIST_VIEW_MODES,
                 "listPresentation.defaultState.mode",
               ),
             }),
