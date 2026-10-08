@@ -1,4 +1,5 @@
 import { parsePublishedCardContent, parsePublishedListBoard, validatePublishedListBoard } from "./list-board-descriptor.js";
+import { parsePublishedListCalendar, validatePublishedListCalendar } from "./list-calendar-descriptor.js";
 import { validateEntityLiveReadContractV1, parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
@@ -888,6 +889,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(dataOperations ? { dataOperations } : {}),
     ...(item["board"] === undefined ? {} : { board: parsePublishedListBoard(item["board"]) }),
     ...(item["cardContent"] === undefined ? {} : { cardContent: parsePublishedCardContent(item["cardContent"]) }),
+    ...(item["calendar"] === undefined ? {} : { calendar: parsePublishedListCalendar(item["calendar"]) }),
   };
 }
 
@@ -988,6 +990,7 @@ function validateListPresentation(
   if (presentation.identityField)
     requireField(presentation.identityField, "listPresentation.identityField");
   validatePublishedListBoard(presentation, byKey);
+  validatePublishedListCalendar(presentation, byKey);
   for (const key of Object.keys(presentation.localizedLabels?.fields ?? {}))
     requireField(key, "listPresentation.localizedLabels.fields");
   const columns =

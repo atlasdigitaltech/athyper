@@ -160,6 +160,7 @@ export interface SaveableListStateV1 {
   readonly mode: ListViewMode;
   readonly spreadsheet?: SpreadsheetStateV1;
   readonly board?: import("./board").ListBoardStateV1;
+  readonly calendar?: import("./calendar").ListCalendarStateV1;
 }
 
 export interface ListLocationStateV1 extends SaveableListStateV1 {
@@ -168,6 +169,8 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
   readonly cursor?: string;
   readonly pageIndex?: number;
   readonly pageSize?: number;
+  /** Calendar position (`YYYY-MM-DD`). Location only: never saved with a view. */
+  readonly calendarAnchor?: string;
 }
 
 export interface ListFieldDescriptorV1 {
@@ -292,6 +295,8 @@ export interface EntityListDescriptorV1 {
     readonly board?: import("./board").ListBoardV1;
     /** Compiled card content (summary placements), shared by Cards and Board. */
     readonly cardContent?: import("./board").ListCardContentV1;
+    /** Date fields and default view this viewer can use; present only when Calendar is supported. */
+    readonly calendar?: import("./calendar").ListCalendarV1;
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;

@@ -91,7 +91,10 @@ import {
 } from "./mode-renderers";
 import { boardSummaryState } from "./board/board-model";
 import { EntityBoard } from "./board/board-view";
+import { calendarPageState } from "./calendar/calendar-model";
+import { EntityCalendar } from "./calendar/calendar-view";
 import {
+  parseSaveableListState,
   fallbackQuickFields,
   resolveEntityText,
 } from "@athyper/contract-platform-entity-list";
@@ -722,6 +725,8 @@ function EntityCollectionRuntime({
 }: EntityListRuntimeProps) {
   const inherited = useEntityApplication();
   const locale = useOptionalI18n()?.localization.uiLocale;
+  // Calendar windows use the person's governed time zone and week start (i18n defaults otherwise).
+  const localization = useOptionalI18n()?.localization ?? { timeZone: "UTC", weekStart: 1 };
   const actionReasonId = useId();
   const [sourceDescriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const entityIntl = useEntityI18n();
@@ -794,6 +799,11 @@ function EntityCollectionRuntime({
           // Board's summary query groups by the lane field instead.
           boardLaneField:
             state.mode === "board" ? (state.board?.laneField ?? null) : null,
+          // Calendar's page query is the window query for this field, view and anchor.
+          calendar:
+            state.mode === "calendar"
+              ? [state.calendar?.dateField ?? null, state.calendar?.view ?? null, state.calendarAnchor ?? null, localization.timeZone, localization.weekStart]
+              : null,
         }
       : null,
   );
@@ -948,7 +958,7 @@ function EntityCollectionRuntime({
         )
           setActionNotice(listNotice("list.notice.savedViewRetired"));
         if (controller.signal.aborted) return;
-        next = withRenderableModes(next, { board: !embedding });
+        next = withRenderableModes(next, { board: !embedding, calendar: !embedding });
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
         const effectiveSearch = entityLocationSearch(
@@ -1093,7 +1103,10 @@ function EntityCollectionRuntime({
       .request(entityListOperation, {
         params: { entityCode },
         query: entityListQuery(
-          boardSummaryState(state, descriptor),
+          calendarPageState(boardSummaryState(state, descriptor), descriptor, {
+            timeZone: localization.timeZone,
+            weekStart: localization.weekStart,
+          }),
           descriptor,
           scopeCoordinate,
         ),
@@ -1734,6 +1747,30 @@ function EntityCollectionRuntime({
             {loading && !page ? (
               <LoadingTable columns={fields.length} />
             ) : page &&
+              state.mode === "calendar" &&
+              descriptor.surface.calendar &&
+              !embedding ? (
+              <EntityCalendar
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                state={state}
+                page={page}
+                pageCurrent={resultsCurrent}
+                scope={scopeCoordinate}
+                widthTier={widthTier}
+                fields={fields}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                timeZone={localization.timeZone}
+                weekStart={localization.weekStart}
+                recordHref={(row) => recordHref(descriptor, row)}
+                onOpenRecord={onOpenRecord}
+                renderActions={(row) => (
+                  <RowMenu descriptor={descriptor} row={row} intl={entityIntl} />
+                )}
+                onCalendarChange={(change) => update({ ...state, ...change }, "replace")}
+              />
+            ) : page &&
               state.mode === "board" &&
               descriptor.surface.board &&
               !embedding ? (
@@ -1849,7 +1886,7 @@ function EntityCollectionRuntime({
                 />
               </>
             ) : null}
-            {page && state.mode !== "board" ? (
+            {page && state.mode !== "board" && state.mode !== "calendar" ? (
               <EntityListPagination
                 hideSinglePageControls={Boolean(section)}
                 descriptor={descriptor}
@@ -2035,8 +2072,12 @@ function ListChrome({
           ...(embedding ? { mode: undefined } : {}),
         }) !==
         JSON.stringify({
+          // Normalized like any state, so layout-specific defaults (board,
+          // calendar) compare equal however the descriptor was obtained.
           ...(activeView?.state ??
-            saveableViewState(descriptor.surface.defaultState)),
+            saveableViewState(
+              parseSaveableListState(descriptor.surface.defaultState, descriptor),
+            )),
           density: undefined,
           ...(embedding ? { mode: undefined } : {}),
         }),
@@ -2564,8 +2605,8 @@ function ListChrome({
                       ) ||
                       embedding.initialControl === "display"),
                 ).map((item) => item.key)
-              : state.mode === "board"
-                ? // Lanes are the grouping on a board; a saved group stays for Table and Cards.
+              : state.mode === "board" || state.mode === "calendar"
+                ? // Board lanes and calendar days are the grouping; a saved group stays for Table and Cards.
                   LIST_DRAWERS.filter((item) => item.key !== "group").map(
                     (item) => item.key,
                   )
@@ -5128,6 +5169,8 @@ function modeUnavailableReasonKey(code: string): string {
     return "list.mode.reason.laneFieldUnavailable";
   if (code === "LIST_BOARD_COUNTS_UNAVAILABLE")
     return "list.mode.reason.countsUnavailable";
+  if (code === "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE")
+    return "list.mode.reason.dateFieldUnavailable";
   return "list.mode.reason.unsupported";
 }
 function listCountLabel(

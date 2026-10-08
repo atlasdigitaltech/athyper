@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/index.test.ts"
+    "test": "node --import tsx --test src/index.test.ts src/calendar-math.test.ts"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

@@ -113,6 +113,26 @@ describe("safe entity list service", () => {
     expect(limited.surface.board).toBeUndefined();
   });
 
+  it("offers Calendar when a date field is usable and reports why when it is not", async () => {
+    const calendarDescriptor = (startFilterable: boolean): EntityRuntimeDescriptor => ({
+      ...descriptor,
+      fields: [...descriptor.fields, { key: "due_on", storagePath: "due_on", type: "date", required: false, writableOn: [], filterable: startFilterable, sortable: true }],
+      listPresentation: {
+        identityField: "code", title: "Business Partners", defaultColumns: ["code", "name", "due_on"], supportedModes: ["table", "calendar"],
+        calendar: { defaultView: "agenda", dateFields: [{ start: "due_on" }] },
+      },
+    });
+    const usable = calendarDescriptor(true);
+    const compiled = parseEntityListDescriptor(await createTestListService({ metadata: { getEntityDescriptor: async () => usable }, descriptor: usable, authorizer: allowReadOnly() }).descriptor(context, usable.entityCode));
+    expect(compiled.surface.supportedModes).toEqual(["table", "calendar"]);
+    expect(compiled.surface.calendar).toEqual({ defaultView: "agenda", dateFields: [{ start: "due_on", label: "Due On", kind: "date", unscheduled: true }] });
+    const blocked = calendarDescriptor(false);
+    const limited = parseEntityListDescriptor(await createTestListService({ metadata: { getEntityDescriptor: async () => blocked }, descriptor: blocked, authorizer: allowReadOnly() }).descriptor(context, blocked.entityCode));
+    expect(limited.surface.supportedModes).toEqual(["table"]);
+    expect(limited.surface.unavailableModes).toEqual([{ mode: "calendar", code: "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE" }]);
+    expect(limited.surface.calendar).toBeUndefined();
+  });
+
   it("omits unavailable modes when every declared mode is renderable", async () => {
     const lists = createTestListService({ authorizer: allowReadOnly() });
     const compiled = parseEntityListDescriptor(await lists.descriptor(context, descriptor.entityCode));

@@ -61,6 +61,9 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
     const collapsed = parameters.get("lanes.collapsed");
     apply({ board: { laneField: parameters.get("lane") ?? state.board.laneField, collapsed: collapsed === null ? state.board.collapsed : collapsed.split(",").filter(Boolean) } });
   }
+  if (state.calendar && (parameters.has("cal.field") || parameters.has("cal.view")))
+    apply({ calendar: { dateField: parameters.get("cal.field") ?? state.calendar.dateField, view: (parameters.get("cal.view") ?? state.calendar.view) as NonNullable<ListLocationStateV1["calendar"]>["view"] } });
+  if (parameters.has("cal")) apply({ calendarAnchor: parameters.get("cal") || undefined });
   if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
   else if (parameters.get("sheet") === "custom" || parameters.has("pinned") || [...parameters.keys()].some((key) => key.startsWith("width."))) apply({ spreadsheet: decodeSpreadsheet(parameters, state.spreadsheet) });
   if (parameters.get("vid")) apply({ savedViewId: parameters.get("vid")! });
@@ -96,6 +99,11 @@ export function encodeListLocationState(state: ListLocationStateV1, descriptor: 
   if (normalized.density !== base.density) parameters.set("density", normalized.density);
   if (normalized.mode !== base.mode) parameters.set("view", normalized.mode);
   encodeSpreadsheet(parameters, normalized.spreadsheet, base.spreadsheet);
+  if (normalized.calendar && base.calendar) {
+    if (normalized.calendar.dateField !== base.calendar.dateField) parameters.set("cal.field", normalized.calendar.dateField);
+    if (normalized.calendar.view !== base.calendar.view) parameters.set("cal.view", normalized.calendar.view);
+  }
+  if (normalized.calendarAnchor) parameters.set("cal", normalized.calendarAnchor);
   if (normalized.board && base.board) {
     if (normalized.board.laneField !== base.board.laneField) parameters.set("lane", normalized.board.laneField);
     if (!equal(normalized.board.collapsed, base.board.collapsed)) parameters.set("lanes.collapsed", normalized.board.collapsed.join(","));
@@ -117,6 +125,7 @@ export function toSaveableListState(state: ListLocationStateV1): SaveableListSta
     ...(state.group ? { group: state.group } : {}), columns: state.columns, density: state.density, mode: state.mode,
     ...(state.spreadsheet ? { spreadsheet: state.spreadsheet } : {}),
     ...(state.board ? { board: state.board } : {}),
+    ...(state.calendar ? { calendar: state.calendar } : {}),
   });
 }
 

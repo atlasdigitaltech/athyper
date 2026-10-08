@@ -332,6 +332,34 @@ describe("entity list browser contract", () => {
     );
   });
 
+  it("parses a viewer's calendar, normalizes its state and keeps the anchor out of saved state", () => {
+    const fields = [
+      ...descriptorPayload.fields,
+      { key: "due_on", label: "Due on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt", "is_null"], sortable: true, groupable: false, aggregations: [] },
+    ];
+    const calendar = { defaultView: "month", dateFields: [{ start: "due_on", label: "Due on", kind: "date", unscheduled: true, tone: { field: "status", tones: { active: "success" } } }] };
+    const payload = { ...descriptorPayload, fields, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "calendar"], calendar } };
+    const descriptor = parseEntityListDescriptor(payload);
+    assert.deepEqual(descriptor.surface.calendar?.dateFields[0]?.tone, { field: "status", tones: { active: "success" } });
+    assert.deepEqual(descriptor.surface.defaultState.calendar, { dateField: "due_on", view: "month" });
+
+    const shared = decodeListLocationState("?view=calendar&cal=2026-10-08&cal.view=agenda", descriptor);
+    assert.equal(shared.mode, "calendar");
+    assert.equal(shared.calendarAnchor, "2026-10-08");
+    assert.deepEqual(shared.calendar, { dateField: "due_on", view: "agenda" });
+    const encoded = encodeListLocationState(shared, descriptor);
+    assert.equal(encoded.get("cal"), "2026-10-08");
+    assert.equal(encoded.get("cal.view"), "agenda");
+    assert.equal("calendarAnchor" in toSaveableListState(shared), false);
+
+    assert.deepEqual(decodeListLocationState("?view=calendar&cal.view=week&cal.field=retired", descriptor).calendar, { dateField: "due_on", view: "month" });
+    assert.equal(decodeListLocationState("?view=calendar&cal=not-a-day", descriptor).calendarAnchor, undefined);
+
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Calendar/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, defaultView: "week" } } }), /renderable view/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], kind: "datetime" }] } } }), /listed datetime field/);
+  });
+
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);

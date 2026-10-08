@@ -39,6 +39,12 @@ import type {
 import { ENTITY_LIST_VIEW_MODES } from "./view-modes";
 import { temporalFilterValueError } from "./filter-values";
 import {
+  isListCalendarAnchor,
+  parseListCalendar,
+  parseListCalendarState,
+  type ListCalendarV1,
+} from "./calendar";
+import {
   parseListBoard,
   parseListBoardState,
   parseListCardContent,
@@ -199,6 +205,12 @@ export function parseEntityListDescriptor(
       : parseListBoard(surfaceRecord.board, new Set(fieldByKey.keys()));
   if (Boolean(board) !== supportedModes.includes("board"))
     throw new TypeError("surface.board is required exactly when Board is supported");
+  const calendar =
+    surfaceRecord.calendar === undefined
+      ? undefined
+      : parseListCalendar(surfaceRecord.calendar, fieldByKey);
+  if (Boolean(calendar) !== supportedModes.includes("calendar"))
+    throw new TypeError("surface.calendar is required exactly when Calendar is supported");
   const cardContent =
     surfaceRecord.cardContent === undefined
       ? undefined
@@ -208,6 +220,7 @@ export function parseEntityListDescriptor(
     identityField,
     supportedModes: new Set(supportedModes),
     ...(board ? { board } : {}),
+    ...(calendar ? { calendar } : {}),
     maxSortLevels,
     allowedPageSizes: new Set(allowedPageSizes),
     defaultPageSize,
@@ -298,6 +311,7 @@ export function parseEntityListDescriptor(
       supportedModes,
       ...(unavailableModes.length ? { unavailableModes } : {}),
       ...(board ? { board } : {}),
+      ...(calendar ? { calendar } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")
@@ -728,6 +742,7 @@ function stateRules(
     // saved-view service), which then falls back to the first supported mode.
     defaultMode: descriptor.surface.defaultState?.mode,
     ...(descriptor.surface.board ? { board: descriptor.surface.board } : {}),
+    ...(descriptor.surface.calendar ? { calendar: descriptor.surface.calendar } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -742,6 +757,7 @@ interface StateRules {
   /** Surface default used when saved or shared state names an unusable mode. */
   readonly defaultMode?: ListViewMode;
   readonly board?: ListBoardV1;
+  readonly calendar?: ListCalendarV1;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -829,6 +845,7 @@ function parseState(
       ? undefined
       : parseSpreadsheet(record.spreadsheet, rules.fields);
   const board = rules.board ? parseListBoardState(record.board, rules.board) : undefined;
+  const calendar = rules.calendar ? parseListCalendarState(record.calendar, rules.calendar) : undefined;
   const base = {
     ...(optionalCode(record.standardViewKey, "standardViewKey")
       ? {
@@ -849,6 +866,7 @@ function parseState(
     mode,
     ...(spreadsheet ? { spreadsheet } : {}),
     ...(board ? { board } : {}),
+    ...(calendar ? { calendar } : {}),
   };
   if (!rules.includeLocation) return Object.freeze(base);
   const pageSize =
@@ -877,6 +895,7 @@ function parseState(
     ...(pageSize !== undefined && rules.allowedPageSizes.has(pageSize)
       ? { pageSize }
       : { pageSize: rules.defaultPageSize }),
+    ...(rules.calendar && isListCalendarAnchor(record.calendarAnchor) ? { calendarAnchor: record.calendarAnchor } : {}),
   });
 }
 

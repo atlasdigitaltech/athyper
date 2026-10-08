@@ -12,7 +12,7 @@ export function readListLocation(descriptor: EntityListDescriptorV1, search = wi
     const stored = readSessionState(token, descriptor);
     if (stored) return stored;
   }
-  const explicit=[...parameters.keys()].some(key=>["standardView","vid","bvid","q","sort","group","group.clear","density","view","lane","lanes.collapsed","columns","cols","col.remove","col.move","filters","page","pageSize","cursor","lst"].includes(key)||key.startsWith("filter.")||key.startsWith("col.")||key.startsWith("sheet"));
+  const explicit=[...parameters.keys()].some(key=>["standardView","vid","bvid","q","sort","group","group.clear","density","view","lane","lanes.collapsed","cal","cal.view","cal.field","columns","cols","col.remove","col.move","filters","page","pageSize","cursor","lst"].includes(key)||key.startsWith("filter.")||key.startsWith("col.")||key.startsWith("sheet"));
   const preferred=descriptor.viewCatalog?.personalDefault??descriptor.viewCatalog?.sharedDefault;
   if(!explicit&&preferred)parameters.set("vid",preferred);
   const id=parameters.get("vid"),base=savedViewBase(id,descriptor);

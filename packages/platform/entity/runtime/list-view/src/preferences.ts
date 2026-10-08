@@ -28,6 +28,9 @@ export function saveableViewState(state: ListLocationStateV1): SaveableListState
     density: state.density,
     mode: state.mode,
     ...(state.spreadsheet ? { spreadsheet: state.spreadsheet } : {}),
+    ...(state.board ? { board: state.board } : {}),
+    // The calendar's date field and view are saved; its anchor never is.
+    ...(state.calendar ? { calendar: state.calendar } : {}),
   });
 }
 

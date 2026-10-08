@@ -225,6 +225,24 @@ export interface EntityListBoardDescriptor {
   }[];
 }
 
+/** Published Calendar projection. Fields are declared explicitly; a null end
+ * means open-ended. The default view is one this release can render. */
+export interface EntityListCalendarDescriptor {
+  readonly defaultView: import("@athyper/contract-platform-entity-list").ListCalendarView;
+  readonly dateFields: readonly {
+    readonly start: string;
+    readonly end?: string;
+    readonly tone?: {
+      readonly field: string;
+      readonly choices: readonly {
+        readonly value: string;
+        readonly label: string;
+        readonly tone: import("@athyper/contract-platform-entity-list").ListCalendarTone;
+      }[];
+    };
+  }[];
+}
+
 /** Compiled projection of the surface's binding_kind = summary placements. */
 export interface EntityListCardContentDescriptor {
   readonly fields: readonly { readonly field: string; readonly rendererKey?: string }[];
@@ -254,6 +272,7 @@ export interface EntityListPresentationDescriptor {
   readonly defaultDensity?: EntityListDensity;
   readonly supportedModes?: readonly EntityListViewMode[];
   readonly board?: EntityListBoardDescriptor;
+  readonly calendar?: EntityListCalendarDescriptor;
   readonly cardContent?: EntityListCardContentDescriptor;
   /** @deprecated Use limits.defaultPageSize. */
   readonly defaultPageSize?: number;

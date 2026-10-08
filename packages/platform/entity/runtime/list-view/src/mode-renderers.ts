@@ -6,12 +6,12 @@ import type {
 import type { ListWidthTier } from "./presentation-tier";
 
 /** The shared renderer families a list body can use. */
-export type ListRendererKind = "table" | "cards" | "board";
+export type ListRendererKind = "table" | "cards" | "board" | "calendar";
 
 /** Mode → renderer registry. A mode is rendered only through an entry here;
  * adding a layout means registering its renderer, not adding a branch. */
 const LIST_MODE_RENDERERS: Readonly<Partial<Record<ListViewMode, ListRendererKind>>> =
-  Object.freeze({ table: "table", compact: "cards", board: "board" });
+  Object.freeze({ table: "table", compact: "cards", board: "board", calendar: "calendar" });
 
 export const LIST_MODE_RENDERER_MISSING = "LIST_MODE_RENDERER_MISSING";
 
@@ -24,8 +24,8 @@ export function listRendererKind(
 ): ListRendererKind | undefined {
   const registered = LIST_MODE_RENDERERS[mode];
   if (!registered) return undefined;
-  // Board presents one lane at a time when narrow; other layouts become cards.
-  return widthTier === "narrow" && registered !== "board" ? "cards" : registered;
+  // Board and Calendar adapt themselves when narrow (one lane; Agenda); other layouts become cards.
+  return widthTier === "narrow" && registered !== "board" && registered !== "calendar" ? "cards" : registered;
 }
 
 /** Moves supported modes that this runtime cannot render into
@@ -33,11 +33,11 @@ export function listRendererKind(
  * state, list body) sees only modes it can draw. */
 export function withRenderableModes(
   descriptor: EntityListDescriptorV1,
-  /** Hosts that cannot place a board (for example, record choosers) pass false. */
-  options: { readonly board?: boolean } = {},
+  /** Hosts that cannot place a board or calendar (for example, record choosers) pass false. */
+  options: { readonly board?: boolean; readonly calendar?: boolean } = {},
 ): EntityListDescriptorV1 {
   const { supportedModes, defaultState } = descriptor.surface;
-  const drawable = (mode: ListViewMode) => Boolean(LIST_MODE_RENDERERS[mode]) && (mode !== "board" || options.board !== false);
+  const drawable = (mode: ListViewMode) => Boolean(LIST_MODE_RENDERERS[mode]) && (mode !== "board" || options.board !== false) && (mode !== "calendar" || options.calendar !== false);
   const missing = supportedModes.filter((mode) => !drawable(mode));
   if (!missing.length) return descriptor;
   const renderable = supportedModes.filter(drawable);
@@ -53,12 +53,13 @@ export function withRenderableModes(
       .map((mode) => ({ mode, code: LIST_MODE_RENDERER_MISSING })),
   ];
   // A projection travels with its mode: an unrenderable Board takes its lanes with it.
-  const { board, ...surface } = descriptor.surface;
+  const { board, calendar, ...surface } = descriptor.surface;
   return {
     ...descriptor,
     surface: {
       ...surface,
       ...(board && renderable.includes("board") ? { board } : {}),
+      ...(calendar && renderable.includes("calendar") ? { calendar } : {}),
       supportedModes: renderable.length ? renderable : [fallback],
       unavailableModes,
       defaultState: renderable.includes(defaultState.mode)
