@@ -201,7 +201,7 @@ ListLocationStateV1.ganttAnchor?: string;        // YYYY-MM-DD; location only, n
 
 - **Row label.** No new property: the label is the published `entity.identityField` and, when declared, the field with `semanticRole: "title"`. Both are already published and validated, including the no-UUID rule, and the existing descriptor validation fails closed when they are invalid.
 - **URL.** `view=gantt` selects the mode; `gantt=YYYY-MM-DD` is the anchor; `gantt.zoom=` and `gantt.field=` carry the zoom and date field. This mirrors Calendar's split and leaves Calendar's approved `calendarAnchor` untouched.
-- **Saved views** keep `dateField` and `zoom`, never the anchor. A saved or URL zoom the descriptor cannot render is normalized to `defaultZoom`; a date field that is no longer usable falls back to the first usable one with the existing notice. Display state only, so normalizing never widens results.
+- **Saved views** keep `dateField` and `zoom`, never the anchor. In Phase 1 they keep nothing else for Gantt: group collapse is display state for the session and is not saved. A saved or URL zoom the descriptor cannot render is normalized to `defaultZoom`; a date field that is no longer usable falls back to the first usable one with the existing notice. Display state only, so normalizing never widens results.
 - **Query contract.** Calendar's applies unchanged (Calendar section 5.6): an explicit start-ascending sort on every query, constant sort and filters across pages, the largest allowed page size.
 
 ### 5.7 Later phases (shape only; each needs its own approval)
@@ -346,7 +346,7 @@ Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colo
 - Shared date-layout parts, so Gantt reuses rather than duplicates Calendar's agenda, tray, "when" note and empty state: `61ecf4c94` (`date-range/date-range-parts.tsx`, `date-range.css`).
 - G-runtime (sections 5.1, 5.5, 5.6 and the section 6 runtime codes): `6a0b53150`, verified on synthetic fixtures (`tests/foundation-browser/entity-list-gantt.spec.ts`, registered in `test:country-browser`). As built:
   - The published date-range parser and the per-viewer date-range resolution are shared with Calendar (`list-date-range-descriptor.ts`, `list-date-range.ts`), so both layouts apply one set of eligibility rules.
-  - The group field's choices come from the field's authorized choice projection (`filterOptions`) and tones (`statusTones`); the published descriptor carries only `group.field`. A masked field has no projection, so it is omitted.
+  - The group field's choices come from the field's authorized choice projection (`filterOptions`) and tones (`statusTones`); the two layers differ on purpose. The published `listPresentation.gantt` declares only `group.field`; the list service resolves it per viewer and sends the browser `surface.gantt.group` as `{ field, label, choices[] }`, with the authorized choices and their tones. The browser never derives choices itself. A masked field has no projection, so it is omitted.
   - Group counts appear only under exact counts with every row of the window loaded and the ceiling not reached.
   - Group collapse is display state for the session; it is not saved in Phase 1.
 - Not landed: G-authoring (decision 8 open; behind the metadata-cleanup gate) and the component catalogue row (a publication gate, as for Calendar).
