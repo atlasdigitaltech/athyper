@@ -1,0 +1,8 @@
+# Opt-in local native authoring. Use only an installed, pinned startup configuration.
+# Component approval and product-command admission remain independent.
+services:
+  control-api:
+    environment:
+      PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE: /run/native-bootstrap/startup.json
+    volumes:
+      - ${ATHYPER_NATIVE_BOOTSTRAP_ROOT:?set private native startup directory}:/run/native-bootstrap:ro

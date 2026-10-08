@@ -32,7 +32,7 @@ Implementation baseline reviewed in this conversation: `e8518cc2e` (proposal bun
 | ID  | Deliverable                               | Status      | Available evidence / actual gap                                                                                           | Next action                                                                                         |
 | --- | ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | L0a | Non-destructive local preparation harness | In progress | Repaired command; seven tests pass; actual Studio dump restored successfully; reset/production acceptance not implemented | Complete logical cleanup dispositions and L1 graph/startup integration before reset                 |
-| L1  | Complete native proposals                 | In progress | Both real graphs assembled and compiled; expanded list-display resource remains a proposal, not installed support         | Qualify/publish expanded display resource and validate graphs against installed bindings            |
+| L1  | Complete native proposals                 | In progress | Both real graphs assembled and compiled; expanded list-display resource remains a proposal, not installed support         | Publish qualified component candidates and validate graphs against installed bindings               |
 | L2  | Clean schema and startup composition      | In progress | Production startup composition implemented; final clean profile and real startup configuration not installed              | Install pinned configuration after final schema/setup, restricted grants and component installation |
 | L3  | Actual native bootstrap and replay        | Not started | No replacement native draft execution established                                                                         | Execute authenticated commands after L1/L2, verify exact readback/replay/rollback                   |
 | L4  | Working local live-read integration       | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                                 | Implement bounded validation and actual storage/security/identity composition                       |
@@ -194,6 +194,104 @@ commit/readback/replay/rollback. No DEV cleanup, replacement draft write, Entity
 publication or activation occurred in this checkpoint. Existing revision-4 drafts remain
 unchanged. Formal F6/F8/F9 acceptance is not established.
 
+### Expanded renderer deployment and final-schema rehearsal — 9 October 2026
+
+**Implemented → tested → installed → executed:** the fixed Studio renderer bundle
+is deployed and serves HTTPS; component catalogue installation is still pending human
+proposal/review and worker activation. The source database is unchanged. The final
+schema is installed/executed only in a temporary restored database, not in DEV itself.
+
+A dependency check found that the former deployed bundle predated the shared fix that
+prevents unresolved references from exposing technical identifiers. Rather than qualify
+that older implementation or deploy concurrent edits, built Studio from detached commit
+`4f4867ecf` in `/tmp/athyper-list-scalar-20261009`. The production build passes; 13 list/detail
+renderer conformance tests pass against that checkout, including the newly added unresolved
+reference case. The test file was copied into the detached checkout; renderer sources
+remain at the recorded commit. The temporary packaging attempt which dereferenced pnpm
+symlinks failed startup; preserving internal standalone links corrected it. No failed
+packaging is represented as a passing deployment.
+
+Current deployment workspace:
+`~/.athyper/instances/dev/workspace/component-list-scalars-20261009/`.
+`bundle/component-manifest.json` hash is
+`c9ccf3b846f1151755569e4fead7f4bffc111e6bcd666321b871e4d149b6c7e5`.
+All **1,634 files** verify through the actual component qualifier; Studio `/readyz` and
+an HTTPS-served static asset return 200, and the asset matches the inventoried bytes.
+`verified-deployment-recheck.json` records this execution. This is not authenticated
+Entity list/detail acceptance or human publication approval.
+
+Four exact candidates are mounted in the existing resource-review source directory:
+
+| Resource                       | Proposed release ID                    | State                    |
+| ------------------------------ | -------------------------------------- | ------------------------ |
+| `shared.entity.list` v3        | `df78097a-7a90-4c72-a919-7d9855082b24` | Unsubmitted / unapproved |
+| `shared.entity.detail` v3      | `575bd38d-f7db-487c-a472-4e33d336542b` | Unsubmitted / unapproved |
+| `shared.entity.text` v3        | `455c96dc-f406-4e42-97fe-21b11c9b7c9f` | Unsubmitted / unapproved |
+| `shared.entity.detail-text` v3 | `0534591b-2a9f-4128-95c0-67d4939b8d94` | Unsubmitted / unapproved |
+
+`candidates.json` contains exact source hashes. The expanded list text declaration covers
+string, boolean, enum and datetime; matching surface/detail candidates pin the rebuilt
+implementation. The preliminary single `candidate.json` is explicitly superseded.
+Both stored human sessions were expired when checked. Admin refresh has been requested
+for submission; independent Owner approval is separate and has not been inferred.
+The new verifier manifest recognizes these candidate declarations. Old catalogue entries
+are retained, but bootstrap checks against the newly pinned deployment will reject old
+component pins until the successor resources are approved/installed and selected.
+
+Executable read-only deployment recheck (use a new output filename):
+
+```sh
+NODE_EXTRA_CA_CERTS=/home/chandravel_natarajan/.athyper/platform/secrets/tls.crt \
+  pnpm --filter @athyper/server-platform-host exec tsx scripts/operations/qualify-component-deployment.ts \
+  /home/chandravel_natarajan/.athyper/instances/dev/workspace/component-list-scalars-20261009/probe.json \
+  /absolute/new-deployment-evidence.json
+```
+
+Regenerated both complete proposals with these exact candidate component IDs through the
+actual read-only application catalogue path. `native-proposals/manifest.json` hash:
+`9c83cc6f5793b70c2f868919fdbc05ddc6938e29fc9cfd43643407a49d2cbe6d`.
+Proposed draft IDs stay as above; proposal hashes are now Country
+`0abece2e7d87e97b416d13defd85b80a5cbc19465f4cd680acf80f32bc4fa7da`
+and State Region `67f4ff6114429569514e7c1d479e30f01bdfcaafc49c2f1ed011caa8ada9f686`.
+They are files, not committed drafts. Do not reuse the superseded command hashes.
+
+Extended the existing preparation harness with a real schema rehearsal:
+
+```sh
+pnpm db:setup:rebuild-entity-metadata --mode rehearse-schema
+```
+
+It captures a fresh Studio dump, restores it, rejects disabled aggregate guards and
+partially removed predecessor checks, then transactionally removes the seven pending
+checks and applies canonical `58_native_fresh_identity_privileges.sql` in the temporary
+restore only. Row counts and guard definitions remain unchanged; schema-profile replay
+passes. A real connection using `athyper_dev_product_command` performs canonical schema
+inspection in a read-only transaction and reports **zero blockers**. No fixture authority
+is used for that inspection, but this does **not** exercise authenticated graph writes.
+
+Executed receipt:
+`~/.athyper/instances/dev/workspace/entity-native-build-d25387e0-1650-4f45-9d60-598421c5a408/`.
+The archive hash is `73953f60105afeb9784155603311f34984bc9ed4894be4871a74eb3b12be6f43`;
+`application-schema.json` records the actual login and complete inventory. The temporary
+database was removed. Its database-specific fingerprint is not a deployable DEV pin.
+The source DEV retains all seven checks, original drafts and identities. `reset` remains
+unimplemented pending logical cleanup dispositions; do not invoke the rehearsal SQL
+against the source database. Fresh backup/quiescence remains necessary for actual reset.
+
+`compose.native-bootstrap.yaml` now provides the opt-in read-only startup directory mount
+and `PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE`. It has not been enabled:
+install the final DEV schema, resolve actual approved component pins, and generate the
+exact configuration/initialization binding for the accepted proposals before startup.
+No placeholder hash or restored-database fingerprint is an installed configuration.
+
+Validation: 10 preparation/profile tests, 11 host qualifier/startup/compiler tests, 13
+renderer tests, production Studio build and actual schema rehearsal pass. The broader
+host typecheck still fails on the concurrent `entity-views-routes.ts:317` `group`/`groups`
+mismatch. Next: authenticated Admin submission → independent Owner review → component
+worker activation, then scoped cleanup/final schema installation and native startup.
+No new Entity publication or activation, native draft commit or manual-test handover is
+claimed by renderer deployment or the schema rehearsal.
+
 ### L1 — complete graphs, fresh identities and approved initial values
 
 Pin the maintained source definitions and declared target scope. Assemble both graphs through shared code selected by metadata. Include root/provenance, fields/types/keys, relations, labels, navigation/sections/views/bindings, selected components, operations, exact permission semantics, storage/runtime settings, supported AI declarations and dependencies. AI can be processed last but cannot silently disappear from the accepted graph.
@@ -320,7 +418,7 @@ Close applicable checklist items or record a specific owner disposition before p
 
 ### Latest execution and next action
 
-**This update:** row-scoped candidate cleanup planning executed read-only (1,551 rows/23 tables), and source-free declared operation preparation implemented/tested through the canonical transaction protocol fixture. Complete real graphs, fresh-identity persistence, production startup resource composition and logical publication/activation cleanup dispositions remain unfinished. No destructive setup, new identity, replacement draft, Entity publication or activation occurred. L2 remains gated on L1 and complete scope readiness; Milestones A and B are not complete.
+**Current update:** complete proposal graphs and production startup composition are implemented; a fixed renderer bundle is deployed, but its component candidates await authenticated submission and independent approval. Final schema/grants pass restored-database rehearsal and application-login catalogue inspection. Logical cleanup dispositions, source DEV reset/final setup, actual startup configuration and native bootstrap/replay remain unfinished. No replacement draft, Entity publication or activation occurred. Milestones A and B are not complete.
 
 ## Historical evidence boundary
 

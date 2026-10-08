@@ -18,6 +18,8 @@ import {
   validateCleanupScope,
 } from "./entity-cleanup-plan.mjs";
 
+import { finalNativeSchemaSql } from "./entity-native-final-schema.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const container = "athyper-dev-db-1";
 const database = "athyper_studio";
@@ -37,9 +39,14 @@ export function parseArguments(args) {
     seen = true;
   }
   if (
-    !["inspect", "backup-verify", "verify", "reset", "plan-cleanup"].includes(
-      result.mode,
-    )
+    ![
+      "inspect",
+      "backup-verify",
+      "rehearse-schema",
+      "verify",
+      "reset",
+      "plan-cleanup",
+    ].includes(result.mode)
   )
     throw Error("LOCAL_BUILD_MODE_INVALID");
   if ((result.mode === "plan-cleanup") !== Boolean(result.scope))
@@ -258,7 +265,7 @@ async function execute(mode, directory, report, scope) {
     rowDisposition: "not-established",
     logicalDependencyClosure: "not-established",
   });
-  if (mode === "backup-verify") {
+  if (mode === "backup-verify" || mode === "rehearse-schema") {
     const archive = join(directory, "studio.dump");
     let fd = openSync(archive, "wx", 0o600);
     try {
@@ -333,6 +340,123 @@ async function execute(mode, directory, report, scope) {
       const restored = inventory(temporary);
       writeJson(join(directory, "restored-inventory.json"), restored);
       restoreComparison(before, restored);
+      if (mode === "rehearse-schema") {
+        const statement = finalNativeSchemaSql(temporary);
+        writeFileSync(join(directory, "final-schema.sql"), statement, {
+          mode: 0o600,
+        });
+        const executeSql = (input) =>
+          run(
+            [
+              "docker",
+              "exec",
+              "-i",
+              container,
+              "psql",
+              "-U",
+              "postgres",
+              "-d",
+              temporary,
+              "-X",
+              "-q",
+              "-v",
+              "ON_ERROR_STOP=1",
+            ],
+            { input },
+          );
+        for (const [mutation, expected] of [
+          [
+            "ALTER TABLE metadata.entity_field DISABLE TRIGGER native_snapshot_final_guard;",
+            "LOCAL_NATIVE_SCHEMA_FINAL_GUARD_REQUIRED",
+          ],
+          [
+            "ALTER TABLE metadata.entity_field DROP CONSTRAINT entity_field_native_pending_ck;",
+            "LOCAL_NATIVE_SCHEMA_PARTIAL_PREDECESSOR",
+          ],
+        ]) {
+          const failed = spawnSync(
+            "docker",
+            [
+              "exec",
+              "-i",
+              container,
+              "psql",
+              "-U",
+              "postgres",
+              "-d",
+              temporary,
+              "-X",
+              "-q",
+              "-v",
+              "ON_ERROR_STOP=1",
+            ],
+            {
+              encoding: "utf8",
+              input: statement.replace("BEGIN;", "BEGIN;\n" + mutation),
+            },
+          );
+          if (failed.status === 0 || !failed.stderr.includes(expected))
+            throw Error(
+              "LOCAL_NATIVE_SCHEMA_NEGATIVE_PROOF_FAILED:" + expected,
+            );
+        }
+        executeSql(statement);
+        executeSql(
+          readFileSync(
+            join(
+              root,
+              "server/db/ddl/planes/studio/metadata/58_native_fresh_identity_privileges.sql",
+            ),
+            "utf8",
+          ),
+        );
+        const final = inventory(temporary);
+        writeJson(join(directory, "final-inventory.json"), final);
+        if (
+          final.constraints.some((c) => c.name.endsWith("_native_pending_ck"))
+        )
+          throw Error("LOCAL_NATIVE_SCHEMA_PENDING_REMAINS");
+        if (JSON.stringify(restored.tables) !== JSON.stringify(final.tables))
+          throw Error("LOCAL_NATIVE_SCHEMA_ROW_COUNTS_CHANGED");
+        if (
+          JSON.stringify(restored.triggers) !==
+            JSON.stringify(final.triggers) ||
+          JSON.stringify(restored.routines) !== JSON.stringify(final.routines)
+        )
+          throw Error("LOCAL_NATIVE_SCHEMA_GUARDS_CHANGED");
+        executeSql(statement); // Idempotent final profile, not bootstrap replay.
+        const applicationSchema = JSON.parse(
+          run([
+            "docker",
+            "exec",
+            "athyper-dev-control-control-api-1",
+            "node",
+            "--import",
+            "tsx",
+            "scripts/operations/inspect-native-bootstrap-schema.ts",
+            "/run/product-command/application-database-url",
+            temporary,
+          ]),
+        );
+        writeJson(
+          join(directory, "application-schema.json"),
+          applicationSchema,
+        );
+        if (applicationSchema.blockers.length)
+          throw Error("LOCAL_NATIVE_SCHEMA_APPLICATION_BLOCKERS");
+
+        report.stages.push({
+          id: "final-schema-rehearsal",
+          status: "passed",
+          database: temporary,
+          executionRole: "postgres",
+          pendingConstraints: 0,
+          rowCountsAndGuardsPreserved: true,
+          replay: "passed",
+          qualification: "schema-only; no application-role draft writes",
+        });
+      }
+
       report.stages.push({
         id: "backup-restore",
         status: "passed",

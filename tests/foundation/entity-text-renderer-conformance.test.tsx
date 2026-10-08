@@ -93,3 +93,21 @@ it("explicit list datetime text formats an instant without interpreting markup",
     "<span>&lt;invalid&gt;</span>",
   );
 });
+
+it("an unresolved reference never falls back to its technical identifier", () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const reference = { ...field, valueKind: "reference" as const };
+  const unresolved = renderToStaticMarkup(
+    <span>{renderFieldValue(id, reference)}</span>,
+  );
+  assert.equal(unresolved, "<span>—</span>");
+  assert.ok(!unresolved.includes(id));
+  assert.equal(
+    renderToStaticMarkup(
+      <span>
+        {renderFieldValue(id, reference, undefined, undefined, "Malaysia")}
+      </span>,
+    ),
+    "<span>Malaysia</span>",
+  );
+});
