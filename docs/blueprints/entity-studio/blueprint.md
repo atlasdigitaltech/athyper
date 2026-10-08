@@ -1305,7 +1305,7 @@ One active default surface per kind. A form's create/edit modes are **derived** 
 | `code_field_id` | `uuid` | N; detail only; optional readable code | @country.code | Field selectors |
 | `column_count` | `smallint` | N; P 1..12 for detail, form and sectioned embedded; NULL for list, collection embedded and lookup | 1 | Layout number |
 | `search_profile_id` | `uuid` | N; list/collection embedded only; search definition FK | @country.search | Search selector |
-| `supported_modes` | `text[]` | P for list and collection embedded; qualified modes | {table,compact} | Mode multi-select |
+| `supported_modes` | `text[]` | P for list and collection embedded; qualified modes. Proposed: `board` additionally requires Board lane-field rows and `count_mode` = exact ([Entity list Board blueprint](../entity-list-board/blueprint.md)) | {table,compact} | Mode multi-select |
 | `default_page_size` | `integer` | P for list and collection embedded; positive member of allowed set | 25 | Number input |
 | `allowed_page_sizes` | `integer[]` | P for list and collection embedded; distinct positive values | {10,25,50,100} | Number list |
 | `max_sort_levels` | `integer` | P for list and collection embedded; bounded | 3 | Number input |
@@ -3008,7 +3008,7 @@ Platform Admin authors this definition and Platform Owner independently reviews 
 | --- | --- | --- | --- | --- |
 | 1 | Overview | Identity · Ownership and targets · Placement · Storage · Provenance | entity, entity_change_set, entity_target, entity_navigation_placement, entity_runtime_profile | entity_class_profile (defaults source), base release |
 | 2 | Data model | Fields (choices are edited in the field Value rules panel) · Keys · Relations · Search | entity_field, entity_field_choice, entity_key, entity_key_field, entity_relation, entity_relation_target, entity_relation_field, entity_field_reference_binding, entity_search_profile, entity_search_field | entity_field_identity (server-owned), where-used placements |
-| 3 | Experience | Surface tree, then the selected surface's editor (List · Detail · Form · Embedded · Lookup) | entity_surface, entity_surface_navigation_group, entity_surface_section, entity_surface_field_binding, entity_surface_component_field, entity_surface_badge_tone, entity_surface_view, entity_surface_view_field, entity_surface_operation, entity_predicate (list_filter/visibility/editability) | ui_component_contract and ui_component_slot as palette only |
+| 3 | Experience | Surface tree, then the selected surface's editor (List · Detail · Form · Embedded · Lookup) | entity_surface, entity_surface_navigation_group, entity_surface_section, entity_surface_field_binding, entity_surface_component_field, entity_surface_badge_tone, entity_surface_view, entity_surface_view_field, entity_surface_operation, entity_predicate (list_filter/visibility/editability); proposed: entity_surface_board_lane_field, entity_surface_board_lane, entity_surface_board_lane_value | ui_component_contract and ui_component_slot as palette only |
 | 4 | Access and behaviour | Operations · Permissions and scope · Field access · Record lock · Policies · Rules and context | entity_operation, entity_operation_permission, entity_access_permission, entity_operation_scope_binding, entity_operation_field, entity_authorization_profile, entity_field_access, entity_predicate (record_lock), entity_policy_binding, entity_field_policy_binding, entity_policy_parameter_binding, entity_operation_rule, entity_operation_context_requirement | requires_mfa read-only; no MFA editor |
 | 5 | Labels and languages | Translation matrix · Missing translations | entity_label, entity_label_translation | label usages |
 | 6 | Capabilities | Enrollments · Effective settings · Actions and layouts | entity_capability (incl. override columns), entity_capability_binding | capability_profile, capability_profile_override_rule |
@@ -3303,6 +3303,7 @@ Selecting a surface in the Experience surface tree opens only the editors applic
 | Layout tree | entity_surface_section rows; bindings of kind field; entity_surface_component_field | — | ✓ | ✓ | ✓ (sectioned) | — |
 | Columns and views | entity_surface_view, entity_surface_view_field; identity_field_id; list field bindings | ✓ | — | — | ✓ (collection) | — |
 | Cards and summaries | binding_kind=summary placements and their display/format selections | qualified card/summary mode | — | — | qualified collection card/summary mode | — |
+| Board (proposed, [Entity list Board blueprint](../entity-list-board/blueprint.md)) | entity_surface_board_lane_field, entity_surface_board_lane, entity_surface_board_lane_value rows | qualified `board` mode | — | — | — (collection from Board Phase 2) | — |
 | Filters | binding filter component/operators; entity_predicate purpose list_filter | ✓ | — | — | ✓ (collection) | — |
 | Form behavior | derived create/edit modes (read-only, from submit Actions); meaningful_for_form; entity_predicate purpose editability | — | — | ✓ | — | — |
 | Actions | entity_surface_operation (targets valid for the kind) | toolbar/row/selection | primary/secondary/overflow | submit | collection: row/selection; sectioned: none | — |
@@ -3310,7 +3311,7 @@ Selecting a surface in the Experience surface tree opens only the editors applic
 | Reference presentation | reference_key_id, reference_format; bindings of kind reference_token | — | — | — | — | ✓ |
 | Extension point | extension_point_key on the surface or a fields section | surface | fields section | fields section, or surface only when sectionless | collection: surface; sectioned: fields section | — |
 
-Cards and summaries require an explicitly selected supported_modes entry and qualified registered renderer; binding_kind=summary is not another surface kind. Their editor uses the shared field-placement inspector. Views enroll the intended readable placements explicitly; neither summaries nor default columns are synthesized from available fields. Unsupported card/summary modes block qualification.
+Cards and summaries require an explicitly selected supported_modes entry and qualified registered renderer; binding_kind=summary is not another surface kind. Their editor uses the shared field-placement inspector. Views enroll the intended readable placements explicitly; neither summaries nor default columns are synthesized from available fields. Unsupported card/summary modes block qualification. Proposed ([Entity list Board blueprint](../entity-list-board/blueprint.md)): Table cards and Board cards share one card resolution; published summary placements define the card body and take precedence over `cardPriority`, and `binding_kind=badge` remains a detail-header concept.
 
 A product surface shows Extension point only to platform authors. A tenant extension draft shows the declared extension points as overlay targets in the Extensions module instead.
 
