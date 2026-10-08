@@ -518,6 +518,63 @@ it.skipIf(process.env.ATHYPER_NATIVE_CONSTRAINT_POSTGRES !== "1")(
         probe(randomUUID(), `'{"kind":"string","unexpected":true}'::jsonb`),
         "type_config contains properties not allowed",
       );
+      // The reduced identity fixture gains the canonical catalogue key constraint.
+      query(
+        "ALTER TABLE metadata.entity_field_identity ADD COLUMN field_key text;ALTER TABLE metadata.entity_field_identity ADD UNIQUE NULLS NOT DISTINCT(entity_id,tenant_id,parent_identity_id,field_key);",
+      );
+      query(read("53_native_field_key_uniqueness.sql"));
+      reject(
+        read("53_native_field_key_uniqueness.sql"),
+        "NATIVE_FIELD_KEY_PREDECESSOR_CHANGED",
+      );
+      // Isolate real installed index definitions from unrelated graph completeness.
+      query(
+        "CREATE TABLE metadata.key_uniqueness_probe(tenant_id uuid,change_set_id uuid,field_key text,field_identity_id uuid);",
+      );
+      for (const index of [
+        "entity_field_legacy_key_uq",
+        "entity_field_draft_identity_uq",
+      ]) {
+        const definition = query(
+          `SELECT pg_get_indexdef('metadata.${index}'::regclass);`,
+        ).trim();
+        query(
+          definition
+            .replace(index, index + "_probe")
+            .replace("metadata.entity_field", "metadata.key_uniqueness_probe") +
+            ";",
+        );
+      }
+      const keyRow = (
+        tenant: string,
+        root: string,
+        key: string,
+        identity: string,
+      ) =>
+        `INSERT INTO metadata.key_uniqueness_probe VALUES(${tenant},'${root}',${key},${identity});`;
+      const identityA = randomUUID(),
+        identityB = randomUUID(),
+        tenantA = randomUUID();
+      query(
+        keyRow("NULL", draft, "NULL", `'${identityA}'`) +
+          keyRow("NULL", draft, "NULL", `'${identityB}'`),
+      );
+      reject(
+        keyRow("NULL", draft, "NULL", `'${identityA}'`),
+        "entity_field_draft_identity_uq_probe",
+      );
+      query(keyRow("NULL", randomUUID(), "NULL", `'${identityA}'`));
+      query(keyRow("NULL", draft, "'code'", "NULL"));
+      reject(
+        keyRow("NULL", draft, "'code'", "NULL"),
+        "entity_field_legacy_key_uq_probe",
+      );
+      query(keyRow(`'${tenantA}'`, draft, "'code'", "NULL"));
+      reject(
+        keyRow(`'${tenantA}'`, draft, "'code'", "NULL"),
+        "entity_field_legacy_key_uq_probe",
+      );
+      query(keyRow("NULL", randomUUID(), "'code'", "NULL"));
     } finally {
       if (created) docker("rm", "-f", name);
     }

@@ -629,10 +629,16 @@ only for an exact entity/tenant/change-set match with native layout version 1 or
 branch rejects non-NULL retired key/JSON payloads and relies on the mandatory deferred
 native graph guards for typed completeness. The migration pins its predecessor definition
 and requires the enabled deferred snapshot guard; it does not remove cutover checks.
-Native NULL support must also have a compatible uniqueness disposition: the historical
-`entity_field_key_uq` uses NULLS NOT DISTINCT and cannot admit multiple native NULL legacy
-keys. Preserve legacy key uniqueness and canonical native identity/key uniqueness in a
-forward replacement before declaring whole-graph cutover qualified.
+Forward migration `53_native_field_key_uniqueness.sql` replaces the historical
+`entity_field_key_uq` with `entity_field_legacy_key_uq`: NULLS NOT DISTINCT on
+(tenant_id, change_set_id, field_key), restricted to non-NULL legacy keys. This preserves
+product and tenant key uniqueness while allowing multiple retired native NULL keys.
+`entity_field_draft_identity_uq` separately rejects duplicate non-NULL stable identities
+within one draft; the existing identity catalogue retains entity/tenant/parent/key
+uniqueness. Migration preflight requires the exact predecessor constraint, catalogue key
+constraint and enabled deferred snapshot guard. Existing duplicate identities block
+installation; the migration does not rewrite data or remove pending cutover checks.
+These constraints do not independently attest whole-graph or runtime qualification.
 
 ### `metadata.entity_field_identity_adoption`
 

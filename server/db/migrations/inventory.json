@@ -2154,6 +2154,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/52_native_field_contract_trigger.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_field_key_uniqueness.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_field_key_uniqueness.sql",
+      "sha256": "8df1d78d9b5d8a71e67647624db537e56bdce2fcc41687e982bbadf693a02698",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Preserve scoped legacy field-key uniqueness and enforce per-draft stable identity uniqueness while allowing retired native NULL keys.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/53_native_field_key_uniqueness.sql"
+      ]
     }
   ]
 }

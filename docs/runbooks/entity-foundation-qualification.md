@@ -251,6 +251,36 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Native field-key uniqueness installed — 8 October
+
+Forward migration `20261008_entity_native_field_key_uniqueness.sql` replaces the legacy
+NULL-key collision with a partial non-NULL legacy-key unique index retaining NULLS NOT
+DISTINCT tenant semantics. A separate per-draft stable-identity unique index prevents
+repeated native identity membership. The identity catalogue still owns business-key
+uniqueness. Exact predecessor and catalogue/guard preflight reject missing or changed
+prerequisites. Both indexes are created before dropping the predecessor constraint;
+duplicate existing data or any failure rolls back the migration. No rows or grants change.
+SHA-256: `8df1d78d9b5d8a71e67647624db537e56bdce2fcc41687e982bbadf693a02698`.
+
+DEV rollback rehearsal, installation and ledger replay passed with unchanged authorization
+and activation-head fingerprints. Receipts are `native-field-key-{rehearsal,installation,replay}.json`
+in the existing private backup directory. Both drafts remain revision 4 with NULL native
+layout; seven pending cutover checks remain and no adoption rows are committed.
+
+The canonical restored-DEV bootstrap now passes native field insertion under the
+application role. Its next failure is `entity_surface_view_field_field_binding_id_fk`:
+bootstrap plans insert reference view-field rows before their layout field bindings.
+This requires a shared writer dependency-order/deferral correction, not removal of the FK.
+That rehearsal uses synthetic admission/resources and removes pending checks only in its
+disposable copy; it is not deployed qualification. No replacement draft, publication or
+activation occurred. Installed proposal resolution and deployed F6/F8/F9 remain open.
+
+Validation: the opt-in canonical PostgreSQL suite passes, including migration application
+and predecessor rejection, multiple native NULL keys, duplicate stable identity rejection,
+duplicate product/tenant legacy keys, and independent draft/tenant scope. Index behavior
+is isolated using the actual installed index definitions; full graph completeness remains
+separate evidence. All 22 migration-runner tests pass.
+
 ### Native field-trigger compatibility installed — 8 October
 
 Forward migration `20261008_entity_native_field_contract_trigger.sql` is installed in

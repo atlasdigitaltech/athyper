@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  nativeFieldKeyUniquenessMigrationName,
   nativeFieldContractTriggerMigrationName,
   nativeIdentityAdoptionMigrationName,
   productCreationEntityReadMigrationName,
@@ -696,6 +697,50 @@ test("native field trigger replaces legacy payload validation only behind typed 
       true,
       nativeFieldContractTriggerMigrationName,
     ),
+    /COMMIT;/,
+  );
+});
+
+test("field-key replacement preserves legacy NULL-tenant uniqueness and native identity uniqueness", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/53_native_field_key_uniqueness.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        nativeFieldKeyUniquenessMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  for (const text of [
+    "NATIVE_FIELD_KEY_PREDECESSOR_CHANGED",
+    "NATIVE_FIELD_KEY_IDENTITY_GUARDS_REQUIRED",
+    "NULLS NOT DISTINCT WHERE field_key IS NOT NULL",
+    "(change_set_id,field_identity_id) WHERE field_identity_id IS NOT NULL",
+  ])
+    assert.ok(canonical.includes(text));
+  assert.doesNotMatch(
+    canonical,
+    /CASCADE|GRANT|DISABLE TRIGGER|requires_mfa|UPDATE metadata/,
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      nativeFieldKeyUniquenessMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(source, digest, true, nativeFieldKeyUniquenessMigrationName),
     /COMMIT;/,
   );
 });
