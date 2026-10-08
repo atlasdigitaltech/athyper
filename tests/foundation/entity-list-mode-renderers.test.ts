@@ -2,9 +2,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ENTITY_LIST_VIEW_MODES } from "@athyper/contract-platform-entity-list";
 import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { LIST_MODE_RENDERER_MISSING, listRendererKind, withRenderableModes } from "../../packages/platform/entity/runtime/list-view/src/mode-renderers";
+import { LIST_MODE_RENDERER_MISSING, listModeTraits, listRendererKind, withRenderableModes } from "../../packages/platform/entity/runtime/list-view/src/mode-renderers";
 
 describe("list mode renderer registry", () => {
+  it("declares per-layout list policy as renderer traits, not mode comparisons", () => {
+    // Date layouts report their own counts, so the list title shows none.
+    assert.deepEqual(["table", "compact", "board", "calendar", "gantt"].map((mode) => listModeTraits(mode as never).ownCounts), [false, false, false, true, true]);
+    assert.deepEqual(["table", "compact", "board", "calendar", "gantt"].map((mode) => listModeTraits(mode as never).ownPaging), [false, false, true, true, true]);
+    assert.equal(listModeTraits("gantt").ownGrouping, true);
+    assert.equal(listRendererKind("gantt", "narrow"), "gantt");
+    assert.equal(listRendererKind("table", "narrow"), "cards");
+    assert.deepEqual(listModeTraits("dashboard"), { adaptsWhenNarrow: false, ownPaging: false, ownGrouping: false, ownCounts: false });
+  });
+
   it("renders table and compact through their registered renderers", () => {
     assert.equal(listRendererKind("table", "wide"), "table");
     assert.equal(listRendererKind("compact", "wide"), "cards");

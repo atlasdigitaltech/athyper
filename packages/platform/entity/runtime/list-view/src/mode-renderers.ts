@@ -23,6 +23,73 @@ const LIST_MODE_RENDERERS: Readonly<
 
 export const LIST_MODE_RENDERER_MISSING = "LIST_MODE_RENDERER_MISSING";
 
+/** What a renderer takes over from the shared list chrome. Per-layout list
+ * policy lives here, so a new layout declares its traits instead of adding
+ * mode comparisons to the list. */
+export interface ListRendererTraits {
+  /** Adapts itself at narrow widths instead of becoming cards. */
+  readonly adaptsWhenNarrow: boolean;
+  /** Pages its own rows; the list pagination is hidden. */
+  readonly ownPaging: boolean;
+  /** Supplies its own grouping; the Group drawer is hidden and a saved group
+   * stays for Table and Cards. */
+  readonly ownGrouping: boolean;
+  /** Its page query is only one of its streams, so the list title shows no
+   * record count; the layout reports its own counts under the count-mode
+   * rule (foundation section 5). */
+  readonly ownCounts: boolean;
+}
+
+const LIST_RENDERER_TRAITS: Readonly<
+  Record<ListRendererKind, ListRendererTraits>
+> = Object.freeze({
+  table: {
+    adaptsWhenNarrow: false,
+    ownPaging: false,
+    ownGrouping: false,
+    ownCounts: false,
+  },
+  cards: {
+    adaptsWhenNarrow: false,
+    ownPaging: false,
+    ownGrouping: false,
+    ownCounts: false,
+  },
+  board: {
+    adaptsWhenNarrow: true,
+    ownPaging: true,
+    ownGrouping: true,
+    ownCounts: false,
+  },
+  calendar: {
+    adaptsWhenNarrow: true,
+    ownPaging: true,
+    ownGrouping: true,
+    ownCounts: true,
+  },
+  gantt: {
+    adaptsWhenNarrow: true,
+    ownPaging: true,
+    ownGrouping: true,
+    ownCounts: true,
+  },
+});
+
+const NO_TRAITS: ListRendererTraits = Object.freeze({
+  adaptsWhenNarrow: false,
+  ownPaging: false,
+  ownGrouping: false,
+  ownCounts: false,
+});
+
+/** The traits of the renderer registered for a mode (independent of width). */
+export function listModeTraits(
+  mode: ListViewMode | undefined,
+): ListRendererTraits {
+  const registered = mode ? LIST_MODE_RENDERERS[mode] : undefined;
+  return registered ? LIST_RENDERER_TRAITS[registered] : NO_TRAITS;
+}
+
 /** Narrow lists present the same rows as record cards: geometry changes, the
  * saved table state (columns, sort, grouping) does not. An unregistered mode
  * has no renderer and is never drawn through another layout. */
@@ -35,9 +102,7 @@ export function listRendererKind(
   // Board, Calendar and Gantt adapt themselves when narrow (one lane; a dated
   // list); other layouts become cards.
   return widthTier === "narrow" &&
-    registered !== "board" &&
-    registered !== "calendar" &&
-    registered !== "gantt"
+    !LIST_RENDERER_TRAITS[registered].adaptsWhenNarrow
     ? "cards"
     : registered;
 }

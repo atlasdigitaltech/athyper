@@ -691,6 +691,10 @@ function GanttRow({
   // (blueprint section 8); Calendar's title-first label is a different rule.
   const { identity, title } = datedRowParts(row, descriptor);
   const label = [identity, title].filter(Boolean).join(" ");
+  // The title tooltip repeats the label on every row, truncated or not:
+  // detecting truncation would need a layout read per row for a cosmetic
+  // difference. Accepted deliberately; the accessible name and the focus
+  // reveal are the primary paths to the full label.
   const labelContent = (
     <>
       {identity ? (

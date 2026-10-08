@@ -87,6 +87,7 @@ import { highlightText, renderFieldValue } from "./field-value";
 import { EntityRecordCard } from "./record-card";
 import {
   LIST_MODE_RENDERER_MISSING,
+  listModeTraits,
   listRendererKind,
   withRenderableModes,
 } from "./mode-renderers";
@@ -1367,13 +1368,10 @@ function EntityCollectionRuntime({
     if (pending !== resultSetKey && panelElement && !embedding)
       revealListStart(panelElement);
   }, [resultsCurrent, resultSetKey, state, panelElement, embedding]);
-  // Date layouts (Calendar, Gantt) show no record count in the list title: the
-  // page query is only their window stream, so its count would omit
-  // open-ended and Unscheduled records and rows past the Gantt ceiling. Each
-  // layout reports its own counts under the count-mode rule.
-  const dateLayout = state?.mode === "calendar" || state?.mode === "gantt";
+  // Layouts that report their own counts (Calendar, Gantt: the page query is
+  // only their window stream) show no record count in the list title.
   const availableCount =
-    !dateLayout &&
+    !listModeTraits(state?.mode).ownCounts &&
     !loading &&
     !error &&
     pageContextKey === `${authorityKey}:${serverQueryKey}`
@@ -1961,10 +1959,7 @@ function EntityCollectionRuntime({
                 />
               </>
             ) : null}
-            {page &&
-            state.mode !== "board" &&
-            state.mode !== "calendar" &&
-            state.mode !== "gantt" ? (
+            {page && !listModeTraits(state.mode).ownPaging ? (
               <EntityListPagination
                 hideSinglePageControls={Boolean(section)}
                 descriptor={descriptor}
@@ -2686,9 +2681,7 @@ function ListChrome({
                       ) ||
                       embedding.initialControl === "display"),
                 ).map((item) => item.key)
-              : state.mode === "board" ||
-                  state.mode === "calendar" ||
-                  state.mode === "gantt"
+              : listModeTraits(state.mode).ownGrouping
                 ? // Board lanes, calendar days and Gantt rows supply their own grouping; a saved group stays for Table and Cards.
                   LIST_DRAWERS.filter((item) => item.key !== "group").map(
                     (item) => item.key,
