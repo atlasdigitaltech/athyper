@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 407,
+    "operational-scripts:new": 408,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -14146,6 +14146,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:build-native-bootstrap-proposals",
+      "category": "operational-scripts",
+      "key": "build-native-bootstrap-proposals",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/build-native-bootstrap-proposals.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:business-intent-ownership",

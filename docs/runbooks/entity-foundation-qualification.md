@@ -189,6 +189,39 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native proposal bundle construction — 9 October
+
+Implemented `buildNativeBootstrapProposalBundle` and an offline construction command.
+Input is `{ maximumBytes, maximumMembers, proposals: [{ authorId, proposal }] }`, where
+`proposal` contains exactly `{ title, branchCode, baseReleaseId, graph }` and `graph` is
+complete native 2.5 authoring data. This command does not translate legacy definitions or
+supply installed compiler contexts. It checks typed core/layout/operation/AI rows, local
+reference closure, label completeness, unique target coordinates and budgets. Manifest
+entries bind exact authors, entities, drafts and content hashes. Output includes stable
+command coordinates for replay. Actor and tenant are still resolved through IAM at execution.
+
+Implemented command, from repository root:
+
+```sh
+pnpm --filter @athyper/server-platform-host exec tsx scripts/operations/build-native-bootstrap-proposals.ts /absolute/native-input.json /absolute/new-bundle-directory
+```
+
+The output directory must be new. Documents use exclusive writes with private permissions;
+the manifest is written last, and an interrupted partial directory cannot load as a valid
+bundle. No database write, startup installation, approval, publication or activation occurs.
+
+Validation: 21 tests passed across `native-bootstrap-bundle.test.ts` and
+`native-bootstrap-proposals.test.ts`; host production typecheck passed. Tests execute the
+real command, read its two synthetic complete graphs through the existing production
+reader, verify stable retry inputs and no overwrite, and reject invalid references,
+partial rows, foreign ownership, extra authority input and budget excess. This is proposal
+transport evidence, not a production-entrypoint or canonical PostgreSQL acceptance result.
+
+**Implemented → tested. Not installed → not executed for DEV.** Actual complete
+Country/State Region native graph construction, production startup resource composition
+and canonical authenticated bootstrap/replay remain unfinished. No replacement draft or
+Entity activation was created by this checkpoint.
+
 ### Complete AI declaration resource assembly — 9 October
 
 The native bootstrap wrapper now replaces caller-supplied AI context with

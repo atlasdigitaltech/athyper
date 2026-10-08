@@ -119,6 +119,13 @@ references through the shared key-reference representation. It verifies source/c
 relation membership and full field-mapping coverage; unsupported mutation, polymorphic,
 unmapped and orphan relation branches reject. This representation proof is separate from
 remote target/resource qualification and does not grant reference-data access.
+Bootstrap proposal transport is a content-pinned bundle of complete native graphs,
+separate from installed compiler/resource authority. Construction validates typed rows,
+local reference closure, label completeness and budgets; immutable manifest entries bind
+entity, fresh draft, author, graph and document hashes. Command inputs contain coordinates
+and a stable retry key only. The offline constructor writes a new directory and writes
+its manifest last; it neither replaces existing bundles nor supplies startup configuration,
+approvals or grants. Resource semantics and canonical application remain required.
 Pending cutover checks
 are removed only after canonical whole-graph application qualification. Native bootstrap does not attest deployed F6/F8/F9, publication or
 activation. Execution evidence and remaining integration gaps belong in the existing

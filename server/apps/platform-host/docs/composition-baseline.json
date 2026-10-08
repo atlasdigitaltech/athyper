@@ -216,6 +216,33 @@
       "syntaxDiagnostics": []
     },
     {
+      "file": "src/composition/control-plane/native-bootstrap-bundle.ts",
+      "lines": 143,
+      "imports": [
+        {
+          "specifier": "@athyper/server-contract-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-plane-studio-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "./native-bootstrap-proposals.js",
+          "typeOnly": true,
+          "missing": false
+        }
+      ],
+      "registrations": [],
+      "identifiers": [
+        "entity.native-bootstrap-proposal/1",
+        "entity.native-bootstrap-proposals/1"
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
       "file": "src/composition/control-plane/native-bootstrap-components.ts",
       "lines": 100,
       "imports": [
