@@ -471,6 +471,46 @@ If Country succeeds and State Region fails, retain Country's unpublished draft a
 
 L4 implements bounded live-resource semantic qualification and actual production storage/current-security/identity adapters. `RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED` must be replaced by real validation, never unconditional success. No new allow branch for local runtime is authorized. Pre-publication compiler/provider tests prepare the path; final standard-UI acceptance is after new release activation.
 
+**9 October continuation — implemented/tested, not installed or executed:**
+`compileNativeLiveReadResources` now lowers a complete native graph through
+`compileNativeRelease` into linked security/storage candidates and live-read pins.
+It preserves explicit permission declarations, requires matching permission
+catalogue coordinates and provider pins, maps every field to its stable identity,
+and rejects unsupported masks, ownership controls and non-direct storage. It does
+not grant storage access or attest installation, review or deployment. The control
+resource qualifier can now compare a submitted candidate against this independently
+resolved native source; missing source composition still raises
+`RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED`. Rehashing an altered policy or changing
+its resource coordinate does not pass this comparison.
+
+The integration trace also confirms that the ordinary authoring review/publication
+path remains legacy-only: `loadGraph` rejects native roots with
+`NATIVE_AUTHORING_READER_REQUIRED`, `validateGraph` reports
+`NATIVE_GRAPH_RELEASE_COMPILATION_NOT_QUALIFIED`, and `compileGraph` rejects normalized
+sources. The existing human-reviewed publisher also requires legacy adoption receipts
+and layout markers. Those guards must not be removed to publish native drafts.
+The next integrated change must connect the native reader/compiler and canonical
+source/review pins through review, release allocation and target preparation, using
+native target rows and fresh authorship evidence rather than fabricating adoption.
+A session refresh cannot fix these code paths.
+
+Executed checks for this continuation:
+
+```sh
+pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-live-read-compilation.test.ts src/native-release-compilation.test.ts
+pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/resource-source-qualification.test.ts
+pnpm --filter @athyper/server-plane-studio-meta-entity-authoring run typecheck
+```
+
+The focused suites passed 18 and 5 tests respectively; authoring production/test
+typechecks passed. The changed-file formatting gate passed. Host typechecking still
+reports the pre-existing `entity-views-routes.ts:317` `group`/`groups` mismatch;
+this continuation does not claim a green host build. No current DEV proposal was regenerated, no database write was
+executed, and no Entity candidate was submitted, approved, published or activated
+in this continuation. The last executed draft state remains revision 1 for both
+entities. Runtime installation/resolution, actual live-read requests and manual UI
+handover remain pending; these component results do not satisfy L4–L6.
+
 L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
 
 L6 verifies both entities against the new activated artifacts:

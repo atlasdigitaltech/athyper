@@ -157,3 +157,71 @@ it("routes component sources through the configured deployment qualifier and pro
   );
   expect(query).not.toHaveBeenCalled();
 });
+
+it("qualifies native resources against independently loaded source, rejecting altered policy and pins", async () => {
+  const { nativeReleaseFixture } =
+    await import("../../../../../packages/planes/studio/meta-entity-authoring/src/native-release-compilation.fixtures.js");
+  const { compileNativeLiveReadResources } =
+    await import("@athyper/server-plane-studio-meta-entity-authoring");
+  const f = nativeReleaseFixture();
+  const inputs: Parameters<typeof compileNativeLiveReadResources>[0] = {
+    graph: f.graph,
+    compiler: f.c,
+    controls: f.controls,
+    releaseId: base.releaseId,
+    tenantId: base.releaseId,
+    provider: { ...f.c.listProviders[0]!.provider, namespace: "records" },
+    securityCoordinate: {
+      owner: "platform",
+      namespace: "entity",
+      key: "fixture.security",
+      version: 1,
+    },
+    storageCoordinate: {
+      owner: "platform",
+      namespace: "entity",
+      key: "fixture.storage",
+      version: 1,
+    },
+    permissions: [],
+  };
+  const candidates = compileNativeLiveReadResources(inputs);
+  const read = vi.fn(async () => structuredClone(inputs));
+  const qualify = createResourceSourceQualification(
+    f.c.authoringSchemaHash,
+    { canonicalBytes, sha256 },
+    undefined,
+    read,
+  );
+  const source = {
+    ...base,
+    kind: "entity_security_manifest" as const,
+    payload: candidates.security,
+  };
+  await qualify(tx, source);
+  await qualify(tx, {
+    ...base,
+    kind: "entity_storage_authority",
+    payload: candidates.storage,
+  });
+  expect(read).toHaveBeenCalledWith(tx, source);
+  const altered = structuredClone(source);
+  Reflect.set(altered.payload.content.fields[0]!, "queryUses", []);
+  Reflect.set(
+    altered.payload.pin,
+    "hash",
+    sha256(canonicalBytes(altered.payload.content)),
+  );
+  await expect(qualify(tx, altered)).rejects.toThrow(
+    "RESOURCE_LIVE_READ_SOURCE_CHANGED",
+  );
+  const changedPin = structuredClone(source);
+  Reflect.set(changedPin.payload.pin, "version", 2);
+  await expect(qualify(tx, changedPin)).rejects.toThrow(
+    "RESOURCE_LIVE_READ_SOURCE_CHANGED",
+  );
+  read.mockRejectedValueOnce(Error("EXACT_SAVED_SOURCE_UNAVAILABLE"));
+  await expect(qualify(tx, source)).rejects.toThrow(
+    "EXACT_SAVED_SOURCE_UNAVAILABLE",
+  );
+});

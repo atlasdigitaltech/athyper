@@ -217,3 +217,5 @@ export {
   buildNativeReferenceProduct,
   type NativeReferenceProductInput,
 } from "./authoring/native-product.js";
+
+export { compileNativeLiveReadResources } from "./native-live-read-compilation.js";

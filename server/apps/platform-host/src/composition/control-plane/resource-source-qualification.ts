@@ -6,11 +6,21 @@ import {
   type PublicationCanonicalizer,
 } from "@athyper/server-contract-publication";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
-import { validateLegacyFieldIdentityPlan } from "@athyper/server-plane-studio-meta-entity-authoring";
+import {
+  compileNativeLiveReadResources,
+  validateLegacyFieldIdentityPlan,
+} from "@athyper/server-plane-studio-meta-entity-authoring";
 export function createResourceSourceQualification(
   descriptorHash: string,
   canonical: PublicationCanonicalizer,
   componentQualifier?: ComponentQualifier,
+  /** Trusted source reader: load the exact saved graph and independently
+   * resolved compiler/provider/catalogue inputs in this transaction. Never
+   * derive these from the submitted resource payload. */
+  nativeLiveReadSource?: (
+    tx: Kysely<Record<string, never>>,
+    source: EntityAuthoringResourceSource,
+  ) => Promise<Parameters<typeof compileNativeLiveReadResources>[0]>,
 ) {
   if (!/^[a-f0-9]{64}$/.test(descriptorHash))
     throw Error("RESOURCE_DESCRIPTOR_HASH_REQUIRED");
@@ -34,8 +44,24 @@ export function createResourceSourceQualification(
       await componentQualifier(payload);
       return;
     }
-    if (payload.schema === "entity.installed-live-read-resource/1")
-      throw Error("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
+    if (payload.schema === "entity.installed-live-read-resource/1") {
+      if (!nativeLiveReadSource)
+        throw Error("RESOURCE_LIVE_READ_QUALIFICATION_REQUIRED");
+      const inputs = await nativeLiveReadSource(tx, structuredClone(source));
+      if (inputs.compiler.authoringSchemaHash !== descriptorHash)
+        throw Error("RESOURCE_DESCRIPTOR_CHANGED");
+      const candidates = compileNativeLiveReadResources(inputs);
+      const expected =
+        source.kind === "entity_security_manifest"
+          ? candidates.security
+          : candidates.storage;
+      if (
+        canonical.sha256(canonical.canonicalBytes(payload)) !==
+        canonical.sha256(canonical.canonicalBytes(expected))
+      )
+        throw Error("RESOURCE_LIVE_READ_SOURCE_CHANGED");
+      return;
+    }
     if (payload.authoringSchemaHash !== descriptorHash)
       throw Error("RESOURCE_DESCRIPTOR_CHANGED");
     const current = (
