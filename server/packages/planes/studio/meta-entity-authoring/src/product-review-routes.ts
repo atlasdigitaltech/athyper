@@ -76,6 +76,6 @@ export function registerProductReviewRoutes(
     throw new Error("PRODUCT_REVIEW_ROUTE_PREFIX_INVALID");
   const base = "/api/platform-control/meta-entity-authoring/change-sets/:id";
   app.get(`${base}/graph`, options.authenticate, route());
-  for (const action of ["adopt", "submit", "approve"] as const)
+  for (const action of ["submit", "approve"] as const)
     app.post(`${base}/${action}`, options.authenticate, route(action));
 }

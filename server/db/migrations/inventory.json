@@ -3,6 +3,18 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261009_native_product_review.sql",
+      "path": "migrations/20261009_native_product_review.sql",
+      "sha256": "d60fe6ed0c2dfdf07a36f3bf9f7ef80746565001f7720dfccb4c615d4c019adb",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire active legacy adoption: only native product author submission and independent exact-source approval may insert review receipts. Historical receipts remain unchanged; no graph-write or publication grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/62_native_product_review.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261008_entity_legacy_ownership_initialization.sql",
       "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_legacy_ownership_initialization.sql",
       "sha256": "de601b594de70cce19f915c911a9ad4f09ae2dd8d1fefd3786b30eeae47ad337",

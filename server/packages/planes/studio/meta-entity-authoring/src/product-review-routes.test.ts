@@ -58,7 +58,7 @@ it("requires authentication and retains a read-only graph endpoint", async () =>
 });
 it("does not expose publishing, activation or graph editing on the control review surface", async () => {
   const f = await fixture();
-  for (const action of ["publish", "activate", "fork", "graph"])
+  for (const action of ["publish", "activate", "fork", "graph", "adopt"])
     expect(
       (
         await fetch(f.url + "/" + action, {
@@ -80,7 +80,7 @@ it("rejects privilege, break-glass and unpinned command input", async () => {
   ])
     expect(
       (
-        await fetch(f.url + "/adopt", {
+        await fetch(f.url + "/submit", {
           method: "POST",
           headers: f.headers,
           body: JSON.stringify(body),

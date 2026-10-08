@@ -17,6 +17,7 @@ import {
   type ProductReviewAction,
   type ProductReviewCommand,
   type ProductReviewReceipt,
+  type ProductReviewPorts,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
   createIamAuthenticationMiddleware,
@@ -69,6 +70,10 @@ export function createControlProductReview(options: {
   database: Database;
   authority: PlatformAuthority;
   audit: AuditRecorder<Database>;
+  nativeSource?: (
+    tx: Database,
+    id: string,
+  ) => ReturnType<ProductReviewPorts["nativeSource"]>;
 }) {
   const authority = validatePlatformAuthority(options.authority);
   async function run(
@@ -96,9 +101,9 @@ export function createControlProductReview(options: {
             tx,
           );
         if (actors.rows.length !== 1) throw denied();
-      // Serialize product commands with publication. Do not SELECT FOR UPDATE:
-      // the control role's UPDATE policy intentionally excludes approved rows.
-      // Native transitions lock on UPDATE; serializable isolation rejects drift.
+        // Serialize product commands with publication. Do not SELECT FOR UPDATE:
+        // the control role's UPDATE policy intentionally excludes approved rows.
+        // Native transitions lock on UPDATE; serializable isolation rejects drift.
         await sql`SELECT pg_advisory_xact_lock(hashtextextended('system-entity-release:'||entity_id::text,0))
         FROM metadata.entity_change_set WHERE id=${id}::uuid AND tenant_id IS NULL`.execute(
           tx,
@@ -123,7 +128,6 @@ export function createControlProductReview(options: {
           row.submitted_by !== context.principalId;
         const permissionCode = {
           read: "studio.metadata.contract.view",
-          adopt: "studio.metadata.contract.edit",
           submit: "studio.metadata.contract.submit",
           approve: "studio.metadata.contract.review",
         }[action];
@@ -153,8 +157,14 @@ export function createControlProductReview(options: {
             );
             return r.rows[0]?.receipt ?? null;
           },
-          adopted: (changeSetId, revision, hash, actorId) =>
-            has("adopt", changeSetId, revision, hash, actorId),
+          nativeSource: async (changeSetId) => {
+            if (!options.nativeSource)
+              throw new AuthoringPolicyError(
+                "NATIVE_REVIEW_HOST_NOT_CONFIGURED",
+                "Native compilation source is not installed",
+              );
+            return options.nativeSource(tx, changeSetId);
+          },
           submitted: (changeSetId, revision, hash, actorId) =>
             has("submit", changeSetId, revision, hash, actorId),
           async record(receipt) {
@@ -194,7 +204,7 @@ export function createControlProductReview(options: {
           },
         });
         async function has(
-          kind: "adopt" | "submit",
+          kind: "submit",
           changeSetId: string,
           revision: number,
           hash: string,
@@ -231,6 +241,10 @@ export function registerControlProductReview(
     authority: PlatformAuthority;
     audit: AuditRecorder<Database>;
     authenticator: Authenticator;
+    nativeSource?: (
+      tx: Database,
+      id: string,
+    ) => ReturnType<ProductReviewPorts["nativeSource"]>;
   },
 ) {
   registerProductReviewRoutes(app, {

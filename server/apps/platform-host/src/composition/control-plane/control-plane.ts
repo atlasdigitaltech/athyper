@@ -41,6 +41,9 @@ export function registerControlPlane(
     productLabelEnrollment?: Parameters<typeof createProductLabelEnrollment>[0];
     productReferenceEnrollment?: ProductReferenceEnrollmentOptions;
     resourceReview?: ReturnType<typeof createControlResourceReview>;
+    nativeSource?: Parameters<
+      typeof registerControlProductReview
+    >[1]["nativeSource"];
   },
 ) {
   registerControlSession(application, options.authenticator, options.authority);

@@ -511,6 +511,40 @@ in this continuation. The last executed draft state remains revision 1 for both
 entities. Runtime installation/resolution, actual live-read requests and manual UI
 handover remain pending; these component results do not satisfy L4–L6.
 
+**9 October native review cleanup — implemented/tested, not installed:**
+The product review service now compiles native 2.5 sources directly and reads target
+rows instead of legacy layout markers. `/adopt` is no longer registered. Submit
+requires the native draft author; approve requires an independent actor and the
+exact prior submission receipt. Replay, changed-source rejection, transactional
+receipt failure and independent review checks remain covered. Historical adoption
+receipts retain their read contract; no historical rows or applied migrations are
+rewritten.
+
+Canonical `62_native_product_review.sql` and the registered forward migration
+`20261009_native_product_review.sql` replace the receipt INSERT policy. The policy
+requires native product version 2, authenticated human identity binding, exact
+revision, author submission and independently submitted hash correspondence. It
+allows neither adoption nor graph writes. The old Address-dependent adoption
+rehearsal has been replaced with a disposable PostgreSQL policy test, including
+wrong author/tenant, self-review, stale revision/hash, non-native source and rollback
+cases. This is policy regression evidence, not authenticated DEV execution.
+
+Executed checks: the full authoring suite passed **919 tests with 11 opt-in skips**;
+`PRODUCT_REVIEW_POSTGRES=1 pnpm --filter @athyper/server-platform-host exec vitest run
+src/composition/control-plane/product-review.postgres.test.ts
+src/composition/control-plane/product-review.test.ts` passed 5 tests including the
+actual PostgreSQL policy run. Authoring production/test typechecks passed. Migration
+layout verification reports 173 classified files and 165 retained SQL files. Host
+typecheck still reports the existing `entity-views-routes.ts:317` mismatch.
+
+**Not deployed:** the control host has no trusted native review source resolver yet
+and explicitly rejects with `NATIVE_REVIEW_HOST_NOT_CONFIGURED`. The publication
+worker's legacy plan/adoption handling has not yet been replaced. Do not install the
+new policy or restart the review host as a delivery claim until source compilation,
+review lifecycle snapshots and native release preparation work together. Installed
+live-read resolution and UI verification are also pending. Both executed DEV draft
+states remain revision 1; no new Entity review/publication/activation occurred.
+
 L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
 
 L6 verifies both entities against the new activated artifacts:
