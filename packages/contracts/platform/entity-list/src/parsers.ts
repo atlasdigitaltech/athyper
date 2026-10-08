@@ -37,6 +37,12 @@ import type {
   SaveableListStateV1,
 } from "./types";
 import { ENTITY_LIST_VIEW_MODES } from "./view-modes";
+import {
+  parseListBoard,
+  parseListBoardState,
+  parseListCardContent,
+  type ListBoardV1,
+} from "./board";
 
 const MODES = ENTITY_LIST_VIEW_MODES;
 const DENSITIES = ["compact", "comfortable", "spacious"] as const;
@@ -186,10 +192,21 @@ export function parseEntityListDescriptor(
     surfaceRecord.unavailableModes,
     new Set(supportedModes),
   );
+  const board =
+    surfaceRecord.board === undefined
+      ? undefined
+      : parseListBoard(surfaceRecord.board, new Set(fieldByKey.keys()));
+  if (Boolean(board) !== supportedModes.includes("board"))
+    throw new TypeError("surface.board is required exactly when Board is supported");
+  const cardContent =
+    surfaceRecord.cardContent === undefined
+      ? undefined
+      : parseListCardContent(surfaceRecord.cardContent, new Set(fieldByKey.keys()));
   const defaultState = parseState(surfaceRecord.defaultState, {
     fields: fieldByKey,
     identityField,
     supportedModes: new Set(supportedModes),
+    ...(board ? { board } : {}),
     maxSortLevels,
     allowedPageSizes: new Set(allowedPageSizes),
     defaultPageSize,
@@ -279,6 +296,8 @@ export function parseEntityListDescriptor(
       defaultState,
       supportedModes,
       ...(unavailableModes.length ? { unavailableModes } : {}),
+      ...(board ? { board } : {}),
+      ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")
           ? {
@@ -705,6 +724,7 @@ function stateRules(
     identityField: descriptor.entity.identityField,
     supportedModes: new Set(descriptor.surface.supportedModes),
     defaultMode: descriptor.surface.defaultState.mode,
+    ...(descriptor.surface.board ? { board: descriptor.surface.board } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -718,6 +738,7 @@ interface StateRules {
   readonly supportedModes: ReadonlySet<ListViewMode>;
   /** Surface default used when saved or shared state names an unusable mode. */
   readonly defaultMode?: ListViewMode;
+  readonly board?: ListBoardV1;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -799,6 +820,7 @@ function parseState(
     record.spreadsheet === undefined
       ? undefined
       : parseSpreadsheet(record.spreadsheet, rules.fields);
+  const board = rules.board ? parseListBoardState(record.board, rules.board) : undefined;
   const base = {
     ...(optionalCode(record.standardViewKey, "standardViewKey")
       ? {
@@ -818,6 +840,7 @@ function parseState(
     density: oneOf(record.density, DENSITIES, "density") as ListDensity,
     mode,
     ...(spreadsheet ? { spreadsheet } : {}),
+    ...(board ? { board } : {}),
   };
   if (!rules.includeLocation) return Object.freeze(base);
   const pageSize =

@@ -1,3 +1,4 @@
+import { parsePublishedCardContent, parsePublishedListBoard, validatePublishedListBoard } from "./list-board-descriptor.js";
 import { validateEntityLiveReadContractV1, parseStructuredProjection, validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
@@ -885,6 +886,8 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
           ),
         }),
     ...(dataOperations ? { dataOperations } : {}),
+    ...(item["board"] === undefined ? {} : { board: parsePublishedListBoard(item["board"]) }),
+    ...(item["cardContent"] === undefined ? {} : { cardContent: parsePublishedCardContent(item["cardContent"]) }),
   };
 }
 
@@ -984,6 +987,7 @@ function validateListPresentation(
   };
   if (presentation.identityField)
     requireField(presentation.identityField, "listPresentation.identityField");
+  validatePublishedListBoard(presentation, byKey);
   for (const key of Object.keys(presentation.localizedLabels?.fields ?? {}))
     requireField(key, "listPresentation.localizedLabels.fields");
   const columns =

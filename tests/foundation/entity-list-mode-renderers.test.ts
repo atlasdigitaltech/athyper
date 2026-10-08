@@ -40,6 +40,13 @@ describe("list mode renderer registry", () => {
     assert.equal(normalized.surface.defaultState.mode, "table");
   });
 
+  it("drops a board projection together with an unrenderable Board mode", () => {
+    const descriptor = {
+      surface: { supportedModes: ["table", "board"], board: { laneFields: [] }, defaultState: { mode: "table" } },
+    } as unknown as EntityListDescriptorV1;
+    assert.equal(withRenderableModes(descriptor).surface.board, undefined);
+  });
+
   it("returns the same descriptor when every supported mode has a renderer", () => {
     const descriptor = { surface: { supportedModes: ["table", "compact"], defaultState: { mode: "table" } } } as unknown as EntityListDescriptorV1;
     assert.equal(withRenderableModes(descriptor), descriptor);

@@ -57,6 +57,10 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
   const view = parameters.get("view");
   // Only a layout this viewer can use is applied; anything else keeps the base layout.
   if (view !== null) { const mode = descriptor.surface.supportedModes.find((supported) => supported === view); if (mode) apply({ mode }); }
+  if (state.board && (parameters.has("lane") || parameters.has("lanes.collapsed"))) {
+    const collapsed = parameters.get("lanes.collapsed");
+    apply({ board: { laneField: parameters.get("lane") ?? state.board.laneField, collapsed: collapsed === null ? state.board.collapsed : collapsed.split(",").filter(Boolean) } });
+  }
   if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
   else if (parameters.get("sheet") === "custom" || parameters.has("pinned") || [...parameters.keys()].some((key) => key.startsWith("width."))) apply({ spreadsheet: decodeSpreadsheet(parameters, state.spreadsheet) });
   if (parameters.get("vid")) apply({ savedViewId: parameters.get("vid")! });
@@ -92,6 +96,10 @@ export function encodeListLocationState(state: ListLocationStateV1, descriptor: 
   if (normalized.density !== base.density) parameters.set("density", normalized.density);
   if (normalized.mode !== base.mode) parameters.set("view", normalized.mode);
   encodeSpreadsheet(parameters, normalized.spreadsheet, base.spreadsheet);
+  if (normalized.board && base.board) {
+    if (normalized.board.laneField !== base.board.laneField) parameters.set("lane", normalized.board.laneField);
+    if (!equal(normalized.board.collapsed, base.board.collapsed)) parameters.set("lanes.collapsed", normalized.board.collapsed.join(","));
+  }
   if (options.includeViewIds !== false) {
     if (normalized.savedViewId) parameters.set("vid", normalized.savedViewId);
     if (normalized.baseSavedViewId) parameters.set("bvid", normalized.baseSavedViewId);
@@ -108,6 +116,7 @@ export function toSaveableListState(state: ListLocationStateV1): SaveableListSta
     ...(state.query ? { query: state.query } : {}), filters: state.filters, sort: state.sort,
     ...(state.group ? { group: state.group } : {}), columns: state.columns, density: state.density, mode: state.mode,
     ...(state.spreadsheet ? { spreadsheet: state.spreadsheet } : {}),
+    ...(state.board ? { board: state.board } : {}),
   });
 }
 

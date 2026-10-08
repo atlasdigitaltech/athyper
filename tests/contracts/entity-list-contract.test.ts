@@ -256,6 +256,40 @@ describe("entity list browser contract", () => {
     assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "not a code" }])));
   });
 
+  it("parses a viewer's board and keeps board state through saved views and links", () => {
+    const board = {
+      laneFields: [{
+        field: "status", label: "Status", noValueLane: true,
+        lanes: [
+          { key: "active", label: "Active", values: ["active"], tone: "success", collapsed: false, terminal: false },
+          { key: "closed", label: "Closed", localizedLabel: { defaultLocale: "en", values: { en: "Closed", ms: "Ditutup" } }, values: ["inactive", "archived"], tone: "neutral", collapsed: true, terminal: true },
+        ],
+      }],
+    };
+    const payload = { ...descriptorPayload, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "board"], board, cardContent: { fields: [{ field: "name" }] } } };
+    const descriptor = parseEntityListDescriptor(payload);
+    assert.equal(descriptor.surface.board?.laneFields[0]?.lanes[1]?.localizedLabel?.values.ms, "Ditutup");
+    assert.deepEqual(descriptor.surface.defaultState.board, { laneField: "status", collapsed: ["closed"] });
+    assert.deepEqual(descriptor.surface.cardContent, { fields: [{ field: "name" }] });
+
+    const shared = decodeListLocationState("?view=board&lanes.collapsed=", descriptor);
+    assert.equal(shared.mode, "board");
+    assert.deepEqual(shared.board, { laneField: "status", collapsed: [] });
+    const encoded = encodeListLocationState(shared, descriptor);
+    assert.equal(encoded.get("view"), "board");
+    assert.equal(encoded.get("lanes.collapsed"), "");
+    assert.deepEqual(decodeListLocationState(encoded, descriptor).board, shared.board);
+
+    const stale = parseListLocationState({ ...descriptor.surface.defaultState, board: { laneField: "retired_field", collapsed: ["gone"] } }, descriptor);
+    assert.deepEqual(stale.board, { laneField: "status", collapsed: [] });
+
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Board/);
+    const duplicate = structuredClone(board);
+    duplicate.laneFields[0]!.lanes[1]!.values = ["active"];
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: duplicate } }), /exactly one lane/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: { laneFields: [{ ...board.laneFields[0], field: "missing" }] } } }), /listed field/);
+  });
+
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);

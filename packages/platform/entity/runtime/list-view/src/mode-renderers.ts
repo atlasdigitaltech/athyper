@@ -42,10 +42,13 @@ export function withRenderableModes(
     ...(descriptor.surface.unavailableModes ?? []),
     ...missing.map((mode) => ({ mode, code: LIST_MODE_RENDERER_MISSING })),
   ];
+  // A projection travels with its mode: an unrenderable Board takes its lanes with it.
+  const { board, ...surface } = descriptor.surface;
   return {
     ...descriptor,
     surface: {
-      ...descriptor.surface,
+      ...surface,
+      ...(board && renderable.includes("board") ? { board } : {}),
       supportedModes: renderable.length ? renderable : [fallback],
       unavailableModes,
       defaultState: renderable.includes(defaultState.mode)

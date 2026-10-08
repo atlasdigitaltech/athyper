@@ -1,3 +1,4 @@
+import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { createEntityReferenceReader, type EntityReferenceRequest, type EntityReferencePage } from "./entity-reference-reader.js";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
@@ -1058,10 +1059,25 @@ export function compileEntityListDescriptor(
             : "All permitted tenant records",
         },
       ];
+  const configuredLimits = descriptor.listPresentation?.limits;
+  const masked = (key: string) => maskedPresentationField(descriptor, key);
+  const boardResolution = descriptor.listPresentation?.board
+    ? resolveListBoard({
+        board: descriptor.listPresentation.board,
+        countMode: configuredLimits?.countMode ?? descriptor.listPresentation.countMode ?? "none",
+        fields: ordered,
+        entityFields: descriptor.fields,
+        masked,
+      })
+    : undefined;
+  const board = boardResolution && "board" in boardResolution ? boardResolution.board : undefined;
+  const cardContent = descriptor.listPresentation?.cardContent
+    ? resolveCardContent({ cardContent: descriptor.listPresentation.cardContent, fields: ordered, masked })
+    : undefined;
   const { supported: modes, unavailable: unavailableModes } = resolveModes(
     descriptor.listPresentation?.supportedModes,
+    boardResolution && "unavailable" in boardResolution ? boardResolution.unavailable : board ? undefined : "LIST_MODE_UNSUPPORTED",
   );
-  const configuredLimits = descriptor.listPresentation?.limits;
   const pageSizes = normalizePageSizes(
     configuredLimits?.allowedPageSizes ??
       descriptor.listPresentation?.allowedPageSizes,
@@ -1109,6 +1125,8 @@ export function compileEntityListDescriptor(
     defaultGroup,
     defaultMode,
     ...(unavailableModes.length ? { unavailableModes } : {}),
+    ...(board ? { board } : {}),
+    ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
     filterPresentation,
     experience: descriptor.listPresentation?.experience,
@@ -1157,6 +1175,8 @@ export function compileEntityListDescriptor(
       }),
       supportedModes: modes,
       ...(unavailableModes.length ? { unavailableModes } : {}),
+      ...(board ? { board } : {}),
+      ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey
           ? { profileKey: descriptor.listPresentation.search.profileKey }
@@ -1448,11 +1468,16 @@ function filterOptions(
 
 /** Splits declared modes into those this service can project and those it
  * cannot. Unrenderable declarations are reported, never silently dropped. */
-function resolveModes(value: readonly ListViewMode[] | undefined): {
+function resolveModes(
+  value: readonly ListViewMode[] | undefined,
+  /** Why Board cannot be offered to this viewer, or undefined when it can. */
+  boardUnavailable: string | undefined,
+): {
   readonly supported: readonly ListViewMode[];
   readonly unavailable: readonly ListUnavailableModeV1[];
 } {
   const renderable = new Set<ListViewMode>(ENTITY_LIST_RENDERABLE_MODES);
+  if (!boardUnavailable) renderable.add("board");
   const declared = [...new Set(value ?? ENTITY_LIST_RENDERABLE_MODES)];
   const supported = declared.filter((mode) => renderable.has(mode));
   return Object.freeze({
@@ -1460,7 +1485,7 @@ function resolveModes(value: readonly ListViewMode[] | undefined): {
     unavailable: Object.freeze(
       declared
         .filter((mode) => !renderable.has(mode))
-        .map((mode) => Object.freeze({ mode, code: "LIST_MODE_UNSUPPORTED" })),
+        .map((mode) => Object.freeze({ mode, code: mode === "board" && boardUnavailable ? boardUnavailable : "LIST_MODE_UNSUPPORTED" })),
     ),
   });
 }

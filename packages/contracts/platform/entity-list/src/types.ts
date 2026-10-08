@@ -159,6 +159,7 @@ export interface SaveableListStateV1 {
   readonly density: ListDensity;
   readonly mode: ListViewMode;
   readonly spreadsheet?: SpreadsheetStateV1;
+  readonly board?: import("./board").ListBoardStateV1;
 }
 
 export interface ListLocationStateV1 extends SaveableListStateV1 {
@@ -287,6 +288,10 @@ export interface EntityListDescriptorV1 {
     /** Declared modes this viewer cannot use, with a reason code. They are
      * shown as unavailable and never rendered through another layout. */
     readonly unavailableModes?: readonly ListUnavailableModeV1[];
+    /** Lane fields and lanes this viewer can use; present only when Board is supported. */
+    readonly board?: import("./board").ListBoardV1;
+    /** Compiled card content (summary placements), shared by Cards and Board. */
+    readonly cardContent?: import("./board").ListCardContentV1;
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;

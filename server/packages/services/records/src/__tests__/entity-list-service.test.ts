@@ -87,6 +87,32 @@ describe("safe entity list service", () => {
     ]);
   });
 
+  it("offers Board with its lanes and card content when the lane field is usable", async () => {
+    const boardDescriptor = (countMode: "exact" | "approximate"): EntityRuntimeDescriptor => ({
+      ...descriptor,
+      fields: [...descriptor.fields, { key: "stage", storagePath: "stage", type: "enum", required: false, writableOn: [], filterable: true, sortable: true, list: { groupable: true } }],
+      listPresentation: {
+        identityField: "code", title: "Business Partners", defaultColumns: ["code", "name", "stage"], supportedModes: ["table", "compact", "board"],
+        limits: { defaultPageSize: 10, allowedPageSizes: [10], maxSortLevels: 2, countMode },
+        board: { laneFields: [{ field: "stage", choices: [{ value: "open", label: "Open", tone: "warning", position: 1 }, { value: "won", label: "Won", tone: "success", position: 2 }], lanes: [{ key: "open", label: "Open", values: ["open"], tone: "warning", collapsed: false, terminal: false }, { key: "won", label: "Won", values: ["won"], tone: "success", collapsed: false, terminal: true }] }] },
+        cardContent: { fields: [{ field: "name" }, { field: "tax_id" }] },
+      },
+    });
+    const exact = boardDescriptor("exact");
+    const compiled = parseEntityListDescriptor(await createTestListService({ metadata: { getEntityDescriptor: async () => exact }, descriptor: exact, authorizer: allowReadOnly() }).descriptor(context, exact.entityCode));
+    expect(compiled.surface.supportedModes).toEqual(["table", "compact", "board"]);
+    expect(compiled.surface.unavailableModes).toBeUndefined();
+    expect(compiled.surface.board?.laneFields.map((item) => [item.field, item.noValueLane, item.lanes.map((lane) => lane.key)])).toEqual([["stage", true, ["open", "won"]]]);
+    // tax_id is not readable for this viewer, so card content never widens to it.
+    expect(compiled.surface.cardContent).toEqual({ fields: [{ field: "name" }] });
+
+    const approximate = boardDescriptor("approximate");
+    const limited = parseEntityListDescriptor(await createTestListService({ metadata: { getEntityDescriptor: async () => approximate }, descriptor: approximate, authorizer: allowReadOnly() }).descriptor(context, approximate.entityCode));
+    expect(limited.surface.supportedModes).toEqual(["table", "compact"]);
+    expect(limited.surface.unavailableModes).toEqual([{ mode: "board", code: "LIST_BOARD_COUNTS_UNAVAILABLE" }]);
+    expect(limited.surface.board).toBeUndefined();
+  });
+
   it("omits unavailable modes when every declared mode is renderable", async () => {
     const lists = createTestListService({ authorizer: allowReadOnly() });
     const compiled = parseEntityListDescriptor(await lists.descriptor(context, descriptor.entityCode));

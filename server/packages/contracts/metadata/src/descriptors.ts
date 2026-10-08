@@ -200,6 +200,36 @@ export interface EntityListLimitsDescriptor {
   readonly countMode?: "none" | "cached" | "approximate" | "exact";
 }
 
+/** Published Board projection compiled from the typed lane rows. Choices are
+ * the compiled entity_field_choice projection; every choice is in exactly one
+ * lane, and the lane tone is the authored tone or the members' shared tone. */
+export interface EntityListBoardDescriptor {
+  readonly laneFields: readonly {
+    readonly field: string;
+    readonly choices: readonly {
+      readonly value: string;
+      readonly label: string;
+      readonly localizedLabel?: import("@athyper/contract-platform-entity-list").EntityLocalizedTextV1;
+      readonly tone: import("@athyper/contract-platform-entity-list").ListBoardTone;
+      readonly position: number;
+    }[];
+    readonly lanes: readonly {
+      readonly key: string;
+      readonly label: string;
+      readonly localizedLabel?: import("@athyper/contract-platform-entity-list").EntityLocalizedTextV1;
+      readonly values: readonly string[];
+      readonly tone: import("@athyper/contract-platform-entity-list").ListBoardTone;
+      readonly collapsed: boolean;
+      readonly terminal: boolean;
+    }[];
+  }[];
+}
+
+/** Compiled projection of the surface's binding_kind = summary placements. */
+export interface EntityListCardContentDescriptor {
+  readonly fields: readonly { readonly field: string; readonly rendererKey?: string }[];
+}
+
 export interface EntityListPresentationDescriptor {
   readonly localizedLabels?: import("@athyper/contract-platform-entity-runtime").EntityPresentationLocalizationV1;
   readonly experience?: import("@athyper/contract-platform-entity-list").PublishedListExperienceV1;
@@ -223,6 +253,8 @@ export interface EntityListPresentationDescriptor {
   /** @deprecated Use defaultState.density. */
   readonly defaultDensity?: EntityListDensity;
   readonly supportedModes?: readonly EntityListViewMode[];
+  readonly board?: EntityListBoardDescriptor;
+  readonly cardContent?: EntityListCardContentDescriptor;
   /** @deprecated Use limits.defaultPageSize. */
   readonly defaultPageSize?: number;
   /** @deprecated Use limits.allowedPageSizes. */

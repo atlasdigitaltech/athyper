@@ -181,8 +181,9 @@ The lane `tone` is compiled: the lane's authored `tone`, or the shared tone of i
 
 ```ts
 surface.board?: { laneFields: readonly { field: string; label: string; noValueLane: boolean;
-  lanes: readonly { key: string; label: string; values: readonly string[];
-                    tone: EntityStatusTone; collapsed: boolean; terminal: boolean }[] }[] };
+  lanes: readonly { key: string; label: string; localizedLabel?: EntityLocalizedTextV1;
+                    values: readonly string[]; tone: EntityStatusTone;
+                    collapsed: boolean; terminal: boolean }[] }[] };
 surface.cardContent?: { fields: readonly { field: string; rendererKey?: string }[] };
 SaveableListStateV1.board?: { laneField: string; collapsed: readonly string[] };
 ```
@@ -328,7 +329,7 @@ A parallel metadata cleanup (Country and State Region first) is editing Studio a
 
 | Step                  | Work                                                                                                                                                                                                                      | Overlaps the cleanup                                            | When                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------- |
-| A — 0b-i              | 0b items 1–4: `surface.unavailableModes`, no renderer fall-through, `view=` validation, exact tone lookup                                                                                                                 | No                                                              | Now                     |
+| A — 0b-i              | 0b items 1–4: `surface.unavailableModes`, no renderer fall-through, `view=` validation, exact tone lookup. The legacy compiler's five-mode narrowing (0b-1, `deterministic.ts`) is Studio authoring and moves to step D   | No                                                              | Now                     |
 | B — Phase 1 runtime   | `board.ts`; the published-descriptor parser for `board`/`cardContent`; per-viewer board resolution in the list service; the Board renderer, card content, `describedBy`, i18n; jsdom and Playwright on synthetic fixtures | No                                                              | After A                 |
 | C — 0b-ii             | 0b item 5: the active-descriptor identity scan, then removing the identity fallbacks                                                                                                                                      | Yes (scan depends on cleaned metadata)                          | After the cleanup lands |
 | D — Phase 1 authoring | Reference members, guards, forward upgrade, compiler, generators, Studio dictionary (section 10)                                                                                                                          | Yes (same package, DDL folder, generators and Studio blueprint) | After the cleanup lands |
