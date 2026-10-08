@@ -123,7 +123,7 @@ export function GroupedTree({ descriptor, groups, levelOne, source, variant, col
   );
 }
 
-function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded, first }: {
+function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded, first, visible = true }: {
   readonly heading: GroupHeading;
   readonly fieldIndex: number;
   readonly level: number;
@@ -131,6 +131,9 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
   readonly filters: readonly ListFilterV1[];
   readonly defaultExpanded: boolean;
   readonly first?: boolean;
+  /** False while an ancestor is collapsed: the node stays mounted, keeping
+   * what it loaded, so reopening sends no request. */
+  readonly visible?: boolean;
 }) {
   const ctx = useContext(Context)!;
   const { intl, source, variant } = ctx;
@@ -155,9 +158,9 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
   const key = `${path}/${heading.key}`;
   const label = headingLabel(heading, intl);
   const nextField = last ? undefined : ctx.fields[fieldIndex + 1];
-  const wantsBuckets = expanded && heading.kind !== "unmapped" && nextField && source.exact;
+  const wantsBuckets = loadedOnce.current && heading.kind !== "unmapped" && nextField && source.exact;
   const buckets = useGroupBuckets({ ctx, group: wantsBuckets ? nextField.key : undefined, filters: own });
-  const wantsRecords = expanded && heading.kind !== "unmapped" && last;
+  const wantsRecords = loadedOnce.current && heading.kind !== "unmapped" && last;
   const records = useDateRangePages({
     client: source.client,
     descriptor: ctx.descriptor,
@@ -166,28 +169,31 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     refreshKey: source.refreshKey,
   });
   const count = source.exact && heading.count !== undefined ? heading.count : undefined;
+  const shown = visible && expanded;
   let children: ReactNode = null;
-  if (expanded) {
+  if (loadedOnce.current) {
     if (heading.kind === "unmapped") {
       children = (heading.values ?? []).map((value) => (
         <GroupNode key={JSON.stringify(value)} heading={{ key: JSON.stringify([field.key, "choice", value]), kind: "choice", value, label: formatFieldValue(value, field, intl) }}
-          fieldIndex={fieldIndex} level={level + 1} path={key} filters={filters} defaultExpanded={false} />
+          fieldIndex={fieldIndex} level={level + 1} path={key} filters={filters} defaultExpanded={false} visible={shown} />
       ));
     } else if (nextField) {
       const subheadings = source.exact
         ? buckets.buckets ? groupHeadings(nextField, choicesFor(nextField, intl), buckets.buckets) : undefined
         : groupHeadings(nextField, choicesFor(nextField, intl), undefined);
-      children = buckets.failed
-        ? <Message level={level + 1} text={intl.message("list.tree.failed")} />
-        : !subheadings
-          ? <Message level={level + 1} text={intl.message("list.tree.loading")} />
-          : subheadings.length
-            ? subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} />)
-            : <Message level={level + 1} text={intl.message("list.tree.noRecords")} />;
+      children = subheadings?.length
+        ? subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} visible={shown} />)
+        : !shown
+          ? null
+          : buckets.failed
+            ? <Message level={level + 1} text={intl.message("list.tree.failed")} />
+            : !subheadings
+              ? <Message level={level + 1} text={intl.message("list.tree.loading")} />
+              : <Message level={level + 1} text={intl.message("list.tree.noRecords")} />;
     } else {
       const loading = records.loading && !records.rows.length;
       const remaining = records.total !== undefined ? records.total - records.rows.length : undefined;
-      children = (
+      children = !shown ? null : (
         <>
           {records.failed ? <Message level={level + 1} text={intl.message("list.tree.failed")} /> : null}
           {loading ? <Message level={level + 1} text={intl.message("list.tree.loading")} /> : null}
@@ -215,6 +221,7 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
       {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
     </>
   );
+  if (!visible) return <>{children}</>;
   if (variant === "cards")
     return (
       <section className="a-entity-tree__section" data-level={level}>

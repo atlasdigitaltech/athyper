@@ -1026,9 +1026,11 @@ for (const mode of ["table", "compact"] as const)
           <EntityListRuntime client={client} entityCode="business_partner" />,
         ),
       );
+      // Grouped lists render the shared tree (Tree blueprint A1): each group
+      // loads its own records and keeps them while collapsed.
       const button = () =>
         dom.window.document.querySelector<HTMLButtonElement>(
-          ".a-entity-list__group-toggle",
+          "[data-tree-toggle]",
         )!;
       const record = () =>
         dom.window.document.querySelector(".a-entity-list__record-link");
@@ -1040,7 +1042,9 @@ for (const mode of ["table", "compact"] as const)
       assert.equal(record(), null);
       // Count mode is none, so the heading shows no count: rows on this page
       // never stand in for a group total (layout foundation section 5).
-      assert.equal(button().textContent, "Active");
+      const heading = button().closest(".a-entity-tree__heading")!;
+      assert.match(heading.textContent ?? "", /Active/);
+      assert.equal(heading.querySelector(".a-entity-tree__count"), null);
       await act(async () => button().click());
       assert.equal(button().getAttribute("aria-expanded"), "true");
       assert.ok(record());

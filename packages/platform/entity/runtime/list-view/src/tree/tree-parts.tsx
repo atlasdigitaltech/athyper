@@ -20,7 +20,7 @@ export function TreeToggle({ expandable, expanded, label, onToggle, limit }: {
 }) {
   if (!expandable) return <span className="a-entity-tree__toggle a-entity-tree__toggle--spacer" aria-hidden="true" />;
   return (
-    <button type="button" className="a-entity-tree__toggle" data-tree-toggle="" tabIndex={-1} aria-label={label}
+    <button type="button" className="a-entity-tree__toggle" data-tree-toggle="" tabIndex={-1} aria-label={label} aria-expanded={expanded}
       data-expanded={expanded || undefined} data-limit={limit || undefined} onClick={onToggle}>
       <ChevronRightIcon size={16} aria-hidden="true" />
     </button>

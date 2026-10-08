@@ -141,7 +141,7 @@ test.describe("A1 grouped tree", () => {
     await page.getByRole("button", { name: "Expand all loaded" }).click();
     await expect(headingRow(page, "Asset")).toBeVisible(); // Active was loaded
     await expect(headingRow(page, "Liability")).toHaveCount(1); // only under Active; unloaded groups stay closed
-    expect((await requests(page)).length).toBe(before + 1); // Active's level 2 reloads, nothing else
+    expect((await requests(page)).length).toBe(before); // loaded groups keep what they loaded: no request
     const active = headingRow(page, "Active");
     await active.focus();
     await page.keyboard.press("ArrowLeft");
