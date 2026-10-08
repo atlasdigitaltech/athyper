@@ -142,6 +142,11 @@ Until step 4, Board's build authority rests on its existing approval, and Calend
 
   It also corrects offsets that are present but wrong. The scan results come to the owner before the change.
 
+- **Scan record, DEV, 8 October 2026 (read-only; no corrections needed):**
+  - `master.saved_view` (Neon, Mesh, Studio): one row in Neon, an archived personal `activity.inbox` view with no filters; none in Mesh or Studio. `master.saved_view_default`: no rows.
+  - Published and draft default filters, found by a recursive search of every JSON column holding `defaultState` (runtime descriptors, contracts, release payloads, Studio snapshots, compilations and `layout_config`): 40 filters in total, all `status in [open, claimed, in_progress, blocked]`. None is on a date or datetime field.
+  - Repository fixtures and seeds: one date-shaped filter value, in `records-query-contract.test.ts`, which already asserts rejection for its bound count and stays rejected under P2.
+  - Not scannable centrally: filters in each person's browser storage. These are handled by the strict decode below.
 - **Stored views: applied exactly as saved, or retired whole.** Today the list-state parser silently skips a stored filter whose field no longer exists, or whose operator the field no longer permits (`parsers.ts:756–765`). Each skip widens the view's results without telling the person, and it is more common than a malformed value. P2 therefore covers all three cases: an unknown field, an operator the field does not permit, and a malformed value.
   - **Browser-stored views:** a strict decode in `readSavedViews` throws on any of the three. The existing per-view catch then removes the view whole, with a notice ("This saved view is out of date and was removed").
   - **Server-stored views:** these are offered only when `compatible` (existing catalogue behaviour). The scan reports rows that would fail the strict rule.
