@@ -298,9 +298,25 @@ the existing producer directory. After a Platform Admin session refresh, all thr
 successfully through the control API (HTTP 200, status preparing). `proposal-receipts.json`
 records list `7c2e8db4-640c-47c8-8c36-308ddcdfe459`, detail
 `884d2f0d-344b-4c4a-8ec9-40da40f95a41`, and text
-`61b7f610-a478-474e-a8ba-aee9e6d099b3`. Independent Platform Owner review was requested
-and remains pending. No catalogue rows, replacement drafts or resource/entity activation
-were created. Proposal resolution and F6/F8/F9 remain unfinished.
+`61b7f610-a478-474e-a8ba-aee9e6d099b3`. Platform Owner independently approved all three through the same control API.
+`approval-receipts.json` records HTTP 200 and the separate reviewer. The DEV-only
+`publish-dev-reviewed-resources` command reuses the configured worker source qualifier,
+compiler, signer, dispatcher, activation orchestrator and release transition repository.
+It accepts at most 16 exact release-ID/source-hash requests, resolves the existing worker
+service principal and neither creates review evidence nor edits resource sources.
+
+All three releases are now published with active Studio catalogue rows and one deployment
+acknowledgement each. `delivery.log` and `delivery-replay.log` record identical IDs on replay:
+
+| Component            | Deployment                           | Applied release                      |
+| -------------------- | ------------------------------------ | ------------------------------------ |
+| shared.entity.list   | 01a11b7a-d0ba-705b-9256-ccb7db699a82 | 01a11b7a-d6be-728e-a773-523a39ce0fa4 |
+| shared.entity.detail | 01a11b7a-e3c2-70b8-8542-a081afe12236 | 01a11b7a-e934-7f84-a13f-bc994f29219b |
+| shared.entity.text   | 01a11b7b-0172-7d8c-989a-3f7a7dd9c998 | 01a11b7b-0779-7189-9588-dcc94697bdb1 |
+
+This clears the empty catalogue and component-resource publication blocker. Detail field
+renderer binding, native proposal/bootstrap resolution and F6/F8/F9 remain unfinished.
+No replacement Entity draft or new Country/State Region activation was created.
 
 `createComponentCatalogueInstaller` now binds the existing publication loader to the
 transactional catalogue installer. It reads exact active/reviewed source evidence through
@@ -337,13 +353,13 @@ test typechecks, migration-layout validation and the changed-file formatting gat
 
 The shared list renderer now explicitly handles the `text` key, preserving preformatted
 text/highlighting without inferred status/date decoration. Seven existing board/card
-foundation cases pass with the added assertions. Detail display and deployed bundle/
-implementation evidence remain unqualified; no approved field-display resource is claimed.
+foundation cases pass with the added assertions. The bounded list-only text resource is now reviewed and installed against the deployed
+bundle above; detail field-display binding remains unqualified.
 
-The DEV catalogue is still empty. Both existing drafts remain revision 4, with all seven
-pending native-cutover checks retained. Candidate approval/activation, installed proposal
-resolution and deployed F6/F8/F9 remain open. No replacement draft, cleanup or new
-component/entity publication or activation occurred.
+The DEV catalogue now contains three active components. Both existing Entity drafts
+remain revision 4, with all seven pending native-cutover checks retained. Installed native
+proposal resolution and deployed F6/F8/F9 remain open. No replacement Entity draft or
+new Country/State Region activation occurred.
 
 ### Component publication and installation integration — 8 October
 

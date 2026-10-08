@@ -111,6 +111,12 @@ unset runtime_password worker_password redis_password
 # Operator commands need the same secret-file and storage configuration as the
 # service, but must not start a second worker or accept arbitrary commands.
 if [ "$#" -gt 0 ]; then
+  if [ "$#" -eq 1 ] && [ "$1" = publish-dev-reviewed-resources ]; then
+    [ "$ATHYPER_ENV" = local ] && [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] && [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ] || { echo "Resource publication requires source DEV" >&2; exit 1; }
+    cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}/server/apps/platform-host"
+    exec node --import tsx src/scripts/publish-dev-reviewed-resources.ts
+  fi
+
   if [ "$#" -eq 1 ] && [ "$1" = adopt-dev-business-partner ]; then
     [ "$ATHYPER_ENV" = local ] && [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] && [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ] || { echo "Adoption requires source DEV" >&2; exit 1; }
     cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}"

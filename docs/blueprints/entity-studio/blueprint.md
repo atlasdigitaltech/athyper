@@ -1171,7 +1171,7 @@ Composite read-operation FK uses read_operation_change_set_id. Cross-draft selec
 
 *Composer home: Experience › component palette (read-only catalogue).* (Maintained cross-reference to sections 7.2–7.7; not generated output.)
 
-**DDL status:** typed catalogue generated in `41_ui_component_catalogue.generated.sql` from `ui-component-contract.ts`; installed empty in DEV by forward migration `20261007_entity_ui_component_catalogue.sql`. Resource installation and approved host composition are not yet qualified.
+**DDL status:** typed catalogue generated in `41_ui_component_catalogue.generated.sql` from `ui-component-contract.ts`; installed in DEV by forward migration `20261007_entity_ui_component_catalogue.sql`. Three reviewed Studio component resources are now installed; complete native host composition remains unqualified.
 
 **Component publication integration:** `entity_ui_component` uses the existing reviewed
 resource release, signed artifact and immutable applied-payload machinery, initially on
@@ -1221,7 +1221,9 @@ between checks and consumption; this verifier is not an atomic filesystem deploy
 mechanism. No evidence is inferred from the mere presence of a Next development cache.
 The 8 October DEV checkpoint now serves a pinned standalone Studio bundle and verifies
 served renderer bytes against that bundle; the runbook records its exact evidence.
-Component candidates remain unapproved. The initial explicit text registration is
+The three bounded component candidates have independent approval and active Studio
+catalogue projections (exact release/deployment IDs are recorded in the runbook).
+The initial explicit text registration is
 string/list-only; the current detail field descriptor cannot express that renderer
 binding, so detail text capability remains an implementation gap rather than an assumed
 fallback. Serving this bundle does not qualify native authoring or F6/F8/F9.

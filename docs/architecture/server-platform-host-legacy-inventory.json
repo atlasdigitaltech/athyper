@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 253,
+    "configuration:new": 254,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 402,
+    "operational-scripts:new": 403,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -1026,6 +1026,7 @@
       "key": "athyper_domain_suffix",
       "legacyLocations": [],
       "currentLocations": [
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts",
         "server/packages/services/publication/src/__tests__/local-definition-preview.test.ts"
       ],
       "disposition": "new",
@@ -1106,6 +1107,7 @@
         "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/apps/platform-host/src/diagnostics/telemetry/error-collector.ts",
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts",
         "server/packages/services/publication/src/__tests__/local-definition-preview.test.ts"
       ],
       "disposition": "migrated",
@@ -1145,7 +1147,8 @@
       "key": "athyper_instance",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
+        "server/apps/platform-host/src/composition/register-services.ts",
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6822,7 +6825,8 @@
       "key": "publication_applier_principal_code",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
+        "server/apps/platform-host/src/composition/register-services.ts",
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -7062,6 +7066,18 @@
         "server/apps/platform-host/src/config/environment.ts",
         "server/production.env.example",
         "server/staging.env.example"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:publication_resource_request_file",
+      "category": "configuration",
+      "key": "publication_resource_request_file",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18381,6 +18397,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/publication-rollback-retry.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:publish-dev-reviewed-resources",
+      "category": "operational-scripts",
+      "key": "publish-dev-reviewed-resources",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
