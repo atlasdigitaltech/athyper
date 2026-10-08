@@ -23,10 +23,56 @@ The current four Country/State Region list/read operations all store
 `requires_mfa=false`. Fresh-operation initialization is a separate approval scope
 from the previous persistence/compiler preservation approvals. An exact revision-4,
 source-row-hash-bound proposal is captured in `operation-initialization-proposal.json`
-in the same private directory; it is pending owner approval, not installed authority.
+in the same private directory. The owner approved this exact scope on 8 October;
+this conversation decision is not installed authority or a publication-review receipt.
 Source rows remain intact. Native bootstrap, reset application and deployed live-read
 integration remain unfinished independently of this decision. No publication or
 activation occurred during backup preparation.
+
+The source document hash is
+`7326147996a695b2062fe081fadfd0d04318944690907cc281f5cc3b45c9d2f4`.
+A fresh read-only DEV check confirms all four source values and revision pins still
+match; `operation-source-recheck.json` records that administrative inspection, not
+application-role qualification. The private proposal now records the owner decision.
+
+`createApprovedOperationBootstrap` implements the bounded source-copy insert plan
+and is accepted explicitly by native supplemental preparation after its existing
+root/schema guard. Trusted host configuration pins the independently approved source
+hash and exact fresh target IDs. Transactional source locks/rechecks reject missing
+or changed sources, different tenants/targets, existing target members, reused source
+member IDs, non-read operations and client protected-state properties. Ordinary saves
+still reject new operations without this separately installed initializer. No default
+for future entities, enforcement change or publication approval is introduced.
+
+Validation: 847 authoring tests passed, seven opt-in tests skipped; package production
+and test typechecks passed. The bootstrap PostgreSQL opt-in test was run separately
+and passed. It uses the real admission transport and source-reader SQL with minimal
+fixture Entity tables: admitted exact-source reads pass; absent/forged admission,
+wrong hash, changed revision/value, cross-tenant target, sealed target, direct source
+reads, approval-table writes and committed-token reuse reject. It does not qualify a
+complete native graph, authenticated DEV command or publication.
+
+The application role's existing restrictive read policies admit only its target
+draft and do not allow locking old operation/entity rows. Forward migration
+`20261008_entity_native_operation_bootstrap.sql` now supplies a bounded
+`read_operation_bootstrap_source` routine instead of widening those table grants.
+It requires current transaction admission and exact privately installed approval,
+source and fresh-native-target coordinates; it locks that evidence and source through
+the outer transaction. The private installation table has no application/issuer
+write or read grant. The migration itself installs no approval rows or operations.
+Its SHA-256 is `b35ac2e66391ddc34c5be7b5a8c68d0da8e64cf0f77e46503cdaeb67056fbbcf`.
+DEV rollback rehearsal, ledger-backed application and exact-hash replay passed; authorization assignments
+and activation heads were unchanged. Receipts are `operation-reader-rehearsal.json`
+and `operation-reader-installation.json` in the backup directory. This is installed
+reader infrastructure, not installed source/target bindings or handover completion.
+DEV privilege inspection confirms reader EXECUTE but no application SELECT/INSERT
+on the private evidence table and no UPDATE on operation columns. The installation
+table remains empty. Fifteen migration-runner tests and migration-layout validation
+also pass.
+
+Fresh native root creation, whole-graph command composition, target-specific approval
+installation and live-read adapters remain unfinished. No data reset, new draft
+creation, operation insertion, Entity publication or activation occurred.
 
 ## Live-read resource publication transport — 2026-10-08
 

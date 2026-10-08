@@ -9,6 +9,7 @@ import {
   type BranchPlan,
   type StoredRow,
 } from "./graph-reconciliation.js";
+import type { ApprovedOperationBootstrap } from "./native-operation-bootstrap.js";
 import type { NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
 /** One preparation path for operation and AI plans in the existing transaction.
  * The AI preparation obtains the exact native root lock/schema guard and checks
@@ -20,6 +21,7 @@ export async function prepareNativeSupplementalSave(
   c: NormalizedSaveCoordinate,
   graph: ExpandedNativeMetaEntityGraph,
   maximumMembers: number,
+  operationBootstrap?: ApprovedOperationBootstrap,
 ): Promise<readonly BranchPlan[]> {
   const ai = await prepareNativeAiSaveState(tx, c, graph, maximumMembers);
   // Preserve SQL bigint precision, as in the shared snapshot reader.
@@ -38,9 +40,14 @@ export async function prepareNativeSupplementalSave(
       "NATIVE_SNAPSHOT_LIMIT",
       "Stored operations exceed the admitted budget.",
     );
-  const operations = planNativeOperationBranch(
-    graph.operations,
-    stored.map((r) => r.value),
-  );
+  const storedOperations = stored.map((r) => r.value);
+  const operations = operationBootstrap
+    ? await operationBootstrap.prepare(
+        tx,
+        c,
+        graph.operations,
+        storedOperations,
+      )
+    : planNativeOperationBranch(graph.operations, storedOperations);
   return [operations, ...ai.plans];
 }

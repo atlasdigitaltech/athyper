@@ -104,3 +104,31 @@ it("rejects oversized combined stored families and unavailable operation initial
     prepareNativeSupplementalSave(tx, c, graph(), 100),
   ).rejects.toMatchObject({ code: "OPERATION_PROTECTED_SOURCE_REQUIRED" });
 });
+
+it("uses explicit host bootstrap only after native schema preparation and stored-row bounds", async () => {
+  const candidate = graph();
+  mocks.query.mockResolvedValueOnce({ rows: [] });
+  const plan = {
+    table: "entity_operation" as const,
+    insert: [],
+    update: [],
+    remove: [],
+  };
+  const bootstrap = { prepare: vi.fn().mockResolvedValue(plan) };
+  expect(
+    await prepareNativeSupplementalSave(tx, c, candidate, 100, bootstrap),
+  ).toEqual([plan]);
+  expect(bootstrap.prepare).toHaveBeenCalledWith(
+    tx,
+    c,
+    candidate.operations,
+    [],
+  );
+  mocks.ai.mockRejectedValueOnce(
+    Error("ENTITY_NATIVE_SNAPSHOT_CUTOVER_REQUIRED"),
+  );
+  await expect(
+    prepareNativeSupplementalSave(tx, c, candidate, 100, bootstrap),
+  ).rejects.toThrow();
+  expect(bootstrap.prepare).toHaveBeenCalledTimes(1);
+});

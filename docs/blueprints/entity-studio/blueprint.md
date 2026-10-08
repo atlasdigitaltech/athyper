@@ -2164,6 +2164,21 @@ server/packages/services/publication/src/coordinated-entity-adoption.ts currentl
 
 ### 6.1.5 Protected existing operation state
 
+**Bounded DEV initialization decision (8 October 2026):** the owner specifically
+approved copying the four existing Country/State Region list/read operation values
+(all `requires_mfa=false`) from their exact revision-4 source rows into fresh DEV
+native drafts. The approved source document SHA-256 is
+`7326147996a695b2062fe081fadfd0d04318944690907cc281f5cc3b45c9d2f4`;
+its private backup/proposal and verification evidence are recorded in the existing
+qualification runbook. This is a scoped bootstrap exception, not a default initializer
+for other entities/operations or an enforcement change. Recheck source revisions and
+values inside the canonical transaction, bind fresh target coordinates explicitly,
+reject client overrides, and retain source rows until successful bootstrap. Existing
+authenticated authoring, database admission, snapshots/idempotency and independent
+publication review remain required. Approved implementation does not attest installed
+write authority or deployed qualification.
+
+
 The semantic authoring-model/1 root remains unchanged and excludes editable MFA properties. A complete portable **package** additionally carries a server-produced `athyper.entity-protected-state/1` sidecar, bound to the exact portable-document hash and trusted source snapshot/release hash. Its closed entries identify the source operation by owner-qualified logical coordinate, destination operation mapping, and the existing boolean requiresMfa. New destinations reference their explicitly governed source of protected state; unknown/missing source evidence blocks reconstruction. The sidecar is verification evidence, not an editable property bag or permission to import arbitrary control values.
 
 The server-owned full snapshot retains the existing entity_operation.requires_mfa value; normal graph edits preserve it in place. Export reads that value from trusted persisted evidence. Import/restore/fork/duplicate compare every applicable sidecar entry with the authenticated source, apply the verified operation remap atomically, and reject missing/extra/mismatched entries. A client signature or supplied source hash alone is not source authority. Historical packages without this sidecar require an explicit trusted-source reconstruction adapter or block; false is never invented from absence. Internal snapshot schema changes need a versioned decoder without rewriting prior hashes. The read-only load/inspection DTO may show protected state; mutation DTOs cannot set it. Existing storage remains the canonical column, not the sidecar. This documents preservation only; MFA-related implementation requires the owner's specific prior approval.

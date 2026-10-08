@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 249,
+    "configuration:new": 250,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 391,
+    "operational-scripts:new": 392,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -1370,6 +1370,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:athyper_operation_bootstrap_postgres",
+      "category": "configuration",
+      "key": "athyper_operation_bootstrap_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-operation-bootstrap.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_parameter_db_tests",
       "category": "configuration",
       "key": "athyper_parameter_db_tests",
@@ -1712,6 +1724,7 @@
         "server/packages/planes/studio/meta-entity-authoring/src/native-ai-reconciliation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-constraint-compatibility.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-core-layout.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/native-operation-bootstrap.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
       ],
       "disposition": "new",
@@ -12905,6 +12918,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_live_read_resource_review.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_native_operation_bootstrap",
+      "category": "operational-scripts",
+      "key": "20261008_entity_native_operation_bootstrap",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_native_operation_bootstrap.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

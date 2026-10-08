@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  operationBootstrapMigrationName,
   liveReadResourceReviewMigrationName,
   ownershipInitializationMigrationName,
   referencePrivilegesMigrationName,
@@ -404,5 +405,42 @@ test("live-read lifecycle upgrade is forward-only and rehearses without changing
       true,
       liveReadResourceReviewMigrationName,
     ),
+  );
+});
+
+test("operation bootstrap migration is canonical, bounded and ledger-replayed", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        operationBootstrapMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/46_native_operation_bootstrap.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    source,
+    "BEGIN;\nSET LOCAL lock_timeout='5s';\n" + canonical + "COMMIT;\n",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(source, digest, false, operationBootstrapMigrationName),
+    /ROLLBACK;\n$/,
+  );
+  assert.match(
+    preparationSql(source, digest, true, operationBootstrapMigrationName),
+    /athyper_schema_migration_v1/,
+  );
+  assert.match(canonical, /entity_command_private.admitted\(p_target\)/);
+  assert.match(canonical, /FOR SHARE OF b,t,s,e,o/);
+  assert.doesNotMatch(
+    canonical,
+    /INSERT INTO|GRANT (?:SELECT|UPDATE|INSERT|DELETE)/,
   );
 });

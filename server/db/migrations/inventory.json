@@ -2056,6 +2056,20 @@
       "canonicalPaths": [
         "ddl/common/runtime_meta/14_live_read_resource_projection.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_operation_bootstrap.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_operation_bootstrap.sql",
+      "sha256": "b35ac2e66391ddc34c5be7b5a8c68d0da8e64cf0f77e46503cdaeb67056fbbcf",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit bootstrap source reader bounded by installed owner evidence, exact fresh target and transaction admission; no evidence or operation writes are installed.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/46_native_operation_bootstrap.sql"
+      ]
     }
   ]
 }
