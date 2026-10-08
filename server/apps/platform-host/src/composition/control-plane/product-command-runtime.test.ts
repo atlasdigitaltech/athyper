@@ -1,3 +1,7 @@
+import {
+  readNativeStorageCatalogue,
+  sha256,
+} from "@athyper/server-plane-studio-meta-entity-authoring";
 import { nativeReleaseFixture } from "../../../../../packages/planes/studio/meta-entity-authoring/src/native-release-compilation.fixtures.js";
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it, vi } from "vitest";
@@ -31,6 +35,7 @@ function database(
   auditAllowed = true,
   resourceAllowed = true,
   identities: unknown[] = [],
+  storage: unknown[] = [],
 ) {
   return new Kysely<Record<string, never>>({
     dialect: new PostgresDialect({
@@ -39,13 +44,15 @@ function database(
           query: async (query: string) => ({
             rows: query.includes("SELECT id,entity_id")
               ? identities
-              : [
-                  query.includes("has_schema_privilege")
-                    ? { allowed: auditAllowed }
-                    : query.includes("has_function_privilege")
-                      ? { allowed: resourceAllowed }
-                      : row,
-                ],
+              : query.includes("WITH RECURSIVE types")
+                ? storage
+                : [
+                    query.includes("has_schema_privilege")
+                      ? { allowed: auditAllowed }
+                      : query.includes("has_function_privilege")
+                        ? { allowed: resourceAllowed }
+                        : row,
+                  ],
             rowCount: 1,
           }),
           release() {},
@@ -334,8 +341,33 @@ it("binds compiler identities to application rows and revalidates without compon
     parent_identity_id: i.parentIdentityId,
     identity_status: "reserved",
   }));
-  const tx = database(appRole, true, true, rows);
+  const storage = native.c.core.catalogues[0]!.columns.map((column) => ({
+    path: column.path,
+    storage_type: column.storageType,
+    nullable: column.nullable,
+    base_schema: "pg_catalog",
+    base_type: column.storageType,
+    type_kind: "b",
+    object_kind: "r",
+    generated: "",
+    column_count: 3,
+    constraints: [],
+    default_expression: null,
+  }));
+  const tx = database(appRole, true, true, rows, storage);
   Object.defineProperty(tx, "isTransaction", { value: true });
+  const installedCatalogue = await readNativeStorageCatalogue(
+    tx as never,
+    "studio",
+    {
+      plane: "studio",
+      schema: native.graph.runtimeProfiles[0]!.storageSchema!,
+      object: native.graph.runtimeProfiles[0]!.storageObject!,
+    },
+  );
+  Object.assign(native.graph.runtimeProfiles[0]!, {
+    storageCatalogueHash: installedCatalogue.hash,
+  });
   const proposal = {
     graph: native.graph,
     title: "Reference",
@@ -348,7 +380,7 @@ it("binds compiler identities to application rows and revalidates without compon
     actorId: authority.tenantId,
     tenantId: null,
     idempotencyKey: "native-test",
-    proposalHash: native.c.graphHash,
+    proposalHash: sha256(native.graph),
   };
   const qualify = vi.fn(async () => {});
   try {
@@ -407,11 +439,18 @@ it("binds compiler identities to application rows and revalidates without compon
       );
     const prepared = await resolved.policy.prepare(tx as never, input);
     expect(prepared.compiler.core.identities).toEqual(native.c.core.identities);
+    expect(prepared.compiler.core.catalogues).toEqual([installedCatalogue]);
     await resolved.policy.qualify(tx as never, input);
     expect(qualify).toHaveBeenCalledTimes(1);
     rows[0]!.field_key = "changed";
     await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
       "IDENTITY_BINDING_CHANGED",
+    );
+    expect(qualify).toHaveBeenCalledTimes(1);
+    rows[0]!.field_key = native.c.core.identities[0]!.fieldKey;
+    storage[0]!.nullable = !storage[0]!.nullable;
+    await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
+      "STORAGE_CATALOGUE_CHANGED",
     );
     expect(qualify).toHaveBeenCalledTimes(1);
   } finally {

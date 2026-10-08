@@ -68,7 +68,7 @@ other entities and unauthenticated preparation remain unavailable. Keys and pare
 identity links come from those rows, not proposal-supplied context. Every qualification
 and replay rechecks the roster. Reservation adoption remains a separate source-bound
 check in the canonical writer; this read path cannot allocate or activate identities.
- Fresh-root admission additionally pins the
+Fresh-root admission additionally pins the
 product entity ID in the transaction ticket, rechecks and locks its current system
 ownership in PostgreSQL, and permits only an unpinned revision-zero draft root. An
 ordinary existing-draft ticket cannot create a root; native graph/initializer writes
@@ -86,7 +86,19 @@ Their insert-only persistence uses the same creation-ticket/root/actor/revision 
 is not an AI editor or provider-execution authority. Vocabulary/term persistence remains
 unsupported by the current compiler: no term INSERT grant is installed and profile
 `vocabulary_locale` must remain NULL. Existing scoped read policies and semantic resource
-qualification still apply. Pending cutover checks
+qualification still apply. Compiler storage facts come from PostgreSQL catalogue inspection on the independently
+registered storage-plane connection, including physical types, inherited domain nullability,
+constraints, enum labels and generated/default expressions. A changed fingerprint rejects
+qualification and replay; a proposal does not supply its own physical facts. The current
+product-command composition supports its local Studio connection only and rejects cross-plane
+storage until that connection is independently composed. This catalogue inspection reads no
+business records and does not establish F6 owner authority or F8 access.
+Publication lowering preserves supported single-target, read-only foreign-key/logical
+references through the shared key-reference representation. It verifies source/compiled
+relation membership and full field-mapping coverage; unsupported mutation, polymorphic,
+unmapped and orphan relation branches reject. This representation proof is separate from
+remote target/resource qualification and does not grant reference-data access.
+Pending cutover checks
 are removed only after canonical whole-graph application qualification. Native bootstrap does not attest deployed F6/F8/F9, publication or
 activation. Execution evidence and remaining integration gaps belong in the existing
 [qualification runbook](../../runbooks/entity-foundation-qualification.md).

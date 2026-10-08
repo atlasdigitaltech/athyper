@@ -1,3 +1,4 @@
+import { assertNativeReferenceProjection } from "./native-reference-projection.js";
 import {
   compileNativeRuntimeProjection,
   type NativeProjectionRegistration,
@@ -35,7 +36,6 @@ export function lowerNativeRuntimePublication(
     throw Error("PUBLICATION_LOWERING_TARGET_MISMATCH");
   // Do not silently discard branches this single-storage lowering cannot map.
   for (const key of [
-    "relations",
     "flows",
     "flowSteps",
     "materializationBindings",
@@ -62,6 +62,7 @@ export function lowerNativeRuntimePublication(
         }
       : {}),
   });
+  assertNativeReferenceProjection(source, descriptor);
   if (!Reflect.get(descriptor, "authorizationRuntime"))
     throw Error("PUBLICATION_LOWERING_RUNTIME_BINDINGS_REQUIRED");
   const members = source.contract.capabilities;

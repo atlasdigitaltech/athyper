@@ -189,6 +189,54 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Physical compiler bindings and reference publication — 9 October, 00:06 MYT
+
+The native product-command composition now replaces its supplied storage catalogue with
+PostgreSQL facts read through the admitted application transaction. It checks the selected
+storage plane against the configured Studio connection, validates the proposed catalogue
+hash, and rechecks physical facts during qualification/replay. Facts cover exact column
+storage types, domain-chain nullability, constraints, enum values and default/generated
+expressions. Views, foreign tables, unsupported codecs/arrays and incomplete catalogues
+reject. This is physical compilation evidence, not storage ownership or authorization.
+
+Read-only DEV execution used login `athyper_dev_product_command`, effective role
+`athyper_product_command_app`, database `athyper_studio`. No business rows were selected.
+The current facts are:
+
+| Object                | Columns | Catalogue hash                                                     |
+| --------------------- | ------- | ------------------------------------------------------------------ |
+| `shared.country`      | 28      | `afc7b035b11a62473ab0ba4caf2f2a669dd11add14c366d03272ed928ee8f083` |
+| `shared.state_region` | 15      | `19f0ed73275bc769640357d7ffcba1326fce0455fb82ee8f505efeef02e2457c` |
+
+Private receipt and executable inspection script:
+`~/.athyper/instances/dev/workspace/native-storage-catalogue-20261009/inspection.json`
+and sibling `inspect.mts`. The script uses the existing private application connection;
+it does not provide an authenticated bootstrap command or a publication approval.
+
+The publication lowering step previously rejected **every** nonempty relation graph,
+including references already supported by the shared runtime. It now accepts only fully
+represented single-target read-only references, preserving their exact mapping and target.
+Source/compiled differences, polymorphic/mutable/to-many relations, orphan targets/mappings,
+missing runtime references and changed target/key mappings reject. All six Country/State
+Region × Studio/Neon/Mesh whole-source fixtures now exercise this actual publication
+lowering step after native compilation; their resource/identity/permission context remains
+synthetic, so they do not attest DEV publication or deployed F6/F8/F9.
+
+Validation: 893 authoring tests passed (10 opt-in skips); the subsequent catalogue-only
+run passed 9 tests after adding constraint/enum/generated-expression fingerprint coverage.
+489 publication tests passed
+(5 skips), 36 focused host tests passed, and authoring/publication production/test and
+host production typechecks passed. No DEV migration, new draft, publication or activation
+was performed by this checkpoint.
+
+**Still not implemented end-to-end:** the complete production native proposal and base
+resource assembly/startup binding, registered provider/handler/AI resource closure,
+canonical bootstrap/rollback/replay for both entities, approved live security/storage
+resources and the deployed F6/F8/F9 adapter. Independent Entity candidate review and
+activation follow those concrete candidates. These are engineering gaps; refreshing a
+login cannot close them. Both existing drafts remain revision 4. The old active releases
+remain baseline-only testing, not handover of the new native path.
+
 ### Installed compiler identity reads — 8 October, 15:39 UTC
 
 The production native proposal composition now resolves the compiler's stable-identity

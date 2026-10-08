@@ -7,6 +7,7 @@ import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-en
 import {
   createProductCommandAuthority,
   resolveNativeBootstrapIdentities,
+  readNativeStorageCatalogue,
   sha256,
   createProductLabelHost,
   createProductNativeBootstrapHost,
@@ -71,6 +72,31 @@ export async function createControlProductCommandRuntime(options: {
           args[2],
           args[3].graph,
         );
+        async function catalogues() {
+          const selections = args[3].graph.runtimeProfiles;
+          if (selections.length !== 1)
+            throw Error("PRODUCT_NATIVE_STORAGE_PROFILE_REQUIRED");
+          const profile = selections[0]!;
+          if (
+            !profile.storageSchema ||
+            !profile.storageObject ||
+            !profile.storagePlane
+          )
+            throw Error("PRODUCT_NATIVE_STORAGE_PROFILE_REQUIRED");
+          const catalogue = await readNativeStorageCatalogue(
+            args[0],
+            "studio",
+            {
+              plane: profile.storagePlane,
+              schema: profile.storageSchema,
+              object: profile.storageObject,
+            },
+          );
+          if (catalogue.hash !== profile.storageCatalogueHash)
+            throw Error("PRODUCT_NATIVE_STORAGE_CATALOGUE_CHANGED");
+          return [catalogue];
+        }
+        const installedCatalogues = await catalogues();
         return {
           ...resources,
           async qualify(tx, command) {
@@ -83,13 +109,19 @@ export async function createControlProductCommandRuntime(options: {
             );
             if (sha256(current) !== sha256(identities))
               throw Error("PRODUCT_NATIVE_IDENTITY_BINDING_CHANGED");
+            if (sha256(await catalogues()) !== sha256(installedCatalogues))
+              throw Error("PRODUCT_NATIVE_STORAGE_CATALOGUE_CHANGED");
             await resources.qualify(tx, command);
           },
           preparation: {
             ...resources.preparation,
             compiler: {
               ...resources.preparation.compiler,
-              core: { ...resources.preparation.compiler.core, identities },
+              core: {
+                ...resources.preparation.compiler.core,
+                identities,
+                catalogues: installedCatalogues,
+              },
             },
           },
           host: createProductNativeBootstrapHost({

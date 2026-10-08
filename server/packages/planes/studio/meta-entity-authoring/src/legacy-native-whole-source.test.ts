@@ -1,3 +1,4 @@
+import { lowerNativeRuntimePublication } from "../../../../services/publication/src/compilation/native-runtime.js";
 import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import { expect, it, vi } from "vitest";
 import {
@@ -979,6 +980,52 @@ it.each(
       original.entity.entityCode,
     );
     expect(artifact.contractHash).toBe(sha256(graph));
+    const lowered = lowerNativeRuntimePublication(
+      {
+        releaseId: id(90000),
+        releaseNo: 1,
+        publicationKey: `metadata.reference.${name}`,
+        plane,
+        tenantId: null,
+        entityCode: graph.entity.entityCode,
+        revisionId: id(90001),
+        sourceEntityId: graph.authoringSource.entityId,
+        sourceReleaseHash: "c".repeat(64),
+        sourceContractHash: artifact.contractHash,
+        sourceDescriptorHash: artifact.descriptorHash,
+        generatedAt: "2026-10-08T00:00:00.000Z",
+        native: artifact.descriptor,
+        contract: graph as unknown as Record<string, unknown>,
+      },
+      {
+        registration: {
+          entityCode: graph.entity.entityCode,
+          plane,
+          storage: {
+            schema: runtime.storageSchema!,
+            object: runtime.storageObject!,
+            idField: "id",
+          },
+          columns: original.fields.map((f) => f.storagePath!),
+        },
+        permissions: [
+          ...new Set(
+            original.operationPermissions!.map((p) => p.permissionCode),
+          ),
+        ].map((code, i) => ({
+          id: id(91000 + i),
+          code,
+          kind: original.operationPermissions!.find(
+            (p) => p.permissionCode === code,
+          )!.permissionKind,
+          scopeKinds: ["tenant"],
+        })),
+      },
+    );
+    expect(lowered.runtimeContracts?.[graph.entity.entityCode]).toMatchObject({
+      fields: descriptor.fields,
+    });
+
     const originalRecord = original.surfaces!.find(
       (s) => s.surfaceKind === "detail",
     )!.layoutConfig!.recordPresentation as {
