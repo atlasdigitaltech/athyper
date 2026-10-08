@@ -1,3 +1,4 @@
+import { createNativeReviewSource } from "./native-review-source.js";
 import { sql } from "kysely";
 import {
   createDeclaredOperationBootstrap,
@@ -39,7 +40,7 @@ export function createNativeBootstrapStartup(options: {
 }): Pick<
   RuntimeOptions,
   "nativeBootstrapProposals" | "nativeBootstrapResources"
-> {
+> & { nativeSource: ReturnType<typeof createNativeReviewSource> } {
   const c = structuredClone(options.configuration);
   const fail = (): never => {
     throw Error("CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_INVALID");
@@ -105,6 +106,10 @@ export function createNativeBootstrapStartup(options: {
     throw Error("PRODUCT_NATIVE_BOOTSTRAP_HOST_ONLY");
   };
   return {
+    nativeSource: createNativeReviewSource({
+      configuration: c,
+      loader: options.loader,
+    }),
     nativeBootstrapProposals: {
       readProposal,
       maximumBytes: c.proposals.maximumBytes,

@@ -46,7 +46,15 @@ it.skipIf(process.env.PRODUCT_REVIEW_POSTGRES !== "1")(
       );
       for (let n = 0; n < 100; n++) {
         try {
-          docker("exec", name, "pg_isready", "-U", "postgres");
+          docker(
+            "exec",
+            name,
+            "pg_isready",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "postgres",
+          );
           break;
         } catch {
           if (n === 99) throw Error("POSTGRES_NOT_READY");
@@ -116,6 +124,124 @@ it.skipIf(process.env.PRODUCT_REVIEW_POSTGRES !== "1")(
         `UPDATE metadata.entity_change_set SET status='draft',lock_version=1,native_core_layout_version=NULL;`,
       );
       expect(() => insert(1, "submit", 1)).toThrow();
+      // Exercise the canonical source reader and immutable lifecycle capture.
+      // Only the component reader is excluded here; signed component evidence is
+      // exercised by the production-composition restored-database rehearsal.
+      query(`CREATE SCHEMA publication; CREATE SCHEMA snapshot;
+        ALTER TABLE metadata.entity_change_set ADD status_changed_by uuid;
+        CREATE TABLE snapshot.entity_draft_save(change_set_id uuid,lock_version bigint,tenant_id uuid,graph jsonb,graph_hash text,captured_by uuid,capture_kind text,PRIMARY KEY(change_set_id,lock_version));
+        CREATE TABLE metadata.entity_operation(id uuid,change_set_id uuid,entity_id uuid,tenant_id uuid,export_max_records bigint);
+        CREATE TABLE metadata.entity_field_identity(id uuid,entity_id uuid,tenant_id uuid);
+        CREATE TABLE metadata.entity_field(change_set_id uuid,field_identity_id uuid);
+        GRANT USAGE ON SCHEMA publication TO athyper_control_api;
+        UPDATE metadata.entity_change_set SET native_core_layout_version=2;
+        INSERT INTO snapshot.entity_draft_save VALUES('${id(5)}',1,NULL,'{"exact":"source"}','${"a".repeat(64)}','${id(1)}','saved');`);
+      const nativeSourceDdl = readFileSync(
+        new URL(
+          "../../../../../db/ddl/planes/studio/metadata/63_native_review_source.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      );
+      query(nativeSourceDdl.split("-- Exact installed component evidence")[0]!);
+      const source = (actor: number, tenant = 3, bound = 4194304) =>
+        query(`BEGIN; SET LOCAL ROLE athyper_control_api;
+        SET LOCAL app.actor='${id(actor)}'; SET LOCAL app.tenant='${id(tenant)}';
+        SELECT graph_hash FROM publication.read_native_product_review_source('${id(5)}',${bound}); ROLLBACK;`);
+      expect(source(1)).toContain("a".repeat(64));
+      expect(() => source(1, 6)).toThrow();
+      expect(() => source(1, 3, 1)).toThrow();
+      query(
+        `UPDATE master.principal SET status='disabled' WHERE id='${id(1)}'`,
+      );
+      expect(() => source(1)).toThrow();
+      query(`UPDATE master.principal SET status='active' WHERE id='${id(1)}'`);
+      query(
+        `BEGIN; UPDATE metadata.entity_change_set SET status='in_review',lock_version=2,status_changed_by='${id(1)}'; ROLLBACK;`,
+      );
+      expect(
+        query("SELECT count(*) FROM snapshot.entity_draft_save").trim(),
+      ).toBe("1");
+      expect(() =>
+        query(
+          `UPDATE metadata.entity_change_set SET status='in_review',lock_version=2,entity_id='${id(9)}',status_changed_by='${id(1)}'`,
+        ),
+      ).toThrow();
+      expect(() =>
+        query(
+          `UPDATE metadata.entity_change_set SET status='in_review',lock_version=3,status_changed_by='${id(1)}'`,
+        ),
+      ).toThrow();
+      query(`UPDATE metadata.entity_change_set SET status='in_review',lock_version=2,status_changed_by='${id(1)}';
+        UPDATE metadata.entity_change_set SET status='approved',lock_version=3,status_changed_by='${id(2)}';`);
+      expect(
+        query(
+          "SELECT count(DISTINCT graph_hash)||'|'||count(*) FROM snapshot.entity_draft_save",
+        ).trim(),
+      ).toBe("1|3");
+      expect(source(2)).toContain("a".repeat(64));
+      // The lifecycle command must force deferred validation within its narrow
+      // definer scope, without adding direct native-table read privileges.
+      query(`CREATE DOMAIN metadata.entity_change_set_status_d AS text;
+        CREATE FUNCTION metadata.review_test_revision() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+          NEW.lock_version:=OLD.lock_version+1;
+          IF NEW.status='in_review' THEN NEW.submitted_by:=NEW.status_changed_by; END IF;
+          RETURN NEW; END $$;
+        CREATE TRIGGER review_test_revision BEFORE UPDATE OF status ON metadata.entity_change_set FOR EACH ROW EXECUTE FUNCTION metadata.review_test_revision();
+        CREATE FUNCTION metadata.review_test_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+          IF current_user='athyper_control_api' THEN RAISE EXCEPTION 'DEFERRED_GUARD_OUTSIDE_COMMAND'; END IF;
+          RETURN NEW; END $$;
+        INSERT INTO metadata.entity_change_set(id,entity_id,source_kind,native_core_layout_version,lock_version,status,created_by)
+          VALUES('${id(25)}','${id(4)}','product',2,1,'draft','${id(1)}');
+        INSERT INTO snapshot.entity_draft_save VALUES('${id(25)}',1,NULL,'{"exact":"source"}','${"a".repeat(64)}','${id(1)}','saved');`);
+      for (const name of [
+        "native_layout_final_guard",
+        "native_core_final_guard",
+        "native_root_final_guard",
+        "native_snapshot_final_guard",
+        "settings_locale_check",
+      ])
+        query(
+          `CREATE CONSTRAINT TRIGGER ${name} AFTER UPDATE ON metadata.entity_change_set DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.review_test_guard()`,
+        );
+      query(
+        readFileSync(
+          new URL(
+            "../../../../../db/ddl/planes/studio/metadata/64_native_review_transition.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      const transition = (
+        actor: number,
+        revision: number,
+        from: string,
+        to: string,
+        requestedActor = actor,
+      ) =>
+        query(`BEGIN;
+        SET LOCAL ROLE athyper_control_api; SET LOCAL app.actor='${id(actor)}'; SET LOCAL app.tenant='${id(3)}';
+        SELECT publication.transition_native_product_review('${id(25)}',${revision},'${from}','${to}','${id(requestedActor)}'); COMMIT;`);
+      expect(() => transition(1, 1, "draft", "in_review")).toThrow();
+      query(`BEGIN; SET LOCAL ROLE athyper_control_api; SET LOCAL app.actor='${id(1)}'; SET LOCAL app.tenant='${id(3)}';
+        INSERT INTO metadata.entity_product_review_receipt VALUES('${id(3)}','${id(26)}','${id(25)}','${id(1)}','submit',1,'${"a".repeat(64)}'); COMMIT;`);
+      expect(() => transition(1, 1, "draft", "in_review", 2)).toThrow();
+      expect(() => transition(2, 1, "draft", "in_review")).toThrow();
+      transition(1, 1, "draft", "in_review");
+      expect(() => transition(1, 1, "draft", "in_review")).toThrow();
+      expect(() => transition(1, 2, "in_review", "approved")).toThrow();
+      expect(
+        query(
+          `SELECT lock_version FROM metadata.entity_change_set WHERE id='${id(25)}'`,
+        ).trim(),
+      ).toBe("2");
+      expect(
+        query(
+          `SELECT has_table_privilege('athyper_control_api','metadata.entity_field_identity','SELECT')`,
+        ).trim(),
+      ).toBe("f");
+
       expect(
         query(
           "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname='athyper_control_api'",

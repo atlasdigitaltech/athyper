@@ -191,7 +191,9 @@ export async function startControlApi() {
       commandConnections.push(connection);
       return connection;
     };
-    const nativeBootstrap = config.nativeBootstrapConfigurationFile
+    const nativeBootstrap: Partial<
+      ReturnType<typeof createNativeBootstrapStartup>
+    > = config.nativeBootstrapConfigurationFile
       ? createNativeBootstrapStartup({
           configuration: JSON.parse(
             (
@@ -339,6 +341,9 @@ export async function startControlApi() {
       rateLimit: { windowMs: 60000, maxRequests: 60, scope: "source" },
       configure(application) {
         registerControlPlane(application, {
+          ...(nativeBootstrap.nativeSource
+            ? { nativeSource: nativeBootstrap.nativeSource }
+            : {}),
           database,
           audit,
           authenticator,

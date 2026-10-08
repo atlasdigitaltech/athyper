@@ -62,3 +62,5 @@
 20261008_entity_product_authoring_audit.sql
 
 20261009_native_product_review.sql
+20261009_native_review_source.sql
+20261009_native_review_transition.sql

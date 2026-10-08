@@ -3,6 +3,30 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261009_native_review_transition.sql",
+      "path": "migrations/20261009_native_review_transition.sql",
+      "sha256": "4fe1f674e9b6f7915aec645534797df7473983e98f11f90ce769bd31600139dc",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Receipt-bound native review transition validates complete deferred graph guards internally without granting control login broad native table access. No graph mutation or synthetic approval.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/64_native_review_transition.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_review_source.sql",
+      "path": "migrations/20261009_native_review_source.sql",
+      "sha256": "8b67a738c511db7af45ceb9e5292e7e991626fc5662fcd1fdfcca74e07e1b6a2",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restricted native product review source and installed component reads; preserve exact immutable snapshots across lifecycle revisions. No graph-write, approval or publication grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/63_native_review_source.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261009_native_product_review.sql",
       "path": "migrations/20261009_native_product_review.sql",
       "sha256": "d60fe6ed0c2dfdf07a36f3bf9f7ef80746565001f7720dfccb4c615d4c019adb",

@@ -37,7 +37,7 @@ const denied = () =>
     "Platform product review authority is required",
   );
 
-/** Normal native lifecycle, using the bounded control-role UPDATE policy rather
+/** Normal native lifecycle, using the receipt-bound native transition command rather
  * than the unrelated service-account publication command. */
 class ProductReviewRepository extends KyselyMetaEntityAuthoringRepository {
   constructor(private readonly tx: Database) {
@@ -55,9 +55,8 @@ class ProductReviewRepository extends KyselyMetaEntityAuthoringRepository {
     )
       throw denied();
     const result =
-      await sql`UPDATE metadata.entity_change_set SET status=${input.to}::metadata.entity_change_set_status_d,
-      status_changed_by=${input.actorId}::uuid WHERE id=${input.changeSetId}::uuid AND tenant_id IS NULL
-      AND lock_version=${input.expectedRevision} AND status=${input.from}::metadata.entity_change_set_status_d RETURNING id`.execute(
+      await sql`SELECT publication.transition_native_product_review(${input.changeSetId}::uuid,
+      ${input.expectedRevision}::bigint,${input.from},${input.to},${input.actorId}::uuid) AS id`.execute(
         this.tx,
       );
     if (result.rows.length !== 1)

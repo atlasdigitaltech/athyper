@@ -113,6 +113,7 @@ it("constructs concrete proposal and resource resolvers from bounded configurati
     audit: vi.fn(),
   };
   const startup = createNativeBootstrapStartup(options);
+  expect(typeof startup.nativeSource).toBe("function");
   expect(typeof startup.nativeBootstrapProposals!.readProposal).toBe(
     "function",
   );
@@ -147,7 +148,8 @@ it("production entrypoint constructs and passes native composition to the actual
     true,
   );
   let assembled = false,
-    wired = false;
+    wired = false,
+    reviewWired = false;
   const visit = (node: ts.Node) => {
     if (
       ts.isVariableDeclaration(node) &&
@@ -172,9 +174,19 @@ it("production entrypoint constructs and passes native composition to the actual
         ),
       );
     }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(source) === "registerControlPlane"
+    )
+      reviewWired = node.arguments.some((arg) =>
+        arg
+          .getText(source)
+          .includes("nativeSource: nativeBootstrap.nativeSource"),
+      );
     ts.forEachChild(node, visit);
   };
   visit(source);
   expect(assembled).toBe(true);
   expect(wired).toBe(true);
+  expect(reviewWired).toBe(true);
 });

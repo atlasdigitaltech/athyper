@@ -43,9 +43,10 @@ and restricted fresh-identity grants remain. Actual application login
 `8e1b311886771a5010c3408ce3b4897fa761ad00e325c6c7780145354ac732bc`.
 Complete fresh proposals and pinned production startup configuration are mounted in the
 control API. Four authenticated production requests succeeded: State Region apply/replay
-and Country apply/replay, all HTTP 200. Both fresh product drafts are native version 2 at
-revision 1, attributed to the real Platform Admin. Each has immutable revisions 0 and 1
-and exactly one command receipt. Country has 22 fields/identities; State Region has nine.
+and Country apply/replay, all HTTP 200. Both fresh product drafts committed as native version 2 at
+revision 1, attributed to the real Platform Admin. Subsequent authenticated Admin
+submission and replay now put both at **revision 2, in_review**. Each has immutable
+revisions 0, 1 and 2, exactly one bootstrap command receipt and one submission receipt. Country has 22 fields/identities; State Region has nine.
 The four approved operations retain `requires_mfa=false`. No old identity was adopted.
 
 | Entity       | Fresh draft ID                         | Stored graph hash                                                  | Compiled hash                                                      |
@@ -116,15 +117,15 @@ DDL hashes are recorded in `additional-installation.json`; complete reset SQL pa
 rehearsal before installation. Actual graph write/readback/replay is established; local live-read positive/negative
 acceptance and independent Entity publication/activation remain required.
 
-| ID  | Deliverable                              | Status      | Available evidence / actual gap                                                                      | Next action                                                                   |
-| --- | ---------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| L0a | Local preparation and backup             | Executed    | All three backups restored; exact scoped cleanup manifest executed                                   | Retain recovery evidence                                                      |
-| L1  | Complete native proposals                | Executed    | Both complete proposals saved and compiled through canonical application readback                    | Retain pinned proposal and compiler evidence                                  |
-| L2  | Clean schema and startup composition     | Executed    | Final guards/grants installed; zero pending checks; actual startup used                              | Retain installed schema/configuration pins                                    |
-| L3  | Actual native bootstrap and replay       | Complete    | Both drafts committed at revision 1 and replayed; exact hashes, audit and immutable history verified | Proceed to L4/L5                                                              |
-| L4  | Working local live-read integration      | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete            | Implement bounded validation and actual storage/security/identity composition |
-| L5  | Human review, publication and activation | Not started | Existing infrastructure/component releases are not new native Entity delivery                        | Submit concrete Entity candidates and use independent review/worker paths     |
-| L6  | Local manual-test handover               | Not started | Old Entity heads cleared; no replacement Entity activation yet                                       | Complete L3–L5 and verify standard UI                                         |
+| ID  | Deliverable                              | Status      | Available evidence / actual gap                                                                                  | Next action                                                                   |
+| --- | ---------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| L0a | Local preparation and backup             | Executed    | All three backups restored; exact scoped cleanup manifest executed                                               | Retain recovery evidence                                                      |
+| L1  | Complete native proposals                | Executed    | Both complete proposals saved and compiled through canonical application readback                                | Retain pinned proposal and compiler evidence                                  |
+| L2  | Clean schema and startup composition     | Executed    | Final guards/grants installed; zero pending checks; actual startup used                                          | Retain installed schema/configuration pins                                    |
+| L3  | Actual native bootstrap and replay       | Complete    | Both drafts committed at revision 1 and replayed; exact hashes, audit and immutable history verified             | Proceed to L4/L5                                                              |
+| L4  | Working local live-read integration      | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                        | Implement bounded validation and actual storage/security/identity composition |
+| L5  | Human review, publication and activation | In progress | Both native sources submitted/replayed at revision 2; independent approval, native worker and activation pending | Complete worker/live resources, independently review and deliver              |
+| L6  | Local manual-test handover               | Not started | Old Entity heads cleared; no replacement Entity activation yet                                                   | Complete L3–L5 and verify standard UI                                         |
 
 Status vocabulary: **Not started / In progress / Blocked / Implemented / Tested / Installed / Executed / Complete**. Awaiting authentication is a blocked execution step. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
 
@@ -511,7 +512,7 @@ in this continuation. The last executed draft state remains revision 1 for both
 entities. Runtime installation/resolution, actual live-read requests and manual UI
 handover remain pending; these component results do not satisfy L4–L6.
 
-**9 October native review cleanup — implemented/tested, not installed:**
+**9 October native review cleanup — source/review implemented, tested and installed; Entity delivery pending:**
 The product review service now compiles native 2.5 sources directly and reads target
 rows instead of legacy layout markers. `/adopt` is no longer registered. Submit
 requires the native draft author; approve requires an independent actor and the
@@ -537,13 +538,85 @@ actual PostgreSQL policy run. Authoring production/test typechecks passed. Migra
 layout verification reports 173 classified files and 165 retained SQL files. Host
 typecheck still reports the existing `entity-views-routes.ts:317` mismatch.
 
-**Not deployed:** the control host has no trusted native review source resolver yet
-and explicitly rejects with `NATIVE_REVIEW_HOST_NOT_CONFIGURED`. The publication
-worker's legacy plan/adoption handling has not yet been replaced. Do not install the
-new policy or restart the review host as a delivery claim until source compilation,
-review lifecycle snapshots and native release preparation work together. Installed
-live-read resolution and UI verification are also pending. Both executed DEV draft
-states remain revision 1; no new Entity review/publication/activation occurred.
+**Installed source resolution, 9 October follow-up:** production `control-api.ts`
+now passes the concrete `createNativeReviewSource` returned by native startup to
+`registerControlPlane`. This uses the shared bootstrap compiler/resource assembly;
+it does not treat proposal-file contents as the saved source. Exact saved graph and
+root coordinates, stored operation controls, installed identity rows, current DDL
+catalogue and signed active component/deployment evidence are checked independently.
+The existing compiler-preservation approval applies; no initializer or MFA value is
+changed by this reader.
+
+Canonical `63_native_review_source.sql` adds two restricted read functions and a
+lifecycle snapshot trigger. Functions grant EXECUTE to the control role, without
+underlying publication reads or graph-write grants. Host authentication/IAM remain
+mandatory. Status transitions retain the exact graph/hash at the next immutable
+revision and roll back with the transition; source-property changes or skipped
+revisions reject. Registered forward migrations (62/63; transition 64 below) are installed in actual
+`athyper_studio`, with exact hashes recorded in `athyper_schema_migration_v1`.
+The control API has restarted with the resolver. Installation does not attest an
+approved Entity release or worker readiness.
+
+Current checks and commands:
+
+- `PRODUCT_REVIEW_POSTGRES=1 pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-review.postgres.test.ts`
+  passed the disposable PostgreSQL policy/source/snapshot scenario, including wrong
+  tenant, revoked human, source-size bound, changed source, skipped revision and
+  transactional rollback. The harness waits for final TCP readiness rather than the
+  Docker initialization server.
+- `pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/native-bootstrap-startup.test.ts src/composition/control-plane/product-review.test.ts`
+  passed 7 tests, including production entrypoint composition assertions.
+- `docker exec athyper-dev-control-control-api-1 node --import tsx scripts/operations/rehearse-native-product-review.ts athyper_native_review_rehearsal`
+  executed the production source resolver and compiler against a restored DEV
+  database under login/effective role `athyper_control_api` (neither superuser nor
+  BYPASSRLS). Country and State Region both match the committed source hashes and
+  have 22/9 fields and two operations each. The command is read-only and restricted
+  to explicitly named rehearsal databases. Its configured actor context is
+  synthetic rehearsal evidence, **not authenticated human review**.
+- A transaction in that restored database submitted/approved Country under the
+  restricted role, verified unchanged source hash at revisions 2/3, then rolled
+  back. That rehearsal creates no DEV approval. Subsequent authenticated DEV submission is recorded below.
+- Migration layout: 175 classified files / 167 retained SQL. Security-definer
+  contract check passes. Host typecheck still reports the existing unrelated
+  `entity-views-routes.ts:317` `group`/`groups` mismatch.
+
+Evidence: `~/.athyper/instances/dev/workspace/native-reset-20261009/native-review-installation.json`
+and `review-evidence/{source-rehearsal.json,transition-rollback.sql,transition-rollback.txt}`.
+The pre-install dump is `/tmp/native-review-source-20261009.dump` in the DEV database
+container; the restored database is `athyper_native_review_rehearsal`. Earlier
+recoverable reset backups remain unchanged. The initial actual graph request returned `401 AUTH_TOKEN_INVALID`. After the requested
+Admin refresh, both graph inspections returned HTTP 200 with the exact saved hashes.
+Submission then exposed a deferred-constraint privilege error at transaction commit;
+that request rolled back. A rollback-only rehearsal had not exercised deferred
+commit checks. The corrected rehearsal explicitly forces all constraints before
+rollback, and the maintained PostgreSQL test proves validator execution inside the
+restricted lifecycle command.
+
+Canonical `64_native_review_transition.sql` and its registered forward migration are
+also installed. The control repository now calls a receipt-bound transition function
+that independently rechecks current human scope, exact draft/revision/hash, author
+or independent reviewer and prior submission. It executes the unchanged aggregate
+validators within its definer scope, without granting the control login broad graph
+SELECT privileges. Eight focused tests pass, including actual PostgreSQL policy,
+source, snapshot and transition checks.
+
+**Executed actual submission:** both Admin submit requests and their exact replays
+returned HTTP 200. Country and State Region are `in_review`, revision **2**, with one
+submit receipt each and three immutable snapshots (0/1/2). Source hashes for revisions
+1 and 2 are identical. Evidence is `review-evidence/actual-submission.json` and the
+source-bound `submit-request-<draft-id>.json` files. These are actual authenticated
+Admin actions, not synthetic Owner approval. Independent review, publication,
+activation and live-read acceptance remain pending.
+
+**Remaining engineering:** replace the legacy worker source/adoption checks,
+`prepareSystemReferenceRelease` marker-based target preparation and legacy target
+qualification together; native validation snapshots must declare schema 2.5 instead
+of the legacy 2.1 constant. Preserve enrolled workload authority, exact source and
+compiler hashes, review separation, atomic release allocation and recovery. Then
+connect installed live-read resource resolution/runtime verification, review the
+concrete candidates, publish, activate and verify standard list/detail access.
+No worker replacement, live-read qualification, Entity publication, activation or
+manual-test handover is claimed by this source-reader installation.
 
 L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
 
