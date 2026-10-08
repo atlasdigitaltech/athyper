@@ -1294,6 +1294,14 @@ remain mandatory. The installed resource resolver must supply qualified schema, 
 compiler/reader and existing approved initializer evidence before the endpoint is enabled;
 this proposal reader alone does not establish B0 or F6/F8/F9. Competing bootstrap
 compositions reject rather than select one implicitly.
+The product-command runtime also accepts bootstrap resource composition that replaces
+compiler component rosters with exact installed evidence. It binds the proposal hash,
+descriptor hash, native snapshot version and host release, preserves the existing approved
+operation initializer, and re-resolves schema/compiler/reader/identity evidence during
+qualification, including replay. Changed evidence or current owner rejection aborts the
+transaction. This composition does not manufacture the non-component resource resolvers
+or enable an unconfigured DEV endpoint; canonical schema qualification remains in the
+command executor.
 
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.

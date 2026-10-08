@@ -299,3 +299,18 @@ it("proposal composition still requires installed reference resources", async ()
     await f.commandDatabase.destroy();
   }
 });
+
+it("rejects bootstrap resource wiring without proposal composition before database access", async () => {
+  const f = await fixture();
+  try {
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        nativeBootstrapResources: { components: vi.fn(), scope: vi.fn() },
+      }),
+    ).rejects.toThrow("PRODUCT_NATIVE_BOOTSTRAP_PROPOSALS_REQUIRED");
+  } finally {
+    await f.issuerDatabase.destroy();
+    await f.commandDatabase.destroy();
+  }
+});

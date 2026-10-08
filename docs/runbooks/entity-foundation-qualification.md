@@ -189,6 +189,28 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Bootstrap resource composition — 8 October
+
+The product-command runtime now accepts `nativeBootstrapResources` alongside the pinned
+proposal resolver. The shared composition joins installed component evidence to the whole
+native compiler, retaining the independently resolved schema, host, reader, identity
+adoption sources and existing approved operation initializer. It rejects descriptor/graph
+mismatches and hosts without native snapshot version 2. Initial and replay qualification
+re-resolve resource evidence in the original admitted transaction; schema, host-release,
+compiler/reader/identity changes and current owner revocation reject. It does not supply
+fixture authority or alter initializer/enforcement behavior.
+
+Validation: 43 tests passed across bootstrap resources, proposals, components and product
+command runtime; host typecheck passed. The positive compiler test is synthetic and is
+not actual Country/State Region enrollment. Database inspection confirmed both original
+drafts at revision 4 and zero security/storage resource releases. No database mutations,
+cleanup, replacement drafts, publication or activation occurred in this checkpoint.
+
+Still required for installation: actual native proposal graphs and independently resolved
+non-component compiler/provider/identity bindings, reviewed schema cutover evidence and
+control API configuration. Source-semantic security/storage qualification and deployed
+F6/F8/F9 composition remain unfinished. Manual UI handover of the new path is unavailable.
+
 ### Live-read composition and restricted lock reader — 8 October
 
 `createLocalEntityLiveReadEvidence` now connects the records-service evidence port to the

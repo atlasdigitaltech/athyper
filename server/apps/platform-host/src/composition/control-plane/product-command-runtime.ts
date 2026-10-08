@@ -1,3 +1,4 @@
+import { createNativeBootstrapResourceComposition } from "./native-bootstrap-resources.js";
 import { createNativeBootstrapProposalResolver } from "./native-bootstrap-proposals.js";
 import { parseReferenceResourceConfiguration } from "./reference-resource-configuration.js";
 import { sql, type Kysely } from "kysely";
@@ -27,6 +28,10 @@ export async function createControlProductCommandRuntime(options: {
   nativeBootstrapProposals?: Parameters<
     typeof createNativeBootstrapProposalResolver
   >[0];
+  nativeBootstrapResources?: Omit<
+    Parameters<typeof createNativeBootstrapResourceComposition>[0],
+    "resolve"
+  >;
   nativeConversion?: Pick<
     NonNullable<ProductReferenceEnrollmentOptions["nativeConversion"]>,
     "resolve"
@@ -41,8 +46,18 @@ export async function createControlProductCommandRuntime(options: {
 > {
   if (options.nativeBootstrap && options.nativeBootstrapProposals)
     throw Error("PRODUCT_NATIVE_BOOTSTRAP_COMPOSITION_AMBIGUOUS");
+  if (options.nativeBootstrapResources && !options.nativeBootstrapProposals)
+    throw Error("PRODUCT_NATIVE_BOOTSTRAP_PROPOSALS_REQUIRED");
   const nativeBootstrap = options.nativeBootstrapProposals
-    ? createNativeBootstrapProposalResolver(options.nativeBootstrapProposals)
+    ? createNativeBootstrapProposalResolver({
+        ...options.nativeBootstrapProposals,
+        resolveResources: options.nativeBootstrapResources
+          ? createNativeBootstrapResourceComposition({
+              ...options.nativeBootstrapResources,
+              resolve: options.nativeBootstrapProposals.resolveResources,
+            })
+          : options.nativeBootstrapProposals.resolveResources,
+      })
     : options.nativeBootstrap;
   async function role(db: Database) {
     const result = await sql<{
