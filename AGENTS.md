@@ -72,6 +72,22 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
   both documents together where they meet.
 
+## Entity list Gantt Layout
+
+- The active design is the
+  [Entity list Gantt blueprint](docs/blueprints/entity-list-gantt/blueprint.md).
+  Read it before implementing Gantt list behaviour and update it in place.
+  Implement only contract properties the project owner has approved.
+- Rules shared by every list Layout live in the
+  [shared list layout foundation](docs/blueprints/entity-list-layouts/foundation.md),
+  also updated in place.
+- Gantt is a Layout of the shared Entity list, available to any eligible
+  Entity through governed, published Meta Entity properties. Do not create a
+  Gantt route, page, provider stack or entity-specific Gantt.
+- Its authoring storage, codec, compiler and composer work must conform to the
+  [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
+  both documents together where they meet.
+
 ## Entity list identity and record navigation
 
 - Define navigation groups, section behavior, visible columns and readable

@@ -1,6 +1,6 @@
 # Entity list Gantt — blueprint
 
-**Status:** proposed, revision 2 (8 October 2026; amended the same day with the rename map, the shared progress reader as its own prerequisite, and two clarifications, with no change of intent). Not implementation authority. Owner decisions are listed in section 14; none is approved yet. It incorporates two audit rounds on the proposal that preceded it and one review of revision 1 (section 16).
+**Status:** approved for build, revision 3 (8 October 2026). Decisions 1–7 and 9–12 were approved by the project owner (nchandravel-atlas) on 8 October 2026 by the instruction to build this blueprint, in these words: "start build \\wsl.localhost\Ubuntu-24.04\home\chandravel_natarajan\src\athyper\docs\blueprints\entity-list-gantt\blueprint; prototype attached in \\wsl.localhost\Ubuntu-24.04\home\chandravel_natarajan\src\athyper\docs\prototypes\Neon Gantt Prototype". Decision 8 (authoring storage) remains open; it is needed only for the authoring step, which waits behind the metadata cleanup. Revision 3 adds the build-time clarifications from the owner-supplied prototype (section 16) with no change of intent. It incorporates two audit rounds on the proposal, two reviews of revision 1 and 2, and the prototype review.
 
 **Scope and authority.**
 
@@ -245,7 +245,9 @@ The wire format, the window and open-ended queries, their disjointness, the tray
 - **Relation to page sizes.** The ceiling is counted in rows, independent of `allowedPageSizes`. With a largest page size of 50, reaching it takes up to ten Load more presses; with 100, five. Loading stays manual, so a person never pulls 500 rows without asking for them.
 - When more rows exist than are loaded: "More records than fit in this period. Showing the first N." At the ceiling: "Showing the first 500 records. Records after these are not shown here; narrow the period, add filters or open Table." With exact counts, the wording is "Showing N of M".
 
-**Bars.** Bar geometry comes from the entry's first and last covered day (`placeEntries`), clipped to the window, with continuation markers where it is clipped. An open-ended record is hatched to the window end with the open-ended marker. Phase 1 draws at day granularity; a `datetime` bar's accessible name carries the exact times.
+**Bars.** Bar geometry comes from the entry's first and last covered day (`placeEntries`), clipped to the window, with continuation markers where it is clipped. An open-ended record is hatched to the window end with the open-ended marker. Phase 1 draws at day granularity; a `datetime` bar's accessible name carries the exact times. A bar is never narrower than the minimum bar width (section 11), so a one-day bar stays visible at Year zoom, where a day is about 1/365 of the axis.
+
+**Known edge: a zero-length `datetime` point exactly at the window start.** The window query's end condition is `end gt windowStart` for `datetime`, because the end is exclusive. A point whose start and end both equal `windowStart` therefore falls into the previous window, not this one. AND-only filters cannot include it without also including ranges that end exactly at the window start, which do not overlap the window. This is accepted and stated; it applies to Calendar equally.
 
 **Milestones.** Declared, never inferred:
 
@@ -265,12 +267,23 @@ This costs nothing new: `placeEntries` already distinguishes "covers one day" fr
 
 ## 8. Views and interaction
 
+**Design reference.** The visual design follows the owner-supplied [Neon Gantt prototype](../../prototypes/Neon%20Gantt%20Prototype.html), built in design-system tokens. Where they differ, this blueprint and the shared framework rules win: the Layout is chosen in Display settings (the prototype's toolbar switch was rejected for Calendar and stays out); rows are the shared label column, not the prototype's card layout; the prototype's inspector drawer is a review tool, not product. The prototype's "Only records starting in this period" remedy in the ceiling notice is not adopted in Phase 1: it would add a list filter that outlives the window it was made for, so it needs its own decision.
+
 **Navigation (inside the Gantt body; not a mode switch).** The period title, then Today and ‹ ›, then a "Dates by" control when more than one date range is usable, and a Month | Quarter | Year zoom control. The mode itself is chosen in Display settings → Layout, as for Board and Calendar.
 
 **Chart.**
 
-- A label column (12rem) with the readable identity and, when declared, the title; the label opens the record, and the row menu sits beside it.
-- A two-tier time scale: the upper tier names months (or quarters, or years), the lower tier the columns.
+- A label column (12rem) with the readable identity and, when declared, the title; the label opens the record, and the row menu sits beside it. When a tone is declared, the label carries a tone dot and visually hidden status text (the tone choice's label), because bars carry no text and tone is never the only signal. The column header names the active date range.
+- A two-tier time scale, by zoom:
+
+  | Zoom      | Upper tier         | Lower tier (columns)               | Period title   |
+  | --------- | ------------------ | ---------------------------------- | -------------- |
+  | `month`   | the month and year | days                               | "October 2026" |
+  | `quarter` | months             | weeks, labelled by their first day | "Q4 2026"      |
+  | `year`    | quarters           | months                             | "2026"         |
+
+  The Quarter window is widened to whole weeks, so it can show days of the neighbouring quarters; it is still titled by its quarter, and rows that fall only in the widened days belong to the window.
+
 - Bars in tone colour with a progress fill; milestones as diamonds; a today line; muted out-of-window context is not drawn.
 - The chart fits the width at every zoom, so the page never scrolls sideways. The arithmetic: the chart appears only at list container widths of 40rem and above (narrower containers show the phone list, section 8), the label column is 12rem, so the time axis has about 26rem. Month gives 31 day columns of about 0.85rem, Quarter up to 14 week columns of about 1.9rem, and Year 12 month columns of about 2.2rem. Bars carry no text in Phase 1 (the label is in the label column), so a day column of 0.75rem or more holds a legible bar and a milestone. The minimum column width is 0.75rem; if a container ever leaves less, the time axis scrolls inside its own region with the label column fixed, and the page still never scrolls sideways.
 - Rows follow the list density (comfortable or compact).
@@ -312,7 +325,7 @@ The same nine steps as Calendar section 10, for `entity_surface_gantt` and the d
 | `tests/foundation/entity-list-gantt-model.test.ts`                        | model tests                                                                             |
 | `tests/foundation-browser/entity-list-gantt.spec.ts`                      | browser spec, registered beside the Calendar spec                                       |
 
-Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colours, spacing and type use design-system tokens only. The breakpoint scale governs container tiers, not every internal dimension: the chart has two local layout constants, the 12rem label column and the 0.75rem minimum column, declared once as custom properties in `gantt.css` (`--gantt-label-width`, `--gantt-min-column`), because no design-system token covers them.
+Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colours, spacing and type use design-system tokens only. The breakpoint scale governs container tiers, not every internal dimension: the chart has three local layout constants, the 12rem label column, the 0.75rem minimum column and the 0.375rem minimum bar width, declared once as custom properties in `gantt.css` (`--gantt-label-width`, `--gantt-min-column`, `--gantt-min-bar`), because no design-system token covers them.
 
 ## 12. Delivery phases and acceptance
 
@@ -338,18 +351,18 @@ Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colo
 
 ## 14. Decisions required (project owner)
 
-1. **P-G1, shared date-range module.** Approve the split (12 move, 4 generalize, 4 stay, 20 in all) and the two commits: move and rename the 12 generic exports; rename and generalize the 4 layout-bound helpers.
-2. **P-G2, date-scale module.** Approve the move-only rename of `calendar-math.ts` to `date-scale.ts` and its expansion with quarter and year windows and `daysBetween`.
-3. **Gantt runtime contract.** Approve sections 5.1, 5.5 and 5.6 and the section 6 codes, including the row label from the existing identity and title (no new property) and the URL and saved-state split.
-4. **Zoom set and windows.** Month, Quarter and Year as defined in section 7. `default_zoom` stays required (section 5.3); the Studio composer suggests Quarter when an author first adds Gantt. That is an authoring suggestion, not a framework fallback.
-5. **Row budget.** `GANTT_ROW_CEILING` = 500 bounds both loading and drawing; records beyond it are reachable only by narrowing the period, filtering or Table, and the notice says so. Rows are a prefix in start order (section 7). A named constant with a test.
-6. **Milestones declared only** (section 7).
-7. **Group and progress fields.** Group by the Board lane-field rule, rendered over loaded rows, with an "Unmapped values" group (section 7 states why this differs from Board); progress as an `integer` or `decimal` percentage clamped to 0–100, read through the shared progress reader (decision 12).
-8. **Authoring storage for date ranges.** **Recommendation:** one shared `entity_surface_date_range` table with a `layout` discriminator, amending Calendar section 5.2 before Calendar's authoring is built (neither table exists yet), so the two layouts share one guard and registration set. **Alternative:** a separate `entity_surface_gantt_field` mirroring Calendar's. Either way, the build waits behind the metadata-cleanup gate.
-9. **Phase 1 scope.** Read-only; dependencies, hierarchy, extra columns and rescheduling are separate approvals.
-10. **Verification** on synthetic fixtures, with the fixture boundary in section 12.
-11. **AGENTS.md pointer**, worded like Calendar's, linking this blueprint and the foundation by their stable paths.
-12. **P-G3, shared progress reader.** Approve the reader and its user-visible correction outside Gantt: blank or whitespace-only progress text shows as an empty value instead of 0% in Table, Cards, Board and Calendar. It lands as its own commit with its own acceptance (section 12).
+1. **Approved 8 October 2026 (owner wording in the status line).** **P-G1, shared date-range module.** Approve the split (12 move, 4 generalize, 4 stay, 20 in all) and the two commits: move and rename the 12 generic exports; rename and generalize the 4 layout-bound helpers.
+2. **Approved 8 October 2026 (owner wording in the status line).** **P-G2, date-scale module.** Approve the move-only rename of `calendar-math.ts` to `date-scale.ts` and its expansion with quarter and year windows and `daysBetween`.
+3. **Approved 8 October 2026 (owner wording in the status line).** **Gantt runtime contract.** Approve sections 5.1, 5.5 and 5.6 and the section 6 codes, including the row label from the existing identity and title (no new property) and the URL and saved-state split.
+4. **Approved 8 October 2026 (owner wording in the status line).** **Zoom set and windows.** Month, Quarter and Year as defined in section 7. `default_zoom` stays required (section 5.3); the Studio composer suggests Quarter when an author first adds Gantt. That is an authoring suggestion, not a framework fallback.
+5. **Approved 8 October 2026 (owner wording in the status line).** **Row budget.** `GANTT_ROW_CEILING` = 500 bounds both loading and drawing; records beyond it are reachable only by narrowing the period, filtering or Table, and the notice says so. Rows are a prefix in start order (section 7). A named constant with a test.
+6. **Approved 8 October 2026 (owner wording in the status line).** **Milestones declared only** (section 7).
+7. **Approved 8 October 2026 (owner wording in the status line).** **Group and progress fields.** Group by the Board lane-field rule, rendered over loaded rows, with an "Unmapped values" group (section 7 states why this differs from Board); progress as an `integer` or `decimal` percentage clamped to 0–100, read through the shared progress reader (decision 12).
+8. **Open (needed only for authoring).** **Authoring storage for date ranges.** **Recommendation:** one shared `entity_surface_date_range` table with a `layout` discriminator, amending Calendar section 5.2 before Calendar's authoring is built (neither table exists yet), so the two layouts share one guard and registration set. **Alternative:** a separate `entity_surface_gantt_field` mirroring Calendar's. Either way, the build waits behind the metadata-cleanup gate.
+9. **Approved 8 October 2026 (owner wording in the status line).** **Phase 1 scope.** Read-only; dependencies, hierarchy, extra columns and rescheduling are separate approvals.
+10. **Approved 8 October 2026 (owner wording in the status line).** **Verification** on synthetic fixtures, with the fixture boundary in section 12.
+11. **Approved 8 October 2026 (owner wording in the status line).** **AGENTS.md pointer**, worded like Calendar's, linking this blueprint and the foundation by their stable paths.
+12. **Approved 8 October 2026 (owner wording in the status line).** **P-G3, shared progress reader.** Approve the reader and its user-visible correction outside Gantt: blank or whitespace-only progress text shows as an empty value instead of 0% in Table, Cards, Board and Calendar. It lands as its own commit with its own acceptance (section 12).
 
 ## 15. Rejected options
 
@@ -393,3 +406,9 @@ Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colo
 | R2-2: the rename map must be complete                                                                                 | Section 4 lists all 12 moves and all 4 generalizations with their target names                                                                                                  |
 | R2-3: the 12rem label column is not on the breakpoint scale                                                           | Section 11: the scale governs container tiers; two local layout constants are named                                                                                             |
 | R2-4: Phase 3 hit target at the minimum column                                                                        | Section 5.7, Phase 3 row                                                                                                                                                        |
+| P1: tone is the only status signal on a bar                                                                           | The label carries a tone dot and hidden status text (section 8)                                                                                                                 |
+| P1: short bars vanish at Year zoom                                                                                    | Minimum bar width, a third local constant (sections 7 and 11)                                                                                                                   |
+| P1: which tier each zoom shows                                                                                        | Section 8 table                                                                                                                                                                 |
+| P1: the Quarter window title and widened days                                                                         | Section 8                                                                                                                                                                       |
+| P1: a zero-length datetime at the window start                                                                        | Stated as a known edge (section 7)                                                                                                                                              |
+| P1: "Only records starting in this period" remedy                                                                     | Not adopted in Phase 1; needs its own decision (section 8)                                                                                                                      |
