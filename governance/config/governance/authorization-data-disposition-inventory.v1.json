@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "policyId": "authorization-wave0-data-disposition",
-  "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
+  "policyHash": "c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 780,
+    "discoveredTables": 781,
     "externalObjects": 12,
-    "exactTableOverrides": 15,
+    "exactTableOverrides": 16,
     "exactRuntimeTableOverrides": 1,
     "schemaDefaultedTables": 764,
     "byDataClass": {
@@ -26,7 +26,7 @@
       "document_object": 2,
       "event_outbox_inbox": 21,
       "event_stream": 1,
-      "governance_audit": 14,
+      "governance_audit": 15,
       "identity_desired_state_authority": 11,
       "identity_projection": 3,
       "ledger_regulatory": 16,
@@ -46,6 +46,7 @@
       "trace_telemetry": 1
     },
     "byDisposition": {
+      "archive_evidence_and_reinstall_only_for_verified_target": 1,
       "drain_record_offsets_and_resume_idempotently": 1,
       "drain_watermark_and_replay_pending": 21,
       "import_cleaned_preserved_projection": 1,
@@ -6331,6 +6332,24 @@
       "disposition": "migrate_with_referenced_objects",
       "retention": "document class and legal-hold policy",
       "evidence": "metadata count/checksum plus object existence, size, and content hash",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "entity_command_private.operation_bootstrap_source",
+      "schema": "entity_command_private",
+      "table": "operation_bootstrap_source",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/46_native_operation_bootstrap.sql",
+          "line": 13
+        }
+      ],
+      "decisionSource": "exact_table_override",
+      "dataClass": "governance_audit",
+      "disposition": "archive_evidence_and_reinstall_only_for_verified_target",
+      "retention": "preserve source approval and installation evidence; never blindly restore active bootstrap authority",
+      "evidence": "owner-approved source hash, exact source revisions and fresh target coordinates, current admission and unchanged protected values",
       "approvalStatus": "pending"
     },
     {

@@ -622,6 +622,12 @@
       "disposition": "preserve_immutable_through_observation",
       "retention": "rollback observation plus approved security retention",
       "evidence": "source database identity, exported snapshot identifier, and source watermark"
+    },
+    "entity_command_private.operation_bootstrap_source": {
+      "dataClass": "governance_audit",
+      "disposition": "archive_evidence_and_reinstall_only_for_verified_target",
+      "retention": "preserve source approval and installation evidence; never blindly restore active bootstrap authority",
+      "evidence": "owner-approved source hash, exact source revisions and fresh target coordinates, current admission and unchanged protected values"
     }
   },
   "externalObjects": [
