@@ -1236,8 +1236,9 @@ and deployed conformance evidence remain required. Serving the existing bundle d
 qualify native authoring or F6/F8/F9.
 
 The subsequent detail deployment checkpoint serves a new pinned standalone bundle,
-including the explicit detail field renderer. New component versions are proposals only;
-old component approvals do not qualify the changed implementation inventory. HTTPS byte
+including the explicit detail field renderer. The four v3 component versions have now
+passed separate Admin proposal and Owner review and are published/active in Studio,
+with exact worker replay evidence. Old approvals did not qualify the changed inventory. HTTPS byte
 verification and shared-renderer conformance are recorded separately from authenticated
 browser acceptance, resource approval and catalogue installation in the runbook.
 
@@ -1253,6 +1254,14 @@ reader is product/Studio-only. Migration `55_product_component_resource_read.sql
 installed in DEV with rehearsal/replay evidence; this does not enable native bootstrap
 or qualify live records. The runbook distinguishes fixture-admission PostgreSQL coverage
 from actual application-role negative privilege checks.
+
+**Fresh bootstrap component assembly:** explicit surface, section and field component
+selections resolve through configured exact catalogue/manifest/release pins and the
+restricted installed-evidence reader before graph child rows exist. Host admission is
+required independently in the canonical transaction. Missing pins or mismatched evidence
+reject; no component is chosen from a fallback catalogue search. Saved graphs and fresh
+proposals share the capability projection. Component activation and assembly do not
+qualify the remaining schema/compiler/initializer composition or F6/F8/F9 live reads.
 
 **Native bootstrap proposal input:** the shared control host has a bounded immutable-file
 proposal reader and resolver composed through the existing product-command runtime. A

@@ -201,3 +201,5 @@ export type {
   InstalledComponentEvidence,
   NativeComponentScope,
 } from "./native-component-resources.js";
+
+export { projectNativeComponentEvidence } from "./native-component-resources.js";

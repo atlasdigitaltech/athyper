@@ -134,6 +134,41 @@ export async function resolveNativeComponentResources(
       fail("COMPONENT_INSTALLATION_EVIDENCE_MISMATCH");
     evidence.push(structuredClone(installed));
   }
+  return projectNativeComponentEvidence(scope, evidence);
+}
+/** One capability projection for saved graphs and fresh bootstrap proposals.
+ * Callers must first obtain installed evidence; this is not a qualifier. */
+export function projectNativeComponentEvidence(
+  scope: NativeComponentScope,
+  evidence: readonly InstalledComponentEvidence[],
+) {
+  const fail = (): never => {
+    throw new FoundationContractError(
+      "COMPONENT_INSTALLATION_EVIDENCE_MISMATCH",
+      "/components",
+    );
+  };
+  if (
+    !/^[a-f0-9]{64}$/.test(scope.hostReleaseHash) ||
+    !["studio", "neon", "mesh"].includes(scope.plane)
+  )
+    fail();
+  const contracts = evidence.map((item) => {
+    const contract = parseUiComponentContract(item.contract);
+    if (
+      item.plane !== scope.plane ||
+      item.hostReleaseHash !== scope.hostReleaseHash ||
+      !/^[a-f0-9]{64}$/.test(item.evidenceHash) ||
+      !item.runtimeKey ||
+      item.runtimeKey.length > 127 ||
+      contract.status !== "active" ||
+      !contract.supportedPlanes.includes(scope.plane) ||
+      (contract.tenantId !== null && contract.tenantId !== scope.tenantId)
+    )
+      fail();
+    return contract;
+  });
+  if (new Set(contracts.map((c) => c.id)).size !== contracts.length) fail();
   const options = {
     text_wrap: "textWrap",
     fraction_digits: "fractionDigits",
@@ -145,7 +180,7 @@ export async function resolveNativeComponentResources(
       .filter((c) => c.componentLevel === "surface")
       .map((c) => ({
         id: c.id,
-        level: "surface",
+        level: "surface" as const,
         surfaceKinds: c.supportedSurfaceKinds,
         modes: c.supportedModes,
       })),

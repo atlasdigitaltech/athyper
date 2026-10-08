@@ -189,6 +189,41 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Reviewed components activated and bootstrap assembly — 8 October
+
+This checkpoint supersedes the expired-session/unsubmitted status below. The four v3
+component candidates were submitted by authenticated Platform Admin and independently
+approved by the distinct Platform Owner principal. The existing publication worker
+published and activated all four in Studio. Each has one deployment acknowledgement;
+a second worker invocation returned exactly the same compilation, deployment and applied
+release identities. No Entity draft or Entity activation changed.
+
+| Component                    | Source release                       | Activated deployment                 |
+| ---------------------------- | ------------------------------------ | ------------------------------------ |
+| shared.entity.list v2        | e8e4dc0c-3658-41fe-9a02-3a55b6b5e533 | 01a11ba2-c2e4-75d8-b469-3bd668fbe0ec |
+| shared.entity.detail v2      | a40a14b0-d2be-4a32-a1d1-1cfa66093a68 | 01a11ba2-d733-7635-8668-6d0eec957b8b |
+| shared.entity.text v2        | 45569947-da4c-46a4-9d69-9acd3bbc6fa0 | 01a11ba2-eac8-794d-b676-b98b6a87fb2e |
+| shared.entity.detail-text v1 | 5057aa47-cc7c-4dbe-aee8-cf5a91cd803a | 01a11ba2-ff28-780d-a703-acf046d9c104 |
+
+Token-free receipts are in the private DEV workspace
+`component-deployment-20261008-v3/`: `proposal-receipts.json`,
+`approval-receipts.json`, `delivery-evidence.json`, `delivery.log` and
+`delivery-replay.log`. `native-component-pins.json` records the four exact current
+head-backed catalogue IDs and manifest/release hashes. Historical catalogue rows remain.
+
+`createNativeBootstrapComponents` assembles explicit proposal component selections through
+the restricted installed-evidence reader before child graph rows exist. It requires host
+admission, exact configured pins and the canonical transaction; missing pins, changed
+hashes/IDs, stale host scope and invalid selections reject. Both saved-graph resolution
+and bootstrap share the capability projection. This removes the component-context
+ordering dependency without granting catalogue writes or using fixture authority.
+
+Validation: 27 focused host tests and 28 authoring tests passed; host typecheck passed.
+The assembler is implemented and tested, but complete installed bootstrap composition
+(schema, compiler, host and initializer bindings) and deployed F6/F8/F9 remain open.
+Authenticated native list/detail acceptance is not established by component activation.
+Both original drafts remain revision 4; no reset, replacement draft or cutover occurred.
+
 ### Native component evidence grant installed — 8 October
 
 `20261008_entity_product_component_resource_read.sql` is installed in DEV. Exact source
