@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  productDraftCreationMigrationName,
   operationBootstrapMigrationName,
   liveReadResourceReviewMigrationName,
   ownershipInitializationMigrationName,
@@ -442,5 +443,42 @@ test("operation bootstrap migration is canonical, bounded and ledger-replayed", 
   assert.doesNotMatch(
     canonical,
     /INSERT INTO|GRANT (?:SELECT|UPDATE|INSERT|DELETE)/,
+  );
+});
+
+test("product creation migration pins entity intent and leaves native/protected grants separate", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        productDraftCreationMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/47_product_draft_creation.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    source,
+    "BEGIN;\nSET LOCAL lock_timeout='5s';\n" + canonical + "\nCOMMIT;\n",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(source, digest, false, productDraftCreationMigrationName),
+    /ROLLBACK;\n$/,
+  );
+  assert.match(
+    preparationSql(source, digest, true, productDraftCreationMigrationName),
+    /athyper_schema_migration_v1/,
+  );
+  assert.match(canonical, /creation_entity_id=p_entity/);
+  assert.match(canonical, /AS RESTRICTIVE/);
+  assert.doesNotMatch(
+    canonical,
+    /DROP CONSTRAINT|requires_mfa|INSERT INTO metadata|GRANT UPDATE/,
   );
 });

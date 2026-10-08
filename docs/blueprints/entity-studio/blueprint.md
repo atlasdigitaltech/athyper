@@ -61,7 +61,11 @@ historical identity reconstruction are separate acceptance work, not prerequisit
 for this fresh-native demonstration. Root creation, typed whole-graph persistence,
 initial/saved history, exact readback, compilation and reader compatibility form one
 atomic command; an interrupted or rejected command must leave no partial draft.
-Replay requires fresh current authorization. Operation initialization uses only the
+Replay requires fresh current authorization. Fresh-root admission additionally pins the
+product entity ID in the transaction ticket, rechecks and locks its current system
+ownership in PostgreSQL, and permits only an unpinned revision-zero draft root. An
+ordinary existing-draft ticket cannot create a root; native graph/initializer writes
+and independent publication review remain separate authorities. Operation initialization uses only the
 specifically approved source-bound initializer, never a default or client-supplied
 protected value. Native bootstrap does not attest deployed F6/F8/F9, publication or
 activation. Execution evidence and remaining integration gaps belong in the existing

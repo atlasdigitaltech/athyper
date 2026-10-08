@@ -2070,6 +2070,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/46_native_operation_bootstrap.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_product_draft_creation.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_draft_creation.sql",
+      "sha256": "f2f3842ef241c4f3b13eec87693be1d07c5257ed6306834c0c2f3d37f5d0768f",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Explicit entity-bound creation admission and restricted fresh-root INSERT; no native write or initializer grant.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/47_product_draft_creation.sql"
+      ]
     }
   ]
 }

@@ -7,6 +7,8 @@ export interface ProductCommandScope {
   readonly authorityTenantId: string;
   readonly actorId: string;
   readonly changeSetId: string;
+  /** Explicit creation intent, pinned by governance and the database ticket. */
+  readonly creationEntityId?: string;
 }
 /** Trusted host port. It must re-resolve the installed governance binding and
  * current authenticated human authority, including revocation, on every call.
@@ -44,12 +46,20 @@ export function createProductCommandAuthority<Context>(options: {
       await options.governance.authorize(context, captured, requestHash);
       const token = randomBytes(32).toString("hex");
       const digest = createHash("sha256").update(token).digest();
-      await sql`INSERT INTO entity_command_private.admission
+      if (captured.creationEntityId !== undefined) {
+        await sql`INSERT INTO entity_command_private.admission
+          (token_hash,login_role,authority_tenant_id,actor_id,change_set_id,request_hash,expires_at,creation_entity_id)
+          VALUES(${digest},${options.applicationLogin},${captured.authorityTenantId}::uuid,
+          ${captured.actorId}::uuid,${captured.changeSetId}::uuid,${requestHash},clock_timestamp()+interval '60 seconds',${captured.creationEntityId}::uuid)`.execute(
+          options.issuer,
+        );
+      } else
+        await sql`INSERT INTO entity_command_private.admission
         (token_hash,login_role,authority_tenant_id,actor_id,change_set_id,request_hash,expires_at)
         VALUES(${digest},${options.applicationLogin},${captured.authorityTenantId}::uuid,
           ${captured.actorId}::uuid,${captured.changeSetId}::uuid,${requestHash},clock_timestamp()+interval '60 seconds')`.execute(
-        options.issuer,
-      );
+          options.issuer,
+        );
       return { token, requestHash, scope: captured };
     },
     async revoke(token: string) {

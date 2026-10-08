@@ -105,6 +105,43 @@ approval is requested; these are implementation gaps. No DEV data was reset, no
 replacement draft was created and no new Entity release was published or activated
 by this checkpoint. The refreshed Admin session was not used to fabricate evidence.
 
+### Product-root creation admission installed — 8 October
+
+The next admission step is implemented: `creationEntityId` is an explicit optional
+product-command scope, captured in the request hash and the private admission ticket.
+The control API resolves current human/IAM authoring authority against the exact
+system-owned product entity for a fresh target; it rejects conflicting existing roots.
+Existing-draft commands retain their previous admission path. Creation has no review
+receipt requirement and grants no publication authority.
+
+Forward migration `20261008_entity_product_draft_creation.sql` installs a restrictive
+root INSERT policy and `admitted_creation` verifier. The verifier requires the current
+transaction/login/actor/tenant ticket, exact entity and draft, unexpired admission,
+and current system ownership locked through commit. INSERT permits only the canonical
+root-creation columns; native pins and operation controls are not granted. Exact SQL
+effects still depend on the canonical writer; the ticket is scope enforcement, not
+a comparison of SQL against the request body.
+
+SHA-256: `f2f3842ef241c4f3b13eec87693be1d07c5257ed6306834c0c2f3d37f5d0768f`.
+DEV rollback rehearsal, ledger-backed installation and exact-hash replay passed.
+Receipts `product-creation-{rehearsal,installation,replay}.json` are in the existing
+private backup directory. Authorization assignments and activation heads were
+unchanged. DEV privilege inspection confirms root-ID INSERT and verifier EXECUTE,
+with no native-version UPDATE grant. This supersedes the earlier absence of a
+fresh-root INSERT privilege; it does not establish complete native-write authority.
+
+The isolated PostgreSQL application-role test passed with missing/ordinary tickets,
+wrong entity/target/actor, changed ownership, private-ticket writes, native-pin updates
+and consumed-token reuse rejecting. Authorized INSERT and rollback pass. This test
+uses real admission SQL/RLS but a minimal root schema and synthetic issuer, not an
+authenticated DEV graph bootstrap. Nine control-governance tests and sixteen migration
+runner tests pass. The authoring suite passes 856 tests with eight opt-in tests skipped;
+the new PostgreSQL test was explicitly enabled and passed separately. Authoring, native-test
+and host typechecks pass. The source-mounted control API was restarted and is healthy;
+an unauthenticated session request still returns 401. Initializer target installation, native member grants/constraint
+qualification, actual bootstrap endpoint composition and deployed live reads remain
+open. No Entity draft, operation, release or activation was created by installation.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`

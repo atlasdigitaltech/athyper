@@ -143,3 +143,47 @@ it.each(["principal", "draft"])(
     }
   },
 );
+
+it("authorizes a fresh target through current entity-scoped IAM without a draft or review receipt", async () => {
+  const f = fixture();
+  Object.assign(f.scope, {
+    creationEntityId: "33333333-3333-4333-8333-333333333333",
+  });
+  const original = f.query.getMockImplementation()!;
+  f.query.mockImplementation(async (text) =>
+    text.includes("SELECT e.id AS entity_id")
+      ? {
+          rows: [{ entity_id: "33333333-3333-4333-8333-333333333333" }],
+          rowCount: 1,
+        }
+      : original(text),
+  );
+  try {
+    await expect(f.run()).resolves.toBeUndefined();
+    expect(resolve).toHaveBeenCalledTimes(1);
+    resolve.mockResolvedValue({
+      ...f.snapshot,
+      allowed: [],
+      denied: ["studio.metadata.contract.edit"],
+    });
+    await expect(f.run()).rejects.toMatchObject({
+      code: "PRODUCT_COMMAND_AUTHORITY_DENIED",
+    });
+  } finally {
+    await f.db.destroy();
+  }
+});
+it("rejects unavailable or tenant-owned creation targets before permission resolution", async () => {
+  const f = fixture();
+  Object.assign(f.scope, {
+    creationEntityId: "33333333-3333-4333-8333-333333333333",
+  });
+  try {
+    await expect(f.run()).rejects.toMatchObject({
+      code: "PRODUCT_COMMAND_AUTHORITY_DENIED",
+    });
+    expect(resolve).not.toHaveBeenCalled();
+  } finally {
+    await f.db.destroy();
+  }
+});

@@ -127,3 +127,30 @@ it.each(["committed", "execute-failed", "commit-unconfirmed"] as const)(
     }
   },
 );
+
+it("pins fresh-root entity intent in the issuer ticket and command hash", async () => {
+  const { database, query, scope } = fixture();
+  const creation = {
+    ...scope,
+    creationEntityId: "00000000-0000-4000-8000-000000000009",
+  };
+  const authorize = vi.fn(async () => {});
+  try {
+    const authority = createProductCommandAuthority({
+      issuer: database,
+      applicationLogin: "application",
+      governance: { authorize },
+    });
+    const result = await authority.issue(null, creation, { kind: "bootstrap" });
+    expect(result.scope).toEqual(creation);
+    expect(result.requestHash).toBe(
+      sha256({ scope: creation, command: { kind: "bootstrap" } }),
+    );
+    expect(JSON.stringify(query.mock.calls)).toContain("creation_entity_id");
+    expect(JSON.stringify(query.mock.calls)).toContain(
+      creation.creationEntityId,
+    );
+  } finally {
+    await database.destroy();
+  }
+});

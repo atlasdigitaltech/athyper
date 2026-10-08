@@ -41,7 +41,11 @@ export function createControlProductCommandGovernance(options: {
       if (
         scope.actorId !== context.principalId ||
         scope.authorityTenantId !== context.tenantId ||
-        !/^[a-f0-9]{64}$/.test(requestHash)
+        !/^[a-f0-9]{64}$/.test(requestHash) ||
+        (scope.creationEntityId !== undefined &&
+          !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
+            scope.creationEntityId,
+          ))
       )
         throw denied();
       await options.database
@@ -61,13 +65,23 @@ export function createControlProductCommandGovernance(options: {
             tx,
           );
           if (actors.rows.length !== 1) throw denied();
-          const roots = await sql<{
-            entity_id: string;
-          }>`SELECT c.entity_id FROM metadata.entity_change_set c JOIN metadata.entity e ON e.id=c.entity_id
+          const roots =
+            scope.creationEntityId !== undefined
+              ? await sql<{
+                  entity_id: string;
+                }>`SELECT e.id AS entity_id FROM metadata.entity e
+              WHERE e.id=${scope.creationEntityId}::uuid AND e.tenant_id IS NULL AND e.ownership_model='system'
+              AND NOT EXISTS(SELECT 1 FROM metadata.entity_change_set c WHERE c.id=${scope.changeSetId}::uuid
+                AND (c.entity_id<>e.id OR c.tenant_id IS NOT NULL OR c.status NOT IN ('draft','rejected')))`.execute(
+                  tx,
+                )
+              : await sql<{
+                  entity_id: string;
+                }>`SELECT c.entity_id FROM metadata.entity_change_set c JOIN metadata.entity e ON e.id=c.entity_id
           WHERE c.id=${scope.changeSetId}::uuid AND c.tenant_id IS NULL AND e.tenant_id IS NULL
           AND e.ownership_model='system' AND c.status IN ('draft','rejected')`.execute(
-            tx,
-          );
+                  tx,
+                );
           if (roots.rows.length !== 1) throw denied();
           const permissions = await createKyselyPermissionResolver({
             run: (_identity, work) => work(tx),
