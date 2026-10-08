@@ -103,6 +103,7 @@ planes/mesh/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
 common/runtime_meta/13_authoring_resource_projection.sql
+common/runtime_meta/14_live_read_resource_projection.sql
 planes/mesh/master/07_functions.sql
 common/master/07_functions.sql
 common/snapshot/07_functions.sql
@@ -234,5 +235,6 @@ planes/mesh/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
 common/authz/21_entity_default_access.sql
 
+common/runtime_meta/15_locked_live_read_resources.sql
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

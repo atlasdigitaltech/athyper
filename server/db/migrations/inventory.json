@@ -2224,6 +2224,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/55_product_component_resource_read.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_locked_live_read_resources.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_locked_live_read_resources.sql",
+      "sha256": "09eb32054ee2ca679573819283442e61fae44b6ad0a2e6f52ad50888cbef9bc8",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Bounded tenant-scoped locked live-read evidence without granting runtime table UPDATE privileges.",
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/15_locked_live_read_resources.sql"
+      ]
     }
   ]
 }

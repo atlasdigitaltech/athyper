@@ -2642,15 +2642,15 @@ BEGIN
         "relation": "event.authorization_invalidation_outbox",
         "command": "ALL",
         "reason": "Preserve administrative global catalog invalidation through the definer without admitting global rows for tenant application sessions.",
-        "using": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))",
-        "check": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))"
+        "using": "((scope_kind = ''global''::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))",
+        "check": "((scope_kind = ''global''::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))"
       },
       {
         "relation": "event.authorization_invalidation_outbox",
         "command": "ALL",
         "reason": "Published global authorization projections emit invalidation within their authorized mutation trigger; projection appliers cannot directly emit arbitrary global invalidations.",
-        "using": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = ''authz'' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text))",
-        "check": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = ''authz'' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text))"
+        "using": "((scope_kind = ''global''::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND (authority_schema = ''authz''::text) AND (pg_trigger_depth() > 0) AND pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text))",
+        "check": "((scope_kind = ''global''::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND (authority_schema = ''authz''::text) AND (pg_trigger_depth() > 0) AND pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text))"
       }
     ]
   },
@@ -4637,27 +4637,27 @@ BEGIN
         "relation": "control.policy_definition",
         "command": "SELECT",
         "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-        "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = ''metadata.publication'')"
+        "using": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = ''metadata.publication''::text))"
       },
       {
         "relation": "control.policy_definition",
         "command": "UPDATE",
         "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-        "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = ''metadata.publication'')",
-        "check": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = ''metadata.publication'')"
+        "using": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = ''metadata.publication''::text))",
+        "check": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = ''metadata.publication''::text))"
       },
       {
         "relation": "control.policy_rule",
         "command": "SELECT",
         "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-        "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = ''metadata.publication''))"
+        "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = ''metadata.publication''::text))))"
       },
       {
         "relation": "control.policy_rule",
         "command": "UPDATE",
         "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-        "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = ''metadata.publication''))",
-        "check": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = ''metadata.publication''))"
+        "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = ''metadata.publication''::text))))",
+        "check": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = ''metadata.publication''::text))))"
       }
     ]
   },
@@ -5284,6 +5284,81 @@ BEGIN
         "command": "SELECT",
         "using": "(EXISTS ( SELECT 1\n   FROM ((publication.deployment d\n     JOIN publication.artifact a ON ((a.id = d.artifact_id)))\n     JOIN publication.release r ON ((r.id = a.publication_release_id)))\n  WHERE ((d.id = deployment_acknowledgement.deployment_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
         "reason": "Read only current-authority signed deployment coordinates and acknowledgements for exact recovery admission."
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_live_read",
+    "bypassRls": false,
+    "schemas": [
+      "runtime_meta",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "runtime_meta.applied_release",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      }
+    ],
+    "functions": [
+      "shared.current_tenant_id_soft()"
+    ],
+    "policies": [
+      {
+        "relation": "runtime_meta.applied_release",
+        "command": "SELECT",
+        "using": "pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text)",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+      },
+      {
+        "relation": "runtime_meta.applied_release",
+        "command": "UPDATE",
+        "using": "pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text)",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+        "check": "false"
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "command": "SELECT",
+        "using": "pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text)",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "command": "UPDATE",
+        "using": "pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text)",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+        "check": "false"
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()) AND (artifact_kind = ANY (ARRAY[''entity_security_manifest''::text, ''entity_storage_authority''::text])))",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "command": "UPDATE",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_runtime''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()) AND (artifact_kind = ANY (ARRAY[''entity_security_manifest''::text, ''entity_storage_authority''::text])))",
+        "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+        "check": "false"
       }
     ]
   }

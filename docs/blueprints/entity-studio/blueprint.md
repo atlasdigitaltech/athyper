@@ -1263,6 +1263,24 @@ reject; no component is chosen from a fallback catalogue search. Saved graphs an
 proposals share the capability projection. Component activation and assembly do not
 qualify the remaining schema/compiler/initializer composition or F6/F8/F9 live reads.
 
+**Consuming-plane live-read composition:** the shared records service can compose
+`createLocalEntityLiveReadEvidence` with exact local publication bindings and independently
+resolved current-security, source-descriptor, provider and permission evidence. It must
+hold publication locks through the record query, bind the original authenticated caller
+and transaction, reject missing closure, and expire evidence at callback completion.
+Capability content hashes supplement owner installation/revocation checks; they do not
+replace them. The bounded adapter does not qualify mask implementations.
+
+Runtime roles must not receive activation-table UPDATE merely to acquire shared locks.
+`runtime_meta.fn_locked_live_read_resources` provides a bounded tenant/plane-scoped
+reader under a dedicated non-login, RLS-bound owner; its locking policies reject updated
+row images and its caller receives EXECUTE only. Signature verification additionally
+requires the resource content plane to match the signed envelope/consumer plane.
+The routine is installed in Studio DEV with rollback/replay evidence. Neither this
+installation nor the adapter's tests establish complete bootstrap or F6/F8/F9; actual
+resource semantic qualification and current installed source/provider bindings remain
+required. Exact execution evidence is in the existing qualification runbook.
+
 **Native bootstrap proposal input:** the shared control host has a bounded immutable-file
 proposal reader and resolver composed through the existing product-command runtime. A
 pinned `entity.native-bootstrap-proposals/1` manifest binds author, entity, target draft,

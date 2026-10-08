@@ -4,64 +4,229 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { boundaryCatalogQueries, inspectPlaneBoundary, type CatalogQuery } from "./plane-boundary-catalog.js";
-import { readDefinerContract, definerHardeningSql } from "./security-definer-contract.js";
+import {
+  boundaryCatalogQueries,
+  inspectPlaneBoundary,
+  type CatalogQuery,
+} from "./plane-boundary-catalog.js";
+import {
+  readDefinerContract,
+  definerHardeningSql,
+} from "./security-definer-contract.js";
 
 const ddlRoot = new URL("../../ddl/", import.meta.url);
-const migration = readFileSync(new URL("../../migrations/20261003_entity_framework_security.sql", import.meta.url), "utf8");
-const hardening = readFileSync(new URL("../../ddl/common/shared/99_security_definer_hardening.sql", import.meta.url), "utf8");
-const docker = (...args: string[]) => execFileSync("docker", args, {encoding:"utf8",stdio:["pipe","pipe","pipe"],maxBuffer:32*1024*1024});
-function sql(container: string, database: string, input: string, user = "postgres") {
-  return execFileSync("docker",["exec","-i",container,"psql","-X","-qAt","-U",user,"-d",database,"-v","ON_ERROR_STOP=1"],{input,encoding:"utf8",stdio:["pipe","pipe","pipe"],maxBuffer:32*1024*1024});
+const migration = readFileSync(
+  new URL(
+    "../../migrations/20261003_entity_framework_security.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const hardening = readFileSync(
+  new URL(
+    "../../ddl/common/shared/99_security_definer_hardening.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const docker = (...args: string[]) =>
+  execFileSync("docker", args, {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+    maxBuffer: 32 * 1024 * 1024,
+  });
+function sql(
+  container: string,
+  database: string,
+  input: string,
+  user = "postgres",
+) {
+  return execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      container,
+      "psql",
+      "-X",
+      "-qAt",
+      "-U",
+      user,
+      "-d",
+      database,
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    {
+      input,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+      maxBuffer: 32 * 1024 * 1024,
+    },
+  );
 }
 
-test("real three-plane definers retain RLS, bootstrap identity, and reject unlisted elevation", {timeout:180_000}, async () => {
-  const supplied = process.env["PLANE_BOUNDARY_TEST_CONTAINER"];
-  const container = supplied ?? `athyper-plane-boundary-${randomUUID().slice(0,8)}`;
-  if (supplied && docker("inspect","--format",'{{index .Config.Labels "athyper.purpose"}}',container).trim() !== "plane-boundary-test")
-    throw new Error("Only an isolated plane-boundary-test container may receive test fixtures");
-  let created = false;
-  try {
-    if (!supplied) {
-      docker("run","-d","--name",container,"--network","none","--tmpfs","/var/lib/postgresql/data","--label","athyper.purpose=plane-boundary-test","-e","POSTGRES_HOST_AUTH_METHOD=trust","postgres:16.15-bookworm");
-      created = true;
-      let ready = false;
-      for (let attempt=0;attempt<80;attempt++) {
-        // The image starts a temporary socket-only server during initialization.
-        // TCP readiness identifies the final server after that restart.
-        try { docker("exec",container,"pg_isready","-h","127.0.0.1","-U","postgres"); ready=true; break; }
-        catch { await new Promise(done => setTimeout(done,250)); }
+test(
+  "real three-plane definers retain RLS, bootstrap identity, and reject unlisted elevation",
+  { timeout: 180_000 },
+  async () => {
+    const supplied = process.env["PLANE_BOUNDARY_TEST_CONTAINER"];
+    const container =
+      supplied ?? `athyper-plane-boundary-${randomUUID().slice(0, 8)}`;
+    if (
+      supplied &&
+      docker(
+        "inspect",
+        "--format",
+        '{{index .Config.Labels "athyper.purpose"}}',
+        container,
+      ).trim() !== "plane-boundary-test"
+    )
+      throw new Error(
+        "Only an isolated plane-boundary-test container may receive test fixtures",
+      );
+    let created = false;
+    try {
+      if (!supplied) {
+        docker(
+          "run",
+          "-d",
+          "--name",
+          container,
+          "--network",
+          "none",
+          "--tmpfs",
+          "/var/lib/postgresql/data",
+          "--label",
+          "athyper.purpose=plane-boundary-test",
+          "-e",
+          "POSTGRES_HOST_AUTH_METHOD=trust",
+          "postgres:16.15-bookworm",
+        );
+        created = true;
+        let ready = false;
+        for (let attempt = 0; attempt < 80; attempt++) {
+          // The image starts a temporary socket-only server during initialization.
+          // TCP readiness identifies the final server after that restart.
+          try {
+            docker(
+              "exec",
+              container,
+              "pg_isready",
+              "-h",
+              "127.0.0.1",
+              "-U",
+              "postgres",
+            );
+            ready = true;
+            break;
+          } catch {
+            await new Promise((done) => setTimeout(done, 250));
+          }
+        }
+        assert.ok(ready, "isolated PostgreSQL must start");
+        sql(
+          container,
+          "postgres",
+          "CREATE ROLE athyper_control_api NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; CREATE ROLE athyper_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; CREATE ROLE athyper_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;",
+        );
+        docker("cp", fileURLToPath(ddlRoot), `${container}:/tmp/ddl`);
+        for (const plane of ["studio", "neon", "mesh"]) {
+          docker(
+            "exec",
+            container,
+            "createdb",
+            "-U",
+            "postgres",
+            `athyper_${plane}`,
+          );
+          const paths = readFileSync(
+            new URL(`planes/${plane}/_manifest.txt`, ddlRoot),
+            "utf8",
+          )
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line && !line.startsWith("#"));
+          assert.equal(
+            paths.at(-1),
+            "common/shared/99_security_definer_hardening.sql",
+            "hardening must include the final manifest functions",
+          );
+          assert.equal(
+            paths.at(-2),
+            "common/shared/98_security_definer_privileges.sql",
+          );
+          sql(
+            container,
+            `athyper_${plane}`,
+            `BEGIN; SELECT set_config('app.database_plane','${plane}',false); SELECT set_config('app.current_principal_id','00000000-0000-0000-0000-000000000000',false);\n${paths.map((path) => `\\i /tmp/ddl/${path}`).join("\n")}\nCOMMIT;`,
+          );
+        }
+        sql(
+          container,
+          "postgres",
+          "GRANT athyperapp,athyper_trustiam_service,athyper_publication_service TO athyper_runtime; GRANT athyper_jobs_service,athyper_publication_service,athyper_projection_applier TO athyper_worker;",
+        );
       }
-      assert.ok(ready,"isolated PostgreSQL must start");
-      sql(container,"postgres","CREATE ROLE athyper_control_api NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; CREATE ROLE athyper_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; CREATE ROLE athyper_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;");
-      docker("cp",fileURLToPath(ddlRoot),`${container}:/tmp/ddl`);
-      for (const plane of ["studio","neon","mesh"]) {
-        docker("exec",container,"createdb","-U","postgres",`athyper_${plane}`);
-        const paths = readFileSync(new URL(`planes/${plane}/_manifest.txt`,ddlRoot),"utf8").split("\n").map(line => line.trim()).filter(line => line && !line.startsWith("#"));
-        assert.equal(paths.at(-1),"common/shared/99_security_definer_hardening.sql","hardening must include the final manifest functions");
-        assert.equal(paths.at(-2),"common/shared/98_security_definer_privileges.sql");
-        sql(container,`athyper_${plane}`,`BEGIN; SELECT set_config('app.database_plane','${plane}',false); SELECT set_config('app.current_principal_id','00000000-0000-0000-0000-000000000000',false);\n${paths.map(path => `\\i /tmp/ddl/${path}`).join("\n")}\nCOMMIT;`);
-      }
-      sql(container,"postgres","GRANT athyperapp,athyper_trustiam_service,athyper_publication_service TO athyper_runtime; GRANT athyper_jobs_service,athyper_publication_service,athyper_projection_applier TO athyper_worker;");
-    }
-    const contract = await readDefinerContract();
-    const probeHardening = definerHardeningSql({...contract,sourceSignatures:[...contract.sourceSignatures,"shared.boundary_probe_read()","shared.boundary_probe_write(text)"]});
-    for (const plane of ["neon","studio","mesh"]) {
-      const database = `athyper_${plane}`;
-      // Upgrade is repeatable and covers installed functions independently of
-      // the foundation receipt or the role which originally created them.
-      sql(container,database,migration);
-      sql(container,database,migration);
-      if (plane === "mesh") sql(container,database,readFileSync(new URL("./mesh-boundary.sql",import.meta.url),"utf8"));
-      if (plane === "studio") sql(container,database,readFileSync(new URL("./onboarding-boundary.sql",import.meta.url),"utf8"));
-      const query: CatalogQuery = async <Row extends object>(statement: string) => JSON.parse(sql(container,database,`BEGIN READ ONLY; SELECT COALESCE(json_agg(result),'[]'::json) FROM (${statement}) result; COMMIT;`).trim()) as Row[];
-      const report = await inspectPlaneBoundary(query,contract);
-      assert.deepEqual(report.errors,[],`${plane} catalog qualification`);
-      assert.equal(report.catalogQualified,true);
+      const contract = await readDefinerContract();
+      const probeHardening = definerHardeningSql({
+        ...contract,
+        sourceSignatures: [
+          ...contract.sourceSignatures,
+          "shared.boundary_probe_read()",
+          "shared.boundary_probe_write(text)",
+        ],
+      });
+      for (const plane of ["neon", "studio", "mesh"]) {
+        const database = `athyper_${plane}`;
+        // The immutable historical upgrade must reject a newly introduced definer.
+        // Reapplying an old signature inventory to today's foundation is unsafe.
+        assert.throws(
+          () => sql(container, database, migration),
+          /Unregistered source definer signature: runtime_meta.fn_locked_live_read_resources/,
+        );
+        // Today's generated hardening remains repeatable without rewriting that
+        // historical migration or accepting unknown signatures.
+        sql(container, database, hardening);
+        sql(container, database, hardening);
+        if (plane === "mesh")
+          sql(
+            container,
+            database,
+            readFileSync(
+              new URL("./mesh-boundary.sql", import.meta.url),
+              "utf8",
+            ),
+          );
+        if (plane === "studio")
+          sql(
+            container,
+            database,
+            readFileSync(
+              new URL("./onboarding-boundary.sql", import.meta.url),
+              "utf8",
+            ),
+          );
+        const query: CatalogQuery = async <Row extends object>(
+          statement: string,
+        ) =>
+          JSON.parse(
+            sql(
+              container,
+              database,
+              `BEGIN READ ONLY; SELECT COALESCE(json_agg(result),'[]'::json) FROM (${statement}) result; COMMIT;`,
+            ).trim(),
+          ) as Row[];
+        const report = await inspectPlaneBoundary(query, contract);
+        assert.deepEqual(report.errors, [], `${plane} catalog qualification`);
+        assert.equal(report.catalogQualified, true);
 
-      // Fixture setup bypasses unrelated FK/trigger dependencies only. All
-      // behavior assertions restore normal triggers and use the actual login.
-      sql(container,database,`BEGIN;
+        // Fixture setup bypasses unrelated FK/trigger dependencies only. All
+        // behavior assertions restore normal triggers and use the actual login.
+        sql(
+          container,
+          database,
+          `BEGIN;
         SET LOCAL session_replication_role=replica;
         INSERT INTO master.tenant(id,code,name,display_name,realm_key,status,created_by) VALUES
           ('b0000000-0000-4000-8000-000000000001','boundary_one','Boundary one','Boundary one','boundary','active','d0000000-0000-4000-8000-000000000001'),
@@ -98,7 +263,7 @@ test("real three-plane definers retain RLS, bootstrap identity, and reject unlis
         END $assert$;
         SET LOCAL app.current_principal_id='d0000000-0000-4000-8000-000000000001';
         SET LOCAL app.current_atlas_plane='${plane}';
-        ${plane === 'studio' ? `DO $assert$ BEGIN IF EXISTS(SELECT 1 FROM metadata.fn_product_learning_source('a0000000-0000-4000-8000-000000000010','country','studio')) THEN RAISE EXCEPTION 'learning source admitted an unpublished product release'; END IF; END $assert$;` : ''}
+        ${plane === "studio" ? `DO $assert$ BEGIN IF EXISTS(SELECT 1 FROM metadata.fn_product_learning_source('a0000000-0000-4000-8000-000000000010','country','studio')) THEN RAISE EXCEPTION 'learning source admitted an unpublished product release'; END IF; END $assert$;` : ""}
         DO $assert$ BEGIN
           IF NOT ai.fn_atlas_conversation_access('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001',true) OR NOT ai.fn_is_atlas_conversation('b0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'Atlas lost authorized conversation visibility'; END IF;
           IF ai.fn_atlas_conversation_access('b0000000-0000-4000-8000-000000000002','a0000000-0000-4000-8000-000000000001',true) THEN RAISE EXCEPTION 'Atlas accepted foreign tenant substitution'; END IF;
@@ -119,18 +284,107 @@ test("real three-plane definers retain RLS, bootstrap identity, and reject unlis
         DO $assert$ BEGIN IF EXISTS(SELECT 1 FROM shared.boundary_probe_read()) OR shared.boundary_probe_write('no-context') <> 0 THEN RAISE EXCEPTION 'no-context definer accessed rows'; END IF; END $assert$;
         RESET SESSION AUTHORIZATION;
         DO $assert$ BEGIN IF NOT EXISTS(SELECT 1 FROM shared.boundary_probe WHERE label='foreign') THEN RAISE EXCEPTION 'foreign row was mutated'; END IF; END $assert$;
-        ROLLBACK;`);
-      assert.throws(() => sql(container,database,`BEGIN; ALTER FUNCTION shared.current_tenant_id() SET search_path=pg_catalog,public,pg_temp; ${hardening} ROLLBACK;`),/untrusted search_path schema/);
-      assert.throws(() => sql(container,database,`BEGIN; GRANT CREATE ON SCHEMA shared TO athyper_runtime; ${hardening} ROLLBACK;`),/writable by runtime or PUBLIC/);
-      assert.throws(() => sql(container,database,`BEGIN; CREATE FUNCTION shared.unlisted_bypass() RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog SET row_security=off AS 'SELECT 1'; ${hardening} ROLLBACK;`),/Unlisted or changed RLS bypass signature/);
-      assert.throws(() => sql(container,database,`BEGIN; CREATE FUNCTION shared.deployed_only_definer() RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS 'SELECT 1'; ${migration}`),/Unregistered source definer signature/);
-      assert.throws(() => sql(container,database,"SET SESSION AUTHORIZATION athyper_runtime; SET ROLE athyper_bypass_ai;"),/permission denied to set role/);
-      const membershipRows = JSON.parse(sql(container,database,`BEGIN; CREATE ROLE boundary_bridge NOLOGIN; GRANT athyper_bypass_ai TO boundary_bridge WITH SET TRUE, INHERIT FALSE; GRANT boundary_bridge TO athyper_runtime WITH SET TRUE, INHERIT FALSE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; ROLLBACK;`).trim());
-      assert.ok(membershipRows.some((row: {root:string;role:string;settable:boolean}) => row.root === "athyper_runtime" && row.role === "athyper_bypass_ai" && row.settable));
-      const mixedRows = JSON.parse(sql(container,database,`BEGIN; CREATE ROLE boundary_bridge NOLOGIN; GRANT athyper_definer_shared TO boundary_bridge WITH SET FALSE, INHERIT TRUE; GRANT boundary_bridge TO athyper_runtime WITH SET TRUE, INHERIT FALSE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; SET LOCAL SESSION AUTHORIZATION athyper_runtime; SET LOCAL ROLE boundary_bridge; DO $assert$ BEGIN IF NOT has_function_privilege(current_user,'shared.current_tenant_id()','EXECUTE') THEN RAISE EXCEPTION 'mixed membership fixture must inherit function-owner privileges'; END IF; END $assert$; RESET SESSION AUTHORIZATION; ROLLBACK;`).trim());
-      assert.ok(mixedRows.some((row: {root:string;role:string;inheritable:boolean;settable:boolean}) => row.root === "athyper_runtime" && row.role === "athyper_definer_shared" && row.inheritable && !row.settable));
-      const adminRows = JSON.parse(sql(container,database,`BEGIN; GRANT athyper_bypass_ai TO athyper_runtime WITH SET FALSE, INHERIT FALSE, ADMIN TRUE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; SET LOCAL SESSION AUTHORIZATION athyper_runtime; GRANT athyper_bypass_ai TO athyper_runtime WITH SET TRUE; SET LOCAL ROLE athyper_bypass_ai; RESET SESSION AUTHORIZATION; ROLLBACK;`).trim());
-      assert.ok(adminRows.some((row: {root:string;role:string;administrable:boolean}) => row.root === "athyper_runtime" && row.role === "athyper_bypass_ai" && row.administrable));
+        ROLLBACK;`,
+        );
+        assert.throws(
+          () =>
+            sql(
+              container,
+              database,
+              `BEGIN; ALTER FUNCTION shared.current_tenant_id() SET search_path=pg_catalog,public,pg_temp; ${hardening} ROLLBACK;`,
+            ),
+          /untrusted search_path schema/,
+        );
+        assert.throws(
+          () =>
+            sql(
+              container,
+              database,
+              `BEGIN; GRANT CREATE ON SCHEMA shared TO athyper_runtime; ${hardening} ROLLBACK;`,
+            ),
+          /writable by runtime or PUBLIC/,
+        );
+        assert.throws(
+          () =>
+            sql(
+              container,
+              database,
+              `BEGIN; CREATE FUNCTION shared.unlisted_bypass() RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog SET row_security=off AS 'SELECT 1'; ${hardening} ROLLBACK;`,
+            ),
+          /Unlisted or changed RLS bypass signature/,
+        );
+        assert.throws(
+          () =>
+            sql(
+              container,
+              database,
+              `BEGIN; CREATE FUNCTION shared.deployed_only_definer() RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS 'SELECT 1'; ${migration}`,
+            ),
+          /Unregistered source definer signature/,
+        );
+        assert.throws(
+          () =>
+            sql(
+              container,
+              database,
+              "SET SESSION AUTHORIZATION athyper_runtime; SET ROLE athyper_bypass_ai;",
+            ),
+          /permission denied to set role/,
+        );
+        const membershipRows = JSON.parse(
+          sql(
+            container,
+            database,
+            `BEGIN; CREATE ROLE boundary_bridge NOLOGIN; GRANT athyper_bypass_ai TO boundary_bridge WITH SET TRUE, INHERIT FALSE; GRANT boundary_bridge TO athyper_runtime WITH SET TRUE, INHERIT FALSE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; ROLLBACK;`,
+          ).trim(),
+        );
+        assert.ok(
+          membershipRows.some(
+            (row: { root: string; role: string; settable: boolean }) =>
+              row.root === "athyper_runtime" &&
+              row.role === "athyper_bypass_ai" &&
+              row.settable,
+          ),
+        );
+        const mixedRows = JSON.parse(
+          sql(
+            container,
+            database,
+            `BEGIN; CREATE ROLE boundary_bridge NOLOGIN; GRANT athyper_definer_shared TO boundary_bridge WITH SET FALSE, INHERIT TRUE; GRANT boundary_bridge TO athyper_runtime WITH SET TRUE, INHERIT FALSE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; SET LOCAL SESSION AUTHORIZATION athyper_runtime; SET LOCAL ROLE boundary_bridge; DO $assert$ BEGIN IF NOT has_function_privilege(current_user,'shared.current_tenant_id()','EXECUTE') THEN RAISE EXCEPTION 'mixed membership fixture must inherit function-owner privileges'; END IF; END $assert$; RESET SESSION AUTHORIZATION; ROLLBACK;`,
+          ).trim(),
+        );
+        assert.ok(
+          mixedRows.some(
+            (row: {
+              root: string;
+              role: string;
+              inheritable: boolean;
+              settable: boolean;
+            }) =>
+              row.root === "athyper_runtime" &&
+              row.role === "athyper_definer_shared" &&
+              row.inheritable &&
+              !row.settable,
+          ),
+        );
+        const adminRows = JSON.parse(
+          sql(
+            container,
+            database,
+            `BEGIN; GRANT athyper_bypass_ai TO athyper_runtime WITH SET FALSE, INHERIT FALSE, ADMIN TRUE; SELECT json_agg(result) FROM (${boundaryCatalogQueries.memberships}) result; SET LOCAL SESSION AUTHORIZATION athyper_runtime; GRANT athyper_bypass_ai TO athyper_runtime WITH SET TRUE; SET LOCAL ROLE athyper_bypass_ai; RESET SESSION AUTHORIZATION; ROLLBACK;`,
+          ).trim(),
+        );
+        assert.ok(
+          adminRows.some(
+            (row: { root: string; role: string; administrable: boolean }) =>
+              row.root === "athyper_runtime" &&
+              row.role === "athyper_bypass_ai" &&
+              row.administrable,
+          ),
+        );
+      }
+    } finally {
+      if (created) docker("rm", "-f", container);
     }
-  } finally { if (created) docker("rm","-f",container); }
-});
+  },
+);

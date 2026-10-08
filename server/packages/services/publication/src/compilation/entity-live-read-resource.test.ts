@@ -196,6 +196,42 @@ it.each(
       canonical,
     };
     expect(await verifyLocalLiveReadResource(verification)).toEqual(f.resource);
+    // A correctly re-signed envelope cannot bind content from another plane.
+    const wrongContent = {
+      ...f.resource.content,
+      plane: plane === "studio" ? "neon" : "studio",
+    };
+    const wrongResource = {
+      ...f.resource,
+      content: wrongContent,
+      pin: { ...f.resource.pin, hash: hash(wrongContent) },
+    };
+    const wrongUnsigned = {
+      ...unsigned,
+      envelope: { ...unsigned.envelope, payload: wrongResource },
+      manifest: { ...unsigned.manifest, payloadSha256: hash(wrongResource) },
+    };
+    const wrongDocument = {
+      ...wrongUnsigned,
+      signature: sign(
+        null,
+        canonical.canonicalBytes(wrongUnsigned),
+        keys.privateKey,
+      ).toString("base64"),
+    };
+    await expect(
+      verifyLocalLiveReadResource({
+        ...verification,
+        pin: wrongResource.pin,
+        installation: {
+          ...installation,
+          artifactHash: hash(wrongDocument),
+          payloadHash: hash(wrongResource),
+          payload: wrongResource,
+          signedDocument: wrongDocument,
+        },
+      }),
+    ).rejects.toThrow();
     // Driver fixture exercises SQL construction and signature/closure semantics;
     // it does not claim actual PostgreSQL lock or application-role qualification.
     const statements: string[] = [];
@@ -218,7 +254,7 @@ it.each(
             query: async (sql: string) => {
               statements.push(sql);
               return {
-                rows: sql.includes("SELECT h.publication_key")
+                rows: sql.includes("fn_locked_live_read_resources")
                   ? selectedRows
                   : [],
               };
@@ -254,7 +290,9 @@ it.each(
       expect(value).toEqual(f.resource);
       expect(escaped).toThrow();
     });
-    expect(statements.some((s) => s.includes("FOR SHARE OF h,r,p"))).toBe(true);
+    expect(
+      statements.some((s) => s.includes("fn_locked_live_read_resources")),
+    ).toBe(true);
     const work = vi.fn(async () => {});
     selectedRows = [];
     await expect(

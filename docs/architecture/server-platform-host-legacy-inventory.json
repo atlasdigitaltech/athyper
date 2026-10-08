@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 254,
+    "configuration:new": 255,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 404,
+    "operational-scripts:new": 405,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -1200,6 +1200,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "configuration:athyper_live_read_postgres",
+      "category": "configuration",
+      "key": "athyper_live_read_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/entity-live-read-evidence.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_local_preview_root",
       "category": "configuration",
       "key": "athyper_local_preview_root",
@@ -1756,6 +1768,7 @@
       "key": "athyper_test_postgres_image",
       "legacyLocations": [],
       "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/entity-live-read-evidence.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-ai.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-operation.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-root.postgres.test.ts",
@@ -12998,6 +13011,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_live_read_resource_review.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_locked_live_read_resources",
+      "category": "operational-scripts",
+      "key": "20261008_entity_locked_live_read_resources",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_locked_live_read_resources.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

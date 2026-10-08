@@ -1,3 +1,4 @@
+import { createLocalEntityLiveReadEvidence } from "./shared/publication/entity-live-read-evidence.js";
 import { createDeployedComponentQualification } from "./shared/publication/component-qualification.js";
 import { parseEntityAuthoringResource } from "@athyper/server-contract-publication";
 import {
@@ -683,6 +684,10 @@ export interface ServiceRegistrationDependencies {
   readonly entityLiveReadEvidence?: Parameters<
     typeof createEntityServices
   >[0]["liveReadEvidence"];
+  /** Installed publication-backed evidence; mutually exclusive with a custom port. */
+  readonly localEntityLiveRead?: Parameters<
+    typeof createLocalEntityLiveReadEvidence
+  >[0];
   readonly workflowRepository?: WorkflowRepository<RecordTransaction>;
   readonly workflowCommandExecutions?: CommandExecutionStore<
     RecordTransaction,
@@ -4000,12 +4005,17 @@ export function registerServices(
           createStudioRecordCollectionScopeResolver(),
         )
       : undefined;
+    if (dependencies.entityLiveReadEvidence && dependencies.localEntityLiveRead)
+      throw Error("ENTITY_LIVE_READ_COMPOSITION_CONFLICT");
+    const liveReadEvidence = dependencies.localEntityLiveRead
+      ? createLocalEntityLiveReadEvidence(dependencies.localEntityLiveRead)
+      : dependencies.entityLiveReadEvidence;
     const entityServices = capabilityRegistration.register(
       "entity.persistence",
       () =>
         createEntityServices({
           admitDescriptor,
-          liveReadEvidence: dependencies.entityLiveReadEvidence,
+          liveReadEvidence,
           common,
           listMetadata,
           reader: container.platform.compiledEntityReader!,

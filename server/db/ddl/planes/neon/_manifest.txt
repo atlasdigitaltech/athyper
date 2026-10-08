@@ -102,6 +102,7 @@ planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
 common/runtime_meta/13_authoring_resource_projection.sql
+common/runtime_meta/14_live_read_resource_projection.sql
 planes/neon/master/07_functions.sql
 planes/neon/master/33_partner_organization_identity.sql
 planes/neon/master/14_payment_instrument_integrity.sql
@@ -276,8 +277,10 @@ planes/neon/master/36_principal_person_link.sql
 
 planes/neon/authz/28_retire_bp_child_reads.sql
 
-common/shared/98_security_definer_privileges.sql
-common/shared/99_security_definer_hardening.sql
+common/runtime_meta/15_locked_live_read_resources.sql
 
 planes/neon/master/37_partner_child_read_models.sql
 planes/neon/master/38_partner_identity_read_models.sql
+
+common/shared/98_security_definer_privileges.sql
+common/shared/99_security_definer_hardening.sql

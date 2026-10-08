@@ -373,6 +373,12 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)",
+    "owner": "athyper_definer_live_read",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login locked evidence reader; no activation authority or application UPDATE grant."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -603,7 +609,8 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)",
+  "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;

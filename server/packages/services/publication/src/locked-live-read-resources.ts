@@ -34,7 +34,7 @@ interface InstalledRow {
  * portion of the evidence adapter, not caller authorization, provider qualification
  * or discovery of current security. Superseded pins deliberately fail here; a
  * historical installation needs a separately qualified reader.
- * No privileges are granted by this adapter. Missing SELECT/row-lock privileges
+ * No privileges are granted by this adapter. Missing routine EXECUTE privileges
  * fail rather than retrying through a privileged connection. */
 export async function withLockedLocalLiveReadResources<Result>(
   options: {
@@ -64,8 +64,10 @@ export async function withLockedLocalLiveReadResources<Result>(
     !options.transaction.isTransaction ||
     !Number.isSafeInteger(options.maximumResources) ||
     options.maximumResources < 1 ||
+    options.maximumResources > 64 ||
     !Number.isSafeInteger(options.maximumBytes) ||
     options.maximumBytes < 1 ||
+    options.maximumBytes > 4194304 ||
     !bindings.length ||
     bindings.length > options.maximumResources ||
     new Set(bindings.map((b) => b.publicationKey)).size !== bindings.length
@@ -88,19 +90,9 @@ export async function withLockedLocalLiveReadResources<Result>(
   // contradictory local projection. Missing rows cannot produce partial evidence.
   const rows = (
     await sql<InstalledRow>`
-    SELECT h.publication_key,r.source_release_id,r.source_release_no,r.artifact_hash,
-      h.row_version,p.payload_hash,p.payload_json,p.coordinates->'signed_document' AS signed_document
-    FROM runtime_meta.release_activation_head h
-    JOIN runtime_meta.applied_release r ON r.id=h.applied_release_id
-      AND r.publication_key=h.publication_key AND r.source_release_no=h.source_release_no
-      AND r.artifact_hash=h.artifact_hash
-    JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=r.id
-    WHERE h.publication_key IN (${sql.join(bindings.map((b) => sql`${b.publicationKey}`))})
-      AND r.status='active' AND p.tenant_id=${options.tenantId}::uuid
-      AND p.artifact_kind IN ('entity_security_manifest','entity_storage_authority')
-      AND p.coordinates->>'plane_code'=${options.plane}
-      AND octet_length(p.payload_json::text)+octet_length(p.coordinates::text)<=${options.maximumBytes}
-    ORDER BY h.publication_key FOR SHARE OF h,r,p
+    SELECT * FROM runtime_meta.fn_locked_live_read_resources(
+      ${bindings.map((b) => b.publicationKey)}::text[],${options.tenantId}::uuid,
+      ${options.plane},${options.maximumBytes})
   `.execute(options.transaction)
   ).rows;
   if (rows.length !== bindings.length) fail();

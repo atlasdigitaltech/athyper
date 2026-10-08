@@ -223,7 +223,8 @@
     "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
     "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
     "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-    "trustiam.lock_identity_replay_projection(uuid, uuid)"
+    "trustiam.lock_identity_replay_projection(uuid, uuid)",
+    "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)"
   ],
   "ordinaryOwners": {
     "ai": "athyper_definer_ai",
@@ -598,61 +599,47 @@
       "owner": "athyper_definer_product_publication",
       "rowSecurityOff": false,
       "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+    },
+    {
+      "signature": "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)",
+      "owner": "athyper_definer_live_read",
+      "rowSecurityOff": false,
+      "reason": "Dedicated non-login locked evidence reader; no activation authority or application UPDATE grant."
     }
   ],
   "roles": [
     {
       "name": "athyper_bypass_ai",
       "bypassRls": true,
-      "schemas": [
-        "ai",
-        "document"
-      ],
+      "schemas": ["ai", "document"],
       "tables": [
         {
           "relation": "ai.atlas_thread",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.conversation",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.conversation_participant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
-      "functions": [
-        "ai.fn_atlas_conversation_access(uuid, uuid, boolean)"
-      ]
+      "functions": ["ai.fn_atlas_conversation_access(uuid, uuid, boolean)"]
     },
     {
       "name": "athyper_bypass_audit",
       "bypassRls": true,
-      "schemas": [
-        "audit",
-        "master"
-      ],
+      "schemas": ["audit", "master"],
       "tables": [
         {
           "relation": "audit.audit_log",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.audit_event_contract",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": []
@@ -660,27 +647,19 @@
     {
       "name": "athyper_bypass_authz",
       "bypassRls": true,
-      "schemas": [
-        "authz"
-      ],
+      "schemas": ["authz"],
       "tables": [
         {
           "relation": "authz.application_projection",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.projection_provider",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.projection_scope",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": []
@@ -688,23 +667,15 @@
     {
       "name": "athyper_bypass_control",
       "bypassRls": true,
-      "schemas": [
-        "control"
-      ],
+      "schemas": ["control"],
       "tables": [
         {
           "relation": "control.connector_health_job",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "control.cron_schedule",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         }
       ],
       "functions": []
@@ -712,53 +683,35 @@
     {
       "name": "athyper_bypass_document",
       "bypassRls": true,
-      "schemas": [
-        "document",
-        "governance",
-        "master"
-      ],
+      "schemas": ["document", "governance", "master"],
       "tables": [
         {
           "relation": "document.entity_case",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.supplier_activation_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.work_item",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_attempt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_document_job",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.tenant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": []
@@ -766,75 +719,47 @@
     {
       "name": "athyper_bypass_event",
       "bypassRls": true,
-      "schemas": [
-        "control",
-        "event",
-        "runtime_meta",
-        "shared"
-      ],
+      "schemas": ["control", "event", "runtime_meta", "shared"],
       "tables": [
         {
           "relation": "control.notification_routing_rule",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.authorization_invalidation_outbox",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "event.digest_staging",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.notification_delivery",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.notification_delivery_claim",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.notification_message",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.notification_outbox_state",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.push_subscription",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "runtime_meta.authorization_epoch",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         }
       ],
       "functions": [
@@ -845,17 +770,11 @@
     {
       "name": "athyper_bypass_master",
       "bypassRls": true,
-      "schemas": [
-        "master",
-        "shared"
-      ],
+      "schemas": ["master", "shared"],
       "tables": [
         {
           "relation": "master.reference_choice_recent",
-          "privileges": [
-            "DELETE",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "SELECT"]
         }
       ],
       "functions": [
@@ -866,76 +785,51 @@
     {
       "name": "athyper_bypass_mesh",
       "bypassRls": true,
-      "schemas": [
-        "mesh",
-        "shared"
-      ],
+      "schemas": ["mesh", "shared"],
       "tables": [
         {
           "relation": "mesh.catalog",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_audience",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_availability",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_item",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_item_classification",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_item_identifier",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_item_uom",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.catalog_price",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.network_account",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.network_account_profile_publication",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.network_relationship",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -949,16 +843,11 @@
     {
       "name": "athyper_bypass_onboarding",
       "bypassRls": true,
-      "schemas": [
-        "onboarding",
-        "public"
-      ],
+      "schemas": ["onboarding", "public"],
       "tables": [
         {
           "relation": "onboarding.onboarding_case_guest_access",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -970,36 +859,23 @@
     {
       "name": "athyper_bypass_ops",
       "bypassRls": true,
-      "schemas": [
-        "ops"
-      ],
+      "schemas": ["ops"],
       "tables": [
         {
           "relation": "ops.record_export_request",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "ops.record_import_chunk",
-          "privileges": [
-            "DELETE",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "SELECT"]
         },
         {
           "relation": "ops.record_import_session",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "ops.record_transfer_retention_policy",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": []
@@ -1007,9 +883,7 @@
     {
       "name": "athyper_definer_ai",
       "bypassRls": false,
-      "schemas": [
-        "ai"
-      ],
+      "schemas": ["ai"],
       "tables": [],
       "functions": [],
       "policies": []
@@ -1017,56 +891,35 @@
     {
       "name": "athyper_definer_audit",
       "bypassRls": false,
-      "schemas": [
-        "audit",
-        "master",
-        "public",
-        "shared"
-      ],
+      "schemas": ["audit", "master", "public", "shared"],
       "tables": [
         {
           "relation": "audit.audit_log",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "audit.authorization_decision_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "audit.hash_anchor",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "audit.security_event",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.audit_event_contract",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.audit_reason_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -1152,121 +1005,75 @@
     {
       "name": "athyper_definer_authz",
       "bypassRls": false,
-      "schemas": [
-        "authz",
-        "master",
-        "shared"
-      ],
+      "schemas": ["authz", "master", "shared"],
       "tables": [
         {
           "relation": "authz.delegation",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "authz.delegation_grant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.deny_rule",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.group_member",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "authz.group_role",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "authz.override",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "authz.permission",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.permission_scope_kind",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.plane_membership",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "authz.principal_group",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.record_acl",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "authz.role",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.role_permission",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.scope_target",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.trusted_device",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.tenant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -1565,324 +1372,195 @@
       "tables": [
         {
           "relation": "control.business_partner_block",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.business_partner_decision_scope",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.business_partner_mutation_evidence",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.business_partner_qualification",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.company_fiscal_calendar_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.customer_account_designation",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.customer_credit_review",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.customer_lifecycle_event",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.cycle_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.fiscal_calendar_config",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.fiscal_calendar_period_rule",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.lookup_domain",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "control.lookup_revision",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.lookup_tenant_revision",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.lookup_value",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.lookup_value_reference",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.module",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.owner_type",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.owner_type_purpose",
-          "privileges": [
-            "DELETE",
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "INSERT", "SELECT"]
         },
         {
           "relation": "control.parameter_definition",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.subscription_plan",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "control.subscription_plan_module",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.subscription_plan_usage_limit",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.supplier_preference_designation",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "control.usage_metric_catalog",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.command_execution",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "ledger.book_period_status",
-          "privileges": [
-            "DELETE",
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "INSERT", "SELECT"]
         },
         {
           "relation": "master.address_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.business_partner_commodity_classification",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner_operating_organization_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner_organization_identity",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner_relationship",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.commodity_category",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.company_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.company_code_book_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.contact_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.customer",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.fiscal_period",
-          "privileges": [
-            "DELETE",
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "INSERT", "SELECT"]
         },
         {
           "relation": "master.operating_organization",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization_company_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.org_unit",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.party_risk_assessment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.supplier",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.tax_jurisdiction",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.subscription_plan_entitlement",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         }
       ],
       "functions": [
@@ -2293,382 +1971,235 @@
       "tables": [
         {
           "relation": "authz.deny_rule",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.group_member",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.group_role",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.permission",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.permission_scope_kind",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.plane_membership",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.principal_group",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.role",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.role_permission",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "authz.scope_target",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.business_partner_mutation_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.attachment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.attachment_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.business_partner_duplicate_resolution",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.comment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.comment_revision",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.contingent_work_order",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.entity_case",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "document.entity_case_command_evidence",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.entity_case_materialization",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.entity_case_validation",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.process_case_contributor",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.process_task_assignment_history",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.process_task_information",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "document.process_task_interaction_receipt",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.statement_of_work",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.supplier_activation_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.work_item",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "document.worker_engagement",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.worker_operational_placement",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "document.workflow_request",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.workflow_stage",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.workforce_iam_projection",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.workforce_requisition",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.workforce_requisition_supplier",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "event.command_execution",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "governance.cycle_deviation",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.cycle_run",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "governance.cycle_subject",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "governance.cycle_task",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "governance.cycle_task_dependency",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_attempt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_document_job",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "governance.process_selection_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.company_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.employee",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.employment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.external_worker",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization_company_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.person",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "runtime_meta.entity_contract",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_case_snapshot_lineage",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot_identity",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -3126,40 +2657,23 @@
     {
       "name": "athyper_definer_event",
       "bypassRls": false,
-      "schemas": [
-        "event",
-        "master",
-        "public",
-        "shared"
-      ],
+      "schemas": ["event", "master", "public", "shared"],
       "tables": [
         {
           "relation": "event.authorization_invalidation_outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "event.notification_delivery",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "DELETE",
-            "SELECT"
-          ]
+          "privileges": ["DELETE", "SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -3230,15 +2744,15 @@
           "relation": "event.authorization_invalidation_outbox",
           "command": "ALL",
           "reason": "Preserve administrative global catalog invalidation through the definer without admitting global rows for tenant application sessions.",
-          "using": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))",
-          "check": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))"
+          "using": "((scope_kind = 'global'::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))",
+          "check": "((scope_kind = 'global'::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))"
         },
         {
           "relation": "event.authorization_invalidation_outbox",
           "command": "ALL",
           "reason": "Published global authorization projections emit invalidation within their authorized mutation trigger; projection appliers cannot directly emit arbitrary global invalidations.",
-          "using": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = 'authz' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))",
-          "check": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = 'authz' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))"
+          "using": "((scope_kind = 'global'::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND (authority_schema = 'authz'::text) AND (pg_trigger_depth() > 0) AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))",
+          "check": "((scope_kind = 'global'::text) AND (tenant_id IS NULL) AND (plane_code IS NULL) AND (authority_schema = 'authz'::text) AND (pg_trigger_depth() > 0) AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))"
         }
       ]
     },
@@ -3256,46 +2770,31 @@
       "tables": [
         {
           "relation": "control.cycle_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.entity_case",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.cycle_run",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.cycle_subject",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "governance.process_attempt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_selection_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -3338,529 +2837,327 @@
       "tables": [
         {
           "relation": "authz.scope_target",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.business_partner_block",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.business_partner_mutation_evidence",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.customer_lifecycle_event",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.lookup_domain",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.lookup_value",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.mesh_business_partner_profile_projection",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.owner_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.owner_type_purpose",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.supplier_activation_policy",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.attachment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.attachment_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.attachment_series",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.entity_case",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "document.entity_case_command_evidence",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.entity_case_materialization",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "document.mesh_profile_change_case",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "document.mesh_profile_change_resolution",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.command_execution",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "governance.cycle_run",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.cycle_subject",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_attempt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "governance.process_document_job",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.accounting_profile",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.address",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.address_link",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.audit_reason_code",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.bank_account",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.business_partner_alias",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_commodity_classification",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.business_partner_governance_relation",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_identifier",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_identity_current",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.business_partner_industry_classification",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_operating_organization_assignment",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_organization_identity",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.business_partner_relationship",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.business_partner_tax_registration",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.certification",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.certification_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.commodity_category",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.company_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.company_code_customer_profile",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.company_code_supplier_profile",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.condition_type",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.contact_email",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.contact_link",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.contact_person",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "master.contact_person_role",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.contact_phone",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.customer",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.dimension_set",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.dimension_set_item",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.dimension_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.dimension_value",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization_capability",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.operating_organization_company_assignment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.organization_amendment",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.payment_instrument",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.payment_instrument_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.payment_term",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "master.payment_term_clause",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.payment_term_discount_tier",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal_identity_binding",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.supplier",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.tax_jurisdiction",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.tax_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.tenant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "runtime_meta.entity_contract",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.commodity_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.country",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.industry_code",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.state_region",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.timezone",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_case_snapshot_lineage",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.mesh_business_partner_profile_received",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -4450,187 +3747,111 @@
       "tables": [
         {
           "relation": "authz.scope_target",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.network_document_type",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "event.outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "master.tenant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.bank_account",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.bank_account_disclosure",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.bank_account_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.bank_account_retrieval_evidence",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.bank_disclosure_purpose",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "mesh.bank_provisional_reference",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.canonical_party_correlation_case",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.catalog",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.catalog_revision",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.document_envelope",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.network_account",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.network_command_evidence",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.network_discovery_receipt",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.network_lifecycle_event",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.network_relationship",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.network_relationship_capability",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "mesh.network_relationship_identity",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "mesh.registration_exchange",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "runtime_meta.entity_contract",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.bank_branch",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.bank_identifier",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.v_bank_branch",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "shared.v_bank_directory",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -4755,77 +3976,51 @@
       "tables": [
         {
           "relation": "control.module",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.tenant",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_change_set",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_release",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.publication_recovery_archive",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "metadata.publication_recovery_revocation",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.entity_release_link",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_contract_revision",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_draft_save",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_release_artifact",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -4878,45 +4073,27 @@
     {
       "name": "athyper_definer_onboarding",
       "bypassRls": false,
-      "schemas": [
-        "onboarding",
-        "shared",
-        "master"
-      ],
+      "schemas": ["onboarding", "shared", "master"],
       "tables": [
         {
           "relation": "onboarding.onboarding_case",
-          "privileges": [
-            "SELECT",
-            "INSERT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "INSERT", "UPDATE"]
         },
         {
           "relation": "onboarding.onboarding_case_target",
-          "privileges": [
-            "SELECT",
-            "INSERT"
-          ]
+          "privileges": ["SELECT", "INSERT"]
         },
         {
           "relation": "onboarding.onboarding_case_revision",
-          "privileges": [
-            "SELECT",
-            "INSERT"
-          ]
+          "privileges": ["SELECT", "INSERT"]
         },
         {
           "relation": "master.canonical_party",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -4932,9 +4109,7 @@
     {
       "name": "athyper_definer_ops",
       "bypassRls": false,
-      "schemas": [
-        "ops"
-      ],
+      "schemas": ["ops"],
       "tables": [],
       "functions": [],
       "policies": []
@@ -4955,138 +4130,83 @@
       "tables": [
         {
           "relation": "event.outbox",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "metadata.entity",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_baseline_import",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_baseline_import_revocation",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_change_set",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "metadata.entity_release",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.artifact",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "publication.deployment",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "publication.deployment_acknowledgement",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.deployment_event",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.entity_authorization_successor_link",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.entity_authorization_successor_payload",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.entity_baseline_release_link",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.entity_release_link",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.entity_runtime_restoration_link",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "publication.release",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "snapshot.entity_contract_revision",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_release_artifact",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "control.policy_definition",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "control.policy_rule",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         }
       ],
       "functions": [
@@ -5225,84 +4345,58 @@
           "relation": "control.policy_definition",
           "command": "SELECT",
           "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-          "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')"
+          "using": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = 'metadata.publication'::text))"
         },
         {
           "relation": "control.policy_definition",
           "command": "UPDATE",
           "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-          "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')",
-          "check": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')"
+          "using": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = 'metadata.publication'::text))",
+          "check": "((tenant_id = shared.current_tenant_id_soft()) AND (entity_type = 'metadata.publication'::text))"
         },
         {
           "relation": "control.policy_rule",
           "command": "SELECT",
           "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-          "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))"
+          "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = 'metadata.publication'::text))))"
         },
         {
           "relation": "control.policy_rule",
           "command": "UPDATE",
           "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
-          "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))",
-          "check": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))"
+          "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = 'metadata.publication'::text))))",
+          "check": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()) AND (d.entity_type = 'metadata.publication'::text))))"
         }
       ]
     },
     {
       "name": "athyper_definer_runtime_meta",
       "bypassRls": false,
-      "schemas": [
-        "authz",
-        "runtime_meta",
-        "shared"
-      ],
+      "schemas": ["authz", "runtime_meta", "shared"],
       "tables": [
         {
           "relation": "runtime_meta.applied_release",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "runtime_meta.applied_release_payload",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "runtime_meta.entity_contract",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "runtime_meta.entity_descriptor",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         },
         {
           "relation": "runtime_meta.release_activation_event",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "runtime_meta.release_activation_head",
-          "privileges": [
-            "INSERT",
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["INSERT", "SELECT", "UPDATE"]
         }
       ],
       "functions": [
@@ -5408,9 +4502,7 @@
     {
       "name": "athyper_definer_shared",
       "bypassRls": false,
-      "schemas": [
-        "shared"
-      ],
+      "schemas": ["shared"],
       "tables": [],
       "functions": [],
       "policies": []
@@ -5418,33 +4510,19 @@
     {
       "name": "athyper_definer_snapshot",
       "bypassRls": false,
-      "schemas": [
-        "master",
-        "public",
-        "shared",
-        "snapshot"
-      ],
+      "schemas": ["master", "public", "shared", "snapshot"],
       "tables": [
         {
           "relation": "snapshot.compiled_artifact",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         },
         {
           "relation": "snapshot.entity_snapshot_identity",
-          "privileges": [
-            "INSERT",
-            "SELECT"
-          ]
+          "privileges": ["INSERT", "SELECT"]
         }
       ],
       "functions": [
@@ -5502,22 +4580,15 @@
     {
       "name": "athyper_definer_trustiam",
       "bypassRls": false,
-      "schemas": [
-        "shared",
-        "trustiam"
-      ],
+      "schemas": ["shared", "trustiam"],
       "tables": [
         {
           "relation": "trustiam.identity_projection",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "trustiam.identity_saga_attempt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -5529,22 +4600,15 @@
     {
       "name": "athyper_identity_resolver_owner",
       "bypassRls": false,
-      "schemas": [
-        "master",
-        "shared"
-      ],
+      "schemas": ["master", "shared"],
       "tables": [
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal_identity_binding",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -5573,120 +4637,75 @@
       "tables": [
         {
           "relation": "master.principal",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "master.principal_identity_binding",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "control.policy_definition",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "control.policy_rule",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "metadata.entity",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "metadata.entity_change_set",
-          "privileges": [
-            "SELECT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "UPDATE"]
         },
         {
           "relation": "metadata.entity_release",
-          "privileges": [
-            "SELECT",
-            "INSERT",
-            "UPDATE"
-          ]
+          "privileges": ["SELECT", "INSERT", "UPDATE"]
         },
         {
           "relation": "metadata.entity_product_review_receipt",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_draft_save",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "snapshot.entity_contract_revision",
-          "privileges": [
-            "SELECT",
-            "INSERT"
-          ]
+          "privileges": ["SELECT", "INSERT"]
         },
         {
           "relation": "snapshot.entity_release_artifact",
-          "privileges": [
-            "SELECT",
-            "INSERT"
-          ]
+          "privileges": ["SELECT", "INSERT"]
         },
         {
           "relation": "publication.release",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.entity_release_link",
-          "privileges": [
-            "SELECT",
-            "INSERT"
-          ]
+          "privileges": ["SELECT", "INSERT"]
         },
         {
           "relation": "publication.artifact",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.artifact_compilation",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "ops.job_execution",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.deployment",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         },
         {
           "relation": "publication.deployment_acknowledgement",
-          "privileges": [
-            "SELECT"
-          ]
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -5872,6 +4891,67 @@
           "command": "SELECT",
           "using": "(EXISTS ( SELECT 1\n   FROM ((publication.deployment d\n     JOIN publication.artifact a ON ((a.id = d.artifact_id)))\n     JOIN publication.release r ON ((r.id = a.publication_release_id)))\n  WHERE ((d.id = deployment_acknowledgement.deployment_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
           "reason": "Read only current-authority signed deployment coordinates and acknowledgements for exact recovery admission."
+        }
+      ]
+    },
+    {
+      "name": "athyper_definer_live_read",
+      "bypassRls": false,
+      "schemas": ["runtime_meta", "shared"],
+      "tables": [
+        {
+          "relation": "runtime_meta.applied_release",
+          "privileges": ["SELECT", "UPDATE"]
+        },
+        {
+          "relation": "runtime_meta.release_activation_head",
+          "privileges": ["SELECT", "UPDATE"]
+        },
+        {
+          "relation": "runtime_meta.applied_release_payload",
+          "privileges": ["SELECT", "UPDATE"]
+        }
+      ],
+      "functions": ["shared.current_tenant_id_soft()"],
+      "policies": [
+        {
+          "relation": "runtime_meta.applied_release",
+          "command": "SELECT",
+          "using": "pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text)",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+        },
+        {
+          "relation": "runtime_meta.applied_release",
+          "command": "UPDATE",
+          "using": "pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text)",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+          "check": "false"
+        },
+        {
+          "relation": "runtime_meta.release_activation_head",
+          "command": "SELECT",
+          "using": "pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text)",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+        },
+        {
+          "relation": "runtime_meta.release_activation_head",
+          "command": "UPDATE",
+          "using": "pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text)",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+          "check": "false"
+        },
+        {
+          "relation": "runtime_meta.applied_release_payload",
+          "command": "SELECT",
+          "using": "(pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text) AND (tenant_id = shared.current_tenant_id_soft()) AND (artifact_kind = ANY (ARRAY['entity_security_manifest'::text, 'entity_storage_authority'::text])))",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden."
+        },
+        {
+          "relation": "runtime_meta.applied_release_payload",
+          "command": "UPDATE",
+          "using": "(pg_has_role(SESSION_USER, 'athyper_runtime'::name, 'MEMBER'::text) AND (tenant_id = shared.current_tenant_id_soft()) AND (artifact_kind = ANY (ARRAY['entity_security_manifest'::text, 'entity_storage_authority'::text])))",
+          "reason": "Allow bounded row locking for runtime evidence; UPDATE row images are forbidden.",
+          "check": "false"
         }
       ]
     }

@@ -189,6 +189,58 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Live-read composition and restricted lock reader — 8 October
+
+`createLocalEntityLiveReadEvidence` now connects the records-service evidence port to the
+publication service's exact signed local-resource reader. Shared service composition
+accepts either this installed-resource composition or the existing custom evidence port;
+competing configurations reject. The adapter binds the authenticated caller and original
+transaction, resolves current security explicitly, verifies capability content hashes,
+and closes escaped evidence after the protected read succeeds or fails. Source-descriptor,
+provider and permission qualification still require their trusted owning implementations;
+missing installation is never replaced with draft evidence. Masks remain unsupported by
+this bounded adapter.
+
+Actual DEV inspection found `athyper_runtime` could SELECT activation tables but could
+not acquire the previous direct `FOR SHARE` query. The publication reader now invokes
+`runtime_meta.fn_locked_live_read_resources` instead. The new dedicated
+`athyper_definer_live_read` is non-login, non-superuser and RLS-bound. Its UPDATE policies
+permit scoped locking but reject new row images; the runtime role receives routine
+EXECUTE only. The routine limits tenant/plane/principal scope, resource kinds, key count
+and response size. No Entity permission, MFA control or activation authority changed.
+
+Studio DEV migration `20261008_entity_locked_live_read_resources.sql` is installed with
+SHA-256 `09eb32054ee2ca679573819283442e61fae44b6ad0a2e6f52ad50888cbef9bc8`.
+The pre-install dump, rollback rehearsal, installation, replay and exact role checks are
+under `component-deployment-20261008-v3/` (`studio-before-live-read-lock.dump` and
+`live-read-lock-*.json`). Authorization rows and activation heads were unchanged. The
+actual runtime-role probe used SET SESSION AUTHORIZATION, returned no invented evidence
+for an absent resource, and retained `UPDATE=false` / routine `EXECUTE=true`.
+
+Disposable PostgreSQL proved a positive tenant-scoped resource read, denied direct locking,
+wrong/missing scope rejection, superseded-resource exclusion and an activation update
+blocked until the reader transaction released its locks. Host tests cover caller/transaction
+changes and escaped evidence; signed publication tests reject content from a different
+plane even with a valid new signature. These are implementation/database proofs, not
+human resource approval or deployed positive F6/F8/F9 evidence.
+
+Validation: 14 host composition tests, one opt-in PostgreSQL lock/privilege test,
+seven signed-resource tests, 20 effective-security tests, 24 database security-boundary
+tests and 26 migration-runner tests passed. Host typecheck, migration layout,
+security-definer generation checks and formatting of this change pass. Fresh-database
+manifests now include the existing live-read projection definition before the reader.
+The boundary suite preserves rejection by the immutable older signature inventory and
+checks repeatability of the current hardening contract; PostgreSQL-rendered policy
+expressions remain subject to exact comparison rather than a weakened normalizer.
+
+**Remaining:** complete bootstrap compiler/schema/initializer composition, real native
+proposal graphs and command application; source-semantic security/storage qualification
+and installed owner/provider/catalogue bindings; then independent Entity review,
+publication/activation and authorized/denied live requests. DEV still has zero
+security/storage authoring-resource releases. Country/State Region remain revision 4;
+no replacement draft, cleanup, new Entity publication or activation occurred. The new
+operational migration was applied to Studio only; other plane upgrades are not claimed.
+
 ### Reviewed components activated and bootstrap assembly — 8 October
 
 This checkpoint supersedes the expired-session/unsubmitted status below. The four v3

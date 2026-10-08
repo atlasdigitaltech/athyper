@@ -121,6 +121,7 @@ export async function verifyLocalLiveReadResource(options: {
       ? content.scope.tenantId
       : content.tenantId;
   if (
+    content.plane !== plane ||
     scopedTenant !== tenantId ||
     (content.source.tenantId !== null && content.source.tenantId !== tenantId)
   )
