@@ -24,7 +24,18 @@ const script = buildSync({
       scope:{status:'ready',labels:[{key:'access',label:'Scope',value:'All permitted tenant records'}],fingerprint:'c'.repeat(64)},
       limits:{defaultPageSize:10,allowedPageSizes:[10,25],maxSortLevels:2,countMode:'exact'}});
     let descriptor, rows, laneKey;
-    if(cfg.entity==='requests'){
+    if(cfg.entity==='country'){
+      // Country-shaped rehearsal: the shape Country publishes after the cleanup.
+      laneKey=()=>'status';
+      const fields=[field('code','ISO alpha-2','string'),field('title','Name','string',{semanticRole:'title'}),
+        field('status','Status','enum',{semanticRole:'status',statusTones:{active:'success',deprecated:'warning'}}),
+        field('subregion','Subregion','string'),field('code3','ISO alpha-3','string'),field('calling_code','Calling code','string')];
+      descriptor=base('country','Country','Countries',fields,['code','title','status','subregion','code3','calling_code'],{supportedModes:['table','compact','board'],
+        cardContent:{fields:[{field:'subregion'},{field:'code3'},{field:'calling_code'}]},
+        board:{laneFields:[{field:'status',label:'Status',noValueLane:false,lanes:[lane('active','Active',['active'],'success'),lane('deprecated','Deprecated',['deprecated'],'warning',{terminal:true})]}]}});
+      rows=[['AF','Afghanistan','active','Southern Asia','AFG','93'],['AL','Albania','active','Southern Europe','ALB','355'],['AQ','Antarctica','deprecated','—','ATA','672'],['MY','Malaysia','active','South-eastern Asia','MYS','60']]
+        .map(([code,title,status,subregion,code3,calling_code],i)=>({id:uuid(i),values:{code,title,status,subregion,code3,calling_code}}));
+    } else if(cfg.entity==='requests'){
       laneKey=()=>cfg.lane??'priority';
       const fields=[field('code','Request','string'),field('title','Summary','string',{semanticRole:'title'}),field('priority','Priority','enum'),field('category','Category','enum'),field('requester','Requester','string')];
       descriptor=base('asset_request','Asset request','Asset requests',fields,['code','title','priority','category','requester'],{supportedModes:['table','compact','board'],
@@ -68,7 +79,7 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { entity?: "work" | "requests"; defaultMode?: string; unmapped?: boolean; unavailable?: boolean; collapseDone?: boolean };
+type Fixture = { entity?: "work" | "requests" | "country"; defaultMode?: string; unmapped?: boolean; unavailable?: boolean; collapseDone?: boolean };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 // The shell main padding hosts the list header rule that bleeds into it.
@@ -184,4 +195,17 @@ test("a saved lane field that is no longer published falls back with a notice", 
   await mount(page, 1440, { entity: "requests" }, "?view=board&lane=retired_field");
   await expect(page.getByText("The saved lane field isn't available to you, so the board uses the first available one.")).toBeVisible();
   await expect(lane(page, /^Low, 1 record$/)).toBeVisible();
+});
+
+test("Country-shaped rehearsal: a required status gives two lanes, no No value lane, and card content", async ({ page }) => {
+  await mount(page, 1440, { entity: "country", defaultMode: "board" });
+  await expect(lane(page, /^Active, 3 records$/)).toBeVisible();
+  await expect(lane(page, /^Deprecated, 1 record$/).getByText("Final", { exact: true })).toBeVisible();
+  await expect(page.locator(".a-entity-board__lane")).toHaveCount(2);
+  await expect(lane(page, /^No value/)).toHaveCount(0);
+  const card = lane(page, /^Active/).locator(".a-entity-list__card").first();
+  await expect(card.locator("dt")).toHaveText(["Subregion", "ISO alpha-3", "Calling code"]);
+  await expect(card.getByText("Status", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Records by Status" }).getByRole("listitem")).toHaveText(["Active 3", "Deprecated 1"]);
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
 });
