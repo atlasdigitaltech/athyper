@@ -189,6 +189,35 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Native component evidence grant installed — 8 October
+
+`20261008_entity_product_component_resource_read.sql` is installed in DEV. Exact source
+SHA-256: `2ba4fcb6e24f5455e64869ef7c8750e52598cc88fc245d910805157271fcf46a`.
+The existing migration runner rehearsed rollback, applied it once and verified ledger
+replay. Authorization rows and activation heads were unchanged. Receipts are under
+`~/.athyper/instances/dev/workspace/component-deployment-20261008-v3/`:
+`native-component-read-rehearsal.json`, `native-component-read-installation.json`,
+`native-component-read-replay.json` and `native-component-read-role-check.json`.
+
+The application role has EXECUTE on the admitted exact-component reader, no EXECUTE on
+the catalogue installer and no SELECT on `publication.release`. A read without command
+admission rejects `COMPONENT_RESOURCE_ADMISSION_REQUIRED`. These actual-role checks used
+SET SESSION AUTHORIZATION and do not establish authenticated positive bootstrap.
+
+`createNativeComponentEvidenceReader` reuses the same signed-artifact/current-deployment
+verifier as installation and returns the exact component contract/runtime key. It does
+not grant host admission or install rows. PostgreSQL tests use the canonical routines
+and fixture admission to cover positive reads, missing/wrong admission, tenant mismatch,
+response limits and denied direct ledger/installer access. Existing installation tests
+still verify immutable replay and rollback. Nine host verification tests, the PostgreSQL
+rehearsal and 26 migration-runner tests passed; host typecheck and migration layout passed.
+
+Both human sessions were expired when rechecked. Four v3 candidates remain prepared,
+not submitted or approved. Refreshed Admin authentication has been requested; separate
+Owner review remains required. No replacement drafts, Entity publication, activation,
+reset or cutover occurred. Complete bootstrap resource assembly and deployed F6/F8/F9
+remain unfinished; this migration closes the component-evidence read-grant dependency.
+
 ### Detail deployment and native proposal composition — 8 October
 
 Studio now serves `component-deployment-20261008-v3/bundle` from the private DEV workspace.

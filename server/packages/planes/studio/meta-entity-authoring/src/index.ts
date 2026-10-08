@@ -196,3 +196,8 @@ export {
   installNativeComponentCatalogue,
   type UiComponentInstallationPolicy,
 } from "./native-component-installation.js";
+
+export type {
+  InstalledComponentEvidence,
+  NativeComponentScope,
+} from "./native-component-resources.js";

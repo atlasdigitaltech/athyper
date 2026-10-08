@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  productComponentResourceReadMigrationName,
   componentResourceReviewMigrationName,
   componentCatalogueInstallationMigrationName,
   productComponentValidationReadMigrationName,
@@ -867,6 +868,48 @@ test("component installation grants only reviewed active-source routines", () =>
       digest,
       true,
       componentCatalogueInstallationMigrationName,
+    ),
+    /COMMIT;/,
+  );
+});
+
+test("component evidence preparation remains command-scoped and grants only routine execution", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/55_product_component_resource_read.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        productComponentResourceReadMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  assert.match(canonical, /admitted\(p_target\) IS NOT TRUE/);
+  assert.match(canonical, /publication.read_active_ui_component\(applied\)/);
+  assert.match(canonical, /FOR SHARE OF c,h,p/);
+  assert.doesNotMatch(canonical, /GRANT (?:SELECT|INSERT|UPDATE|DELETE|ALL)/);
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      productComponentResourceReadMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      productComponentResourceReadMigrationName,
     ),
     /COMMIT;/,
   );

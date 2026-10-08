@@ -200,6 +200,30 @@
       "syntaxDiagnostics": []
     },
     {
+      "file": "src/composition/control-plane/native-component-evidence.ts",
+      "lines": 87,
+      "imports": [
+        {
+          "specifier": "kysely",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-plane-studio-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "../shared/publication/active-component-source.js",
+          "typeOnly": false,
+          "missing": false
+        }
+      ],
+      "registrations": [],
+      "identifiers": [],
+      "syntaxDiagnostics": []
+    },
+    {
       "file": "src/composition/control-plane/product-command-governance.ts",
       "lines": 110,
       "imports": [
@@ -5822,6 +5846,30 @@
       "syntaxDiagnostics": []
     },
     {
+      "file": "src/composition/shared/publication/active-component-source.ts",
+      "lines": 49,
+      "imports": [
+        {
+          "specifier": "@athyper/server-contract-meta-entity-authoring",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-service-publication",
+          "typeOnly": false,
+          "missing": false
+        },
+        {
+          "specifier": "@athyper/server-contract-publication",
+          "typeOnly": true,
+          "missing": false
+        }
+      ],
+      "registrations": [],
+      "identifiers": [],
+      "syntaxDiagnostics": []
+    },
+    {
       "file": "src/composition/shared/publication/apply-identity.ts",
       "lines": 38,
       "imports": [
@@ -6162,7 +6210,7 @@
     },
     {
       "file": "src/composition/shared/publication/component-installation.ts",
-      "lines": 83,
+      "lines": 60,
       "imports": [
         {
           "specifier": "kysely",
@@ -6170,7 +6218,7 @@
           "missing": false
         },
         {
-          "specifier": "@athyper/server-contract-meta-entity-authoring",
+          "specifier": "./active-component-source.js",
           "typeOnly": false,
           "missing": false
         },

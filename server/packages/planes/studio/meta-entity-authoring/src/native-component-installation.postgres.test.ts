@@ -133,6 +133,57 @@ it.skipIf(process.env.ATHYPER_COMPONENT_INSTALLATION_POSTGRES !== "1")(
             "ROLLBACK;",
         ),
       ).toThrow();
+      // Exercise the application reader independently of publication privileges.
+      // Admission is a fixture here; actual transport is tested by product-command tests.
+      const target = randomUUID();
+      query(`CREATE SCHEMA entity_command_private;
+        CREATE ROLE athyper_product_command_app NOLOGIN;CREATE ROLE native_component_client LOGIN;
+        GRANT athyper_product_command_app TO native_component_client;
+        GRANT USAGE ON SCHEMA entity_command_private TO athyper_product_command_app;
+        CREATE FUNCTION entity_command_private.admitted(p_target uuid) RETURNS boolean LANGUAGE sql AS $$
+          SELECT p_target::text=current_setting('fixture.admitted_target',true) $$;`);
+      query(read("55_product_component_resource_read.sql"));
+      const componentRead = `SELECT payload_hash FROM entity_command_private.read_component_resource('${target}','${source.declaration.id}','${hash}','${hash}',4194304);`;
+      const appSession = `SET SESSION AUTHORIZATION native_component_client;BEGIN;SET LOCAL app.current_tenant_id='${tenant}';`;
+      expect(() => query(appSession + componentRead + "ROLLBACK;")).toThrow();
+      expect(
+        query(
+          appSession +
+            `SET LOCAL fixture.admitted_target='${target}';` +
+            componentRead +
+            "ROLLBACK;",
+        ),
+      ).toContain(hash);
+      expect(() =>
+        query(
+          appSession +
+            `SET LOCAL fixture.admitted_target='${target}';` +
+            componentRead.replace("4194304", "1") +
+            "ROLLBACK;",
+        ),
+      ).toThrow();
+      expect(() =>
+        query(
+          appSession +
+            `SET LOCAL fixture.admitted_target='${randomUUID()}';` +
+            componentRead +
+            "ROLLBACK;",
+        ),
+      ).toThrow();
+      expect(() =>
+        query(
+          appSession +
+            `SET LOCAL fixture.admitted_target='${target}';SET LOCAL app.current_tenant_id='${randomUUID()}';` +
+            componentRead +
+            "ROLLBACK;",
+        ),
+      ).toThrow();
+      for (const forbidden of [
+        install,
+        "SELECT * FROM publication.release;",
+        "SELECT * FROM runtime_meta.applied_release;",
+      ])
+        expect(() => query(appSession + forbidden + "ROLLBACK;")).toThrow();
       for (const mutation of [
         `UPDATE publication.release SET approved_by=created_by`,
         `UPDATE runtime_meta.applied_release SET status='superseded'`,

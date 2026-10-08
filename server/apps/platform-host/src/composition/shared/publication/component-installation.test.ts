@@ -1,3 +1,4 @@
+import { createNativeComponentEvidenceReader } from "../../control-plane/native-component-evidence.js";
 import { beforeEach, expect, it, vi } from "vitest";
 import { generateKeyPairSync, sign, verify } from "node:crypto";
 import type { Transaction } from "kysely";
@@ -180,4 +181,71 @@ it("requires a transaction and a configured qualifier", async () => {
     ),
   ).rejects.toThrow("COMPONENT_INSTALLATION_TRANSACTION_REQUIRED");
   expect(query).not.toHaveBeenCalled();
+});
+
+it("native authoring reads the same verified evidence without installing or fetching remote bytes", async () => {
+  const f = await fixture();
+  const result = await createNativeComponentEvidenceReader({
+    loader: f.options,
+    maximumBytes: 4194304,
+  })(tx, {
+    changeSetId: id,
+    componentId: id,
+    manifestHash: f.row.payload_hash,
+    publicationReleaseHash: f.row.release_hash,
+    scope: { tenantId: null, plane: "studio", hostReleaseHash: "b".repeat(64) },
+  });
+  expect(result.contract.id).toBe(id);
+  expect(result.runtimeKey).toBe("text");
+  expect(result.evidenceHash).toMatch(/^[a-f0-9]{64}$/);
+  expect(query).toHaveBeenCalledOnce();
+  expect(f.verifier).toHaveBeenCalledOnce();
+  expect(f.qualify).toHaveBeenCalledOnce();
+  expect(f.options.store.get).not.toHaveBeenCalled();
+});
+it("native evidence rejects changed requested pins and unsupported plane", async () => {
+  const f = await fixture();
+  const reader = createNativeComponentEvidenceReader({
+    loader: f.options,
+    maximumBytes: 4194304,
+  });
+  const input = {
+    changeSetId: id,
+    componentId: id,
+    manifestHash: f.row.payload_hash,
+    publicationReleaseHash: f.row.release_hash,
+    scope: {
+      tenantId: null,
+      plane: "studio" as const,
+      hostReleaseHash: "b".repeat(64),
+    },
+  };
+  await expect(
+    reader(tx, { ...input, scope: { ...input.scope, plane: "neon" } }),
+  ).rejects.toThrow("NATIVE_COMPONENT_READER_SCOPE_INVALID");
+  expect(query).not.toHaveBeenCalled();
+  await expect(
+    reader(tx, { ...input, manifestHash: "c".repeat(64) }),
+  ).rejects.toThrow("NATIVE_COMPONENT_RESOURCE_MISMATCH");
+});
+it("native evidence rejects current implementation qualification failure", async () => {
+  const f = await fixture();
+  f.qualify.mockRejectedValueOnce(Error("IMPLEMENTATION_CHANGED"));
+  await expect(
+    createNativeComponentEvidenceReader({
+      loader: f.options,
+      maximumBytes: 4194304,
+    })(tx, {
+      changeSetId: id,
+      componentId: id,
+      manifestHash: f.row.payload_hash,
+      publicationReleaseHash: f.row.release_hash,
+      scope: {
+        tenantId: null,
+        plane: "studio",
+        hostReleaseHash: "b".repeat(64),
+      },
+    }),
+  ).rejects.toThrow("IMPLEMENTATION_CHANGED");
+  expect(query).toHaveBeenCalledOnce();
 });

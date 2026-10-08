@@ -1241,6 +1241,19 @@ old component approvals do not qualify the changed implementation inventory. HTT
 verification and shared-renderer conformance are recorded separately from authenticated
 browser acceptance, resource approval and catalogue installation in the runbook.
 
+**Native component evidence reader:** native product commands use the restricted
+`entity_command_private.read_component_resource` routine to resolve an exact component
+ID plus manifest/release hashes under transaction-bound draft admission. It holds shared
+catalogue/head/payload locks and delegates to the existing active reviewed-source reader.
+Only routine execution is granted; the application receives neither publication-table
+reads nor installation authority. The host reuses the installer's signed-artifact and
+current deployment verification before deriving component context. Host admission is
+still independent; an evidence hash or catalogue row is not a host approval. The bounded
+reader is product/Studio-only. Migration `55_product_component_resource_read.sql` is
+installed in DEV with rehearsal/replay evidence; this does not enable native bootstrap
+or qualify live records. The runbook distinguishes fixture-admission PostgreSQL coverage
+from actual application-role negative privilege checks.
+
 **Native bootstrap proposal input:** the shared control host has a bounded immutable-file
 proposal reader and resolver composed through the existing product-command runtime. A
 pinned `entity.native-bootstrap-proposals/1` manifest binds author, entity, target draft,

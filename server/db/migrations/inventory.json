@@ -2210,6 +2210,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/35_component_catalogue_installation.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_product_component_resource_read.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_component_resource_read.sql",
+      "sha256": "2ba4fcb6e24f5455e64869ef7c8750e52598cc88fc245d910805157271fcf46a",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Read exact active component publication evidence for transaction-admitted native commands without underlying ledger or installation grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/55_product_component_resource_read.sql"
+      ]
     }
   ]
 }

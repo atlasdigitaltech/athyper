@@ -1,11 +1,11 @@
 import { sql, type Transaction } from "kysely";
-import { parseUiComponentResourceSource } from "@athyper/server-contract-meta-entity-authoring";
+import { verifyActiveComponentSource } from "./active-component-source.js";
 import {
   installNativeComponentCatalogue,
   type UiComponentInstallationPolicy,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
-  VerifiedPublicationArtifactLoader,
+  type VerifiedPublicationArtifactLoader,
   type KyselyLocalProjectionRepository,
 } from "@athyper/server-service-publication";
 import type { PublicationDeploymentBundle } from "@athyper/server-contract-publication";
@@ -38,30 +38,7 @@ export function createComponentCatalogueInstaller(
       if (result.rows.length !== 1)
         throw Error("COMPONENT_ACTIVE_SOURCE_REQUIRED");
       const row = result.rows[0]!;
-      const canonical = options.canonicalizer;
-      const hash = (value: unknown) =>
-        canonical.sha256(canonical.canonicalBytes(value));
-      if (
-        hash(row.reviewed_source) !== row.release_hash ||
-        hash(row.source_json) !== row.payload_hash ||
-        hash(row.signed_document) !== row.artifact_hash
-      )
-        throw Error("COMPONENT_ACTIVE_SOURCE_HASH_MISMATCH");
-      const bytes = canonical.canonicalBytes(row.signed_document);
-      const loader = new VerifiedPublicationArtifactLoader({
-        ...options,
-        store: {
-          putImmutable: options.store.putImmutable.bind(options.store),
-          get: async () => bytes,
-        },
-      });
-      const loaded = await loader.load(row.deployment_bundle);
-      if (
-        loaded.document.envelope.artifactKind !== "entity_ui_component" ||
-        hash(loaded.document.envelope.payload) !== row.payload_hash
-      )
-        throw Error("COMPONENT_ACTIVE_SOURCE_KIND_MISMATCH");
-      const source = parseUiComponentResourceSource(row.source_json);
+      const source = await verifyActiveComponentSource(row, options);
       return use(source, {
         sourceHash: row.payload_hash,
         publicationReleaseHash: row.release_hash,
