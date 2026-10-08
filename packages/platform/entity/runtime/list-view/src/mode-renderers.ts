@@ -6,12 +6,20 @@ import type {
 import type { ListWidthTier } from "./presentation-tier";
 
 /** The shared renderer families a list body can use. */
-export type ListRendererKind = "table" | "cards" | "board" | "calendar" | "gantt";
+export type ListRendererKind =
+  "table" | "cards" | "board" | "calendar" | "gantt";
 
 /** Mode → renderer registry. A mode is rendered only through an entry here;
  * adding a layout means registering its renderer, not adding a branch. */
-const LIST_MODE_RENDERERS: Readonly<Partial<Record<ListViewMode, ListRendererKind>>> =
-  Object.freeze({ table: "table", compact: "cards", board: "board", calendar: "calendar", gantt: "gantt" });
+const LIST_MODE_RENDERERS: Readonly<
+  Partial<Record<ListViewMode, ListRendererKind>>
+> = Object.freeze({
+  table: "table",
+  compact: "cards",
+  board: "board",
+  calendar: "calendar",
+  gantt: "gantt",
+});
 
 export const LIST_MODE_RENDERER_MISSING = "LIST_MODE_RENDERER_MISSING";
 
@@ -26,7 +34,12 @@ export function listRendererKind(
   if (!registered) return undefined;
   // Board, Calendar and Gantt adapt themselves when narrow (one lane; a dated
   // list); other layouts become cards.
-  return widthTier === "narrow" && registered !== "board" && registered !== "calendar" && registered !== "gantt" ? "cards" : registered;
+  return widthTier === "narrow" &&
+    registered !== "board" &&
+    registered !== "calendar" &&
+    registered !== "gantt"
+    ? "cards"
+    : registered;
 }
 
 /** Moves supported modes that this runtime cannot render into
@@ -35,10 +48,18 @@ export function listRendererKind(
 export function withRenderableModes(
   descriptor: EntityListDescriptorV1,
   /** Hosts that cannot place a board, calendar or Gantt (for example, record choosers) pass false. */
-  options: { readonly board?: boolean; readonly calendar?: boolean; readonly gantt?: boolean } = {},
+  options: {
+    readonly board?: boolean;
+    readonly calendar?: boolean;
+    readonly gantt?: boolean;
+  } = {},
 ): EntityListDescriptorV1 {
   const { supportedModes, defaultState } = descriptor.surface;
-  const drawable = (mode: ListViewMode) => Boolean(LIST_MODE_RENDERERS[mode]) && (mode !== "board" || options.board !== false) && (mode !== "calendar" || options.calendar !== false) && (mode !== "gantt" || options.gantt !== false);
+  const drawable = (mode: ListViewMode) =>
+    Boolean(LIST_MODE_RENDERERS[mode]) &&
+    (mode !== "board" || options.board !== false) &&
+    (mode !== "calendar" || options.calendar !== false) &&
+    (mode !== "gantt" || options.gantt !== false);
   const missing = supportedModes.filter((mode) => !drawable(mode));
   if (!missing.length) return descriptor;
   const renderable = supportedModes.filter(drawable);

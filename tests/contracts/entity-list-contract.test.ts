@@ -28,10 +28,27 @@ import {
 const digest = "a".repeat(64);
 it("normalizes malformed URL state but never hides descriptor failures", () => {
   const descriptor = parseEntityListDescriptor(descriptorPayload);
-  for (const query of ["density=bad", "page=-1", "page=NaN", "pageSize=Infinity", "group=%00", "standardView=%00", 'filter.name={"operator":"eq","value":{"bad":true}}'])
+  for (const query of [
+    "density=bad",
+    "page=-1",
+    "page=NaN",
+    "pageSize=Infinity",
+    "group=%00",
+    "standardView=%00",
+    'filter.name={"operator":"eq","value":{"bad":true}}',
+  ])
     assert.doesNotThrow(() => decodeListLocationState(query, descriptor));
-  assert.throws(() => decodeListLocationState("density=bad", { ...descriptor, fields: null } as never));
-  assert.throws(() => decodeListLocationState("density=bad", descriptor, { baseState: { density: "bad" } as never }));
+  assert.throws(() =>
+    decodeListLocationState("density=bad", {
+      ...descriptor,
+      fields: null,
+    } as never),
+  );
+  assert.throws(() =>
+    decodeListLocationState("density=bad", descriptor, {
+      baseState: { density: "bad" } as never,
+    }),
+  );
 });
 it("retains valid URL state when a separate optional parameter is invalid", () => {
   const descriptor = parseEntityListDescriptor(descriptorPayload);
@@ -219,10 +236,19 @@ describe("entity list browser contract", () => {
   it("accepts declared record-card priorities and rejects unknown ones", () => {
     const withPriority = (cardPriority: string) => ({
       ...descriptorPayload,
-      fields: descriptorPayload.fields.map((field, index) => index ? field : { ...field, cardPriority }),
+      fields: descriptorPayload.fields.map((field, index) =>
+        index ? field : { ...field, cardPriority },
+      ),
     });
-    assert.equal(parseEntityListDescriptor(withPriority("primary")).fields[0]!.cardPriority, "primary");
-    assert.throws(() => parseEntityListDescriptor(withPriority("top")), /cardPriority/);
+    assert.equal(
+      parseEntityListDescriptor(withPriority("primary")).fields[0]!
+        .cardPriority,
+      "primary",
+    );
+    assert.throws(
+      () => parseEntityListDescriptor(withPriority("top")),
+      /cardPriority/,
+    );
   });
 
   it("normalizes unknown URL fields, unsupported operators, duplicate sorts, and unsupported modes", () => {
@@ -242,9 +268,18 @@ describe("entity list browser contract", () => {
 
   it("applies a shared-link layout only when this viewer can use it", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
-    assert.equal(decodeListLocationState("?view=compact", descriptor).mode, "compact");
-    assert.equal(decodeListLocationState("?view=dashboard", descriptor).mode, descriptor.surface.defaultState.mode);
-    assert.equal(decodeListLocationState("?view=not-a-mode", descriptor).mode, descriptor.surface.defaultState.mode);
+    assert.equal(
+      decodeListLocationState("?view=compact", descriptor).mode,
+      "compact",
+    );
+    assert.equal(
+      decodeListLocationState("?view=dashboard", descriptor).mode,
+      descriptor.surface.defaultState.mode,
+    );
+    assert.equal(
+      decodeListLocationState("?view=not-a-mode", descriptor).mode,
+      descriptor.surface.defaultState.mode,
+    );
   });
 
   it("parses declared-but-unusable modes and rejects contradictory entries", () => {
@@ -252,46 +287,145 @@ describe("entity list browser contract", () => {
       ...descriptorPayload,
       surface: { ...descriptorPayload.surface, unavailableModes },
     });
-    const parsed = parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }]));
-    assert.deepEqual(parsed.surface.unavailableModes, [{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }]);
-    assert.equal(parseEntityListDescriptor(descriptorPayload).surface.unavailableModes, undefined);
-    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "table", code: "LIST_MODE_UNSUPPORTED" }])));
-    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }, { mode: "board", code: "LIST_MODE_UNSUPPORTED" }])));
-    assert.throws(() => parseEntityListDescriptor(withUnavailable([{ mode: "board", code: "not a code" }])));
+    const parsed = parseEntityListDescriptor(
+      withUnavailable([{ mode: "board", code: "LIST_MODE_UNSUPPORTED" }]),
+    );
+    assert.deepEqual(parsed.surface.unavailableModes, [
+      { mode: "board", code: "LIST_MODE_UNSUPPORTED" },
+    ]);
+    assert.equal(
+      parseEntityListDescriptor(descriptorPayload).surface.unavailableModes,
+      undefined,
+    );
+    assert.throws(() =>
+      parseEntityListDescriptor(
+        withUnavailable([{ mode: "table", code: "LIST_MODE_UNSUPPORTED" }]),
+      ),
+    );
+    assert.throws(() =>
+      parseEntityListDescriptor(
+        withUnavailable([
+          { mode: "board", code: "LIST_MODE_UNSUPPORTED" },
+          { mode: "board", code: "LIST_MODE_UNSUPPORTED" },
+        ]),
+      ),
+    );
+    assert.throws(() =>
+      parseEntityListDescriptor(
+        withUnavailable([{ mode: "board", code: "not a code" }]),
+      ),
+    );
   });
 
   it("parses a viewer's board and keeps board state through saved views and links", () => {
     const board = {
-      laneFields: [{
-        field: "status", label: "Status", noValueLane: true,
-        lanes: [
-          { key: "active", label: "Active", values: ["active"], tone: "success", collapsed: false, terminal: false },
-          { key: "closed", label: "Closed", localizedLabel: { defaultLocale: "en", values: { en: "Closed", ms: "Ditutup" } }, values: ["inactive", "archived"], tone: "neutral", collapsed: true, terminal: true },
-        ],
-      }],
+      laneFields: [
+        {
+          field: "status",
+          label: "Status",
+          noValueLane: true,
+          lanes: [
+            {
+              key: "active",
+              label: "Active",
+              values: ["active"],
+              tone: "success",
+              collapsed: false,
+              terminal: false,
+            },
+            {
+              key: "closed",
+              label: "Closed",
+              localizedLabel: {
+                defaultLocale: "en",
+                values: { en: "Closed", ms: "Ditutup" },
+              },
+              values: ["inactive", "archived"],
+              tone: "neutral",
+              collapsed: true,
+              terminal: true,
+            },
+          ],
+        },
+      ],
     };
-    const payload = { ...descriptorPayload, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "board"], board, cardContent: { fields: [{ field: "name" }] } } };
+    const payload = {
+      ...descriptorPayload,
+      surface: {
+        ...descriptorPayload.surface,
+        supportedModes: ["table", "compact", "board"],
+        board,
+        cardContent: { fields: [{ field: "name" }] },
+      },
+    };
     const descriptor = parseEntityListDescriptor(payload);
-    assert.equal(descriptor.surface.board?.laneFields[0]?.lanes[1]?.localizedLabel?.values.ms, "Ditutup");
-    assert.deepEqual(descriptor.surface.defaultState.board, { laneField: "status", collapsed: ["closed"] });
-    assert.deepEqual(descriptor.surface.cardContent, { fields: [{ field: "name" }] });
+    assert.equal(
+      descriptor.surface.board?.laneFields[0]?.lanes[1]?.localizedLabel?.values
+        .ms,
+      "Ditutup",
+    );
+    assert.deepEqual(descriptor.surface.defaultState.board, {
+      laneField: "status",
+      collapsed: ["closed"],
+    });
+    assert.deepEqual(descriptor.surface.cardContent, {
+      fields: [{ field: "name" }],
+    });
 
-    const shared = decodeListLocationState("?view=board&lanes.collapsed=", descriptor);
+    const shared = decodeListLocationState(
+      "?view=board&lanes.collapsed=",
+      descriptor,
+    );
     assert.equal(shared.mode, "board");
     assert.deepEqual(shared.board, { laneField: "status", collapsed: [] });
     const encoded = encodeListLocationState(shared, descriptor);
     assert.equal(encoded.get("view"), "board");
     assert.equal(encoded.get("lanes.collapsed"), "");
-    assert.deepEqual(decodeListLocationState(encoded, descriptor).board, shared.board);
+    assert.deepEqual(
+      decodeListLocationState(encoded, descriptor).board,
+      shared.board,
+    );
 
-    const stale = parseListLocationState({ ...descriptor.surface.defaultState, board: { laneField: "retired_field", collapsed: ["gone"] } }, descriptor);
+    const stale = parseListLocationState(
+      {
+        ...descriptor.surface.defaultState,
+        board: { laneField: "retired_field", collapsed: ["gone"] },
+      },
+      descriptor,
+    );
     assert.deepEqual(stale.board, { laneField: "status", collapsed: [] });
 
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Board/);
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: { ...payload.surface, supportedModes: ["table"] },
+        }),
+      /exactly when Board/,
+    );
     const duplicate = structuredClone(board);
     duplicate.laneFields[0]!.lanes[1]!.values = ["active"];
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: duplicate } }), /exactly one lane/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: { laneFields: [{ ...board.laneFields[0], field: "missing" }] } } }), /listed field/);
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: { ...payload.surface, board: duplicate },
+        }),
+      /exactly one lane/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            board: {
+              laneFields: [{ ...board.laneFields[0], field: "missing" }],
+            },
+          },
+        }),
+      /listed field/,
+    );
   });
 
   it("requires date filter values to be written exactly as they are compared", () => {
@@ -302,14 +436,41 @@ describe("entity list browser contract", () => {
     assert.equal(isListInstantValue("2026-10-08T14:30:00.125+08:00"), true);
     assert.equal(isListInstantValue("2026-10-08T14:30:00"), false, "no offset");
     assert.equal(isListInstantValue("2026-10-08T14:30Z"), false, "no seconds");
-    assert.equal(isListInstantValue("2026-10-01T00:00+08:00"), false, "minutes-only with an offset");
-    assert.equal(isListInstantValue("2026-10-08T14:30:00+0800"), false, "malformed offset");
-    assert.equal(isListInstantValue("2026-10-08"), false, "date on a datetime field");
-    assert.equal(temporalFilterValueError("date", "between", ["2026-10-01", "2026-10-31"]), undefined);
-    assert.match(temporalFilterValueError("date", "in", ["2026-10-01", "2026-10-01T00:00:00Z"]) ?? "", /YYYY-MM-DD/);
+    assert.equal(
+      isListInstantValue("2026-10-01T00:00+08:00"),
+      false,
+      "minutes-only with an offset",
+    );
+    assert.equal(
+      isListInstantValue("2026-10-08T14:30:00+0800"),
+      false,
+      "malformed offset",
+    );
+    assert.equal(
+      isListInstantValue("2026-10-08"),
+      false,
+      "date on a datetime field",
+    );
+    assert.equal(
+      temporalFilterValueError("date", "between", ["2026-10-01", "2026-10-31"]),
+      undefined,
+    );
+    assert.match(
+      temporalFilterValueError("date", "in", [
+        "2026-10-01",
+        "2026-10-01T00:00:00Z",
+      ]) ?? "",
+      /YYYY-MM-DD/,
+    );
     assert.equal(temporalFilterValueError("datetime", "eq", null), undefined);
-    assert.equal(temporalFilterValueError("datetime", "relative", "today"), undefined);
-    assert.equal(temporalFilterValueError("string", "eq", "2026-10-08T14:30:00"), undefined);
+    assert.equal(
+      temporalFilterValueError("datetime", "relative", "today"),
+      undefined,
+    );
+    assert.equal(
+      temporalFilterValueError("string", "eq", "2026-10-08T14:30:00"),
+      undefined,
+    );
   });
 
   it("drops only the malformed date filter from a link, and refuses it in stored state", () => {
@@ -317,17 +478,59 @@ describe("entity list browser contract", () => {
       ...descriptorPayload,
       fields: [
         ...descriptorPayload.fields,
-        { key: "due_on", label: "Due on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt"], sortable: true, groupable: false, aggregations: [] },
-        { key: "updated_at", label: "Updated", valueKind: "datetime", defaultVisible: false, defaultOrder: 4, filterOperators: ["gte", "lt"], sortable: true, groupable: false, aggregations: [] },
+        {
+          key: "due_on",
+          label: "Due on",
+          valueKind: "date",
+          defaultVisible: false,
+          defaultOrder: 3,
+          filterOperators: ["gte", "lt"],
+          sortable: true,
+          groupable: false,
+          aggregations: [],
+        },
+        {
+          key: "updated_at",
+          label: "Updated",
+          valueKind: "datetime",
+          defaultVisible: false,
+          defaultOrder: 4,
+          filterOperators: ["gte", "lt"],
+          sortable: true,
+          groupable: false,
+          aggregations: [],
+        },
       ],
     };
     const descriptor = parseEntityListDescriptor(payload);
-    const good = encodeURIComponent(JSON.stringify({ operator: "gte", value: "2026-10-01" }));
-    const local = encodeURIComponent(JSON.stringify({ operator: "lt", value: "2026-10-08T14:30:00" }));
-    const state = decodeListLocationState(`?filter.due_on=${good}&filter.updated_at=${local}`, descriptor);
-    assert.deepEqual(state.filters, [{ field: "due_on", operator: "gte", value: "2026-10-01" }]);
+    const good = encodeURIComponent(
+      JSON.stringify({ operator: "gte", value: "2026-10-01" }),
+    );
+    const local = encodeURIComponent(
+      JSON.stringify({ operator: "lt", value: "2026-10-08T14:30:00" }),
+    );
+    const state = decodeListLocationState(
+      `?filter.due_on=${good}&filter.updated_at=${local}`,
+      descriptor,
+    );
+    assert.deepEqual(state.filters, [
+      { field: "due_on", operator: "gte", value: "2026-10-01" },
+    ]);
     assert.throws(
-      () => parseSaveableListState({ ...descriptor.surface.defaultState, filters: [{ field: "updated_at", operator: "lt", value: "2026-10-08T14:30:00" }] }, descriptor),
+      () =>
+        parseSaveableListState(
+          {
+            ...descriptor.surface.defaultState,
+            filters: [
+              {
+                field: "updated_at",
+                operator: "lt",
+                value: "2026-10-08T14:30:00",
+              },
+            ],
+          },
+          descriptor,
+        ),
       /RFC 3339/,
     );
   });
@@ -335,15 +538,53 @@ describe("entity list browser contract", () => {
   it("parses a viewer's calendar, normalizes its state and keeps the anchor out of saved state", () => {
     const fields = [
       ...descriptorPayload.fields,
-      { key: "due_on", label: "Due on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt", "is_null"], sortable: true, groupable: false, aggregations: [] },
+      {
+        key: "due_on",
+        label: "Due on",
+        valueKind: "date",
+        defaultVisible: false,
+        defaultOrder: 3,
+        filterOperators: ["gte", "lt", "is_null"],
+        sortable: true,
+        groupable: false,
+        aggregations: [],
+      },
     ];
-    const calendar = { defaultView: "month", dateFields: [{ start: "due_on", label: "Due on", kind: "date", unscheduled: true, tone: { field: "status", tones: { active: "success" } } }] };
-    const payload = { ...descriptorPayload, fields, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "calendar"], calendar } };
+    const calendar = {
+      defaultView: "month",
+      dateFields: [
+        {
+          start: "due_on",
+          label: "Due on",
+          kind: "date",
+          unscheduled: true,
+          tone: { field: "status", tones: { active: "success" } },
+        },
+      ],
+    };
+    const payload = {
+      ...descriptorPayload,
+      fields,
+      surface: {
+        ...descriptorPayload.surface,
+        supportedModes: ["table", "compact", "calendar"],
+        calendar,
+      },
+    };
     const descriptor = parseEntityListDescriptor(payload);
-    assert.deepEqual(descriptor.surface.calendar?.dateFields[0]?.tone, { field: "status", tones: { active: "success" } });
-    assert.deepEqual(descriptor.surface.defaultState.calendar, { dateField: "due_on", view: "month" });
+    assert.deepEqual(descriptor.surface.calendar?.dateFields[0]?.tone, {
+      field: "status",
+      tones: { active: "success" },
+    });
+    assert.deepEqual(descriptor.surface.defaultState.calendar, {
+      dateField: "due_on",
+      view: "month",
+    });
 
-    const shared = decodeListLocationState("?view=calendar&cal=2026-10-08&cal.view=agenda", descriptor);
+    const shared = decodeListLocationState(
+      "?view=calendar&cal=2026-10-08&cal.view=agenda",
+      descriptor,
+    );
     assert.equal(shared.mode, "calendar");
     assert.equal(shared.calendarAnchor, "2026-10-08");
     assert.deepEqual(shared.calendar, { dateField: "due_on", view: "agenda" });
@@ -352,35 +593,150 @@ describe("entity list browser contract", () => {
     assert.equal(encoded.get("cal.view"), "agenda");
     assert.equal("calendarAnchor" in toSaveableListState(shared), false);
 
-    assert.deepEqual(decodeListLocationState("?view=calendar&cal.view=week&cal.field=retired", descriptor).calendar, { dateField: "due_on", view: "month" });
-    assert.equal(decodeListLocationState("?view=calendar&cal=not-a-day", descriptor).calendarAnchor, undefined);
+    assert.deepEqual(
+      decodeListLocationState(
+        "?view=calendar&cal.view=week&cal.field=retired",
+        descriptor,
+      ).calendar,
+      { dateField: "due_on", view: "month" },
+    );
+    assert.equal(
+      decodeListLocationState("?view=calendar&cal=not-a-day", descriptor)
+        .calendarAnchor,
+      undefined,
+    );
 
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Calendar/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, defaultView: "week" } } }), /renderable view/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], kind: "datetime" }] } } }), /listed datetime field/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], endNullable: false }] } } }), /endNullable requires an end field/);
-    const ranged = parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, calendar: { ...calendar, dateFields: [{ ...calendar.dateFields[0], end: "due_on", endNullable: false }] } } });
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: { ...payload.surface, supportedModes: ["table"] },
+        }),
+      /exactly when Calendar/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            calendar: { ...calendar, defaultView: "week" },
+          },
+        }),
+      /renderable view/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            calendar: {
+              ...calendar,
+              dateFields: [{ ...calendar.dateFields[0], kind: "datetime" }],
+            },
+          },
+        }),
+      /listed datetime field/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            calendar: {
+              ...calendar,
+              dateFields: [{ ...calendar.dateFields[0], endNullable: false }],
+            },
+          },
+        }),
+      /endNullable requires an end field/,
+    );
+    const ranged = parseEntityListDescriptor({
+      ...payload,
+      surface: {
+        ...payload.surface,
+        calendar: {
+          ...calendar,
+          dateFields: [
+            { ...calendar.dateFields[0], end: "due_on", endNullable: false },
+          ],
+        },
+      },
+    });
     assert.equal(ranged.surface.calendar?.dateFields[0]?.endNullable, false);
   });
 
   it("parses a viewer's Gantt, normalizes its state and keeps the anchor out of saved state", () => {
     const fields = [
       ...descriptorPayload.fields,
-      { key: "starts_on", label: "Starts on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt", "is_null"], sortable: true, groupable: false, aggregations: [] },
-      { key: "done", label: "Done", valueKind: "decimal", defaultVisible: false, defaultOrder: 4, filterOperators: [], sortable: false, groupable: false, aggregations: [] },
+      {
+        key: "starts_on",
+        label: "Starts on",
+        valueKind: "date",
+        defaultVisible: false,
+        defaultOrder: 3,
+        filterOperators: ["gte", "lt", "is_null"],
+        sortable: true,
+        groupable: false,
+        aggregations: [],
+      },
+      {
+        key: "done",
+        label: "Done",
+        valueKind: "decimal",
+        defaultVisible: false,
+        defaultOrder: 4,
+        filterOperators: [],
+        sortable: false,
+        groupable: false,
+        aggregations: [],
+      },
     ];
     const gantt = {
       defaultZoom: "quarter",
-      dateFields: [{ start: "starts_on", label: "Starts on", kind: "date", unscheduled: true }],
-      group: { field: "status", label: "Status", choices: [{ value: "active", label: "Active", tone: "success" }, { value: "retired", label: "Retired" }] },
+      dateFields: [
+        {
+          start: "starts_on",
+          label: "Starts on",
+          kind: "date",
+          unscheduled: true,
+        },
+      ],
+      group: {
+        field: "status",
+        label: "Status",
+        choices: [
+          { value: "active", label: "Active", tone: "success" },
+          { value: "retired", label: "Retired" },
+        ],
+      },
       progress: { field: "done", label: "Done" },
     };
-    const payload = { ...descriptorPayload, fields, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "gantt"], gantt } };
+    const payload = {
+      ...descriptorPayload,
+      fields,
+      surface: {
+        ...descriptorPayload.surface,
+        supportedModes: ["table", "compact", "gantt"],
+        gantt,
+      },
+    };
     const descriptor = parseEntityListDescriptor(payload);
-    assert.deepEqual(descriptor.surface.gantt?.group?.choices.map((choice) => choice.value), ["active", "retired"]);
-    assert.deepEqual(descriptor.surface.defaultState.gantt, { dateField: "starts_on", zoom: "quarter" });
+    assert.deepEqual(
+      descriptor.surface.gantt?.group?.choices.map((choice) => choice.value),
+      ["active", "retired"],
+    );
+    assert.deepEqual(descriptor.surface.defaultState.gantt, {
+      dateField: "starts_on",
+      zoom: "quarter",
+    });
 
-    const shared = decodeListLocationState("?view=gantt&gantt=2026-11-15&gantt.zoom=year", descriptor);
+    const shared = decodeListLocationState(
+      "?view=gantt&gantt=2026-11-15&gantt.zoom=year",
+      descriptor,
+    );
     assert.equal(shared.mode, "gantt");
     assert.equal(shared.ganttAnchor, "2026-11-15");
     assert.deepEqual(shared.gantt, { dateField: "starts_on", zoom: "year" });
@@ -388,26 +744,87 @@ describe("entity list browser contract", () => {
     assert.equal(encoded.get("gantt"), "2026-11-15");
     assert.equal(encoded.get("gantt.zoom"), "year");
     assert.equal("ganttAnchor" in toSaveableListState(shared), false);
-    assert.deepEqual(decodeListLocationState("?view=gantt&gantt.zoom=week&gantt.field=retired", descriptor).gantt, { dateField: "starts_on", zoom: "quarter" });
+    assert.deepEqual(
+      decodeListLocationState(
+        "?view=gantt&gantt.zoom=week&gantt.field=retired",
+        descriptor,
+      ).gantt,
+      { dateField: "starts_on", zoom: "quarter" },
+    );
 
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Gantt/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, defaultZoom: "week" } } }), /renderable zoom/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, progress: { field: "status", label: "Status" } } } }), /integer or decimal/);
-    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, group: { ...gantt.group, field: "starts_on" } } } }), /listed enum field/);
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: { ...payload.surface, supportedModes: ["table"] },
+        }),
+      /exactly when Gantt/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            gantt: { ...gantt, defaultZoom: "week" },
+          },
+        }),
+      /renderable zoom/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            gantt: { ...gantt, progress: { field: "status", label: "Status" } },
+          },
+        }),
+      /integer or decimal/,
+    );
+    assert.throws(
+      () =>
+        parseEntityListDescriptor({
+          ...payload,
+          surface: {
+            ...payload.surface,
+            gantt: { ...gantt, group: { ...gantt.group, field: "starts_on" } },
+          },
+        }),
+      /listed enum field/,
+    );
   });
 
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
-    const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);
-    const oversized = { ...state, query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH + 1) };
+    const state = decodeListLocationState(
+      "?sort=status:desc:last&density=compact&pageSize=100",
+      descriptor,
+    );
+    const oversized = {
+      ...state,
+      query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH + 1),
+    };
     const encoded = encodeListLocationState(oversized, descriptor);
     assert.equal(encoded.has("q"), false);
     assert.deepEqual(
       decodeListLocationState(encoded, descriptor),
-      decodeListLocationState(encodeListLocationState({ ...state, query: undefined }, descriptor), descriptor),
+      decodeListLocationState(
+        encodeListLocationState({ ...state, query: undefined }, descriptor),
+        descriptor,
+      ),
     );
-    assert.equal(encodeListLocationState({ ...state, query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH) }, descriptor).get("q")?.length, ENTITY_LIST_MAX_SEARCH_LENGTH);
-    assert.throws(() => parseListLocationState(oversized, descriptor), /query exceeds/);
+    assert.equal(
+      encodeListLocationState(
+        { ...state, query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH) },
+        descriptor,
+      ).get("q")?.length,
+      ENTITY_LIST_MAX_SEARCH_LENGTH,
+    );
+    assert.throws(
+      () => parseListLocationState(oversized, descriptor),
+      /query exceeds/,
+    );
   });
 
   it("round-trips canonical location state and excludes navigation state when saving", () => {

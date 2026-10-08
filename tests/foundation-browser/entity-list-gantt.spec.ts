@@ -6,7 +6,10 @@ import { planeStyles } from "./fixtures/app-styles";
 // Real shared list runtime + real Neon CSS with a deterministic API fixture
 // (Entity list Gantt blueprint, Phase 1 on synthetic fixtures).
 const script = buildSync({
-  stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
+  stdin: {
+    resolveDir: process.cwd(),
+    loader: "tsx",
+    contents: `
     import React from 'react';
     import {createRoot} from 'react-dom/client';
     import {EntityListRuntime} from './packages/platform/entity/runtime/list-view/src/index';
@@ -62,110 +65,244 @@ const script = buildSync({
         pagination:{pageSize:page.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,...(q.countMode==='exact'?{total:matched.length}:{}),countMode:q.countMode==='exact'?'exact':'none'}};
     }};
     createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode="work_item"/>);
-  ` },
-  bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
+  `,
+  },
+  bundle: true,
+  write: false,
+  format: "iife",
+  platform: "browser",
+  jsx: "automatic",
   loader: { ".css": "empty" },
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; unavailable?: boolean; many?: number; exact?: boolean; pageSize?: number; milestones?: boolean };
+type Fixture = {
+  defaultMode?: string;
+  unavailable?: boolean;
+  many?: number;
+  exact?: boolean;
+  pageSize?: number;
+  milestones?: boolean;
+};
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 type Query = { filter?: string[]; sort?: string[]; limit?: number };
 
-async function mount(page: Page, width: number, fixture: Fixture = {}, path = "?gantt=2026-11-15", dir?: "rtl") {
+async function mount(
+  page: Page,
+  width: number,
+  fixture: Fixture = {},
+  path = "?gantt=2026-11-15",
+  dir?: "rtl",
+) {
   await page.setViewportSize({ width, height: 1000 });
-  await page.route("https://list.test/**", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><html${dir ? ` dir="${dir}"` : ""}><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>` }));
+  await page.route("https://list.test/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><html${dir ? ` dir="${dir}"` : ""}><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>`,
+    }),
+  );
   await page.goto(`https://list.test/items${path}`);
-  await page.evaluate(value => Object.assign(window, { ganttFixture: value }), fixture);
-  await page.addStyleTag({ content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}" });
+  await page.evaluate(
+    (value) => Object.assign(window, { ganttFixture: value }),
+    fixture,
+  );
+  await page.addStyleTag({
+    content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}",
+  });
   await page.addScriptTag({ content: script });
 }
-const requests = (page: Page) => page.evaluate(() => (window as unknown as { ganttRequests: Query[] }).ganttRequests);
+const requests = (page: Page) =>
+  page.evaluate(
+    () => (window as unknown as { ganttRequests: Query[] }).ganttRequests,
+  );
 const bar = (page: Page, name: RegExp) => page.getByRole("gridcell", { name });
 
-test("bars, one-day bars, open-ended records, groups and progress over the window and open-ended queries", async ({ page }) => {
+test("bars, one-day bars, open-ended records, groups and progress over the window and open-ended queries", async ({
+  page,
+}) => {
   await mount(page, 1440, { defaultMode: "gantt" });
   await expect(page.getByRole("heading", { name: "Q4 2026" })).toBeVisible();
   const chart = page.getByRole("grid", { name: "Q4 2026 Gantt chart" });
   await expect(chart).toBeVisible();
   // Labels are the readable identity's title, never the internal ID; status text backs the tone.
-  await expect(bar(page, /^Kickoff workshop, plan, October 5, 2026 to October 7, 2026, 40% complete$/)).toBeVisible();
+  await expect(
+    bar(
+      page,
+      /^Kickoff workshop, plan, October 5, 2026 to October 7, 2026, 40% complete$/,
+    ),
+  ).toBeVisible();
   // A date range ending on its start day is a one-day bar, not a milestone.
-  await expect(bar(page, /One-day review, build, October 9, 2026 to October 9, 2026/)).toBeVisible();
+  await expect(
+    bar(page, /One-day review, build, October 9, 2026 to October 9, 2026/),
+  ).toBeVisible();
   await expect(chart.locator(".a-entity-gantt__milestone")).toHaveCount(0);
   // Open-ended: drawn once, hatched to the window end.
-  await expect(bar(page, /Vendor contract, build, from September 1, 2026, open-ended/)).toHaveCount(1);
-  await expect(bar(page, /Vendor contract/).locator(".a-entity-gantt__bar")).toHaveAttribute("data-open-ended", "true");
+  await expect(
+    bar(page, /Vendor contract, build, from September 1, 2026, open-ended/),
+  ).toHaveCount(1);
+  await expect(
+    bar(page, /Vendor contract/).locator(".a-entity-gantt__bar"),
+  ).toHaveAttribute("data-open-ended", "true");
   // Blank progress text draws no fill (shared progress reader).
-  await expect(bar(page, /Legacy migration/)).not.toHaveAccessibleName(/complete/);
-  await expect(bar(page, /Legacy migration/).locator(".a-entity-gantt__fill")).toHaveCount(0);
+  await expect(bar(page, /Legacy migration/)).not.toHaveAccessibleName(
+    /complete/,
+  );
+  await expect(
+    bar(page, /Legacy migration/).locator(".a-entity-gantt__fill"),
+  ).toHaveCount(0);
   // Groups: published choice order, then No value, then Unmapped values.
-  await expect(chart.locator(".a-entity-gantt__group button")).toHaveText(["▾Plan", "▾Build", "▾No value", "▾Unmapped values"]);
+  await expect(chart.locator(".a-entity-gantt__group button")).toHaveText([
+    "▾Plan",
+    "▾Build",
+    "▾No value",
+    "▾Unmapped values",
+  ]);
   // Within each group, rows keep start order across both streams.
-  await expect(chart.locator(".a-entity-gantt__row").nth(0)).toContainText("Kickoff workshop");
-  await expect(chart.locator(".a-entity-gantt__row").nth(1)).toContainText("Vendor contract");
-  const issued = (await requests(page)).map(q => (q.filter ?? []).map(f => JSON.parse(f)));
-  expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2027-01-04" }, { field: "ends_on", operator: "gte", value: "2026-09-28" }, { field: "ends_on", operator: "is_not_null" }]);
-  expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2027-01-04" }, { field: "ends_on", operator: "is_null" }]);
+  await expect(chart.locator(".a-entity-gantt__row").nth(0)).toContainText(
+    "Kickoff workshop",
+  );
+  await expect(chart.locator(".a-entity-gantt__row").nth(1)).toContainText(
+    "Vendor contract",
+  );
+  const issued = (await requests(page)).map((q) =>
+    (q.filter ?? []).map((f) => JSON.parse(f)),
+  );
+  expect(issued).toContainEqual([
+    { field: "starts_on", operator: "lt", value: "2027-01-04" },
+    { field: "ends_on", operator: "gte", value: "2026-09-28" },
+    { field: "ends_on", operator: "is_not_null" },
+  ]);
+  expect(issued).toContainEqual([
+    { field: "starts_on", operator: "lt", value: "2027-01-04" },
+    { field: "ends_on", operator: "is_null" },
+  ]);
   expect(issued).toContainEqual([{ field: "starts_on", operator: "is_null" }]);
-  for (const query of await requests(page)) if ((query.filter ?? []).length) expect(query.sort).toEqual(["starts_on:asc"]);
+  for (const query of await requests(page))
+    if ((query.filter ?? []).length)
+      expect(query.sort).toEqual(["starts_on:asc"]);
   // Collapsing a group hides its rows only.
   await chart.getByRole("button", { name: "Plan" }).click();
   await expect(bar(page, /Kickoff workshop/)).toHaveCount(0);
   await expect(bar(page, /One-day review/)).toBeVisible();
   // The tray holds the record with no start.
   await page.locator(".a-entity-dated__tray > summary").click();
-  await expect(page.locator(".a-entity-dated__tray")).toContainText("Backlog grooming");
-  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
-  await page.screenshot({ path: "tooling/config/test-results/entity-list-gantt-quarter.png", fullPage: true });
+  await expect(page.locator(".a-entity-dated__tray")).toContainText(
+    "Backlog grooming",
+  );
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(
+    false,
+  );
+  await page.screenshot({
+    path: "tooling/config/test-results/entity-list-gantt-quarter.png",
+    fullPage: true,
+  });
 });
 
-test("milestones come only from a date range declared without an end", async ({ page }) => {
+test("milestones come only from a date range declared without an end", async ({
+  page,
+}) => {
   await mount(page, 1440, { defaultMode: "gantt", milestones: true });
   // No tone is declared for this range, so the label carries no status text.
-  await expect(bar(page, /^One-day review, October 9, 2026, milestone, 100% complete$/)).toBeVisible();
-  await expect(page.locator(".a-entity-gantt__milestone").first()).toBeVisible();
+  await expect(
+    bar(page, /^One-day review, October 9, 2026, milestone, 100% complete$/),
+  ).toBeVisible();
+  await expect(
+    page.locator(".a-entity-gantt__milestone").first(),
+  ).toBeVisible();
   await expect(page.locator(".a-entity-gantt__bar")).toHaveCount(0);
 });
 
-test("zoom changes the window and is saved in the link; the anchor stays location-only", async ({ page }) => {
+test("zoom changes the window and is saved in the link; the anchor stays location-only", async ({
+  page,
+}) => {
   await mount(page, 1440, { defaultMode: "gantt" });
-  await page.getByRole("radiogroup", { name: "Zoom" }).getByRole("radio", { name: "Year" }).click();
-  await expect(page.getByRole("heading", { name: "2026", exact: true })).toBeVisible();
-  await expect.poll(() => new URL(page.url()).searchParams.get("gantt.zoom")).toBe("year");
+  await page
+    .getByRole("radiogroup", { name: "Zoom" })
+    .getByRole("radio", { name: "Year" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "2026", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("gantt.zoom"))
+    .toBe("year");
   await page.getByRole("button", { name: "Next period" }).click();
-  await expect(page.getByRole("heading", { name: "2027", exact: true })).toBeVisible();
-  await page.getByRole("radiogroup", { name: "Zoom" }).getByRole("radio", { name: "Month" }).click();
-  await expect(page.getByRole("heading", { name: "November 2027" })).toBeVisible();
-  await mount(page, 1440, { defaultMode: "gantt" }, "?gantt=2026-11-15&gantt.zoom=week");
-  await expect(page.getByRole("radiogroup", { name: "Zoom" }).getByRole("radio", { name: "Quarter" })).toBeChecked();
+  await expect(
+    page.getByRole("heading", { name: "2027", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("radiogroup", { name: "Zoom" })
+    .getByRole("radio", { name: "Month" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "November 2027" }),
+  ).toBeVisible();
+  await mount(
+    page,
+    1440,
+    { defaultMode: "gantt" },
+    "?gantt=2026-11-15&gantt.zoom=week",
+  );
+  await expect(
+    page
+      .getByRole("radiogroup", { name: "Zoom" })
+      .getByRole("radio", { name: "Quarter" }),
+  ).toBeChecked();
 });
 
-test("Load more rows pages both streams, and the row ceiling stops loading and drawing at 500", async ({ page }) => {
+test("Load more rows pages both streams, and the row ceiling stops loading and drawing at 500", async ({
+  page,
+}) => {
   await mount(page, 1440, { defaultMode: "gantt", many: 520, pageSize: 250 });
-  await expect(page.getByText("More records than fit in this period. Showing the first 251.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "More records than fit in this period. Showing the first 251.",
+    ),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Load more rows" }).click();
-  await expect(page.getByText("Showing the first 500 records. Records after these are not shown here; narrow the period, add filters or open Table.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load more rows" })).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Showing the first 500 records. Records after these are not shown here; narrow the period, add filters or open Table.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Load more rows" }),
+  ).toHaveCount(0);
   await expect(page.locator(".a-entity-gantt__row")).toHaveCount(500);
 });
 
-test("an unavailable Gantt is a disabled, explained layout option", async ({ page }) => {
+test("an unavailable Gantt is a disabled, explained layout option", async ({
+  page,
+}) => {
   await mount(page, 1440, { unavailable: true }, "?view=gantt");
   await expect(page.locator(".a-entity-list__table")).toBeVisible();
   await page.getByRole("button", { name: "Controls", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Display settings/ }).click();
-  const layout = page.getByRole("dialog", { name: "Work items list controls" }).getByRole("radiogroup", { name: "Layout" });
-  await expect(layout.getByRole("radio", { name: "Gantt, unavailable" })).toBeDisabled();
-  await expect(layout).toHaveAccessibleDescription("Gantt is unavailable: none of its date fields is available to you.");
+  const layout = page
+    .getByRole("dialog", { name: "Work items list controls" })
+    .getByRole("radiogroup", { name: "Layout" });
+  await expect(
+    layout.getByRole("radio", { name: "Gantt, unavailable" }),
+  ).toBeDisabled();
+  await expect(layout).toHaveAccessibleDescription(
+    "Gantt is unavailable: none of its date fields is available to you.",
+  );
 });
 
-test("phones show the dated list; rows move by keyboard; right to left mirrors the axis", async ({ page }) => {
+test("phones show the dated list; rows move by keyboard; right to left mirrors the axis", async ({
+  page,
+}) => {
   await mount(page, 390, { defaultMode: "gantt" });
   await expect(page.getByRole("grid")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: /Monday, October 5/ })).toContainText("Kickoff workshop");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(
+    page.getByRole("region", { name: /Monday, October 5/ }),
+  ).toContainText("Kickoff workshop");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const first = bar(page, /Kickoff workshop/);
   await first.focus();
@@ -176,9 +313,13 @@ test("phones show the dated list; rows move by keyboard; right to left mirrors t
   await page.keyboard.press("PageDown");
   await expect(page.getByRole("heading", { name: "Q1 2027" })).toBeVisible();
   await mount(page, 1440, { defaultMode: "gantt" }, "?gantt=2026-11-15", "rtl");
-  const box = await bar(page, /Kickoff workshop/).locator(".a-entity-gantt__bar").boundingBox();
+  const box = await bar(page, /Kickoff workshop/)
+    .locator(".a-entity-gantt__bar")
+    .boundingBox();
   const track = await bar(page, /Kickoff workshop/).boundingBox();
   // Early October sits at the start of the axis, which is the right edge in RTL.
   expect(box!.x + box!.width).toBeGreaterThan(track!.x + track!.width * 0.8);
-  await page.screenshot({ path: "tooling/config/test-results/entity-list-gantt-rtl.png" });
+  await page.screenshot({
+    path: "tooling/config/test-results/entity-list-gantt-rtl.png",
+  });
 });

@@ -7,7 +7,10 @@ import { planeStyles } from "./fixtures/app-styles";
 // (Entity list Calendar blueprint, Phase 1 on synthetic fixtures). "country"
 // is the owner's interim rehearsal: Country-shaped, dated by updated_at.
 const script = buildSync({
-  stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
+  stdin: {
+    resolveDir: process.cwd(),
+    loader: "tsx",
+    contents: `
     import React from 'react';
     import {createRoot} from 'react-dom/client';
     import {EntityListRuntime} from './packages/platform/entity/runtime/list-view/src/index';
@@ -62,62 +65,134 @@ const script = buildSync({
         pagination:{pageSize:page.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,...(q.countMode==='exact'?{total:matched.length}:{}),countMode:q.countMode==='exact'?'exact':'none'}};
     }};
     createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode={descriptor.entity.code}/>);
-  ` },
-  bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
+  `,
+  },
+  bundle: true,
+  write: false,
+  format: "iife",
+  platform: "browser",
+  jsx: "automatic",
   loader: { ".css": "empty" },
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { entity?: "country" | "work"; defaultMode?: string; unavailable?: boolean; many?: number; exact?: boolean };
+type Fixture = {
+  entity?: "country" | "work";
+  defaultMode?: string;
+  unavailable?: boolean;
+  many?: number;
+  exact?: boolean;
+};
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 type Query = { filter?: string[]; sort?: string[]; limit?: number };
 
 // The shell main padding hosts the list header rule that bleeds into it.
-async function mount(page: Page, width: number, fixture: Fixture = {}, path = "?cal=2026-10-08", dir?: "rtl") {
+async function mount(
+  page: Page,
+  width: number,
+  fixture: Fixture = {},
+  path = "?cal=2026-10-08",
+  dir?: "rtl",
+) {
   await page.setViewportSize({ width, height: 1000 });
-  await page.route("https://list.test/**", route => route.fulfill({ contentType: "text/html", body: `<!doctype html><html${dir ? ` dir="${dir}"` : ""}><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>` }));
+  await page.route("https://list.test/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><html${dir ? ` dir="${dir}"` : ""}><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>`,
+    }),
+  );
   await page.goto(`https://list.test/items${path}`);
-  await page.evaluate(value => Object.assign(window, { calendarFixture: value }), fixture);
-  await page.addStyleTag({ content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}" });
+  await page.evaluate(
+    (value) => Object.assign(window, { calendarFixture: value }),
+    fixture,
+  );
+  await page.addStyleTag({
+    content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}",
+  });
   await page.addScriptTag({ content: script });
 }
-const requests = (page: Page) => page.evaluate(() => (window as unknown as { calendarRequests: Query[] }).calendarRequests);
-const day = (page: Page, label: RegExp) => page.getByRole("gridcell", { name: label });
+const requests = (page: Page) =>
+  page.evaluate(
+    () => (window as unknown as { calendarRequests: Query[] }).calendarRequests,
+  );
+const day = (page: Page, label: RegExp) =>
+  page.getByRole("gridcell", { name: label });
 
-test("Country-shaped rehearsal: updated_at as a datetime calendar with offset edges and an explicit sort", async ({ page }) => {
+test("Country-shaped rehearsal: updated_at as a datetime calendar with offset edges and an explicit sort", async ({
+  page,
+}) => {
   await mount(page, 1440, { entity: "country", defaultMode: "calendar" });
-  await expect(page.getByRole("heading", { name: "October 2026" })).toBeVisible();
-  await expect(day(page, /Thursday, October 8/).getByRole("link")).toHaveCount(2);
-  await expect(day(page, /Thursday, October 8/).getByRole("link").first()).toHaveAccessibleName(/Antarctica, 8:00/);
-  await expect(day(page, /Thursday, October 8/).getByRole("link").first()).toHaveAttribute("data-tone", "warning");
-  const window = (await requests(page)).find(q => (q.filter ?? []).some(f => f.includes('"updated_at"')))!;
-  expect(window.filter!.map(f => JSON.parse(f))).toEqual([
+  await expect(
+    page.getByRole("heading", { name: "October 2026" }),
+  ).toBeVisible();
+  await expect(day(page, /Thursday, October 8/).getByRole("link")).toHaveCount(
+    2,
+  );
+  await expect(
+    day(page, /Thursday, October 8/)
+      .getByRole("link")
+      .first(),
+  ).toHaveAccessibleName(/Antarctica, 8:00/);
+  await expect(
+    day(page, /Thursday, October 8/)
+      .getByRole("link")
+      .first(),
+  ).toHaveAttribute("data-tone", "warning");
+  const window = (await requests(page)).find((q) =>
+    (q.filter ?? []).some((f) => f.includes('"updated_at"')),
+  )!;
+  expect(window.filter!.map((f) => JSON.parse(f))).toEqual([
     { field: "updated_at", operator: "gte", value: "2026-09-28T00:00:00.000Z" },
     { field: "updated_at", operator: "lt", value: "2026-11-02T00:00:00.000Z" },
   ]);
   expect(window.sort).toEqual(["updated_at:asc"]);
   expect(Number(window.limit)).toBe(25);
-  await expect(day(page, /Sunday, November 1/).getByRole("link")).toHaveCount(1);
+  await expect(day(page, /Sunday, November 1/).getByRole("link")).toHaveCount(
+    1,
+  );
   await expect(page.getByText("Germany")).toHaveCount(0); // 5 November is outside the October grid
   await expect(page.getByText("Unscheduled")).toHaveCount(0);
-  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
-  await page.screenshot({ path: "tooling/config/test-results/entity-list-calendar-month.png", fullPage: true });
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(
+    false,
+  );
+  await page.screenshot({
+    path: "tooling/config/test-results/entity-list-calendar-month.png",
+    fullPage: true,
+  });
 });
 
-test("date ranges, open-ended records, +N more and the Unscheduled tray", async ({ page }) => {
+test("date ranges, open-ended records, +N more and the Unscheduled tray", async ({
+  page,
+}) => {
   await mount(page, 1440, { entity: "work", defaultMode: "calendar" });
   // A range is one continuous bar from its first day; a date end is inclusive.
-  const kickoff = day(page, /October 5/).getByRole("link", { name: /Kickoff workshop/ });
+  const kickoff = day(page, /October 5/).getByRole("link", {
+    name: /Kickoff workshop/,
+  });
   await expect(kickoff).toHaveAttribute("style", /--cal-span: 3/);
-  for (const label of [/October 6/, /October 7/, /October 8/]) await expect(day(page, label).getByRole("link", { name: /Kickoff workshop/ })).toHaveCount(0);
+  for (const label of [/October 6/, /October 7/, /October 8/])
+    await expect(
+      day(page, label).getByRole("link", { name: /Kickoff workshop/ }),
+    ).toHaveCount(0);
   // Open-ended from before the window: starts at the grid's first day and continues.
-  const vendor = day(page, /September 28/).getByRole("link", { name: /Vendor contract, open-ended/ });
+  const vendor = day(page, /September 28/).getByRole("link", {
+    name: /Vendor contract, open-ended/,
+  });
   await expect(vendor).toHaveAttribute("data-continues-after", "true");
   await expect(vendor).toHaveAttribute("data-open-ended", "true");
-  const issued = (await requests(page)).map(q => (q.filter ?? []).map(f => JSON.parse(f)));
-  expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2026-11-02" }, { field: "ends_on", operator: "gte", value: "2026-09-28" }, { field: "ends_on", operator: "is_not_null" }]);
-  expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2026-11-02" }, { field: "ends_on", operator: "is_null" }]);
+  const issued = (await requests(page)).map((q) =>
+    (q.filter ?? []).map((f) => JSON.parse(f)),
+  );
+  expect(issued).toContainEqual([
+    { field: "starts_on", operator: "lt", value: "2026-11-02" },
+    { field: "ends_on", operator: "gte", value: "2026-09-28" },
+    { field: "ends_on", operator: "is_not_null" },
+  ]);
+  expect(issued).toContainEqual([
+    { field: "starts_on", operator: "lt", value: "2026-11-02" },
+    { field: "ends_on", operator: "is_null" },
+  ]);
   expect(issued).toContainEqual([{ field: "starts_on", operator: "is_null" }]);
   const busy = day(page, /October 14/);
   await expect(busy.getByRole("link")).toHaveCount(2); // the open-ended bar holds lane 1 from the week's first day
@@ -130,51 +205,110 @@ test("date ranges, open-ended records, +N more and the Unscheduled tray", async 
   await expect(tray).toContainText("Backlog grooming");
   await expect(tray).toContainText("Ends Oct 30, 2026");
   await expect(tray.locator("summary")).toHaveText("Unscheduled"); // no count without exact counts
-  await page.screenshot({ path: "tooling/config/test-results/entity-list-calendar-ranges.png", fullPage: true });
+  await page.screenshot({
+    path: "tooling/config/test-results/entity-list-calendar-ranges.png",
+    fullPage: true,
+  });
 });
 
-test("Agenda pages the window and reports overflow without inventing a total", async ({ page }) => {
-  await mount(page, 1440, { entity: "work", defaultMode: "calendar", many: 30 });
-  await expect(page.getByText("More records than fit in this period. Showing the first 25.")).toBeVisible();
+test("Agenda pages the window and reports overflow without inventing a total", async ({
+  page,
+}) => {
+  await mount(page, 1440, {
+    entity: "work",
+    defaultMode: "calendar",
+    many: 30,
+  });
+  await expect(
+    page.getByText(
+      "More records than fit in this period. Showing the first 25.",
+    ),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Open Agenda" }).click();
-  await expect(page.getByRole("radiogroup", { name: "Calendar view" }).getByRole("radio", { name: "Agenda" })).toBeChecked();
+  await expect(
+    page
+      .getByRole("radiogroup", { name: "Calendar view" })
+      .getByRole("radio", { name: "Agenda" }),
+  ).toBeChecked();
   await page.getByRole("button", { name: "Load more" }).click();
-  await expect(page.getByRole("region", { name: /Thursday, October 22/ }).locator(".a-entity-list__card")).toHaveCount(30);
+  await expect(
+    page
+      .getByRole("region", { name: /Thursday, October 22/ })
+      .locator(".a-entity-list__card"),
+  ).toHaveCount(30);
   // An open-ended record appears once, on its first visible day, not on every day.
-  await expect(page.getByRole("region", { name: /Thursday, October 1/ })).toContainText("Vendor contract");
-  await expect(page.locator(".a-entity-dated__agenda").getByText("Vendor contract")).toHaveCount(1);
-  await expect.poll(() => new URL(page.url()).searchParams.get("cal.view")).toBe("agenda");
-  await expect(page.getByRole("region", { name: /Thursday, October 1/ }).locator(".a-entity-list__card-note")).toContainText("open-ended");
+  await expect(
+    page.getByRole("region", { name: /Thursday, October 1/ }),
+  ).toContainText("Vendor contract");
+  await expect(
+    page.locator(".a-entity-dated__agenda").getByText("Vendor contract"),
+  ).toHaveCount(1);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("cal.view"))
+    .toBe("agenda");
+  await expect(
+    page
+      .getByRole("region", { name: /Thursday, October 1/ })
+      .locator(".a-entity-list__card-note"),
+  ).toContainText("open-ended");
   await page.evaluate(() => window.scrollTo(0, 0)); // sticky day headings render in place
-  await page.screenshot({ path: "tooling/config/test-results/entity-list-calendar-agenda.png", fullPage: true });
+  await page.screenshot({
+    path: "tooling/config/test-results/entity-list-calendar-agenda.png",
+    fullPage: true,
+  });
 });
 
-test("an unavailable Calendar is a disabled, explained layout option", async ({ page }) => {
-  await mount(page, 1440, { entity: "work", unavailable: true }, "?view=calendar");
+test("an unavailable Calendar is a disabled, explained layout option", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    1440,
+    { entity: "work", unavailable: true },
+    "?view=calendar",
+  );
   await expect(page.locator(".a-entity-list__table")).toBeVisible();
   await page.getByRole("button", { name: "Controls", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Display settings/ }).click();
-  const layout = page.getByRole("dialog", { name: "Work items list controls" }).getByRole("radiogroup", { name: "Layout" });
-  await expect(layout.getByRole("radio", { name: "Calendar, unavailable" })).toBeDisabled();
-  await expect(layout).toHaveAccessibleDescription("Calendar is unavailable: none of its date fields is available to you.");
+  const layout = page
+    .getByRole("dialog", { name: "Work items list controls" })
+    .getByRole("radiogroup", { name: "Layout" });
+  await expect(
+    layout.getByRole("radio", { name: "Calendar, unavailable" }),
+  ).toBeDisabled();
+  await expect(layout).toHaveAccessibleDescription(
+    "Calendar is unavailable: none of its date fields is available to you.",
+  );
 });
 
-test("phones show Agenda only, and the month grid moves by keyboard", async ({ page }) => {
+test("phones show Agenda only, and the month grid moves by keyboard", async ({
+  page,
+}) => {
   await mount(page, 390, { entity: "work", defaultMode: "calendar" });
   await expect(page.getByRole("grid")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: /Friday, October 9/ })).toContainText("Steering review");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(
+    page.getByRole("region", { name: /Friday, October 9/ }),
+  ).toContainText("Steering review");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const anchor = day(page, /Thursday, October 8/);
   await anchor.focus();
   await page.keyboard.press("ArrowRight");
   await expect(day(page, /Friday, October 9/)).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog", { name: /October 9, 2026/ })).toContainText("Steering review");
+  await expect(
+    page.getByRole("dialog", { name: /October 9, 2026/ }),
+  ).toContainText("Steering review");
   await page.keyboard.press("Escape");
   await day(page, /Friday, October 9/).focus();
   await page.keyboard.press("PageDown");
-  await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "November 2026" }),
+  ).toBeVisible();
   await expect(day(page, /Monday, November 9/)).toBeFocused();
   await page.keyboard.press("PageUp");
   await expect(day(page, /Friday, October 9/)).toBeFocused();
