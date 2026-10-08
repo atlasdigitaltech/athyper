@@ -141,11 +141,12 @@ export function createNativeBootstrapStartup(options: {
               t.targetKeyKey === target.keyKey,
           ),
         )) {
-          const found =
-            await sql`SELECT id FROM metadata.entity WHERE id=${target.entityId}::uuid AND entity_code=${target.entityCode} AND tenant_id IS NULL AND ownership_model='system'`.execute(
-              tx,
-            );
-          if (found.rows.length !== 1)
+          const found = await sql<{
+            present: boolean;
+          }>`SELECT entity_command_private.native_reference_target_exists(${command.changeSetId}::uuid,${target.entityId}::uuid,${target.entityCode}) AS present`.execute(
+            tx,
+          );
+          if (found.rows.length !== 1 || found.rows[0]!.present !== true)
             throw Error("CONTROL_NATIVE_TARGET_UNAVAILABLE");
         }
         // Database domains must actually accept each declared choice. Quoted type

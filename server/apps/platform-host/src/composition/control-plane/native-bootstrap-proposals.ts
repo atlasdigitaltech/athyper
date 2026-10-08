@@ -1,7 +1,10 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { ExpandedNativeMetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+import {
+  AuthoringPolicyError,
+  type ExpandedNativeMetaEntityGraph,
+} from "@athyper/server-contract-meta-entity-authoring";
 import {
   canonicalJson,
   sha256,
@@ -22,7 +25,10 @@ export type NativeBootstrapProposal = Pick<
 const hash = /^[a-f0-9]{64}$/;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const fail = (): never => {
-  throw Error("NATIVE_BOOTSTRAP_PROPOSAL_UNAVAILABLE");
+  throw new AuthoringPolicyError(
+    "NATIVE_BOOTSTRAP_PROPOSAL_UNAVAILABLE",
+    "NATIVE_BOOTSTRAP_PROPOSAL_UNAVAILABLE: the exact installed proposal is unavailable.",
+  );
 };
 function object(
   value: unknown,

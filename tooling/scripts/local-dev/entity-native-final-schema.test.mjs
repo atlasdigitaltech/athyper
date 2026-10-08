@@ -31,3 +31,12 @@ test("final profile retains aggregate integrity and has bounded transactional DD
     /DROP (?:TABLE|SCHEMA)|CASCADE|DISABLE|requires_mfa|DELETE FROM/,
   );
 });
+test("explicit local installation permits only the approved Studio database", () => {
+  assert.match(
+    finalNativeSchemaSql("athyper_studio", "owner-approved-local-reset"),
+    /LOCAL_NATIVE_SCHEMA_TARGET_MISMATCH/,
+  );
+  for (const db of ["athyper_neon", "qa", "entity_restore_" + "a".repeat(32)])
+    assert.throws(() => finalNativeSchemaSql(db, "owner-approved-local-reset"));
+  assert.throws(() => finalNativeSchemaSql("athyper_studio", "unknown"));
+});

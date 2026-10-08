@@ -1,5 +1,8 @@
 import { createNativeBootstrapStartup } from "../composition/control-plane/native-bootstrap-startup.js";
-import { createDeployedComponentQualification } from "../composition/shared/publication/component-qualification.js";
+import {
+  createDeployedComponentArtifactQualification,
+  createDeployedComponentQualification,
+} from "../composition/shared/publication/component-qualification.js";
 import { createResourceVerifier } from "../composition/control-plane/resource-verifier.js";
 import { createControlResourceReview } from "../composition/control-plane/resource-review.js";
 import { createResourceSourceQualification } from "../composition/control-plane/resource-source-qualification.js";
@@ -208,23 +211,19 @@ export async function startControlApi() {
                 throw Error("NATIVE_COMPONENT_READER_IS_READ_ONLY");
               },
             },
-            uiComponents: {
-              qualify:
-                createDeployedComponentQualification(process.env, {
-                  canonicalBytes,
-                  sha256,
-                }) ??
-                (() => {
-                  throw Error(
-                    "NATIVE_COMPONENT_DEPLOYMENT_CONFIGURATION_REQUIRED",
-                  );
-                })(),
-            },
+            uiComponents: createDeployedComponentArtifactQualification(
+              process.env,
+              {
+                canonicalBytes,
+                sha256,
+              },
+            ),
           },
           audit: async (tx, input, result) => {
             const event = await audit.record(
               {
-                eventCode: "metadata.entity.authoring",
+                eventCode: "metadata.entity.product.enrollment",
+                severity: "critical",
                 tenantId: config.authority.tenantId,
                 actor: { kind: "user", principalId: input.actorId },
                 entityType: "metadata.entity_change_set",

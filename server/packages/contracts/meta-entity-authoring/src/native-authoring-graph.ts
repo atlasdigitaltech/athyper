@@ -31,9 +31,10 @@ export type NativeMetaEntityGraph = Omit<
  * repository. Protected controls remain stored/service-owned, outside commands. */
 export type ExpandedNativeMetaEntityGraph = Omit<
   NativeMetaEntityGraph,
-  "contractSchema" | "operations"
+  "contractSchema" | "operations" | "searchFields"
 > & {
   readonly contractSchema: "athyper.meta-entity-contract/2.5";
+  readonly searchFields?: import("./native-structural-contract.js").NativeStructuralGraph["searchFields"];
   readonly operations: readonly import("./native-operation-contract.js").NativeOperationRow[];
   readonly ai: import("./native-ai-contract.js").NativeAiGraph;
 };

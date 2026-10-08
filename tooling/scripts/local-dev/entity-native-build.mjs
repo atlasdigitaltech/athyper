@@ -401,15 +401,18 @@ async function execute(mode, directory, report, scope) {
             );
         }
         executeSql(statement);
-        executeSql(
-          readFileSync(
-            join(
-              root,
-              "server/db/ddl/planes/studio/metadata/58_native_fresh_identity_privileges.sql",
+        for (const file of [
+          "58_native_fresh_identity_privileges.sql",
+          "59_native_reference_target_read.sql",
+          "60_declared_operation_initialization.sql",
+          "61_native_relation_target_guard.sql",
+        ])
+          executeSql(
+            readFileSync(
+              join(root, "server/db/ddl/planes/studio/metadata", file),
+              "utf8",
             ),
-            "utf8",
-          ),
-        );
+          );
         const final = inventory(temporary);
         writeJson(join(directory, "final-inventory.json"), final);
         if (

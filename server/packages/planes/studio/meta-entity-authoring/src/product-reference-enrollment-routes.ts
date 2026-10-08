@@ -121,7 +121,7 @@ export function registerProductReferenceEnrollmentRoutes(
         res.json(await execute(options.readContext(res), command));
       } catch (error) {
         if (error instanceof FoundationContractError) {
-          res.status(400).json({ code: error.code });
+          res.status(400).json({ code: error.code, path: error.path });
           return;
         }
         if (error instanceof AuthoringConflictError) {

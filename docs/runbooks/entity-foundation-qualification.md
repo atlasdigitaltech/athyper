@@ -25,21 +25,108 @@ The subsequent request authorizes recording this detailed plan. These are owner 
 
 **Retained:** complete typed graphs, canonical commands/rows, shared compiler and UI, no entity hardcoding, exact permissions, tenant/record isolation, current authorization on replay, application-role persistence, transaction integrity, required component semantics, existing supported AI declarations, independent human publication review and artifact verification.
 
-### Current status — documentation baseline, not a new execution receipt
+### Current status — installed local reset, 9 October 2026
 
-Implementation baseline reviewed in this conversation: `e8518cc2e` (proposal bundle construction). Latest reported read-only DEV inspection: both existing drafts revision 4, native version unset, seven pending constraints. That inspection was administrative, not application-role write evidence. The latest audit reconciliation inspected inbound FKs and selected dependent row counts as recorded under L2; it did not requalify draft writes or refresh every earlier baseline value. The harness must refresh the complete baseline before setup.
+The owner approved execution and refreshed separate Admin/Owner sessions. Four expanded
+component candidates were authored, independently approved, published and activated.
+A current Studio backup and separate Neon/Mesh backups were successfully restored before
+reset. The exact scoped reset committed at `2026-10-08T20:27:11Z`: 1,551 obsolete rows
+across 23 tables; Entity roots, business data, IAM and migration history were preserved.
+Fourteen historical Entity publication releases and two obsolete identity-review releases
+were withdrawn without deleting their publication artifacts/receipts. Affected old heads
+were removed in Studio (four), Neon (two) and Mesh (two). Country 13 and State Region 1
+are therefore **no longer active**. No new Entity activation is claimed.
 
-| ID  | Deliverable                               | Status      | Available evidence / actual gap                                                                                           | Next action                                                                                         |
-| --- | ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| L0a | Non-destructive local preparation harness | In progress | Repaired command; seven tests pass; actual Studio dump restored successfully; reset/production acceptance not implemented | Complete logical cleanup dispositions and L1 graph/startup integration before reset                 |
-| L1  | Complete native proposals                 | In progress | Both real graphs assembled and compiled; expanded list-display resource remains a proposal, not installed support         | Publish qualified component candidates and validate graphs against installed bindings               |
-| L2  | Clean schema and startup composition      | In progress | Production startup composition implemented; final clean profile and real startup configuration not installed              | Install pinned configuration after final schema/setup, restricted grants and component installation |
-| L3  | Actual native bootstrap and replay        | Not started | No replacement native draft execution established                                                                         | Execute authenticated commands after L1/L2, verify exact readback/replay/rollback                   |
-| L4  | Working local live-read integration       | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                                 | Implement bounded validation and actual storage/security/identity composition                       |
-| L5  | Human review, publication and activation  | Not started | Existing infrastructure/component releases are not new native Entity delivery                                             | Submit concrete Entity candidates and use independent review/worker paths                           |
-| L6  | Local manual-test handover                | Not started | Old-release testing cannot establish this milestone                                                                       | Verify new activated releases in standard UI and deliver exact identifiers                          |
+All seven pending cutover checks are now removed in actual DEV; final aggregate guards
+and restricted fresh-identity grants remain. Actual application login
+`athyper_dev_product_command` reports zero schema blockers, fingerprint
+`8e1b311886771a5010c3408ce3b4897fa761ad00e325c6c7780145354ac732bc`.
+Complete fresh proposals and pinned production startup configuration are mounted in the
+control API. Four authenticated production requests succeeded: State Region apply/replay
+and Country apply/replay, all HTTP 200. Both fresh product drafts are native version 2 at
+revision 1, attributed to the real Platform Admin. Each has immutable revisions 0 and 1
+and exactly one command receipt. Country has 22 fields/identities; State Region has nine.
+The four approved operations retain `requires_mfa=false`. No old identity was adopted.
 
-Status vocabulary: **Not started / In progress / Blocked / Complete**. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
+| Entity       | Fresh draft ID                         | Stored graph hash                                                  | Compiled hash                                                      |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Country      | `f3aaa770-da84-4aad-83fd-9af62a305299` | `6562efa0fa82d571b13490f9a1533c6899f2fa2a407beeaf60556e7d77275206` | `40bb0af0e4a658a1b0036eeda2216213415519e538da49d1bb038fd153721812` |
+| State Region | `6f64254e-8d1d-429b-9929-e98df9f38dcf` | `0cf8d01d312819ec5819317cce50b37b062f9b3577e6d6601adaafb86628f4b0` | `7a1cfb9400fec00825e800a372f713773cc691ed6c9a17658f128eddcca38828` |
+
+Replay returned the same hashes/revision with `replay=true`, without allocating new
+members or history revisions. Transactional audit contains four successful enrollment
+events with the actual Admin actor and Studio/platform authority scope. Negative actual
+requests reject unauthenticated access (401), a client-supplied actor (400), and a changed
+proposal pin (403). Failed pre-fix writes rolled back all replacement roots/members.
+The application login is `athyper_dev_product_command`, under its configured restricted
+role and transaction-bound admission; no administrator SQL inserted the fresh graphs.
+
+Integration corrections installed during execution: the gateway bootstrap route,
+component envelope/payload adaptation, admitted pre-insert product-target validation,
+exact private source-free initializer declarations, explicit storage values/native
+weight decoding, canonical readback/replay hashing, and reuse of the registered
+`metadata.entity.product.enrollment` transactional audit contract. DDL 59–61 retains the
+normal RLS policies and old source-copy path; only the four approved exact operation IDs
+are enrolled in the source-free private declaration table.
+
+Private evidence: `~/.athyper/instances/dev/workspace/native-reset-20261009/` contains
+`backup-location.json`, `plane-backups.json`, `logical-dispositions.json`,
+`reset-receipts.json`, `installed-schema.json`, `startup.json`, `proposals/manifest.json`,
+`bootstrap-receipts.json`, `bootstrap-database-readback.json`,
+`bootstrap-audit-readback.json` and `negative-request-receipts.json`. `host-composition.json` is a local implementation pin,
+**not** a published host approval or deployed F6/F8/F9 qualification. The initializer
+contains only the four specifically approved source-free false values.
+
+Executable commands used: `pnpm db:setup:rebuild-entity-metadata --mode plan-cleanup
+--scope <private-scope.json>`, then `--mode backup-verify`; generated exact-PK SQL was
+rollback-rehearsed before execution through `psql -X -v ON_ERROR_STOP=1`. Studio cleanup,
+final schema and logical disposition ran in one transaction; each other plane's runtime
+disposition used its own transaction. Foreign keys remained enforced throughout.
+The control API was started using the private `control.compose.json` and actual schema
+inspection used its `scripts/operations/inspect-native-bootstrap-schema.ts` with the
+mounted application-role URL. Bootstrap uses authenticated POST to
+`/api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native`, with
+`entityId`, exact `proposalHash` and stable `idempotencyKey`; repeat the same request for
+replay. The executable local transport is `NODE_EXTRA_CA_CERTS=~/.athyper/platform/secrets/tls.crt
+node ~/.athyper/instances/dev/workspace/native-reset-20261009/bootstrap-references.mjs`.
+It loads the private authenticated Admin session and exact current manifest, applies each
+proposal and replays the same request. No token is printed. A proposed command is not a
+successful execution receipt.
+
+Canonical readback exposed two further integration defects: missing explicit storage
+values in maintained product proposals and legacy numeric decoding of native search
+weights. The product builder now declares those values before hashing; native search
+weights use decimal strings. `nativeBootstrapReadbackJson` compares member sets by ID
+(reference, AI, label and identity collections) while retaining every semantic position,
+value and nested configuration order. UTC timestamp fractional padding to six digits
+preserves microseconds. It does not equate missing required properties with defaults.
+Compiler context must match the original proposal before rebinding to the verified
+stored graph hash. Replay checks the original request hash and separately validates the
+receipt's exact immutable stored graph hash; SQL ordering is not mistaken for mutation.
+These fixes passed focused regression tests and actual application-role bootstrap/replay for both entities.
+
+Validation: 912 ordinary authoring tests pass (11 opt-in exclusions), 20 host tests and
+10 cleanup/final-schema tests pass. The opt-in PostgreSQL test proves declaration
+acceptance, forged identity/value rejection, private-table denial and the real relation
+binding trigger under admitted versus unadmitted application sessions. Host typecheck
+remains blocked by the unrelated preferences `group`/`groups` error at
+`entity-views-routes.ts:317`. Failed actual bootstrap transactions left zero replacement
+roots, fields and identities (`failed-bootstrap-rollback.json`). All required installed
+DDL hashes are recorded in `additional-installation.json`; complete reset SQL passed rollback
+rehearsal before installation. Actual graph write/readback/replay is established; local live-read positive/negative
+acceptance and independent Entity publication/activation remain required.
+
+| ID  | Deliverable                              | Status      | Available evidence / actual gap                                                                      | Next action                                                                   |
+| --- | ---------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| L0a | Local preparation and backup             | Executed    | All three backups restored; exact scoped cleanup manifest executed                                   | Retain recovery evidence                                                      |
+| L1  | Complete native proposals                | Executed    | Both complete proposals saved and compiled through canonical application readback                    | Retain pinned proposal and compiler evidence                                  |
+| L2  | Clean schema and startup composition     | Executed    | Final guards/grants installed; zero pending checks; actual startup used                              | Retain installed schema/configuration pins                                    |
+| L3  | Actual native bootstrap and replay       | Complete    | Both drafts committed at revision 1 and replayed; exact hashes, audit and immutable history verified | Proceed to L4/L5                                                              |
+| L4  | Working local live-read integration      | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete            | Implement bounded validation and actual storage/security/identity composition |
+| L5  | Human review, publication and activation | Not started | Existing infrastructure/component releases are not new native Entity delivery                        | Submit concrete Entity candidates and use independent review/worker paths     |
+| L6  | Local manual-test handover               | Not started | Old Entity heads cleared; no replacement Entity activation yet                                       | Complete L3–L5 and verify standard UI                                         |
+
+Status vocabulary: **Not started / In progress / Blocked / Implemented / Tested / Installed / Executed / Complete**. Awaiting authentication is a blocked execution step. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
 
 Current implementation order is **L0a (non-destructive harness/inventory/backup verification) → L1 (complete replacement graphs and startup assembly) → L2 (explicit destructive rebuild/final constraints/grants)**, as one sequential integration effort. Reset installs the final native integrity contract directly; it is not required merely to obtain an empty target. The reset executor must not destroy source inputs before L1 and its scoped manifest are ready. L4 preparation may run independently only with a separate assigned implementer and isolated changes. Do not split unfinished production composition across uncoordinated sessions.
 

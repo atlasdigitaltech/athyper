@@ -643,5 +643,54 @@ export function buildNativeReferenceProduct(
     },
     10000,
   );
+  return completeNativeProductStorageDeclarations(graph, input.targets);
+}
+
+/** Make maintained product storage semantics explicit before proposal hashing. */
+export function completeNativeProductStorageDeclarations(
+  input: ExpandedNativeMetaEntityGraph,
+  targets: NativeReferenceProductInput["targets"],
+): ExpandedNativeMetaEntityGraph {
+  const graph = structuredClone(
+    input,
+  ) as Mutable<ExpandedNativeMetaEntityGraph>;
+  for (const key of [
+    "capabilities",
+    "changeCaseBindings",
+    "classProfiles",
+    "fieldPolicyBindings",
+    "flowSteps",
+    "flows",
+    "lifecycleBindings",
+    "lifecycleOperationBindings",
+    "materializationBindings",
+    "materializationFieldMappings",
+    "numberingBindings",
+    "operationContextRequirements",
+    "operationRules",
+    "policyBindings",
+    "surfaceOperations",
+    "tests",
+  ] as const)
+    graph[key] ??= [];
+  for (const row of graph.fieldReferenceBindings ?? [])
+    row.requireActive ??= true;
+  for (const row of graph.keys ?? []) {
+    row.nullSemantics ??= "not_allowed";
+    row.status ??= "active";
+  }
+  for (const row of graph.operationPermissions ?? []) row.status ??= "active";
+  for (const row of graph.operationScopeBindings ?? []) row.status ??= "active";
+  for (const row of graph.searchFields ?? []) row.weight ??= "1";
+  for (const row of graph.searchProfiles ?? []) {
+    row.normalizationMode ??= "casefold";
+    row.queryOperator ??= "and";
+    row.status ??= "active";
+  }
+  for (const row of graph.relationTargets ?? []) {
+    const target = targets.find((t) => t.entityId === row.targetEntityId);
+    if (!target) throw Error("NATIVE_PRODUCT_TARGET_DECLARATION_REQUIRED");
+    row.targetEntityCode = target.entityCode;
+  }
   return graph;
 }

@@ -17,8 +17,17 @@ const guards = [
   "fn_assert_native_root(uuid,text,integer)",
   "validate_reference_members(uuid)",
 ];
-export function finalNativeSchemaSql(restoredDatabase) {
-  if (!/^entity_restore_[a-f0-9]{30,32}$/.test(restoredDatabase))
+export function finalNativeSchemaSql(restoredDatabase, mode = "rehearsal") {
+  if (
+    !(
+      mode === "rehearsal" &&
+      /^entity_restore_[a-f0-9]{30,32}$/.test(restoredDatabase)
+    ) &&
+    !(
+      mode === "owner-approved-local-reset" &&
+      restoredDatabase === "athyper_studio"
+    )
+  )
     throw Error("LOCAL_NATIVE_SCHEMA_RESTORE_TARGET_REQUIRED");
   const names = nativePendingTables.map((n) => `'${n}'`).join(",");
   return `BEGIN;

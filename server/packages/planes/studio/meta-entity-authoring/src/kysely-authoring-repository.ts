@@ -683,6 +683,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     const graph: ExpandedNativeMetaEntityGraph = {
       ...core,
       contractSchema: "athyper.meta-entity-contract/2.5",
+      searchFields:
+        core.searchFields as unknown as ExpandedNativeMetaEntityGraph["searchFields"],
       ...(await loadNativeSupplementalMembers(
         tx,
         input,
@@ -1224,9 +1226,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         ].includes(table)
       )
         return [];
-      return (await rows(table)).map((row) =>
-        decodeRow<T>(row, BRANCH_COLUMNS[table]),
-      );
+      return (await rows(table)).map((row) => {
+        const value = decodeRow<T>(row, BRANCH_COLUMNS[table]);
+        // Native structural numeric(6,3) weights use their exact decimal DTO;
+        // retain the legacy numerical decoder for legacy graphs only.
+        if (expanded && table === "entity_search_field" && row.weight != null)
+          Reflect.set(value, "weight", String(row.weight));
+        return value;
+      });
     };
     const ownedLabels = header.label_root?.default_locale
       ? await loadNormalizedLabels(this.database, id)

@@ -129,3 +129,51 @@ it("rejects missing reference contracts, storage mismatch and visible UUID", () 
   Object.assign(visible.product.definition, { columns: ["id"] });
   expect(() => buildNativeReferenceProduct(visible)).toThrow("visible-uuid");
 });
+
+it("declares persisted storage defaults and compares unordered readback without losing semantics", async () => {
+  const { nativeBootstrapReadbackJson } =
+    await import("../native-bootstrap-readback.js");
+  const input = fixture("state_region");
+  const graph = buildNativeReferenceProduct(input);
+  expect(graph.searchFields?.[0]?.weight).toBe("1");
+  expect(
+    graph.keys?.every(
+      (k) => k.nullSemantics === "not_allowed" && k.status === "active",
+    ),
+  ).toBe(true);
+  expect(
+    graph.fieldReferenceBindings?.every((f) => f.requireActive === true),
+  ).toBe(true);
+  const stored = structuredClone(graph);
+  for (const rows of Object.values(stored.referenceMembers!.members))
+    (rows as unknown[]).reverse();
+  for (const rows of Object.values(stored.ai)) (rows as unknown[]).reverse();
+  (stored.fieldIdentities as unknown[]).reverse();
+  for (const identity of stored.fieldIdentities!)
+    Reflect.set(
+      identity,
+      "createdAt",
+      identity.createdAt.replace(".000Z", ".000000Z"),
+    );
+  (stored.ownedLabels!.labels as unknown[]).reverse();
+  expect(nativeBootstrapReadbackJson(stored)).toBe(
+    nativeBootstrapReadbackJson(graph),
+  );
+  Reflect.set(
+    stored.referenceMembers!.members.surfaceViewField[0]!,
+    "visiblePosition",
+    99,
+  );
+  expect(nativeBootstrapReadbackJson(stored)).not.toBe(
+    nativeBootstrapReadbackJson(graph),
+  );
+  const different = structuredClone(graph);
+  Reflect.set(
+    different.fieldIdentities![0]!,
+    "createdAt",
+    "2026-10-09T00:00:00.000001Z",
+  );
+  expect(nativeBootstrapReadbackJson(different)).not.toBe(
+    nativeBootstrapReadbackJson(graph),
+  );
+});

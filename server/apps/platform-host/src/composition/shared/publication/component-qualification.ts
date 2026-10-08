@@ -106,3 +106,17 @@ export function createDeployedComponentQualification(
     }
   };
 }
+
+/** Artifact loaders supply an envelope; source qualification consumes its payload. */
+export function createDeployedComponentArtifactQualification(
+  environment: NodeJS.ProcessEnv,
+  canonical: PublicationCanonicalizer,
+) {
+  const qualify = createDeployedComponentQualification(environment, canonical);
+  if (!qualify)
+    throw Error("NATIVE_COMPONENT_DEPLOYMENT_CONFIGURATION_REQUIRED");
+  return {
+    qualify: async (envelope: { payload: unknown }) =>
+      qualify(envelope.payload),
+  };
+}

@@ -6,7 +6,10 @@ import {
   canonicalBytes,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import { createDeployedComponentQualification } from "./component-qualification.js";
+import {
+  createDeployedComponentQualification,
+  createDeployedComponentArtifactQualification,
+} from "./component-qualification.js";
 const roots: string[] = [];
 afterEach(async () => {
   await Promise.all(
@@ -160,4 +163,23 @@ it("absent configuration remains disabled; partial configuration rejects", () =>
       { canonicalBytes, sha256 },
     ),
   ).toThrow("COMPONENT_DEPLOYMENT_CONFIGURATION_INVALID");
+});
+
+it("production artifact composition unwraps the envelope and retains deployment validation", async () => {
+  const f = await fixture();
+  const adapter = createDeployedComponentArtifactQualification(f.env, {
+    canonicalBytes,
+    sha256,
+  });
+  await adapter.qualify({ payload: f.source });
+  await writeFile(join(f.root, "bundle.js"), "changed");
+  await expect(adapter.qualify({ payload: f.source })).rejects.toThrow(
+    "COMPONENT_DEPLOYMENT_FILE_CHANGED",
+  );
+  expect(() =>
+    createDeployedComponentArtifactQualification(
+      {},
+      { canonicalBytes, sha256 },
+    ),
+  ).toThrow("CONFIGURATION_REQUIRED");
 });

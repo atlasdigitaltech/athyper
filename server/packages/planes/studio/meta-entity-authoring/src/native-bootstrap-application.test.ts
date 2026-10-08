@@ -468,3 +468,34 @@ it("creates fresh identities through the canonical writer and never reallocates 
   expect(await f.run()).toEqual({ ...result, replay: true });
   expect(identityWrites()).toHaveLength(f.graph.fields.length);
 });
+
+it("compiles the exact stored hash after equivalent SQL ordering/precision readback", async () => {
+  const f = fixture(true),
+    stored = structuredClone(f.graph);
+  (stored.ownedLabels!.labels as unknown[]).reverse();
+  for (const identity of stored.fieldIdentities!)
+    Reflect.set(
+      identity,
+      "createdAt",
+      identity.createdAt.replace(".000Z", ".000000Z"),
+    );
+  f.readers.native.mockResolvedValue(stored);
+  const result = await f.run();
+  expect(result.graphHash).toBe(sha256(stored));
+  expect(result.graphHash).not.toBe(f.input.proposalHash);
+  expect(await f.run()).toEqual({ ...result, replay: true });
+});
+it("rejects stale compiler source context before rebinding to SQL readback", async () => {
+  const f = fixture();
+  const prepare = vi.mocked(f.policy.prepare).getMockImplementation()!;
+  vi.spyOn(f.policy, "prepare").mockImplementation(async (...args) => {
+    const prepared = await prepare(...args);
+    return {
+      ...prepared,
+      compiler: { ...prepared.compiler, graphHash: "f".repeat(64) },
+    };
+  });
+  await expect(f.run()).rejects.toMatchObject({
+    code: "NATIVE_AUTHORING_COMPILER_SOURCE_MISMATCH",
+  });
+});

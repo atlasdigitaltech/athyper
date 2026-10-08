@@ -1,3 +1,4 @@
+import { nativeBootstrapReadbackJson } from "./native-bootstrap-readback.js";
 import {
   establishNativeBootstrapIdentities,
   persistFreshNativeBootstrapIdentities,
@@ -185,7 +186,7 @@ export async function applyNativeBootstrap(
     ).rows[0];
     if (
       !saved ||
-      saved.graph_hash !== input.proposalHash ||
+      // The request hash pins the proposal; the receipt pins its verified SQL readback.
       saved.graph_hash !== receipt.identities.graphHash ||
       sha256(saved.graph) !== saved.graph_hash ||
       saved.graph.authoringSource?.entityId !== input.entityId ||
@@ -333,15 +334,23 @@ export async function applyNativeBootstrap(
     sourceKind: "product",
     authoringSchemaHash: schemaHash,
   });
-  if (canonicalJson(stored) !== canonicalJson(graph))
+  if (
+    nativeBootstrapReadbackJson(stored) !== nativeBootstrapReadbackJson(graph)
+  )
     fail("NATIVE_AUTHORING_PERSISTENCE_MISMATCH");
+  if (prepared.compiler.graphHash !== sha256(graph))
+    fail("NATIVE_AUTHORING_COMPILER_SOURCE_MISMATCH");
   const controls = await loadNativeCompilationOperations(
     tx,
     { ...input, revision: 1, graphHash: sha256(stored) },
     stored,
     policy.host.commands.maxMembers,
   );
-  const compiled = compileNativeRelease(stored, prepared.compiler, controls);
+  const compiled = compileNativeRelease(
+    stored,
+    { ...prepared.compiler, graphHash: sha256(stored) },
+    controls,
+  );
   verifyNativeCompiledOperationControls(controls, compiled.descriptor);
   const runtime = stored.runtimeProfiles[0];
   const identity = stored.fields.find((f) => f.id === runtime?.idFieldId);

@@ -12,7 +12,12 @@ if (
   !urlFile ||
   !database ||
   extra.length ||
-  !/^entity_restore_[a-f0-9]{30,32}$/.test(database)
+  (!/^entity_restore_[a-f0-9]{30,32}$/.test(database) &&
+    !(
+      database === "athyper_studio" &&
+      process.env.ATHYPER_ENV === "local" &&
+      process.env.ATHYPER_DOMAIN_SUFFIX === "dev.athyper.test"
+    ))
 )
   throw Error("NATIVE_SCHEMA_RESTORED_DATABASE_REQUIRED");
 const url = new URL((await readFile(urlFile, "utf8")).trim());

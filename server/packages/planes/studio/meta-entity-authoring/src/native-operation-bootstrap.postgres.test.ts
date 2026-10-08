@@ -224,6 +224,92 @@ it.skipIf(process.env.ATHYPER_OPERATION_BOOTSTRAP_POSTGRES !== "1")(
       query(
         `UPDATE entity_command_private.admission SET creation_entity_id='${entity}';`,
       );
+      // Source-free exception installs exact immutable member coordinates privately.
+      query(
+        "ALTER TABLE metadata.entity_operation ADD COLUMN authorization_effect text;",
+      );
+      query(
+        read(
+          "ddl/planes/studio/metadata/60_declared_operation_initialization.sql",
+        ),
+      );
+      query(
+        read("ddl/planes/studio/metadata/59_native_reference_target_read.sql"),
+      );
+      const declared = randomUUID();
+      query(`INSERT INTO entity_command_private.declared_operation_initialization VALUES
+        ('${target}','${entity}','${declared}','list',false,'${hash}','${hash}');
+        GRANT INSERT(authorization_effect) ON metadata.entity_operation TO athyper_product_command_app;`);
+      const declaredInsert = (
+        id: string,
+        value: boolean,
+      ) => `INSERT INTO metadata.entity_operation
+        (id,entity_id,tenant_id,change_set_id,operation_key,operation_kind,requires_mfa,label_id,authorization_effect)
+        VALUES('${id}','${entity}',NULL,'${target}','list','read',${value},'${randomUUID()}','read');`;
+      query(enter + declaredInsert(declared, false) + "ROLLBACK;");
+      denied(
+        enter + declaredInsert(declared, true),
+        "NATIVE_OPERATION_INITIALIZER_SOURCE_CHANGED",
+      );
+      denied(
+        enter + declaredInsert(randomUUID(), false),
+        "NATIVE_OPERATION_INITIALIZER_SOURCE_CHANGED",
+      );
+      denied(
+        `SET SESSION AUTHORIZATION bootstrap_client; DELETE FROM entity_command_private.declared_operation_initialization;`,
+        "permission denied",
+      );
+      expect(
+        query(
+          enter +
+            `SELECT entity_command_private.native_reference_target_exists('${target}','${entity}','fixture_reference');ROLLBACK;`,
+        ),
+      ).toContain("t");
+      expect(
+        query(
+          enter +
+            `SELECT entity_command_private.native_reference_target_exists('${target}','${entity}','wrong');ROLLBACK;`,
+        ),
+      ).toContain("f");
+      denied(
+        `SET SESSION AUTHORIZATION bootstrap_client; SELECT entity_command_private.native_reference_target_exists('${target}','${entity}','fixture_reference');`,
+        "NATIVE_REFERENCE_TARGET_ADMISSION_REQUIRED",
+      );
+      const functions = read("ddl/planes/studio/metadata/07_functions.sql");
+      query(
+        functions.slice(
+          functions.indexOf(
+            "CREATE OR REPLACE FUNCTION metadata.trg_validate_entity_graph_binding()",
+          ),
+          functions.indexOf(
+            "CREATE OR REPLACE FUNCTION metadata.fn_entity_key_reference_valid",
+          ),
+        ),
+      );
+      query(
+        read("ddl/planes/studio/metadata/61_native_relation_target_guard.sql"),
+      );
+      const relation = randomUUID();
+      query(`ALTER TABLE metadata.entity ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE metadata.entity FORCE ROW LEVEL SECURITY;
+        GRANT SELECT ON metadata.entity TO athyper_product_command_app;
+        CREATE TABLE metadata.entity_relation(id uuid,tenant_id uuid,entity_id uuid,change_set_id uuid);
+        INSERT INTO metadata.entity_relation VALUES('${relation}',NULL,'${entity}','${target}');
+        CREATE TABLE metadata.entity_relation_target(tenant_id uuid,entity_id uuid,change_set_id uuid,entity_relation_id uuid,target_entity_id uuid);
+        GRANT SELECT ON metadata.entity_relation TO athyper_product_command_app;
+        GRANT INSERT ON metadata.entity_relation_target TO athyper_product_command_app;
+        CREATE TRIGGER binding_guard BEFORE INSERT ON metadata.entity_relation_target FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_binding();`);
+      const relationInsert = (targetId: string) =>
+        `INSERT INTO metadata.entity_relation_target VALUES(NULL,'${entity}','${target}','${relation}','${targetId}');`;
+      query(enter + relationInsert(entity) + "ROLLBACK;");
+      denied(
+        enter + relationInsert(randomUUID()),
+        "Relation target Entity is not visible",
+      );
+      denied(
+        "SET SESSION AUTHORIZATION bootstrap_client;" + relationInsert(entity),
+        "NATIVE_REFERENCE_TARGET_ADMISSION_REQUIRED",
+      );
       // A committed admission cannot be entered twice.
       expect(query(enter + select + "COMMIT;")).toContain("1:false");
       denied(enter + select, "PRODUCT_COMMAND_ADMISSION_DENIED");

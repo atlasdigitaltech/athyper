@@ -1,5 +1,7 @@
 import {
   FoundationContractError,
+  nativeStructuralRowNode,
+  type NativeStructuralGraph,
   referenceUuid,
   validateFoundationNode,
   validateNativeAiSemantics,
@@ -240,6 +242,31 @@ export function prepareExpandedNativeGraphConversion(
   const candidate: ExpandedNativeMetaEntityGraph = {
     ...core.candidate,
     contractSchema: "athyper.meta-entity-contract/2.5",
+    searchFields: core.candidate.searchFields
+      ? (core.candidate.searchFields.map((row, index) => {
+          if (
+            typeof row.weight === "number" &&
+            (!Number.isFinite(row.weight) ||
+              Number(row.weight.toFixed(3)) !== row.weight)
+          )
+            fail(
+              "NATIVE_STRUCTURAL_WEIGHT_INVALID",
+              `/searchFields/${index}/weight`,
+            );
+          const native = {
+            ...row,
+            ...(typeof row.weight === "number"
+              ? { weight: row.weight.toFixed(3) }
+              : {}),
+          };
+          validateFoundationNode(
+            nativeStructuralRowNode("searchFields"),
+            native,
+            `/searchFields/${index}`,
+          );
+          return native;
+        }) as NativeStructuralGraph["searchFields"])
+      : undefined,
     operations: structuredClone(stage.operations),
     ai: structuredClone(stage.ai),
   };
