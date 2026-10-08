@@ -11,7 +11,9 @@
 .a-entity-calendar__period{flex:1 1 12rem;min-width:0;margin:0;font-size:var(--a-font-size-title);font-weight:var(--a-font-weight-strong);letter-spacing:var(--a-tracking-tighter);line-height:1.15}
 .a-entity-calendar__nav,.a-entity-calendar__choices{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2)}
 .a-entity-calendar__step{min-width:var(--a-density-control-height-small);padding-inline:0;font-size:var(--a-font-size-md)}
-[dir=rtl] .a-entity-calendar__step>span,[dir=rtl] .a-entity-calendar__arrow{display:inline-block;transform:scaleX(-1)}
+/* ‹ and › are bidi-mirrored glyphs, so right-to-left text flips them already;
+   → is not, so the arrow is flipped explicitly. */
+[dir=rtl] .a-entity-calendar__arrow{display:inline-block;transform:scaleX(-1)}
 .a-entity-calendar__notice{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2) var(--a-space-3);margin:0;padding:var(--a-space-2) var(--a-space-3);border-radius:var(--a-radius-md);background:var(--a-warning-subtle);color:var(--a-warning-subtle-foreground);font-weight:var(--a-font-weight-regular)}
 .a-entity-calendar__notice>span{flex:1 1 16rem}
 .a-entity-calendar__nothing{display:grid;justify-items:center;gap:var(--a-space-1);padding:var(--a-space-10) var(--a-space-4);color:var(--a-muted-foreground);text-align:center}
@@ -44,7 +46,6 @@
 .a-entity-calendar__chip[data-continues-before]::before,.a-entity-calendar__chip[data-continues-after]::after{flex:none;color:var(--cal-tone);font-weight:var(--a-font-weight-strong)}
 .a-entity-calendar__chip[data-continues-before]::before{content:"\2039"}
 .a-entity-calendar__chip[data-continues-after]::after{content:"\203A"}
-[dir=rtl] .a-entity-calendar__chip::before,[dir=rtl] .a-entity-calendar__chip::after{transform:scaleX(-1)}
 .a-entity-calendar__chip[data-open-ended]{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--cal-tone) 14%,transparent) 7px 9px)}
 .a-entity-calendar__chip:hover{box-shadow:0 0 0 1.5px var(--cal-tone)}
 .a-entity-calendar__chip:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:0}
@@ -57,6 +58,8 @@
 .a-entity-calendar__agenda h3 small{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-regular);letter-spacing:0}
 .a-entity-calendar__today{padding:0 var(--a-space-2);border-radius:var(--a-radius-round);background:var(--a-primary);color:var(--a-primary-foreground);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-medium);letter-spacing:0}
 .a-entity-calendar__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(16rem,100%),1fr));gap:var(--a-space-3)}
+.a-entity-calendar__cards>.a-entity-list__card{transition:transform var(--a-motion-fast) var(--a-easing),box-shadow var(--a-motion-fast) var(--a-easing)}
+.a-entity-calendar__cards>.a-entity-list__card:hover,.a-entity-calendar__cards>.a-entity-list__card:focus-within{transform:translateY(-1px);box-shadow:var(--a-shadow-md)}
 .a-entity-calendar__tray{display:grid;gap:var(--a-space-3);padding:var(--a-space-1) var(--a-space-3);border:var(--a-border-width) dashed var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface)}
 .a-entity-calendar__tray[open]{padding-block-end:var(--a-space-3)}
 .a-entity-calendar__tray>summary{display:flex;align-items:center;gap:var(--a-space-2);min-height:calc(var(--a-density-control-height-small) + var(--a-space-2));font-weight:var(--a-font-weight-strong);cursor:pointer;list-style:none}
@@ -67,6 +70,10 @@
 .a-entity-calendar__tray>summary:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:2px;border-radius:var(--a-radius-sm)}
 .a-entity-calendar__count{padding:0 var(--a-space-2);border-radius:var(--a-radius-round);background:var(--a-muted);color:var(--a-muted-foreground);font-family:var(--a-font-mono);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-regular)}
 
+@media (prefers-reduced-motion:reduce){
+  .a-entity-calendar__cards>.a-entity-list__card{transition:none}
+  .a-entity-calendar__cards>.a-entity-list__card:hover{transform:none}
+}
 @container entity-list (width < 40rem){
   .a-entity-calendar{padding:var(--a-space-2)}
 }
