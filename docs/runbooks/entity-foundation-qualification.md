@@ -5,6 +5,29 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Owner-authorized DEV reset preparation — 2026-10-08
+
+The owner authorized scoped disposal of obsolete local Entity authoring/publication
+state and a fresh native Country/State Region bootstrap. Legacy conversion is outside
+the immediate handover scope. IAM, business data, platform services, migration history,
+independent publication review and existing MFA controls remain preserved.
+
+Private backup directory: `~/.athyper/instances/dev/workspace/entity-native-reset-20261008T054638Z`.
+Custom-format backups for Studio, Neon, Mesh, IAM and Infisical plus cluster globals
+were captured with restrictive file permissions. All five database archives passed
+full restore rehearsals in temporary databases, which were then removed; checksums
+and results are in `manifest.json`. This was a sequential per-database logical backup,
+not a simultaneous cluster snapshot. No production/local source database was reset.
+
+The current four Country/State Region list/read operations all store
+`requires_mfa=false`. Fresh-operation initialization is a separate approval scope
+from the previous persistence/compiler preservation approvals. An exact revision-4,
+source-row-hash-bound proposal is captured in `operation-initialization-proposal.json`
+in the same private directory; it is pending owner approval, not installed authority.
+Source rows remain intact. Native bootstrap, reset application and deployed live-read
+integration remain unfinished independently of this decision. No publication or
+activation occurred during backup preparation.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`
