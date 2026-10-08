@@ -199,10 +199,55 @@ export function agendaByDay(entries: readonly CalendarEntry[], window: CalendarW
   return days;
 }
 
-/** Chips shown in a month cell, and how many more sit behind "+N more". */
-export const CALENDAR_CHIPS_PER_DAY = 3;
-export function visibleChips(entries: readonly CalendarEntry[]): { readonly shown: readonly CalendarEntry[]; readonly more: number } {
-  return { shown: entries.slice(0, CALENDAR_CHIPS_PER_DAY), more: Math.max(0, entries.length - CALENDAR_CHIPS_PER_DAY) };
+/** Lanes a month week shows before "+N more". */
+export const CALENDAR_LANES_PER_WEEK = 3;
+
+/** One entry drawn as a continuous bar across the days it covers in a week. */
+export interface WeekBar {
+  readonly entry: CalendarEntry;
+  /** Column of the bar's first day in this week, 0 to 6. */
+  readonly column: number;
+  readonly span: number;
+  readonly lane: number;
+  readonly continuesBefore: boolean;
+  readonly continuesAfter: boolean;
+}
+
+/** Week order: multi-day bars first, earlier and then longer first, so long
+ * spans keep a stable lane; then the within-day order. */
+function compareInWeek(left: CalendarEntry, right: CalendarEntry): number {
+  return (
+    Number(right.multiDay) - Number(left.multiDay) ||
+    (left.firstDay < right.firstDay ? -1 : left.firstDay > right.firstDay ? 1 : 0) ||
+    (left.lastDay > right.lastDay ? -1 : left.lastDay < right.lastDay ? 1 : 0) ||
+    compareWithinDay(left, right)
+  );
+}
+
+/** Packs a week's entries into lanes. An entry that finds no free lane for its
+ * whole span is hidden on each day it covers, and counted in that day's
+ * "+N more"; the day dialog lists every entry of the day. */
+export function weekLayout(
+  entries: readonly CalendarEntry[],
+  week: readonly string[],
+  lanes: number = CALENDAR_LANES_PER_WEEK,
+): { readonly bars: readonly WeekBar[]; readonly hidden: readonly number[] } {
+  const first = week[0]!, last = week[week.length - 1]!;
+  const occupied = Array.from({ length: lanes }, () => new Array<boolean>(week.length).fill(false));
+  const hidden = new Array<number>(week.length).fill(0);
+  const bars: WeekBar[] = [];
+  for (const entry of entries.filter((item) => item.firstDay <= last && item.lastDay >= first).sort(compareInWeek)) {
+    const column = entry.firstDay < first ? 0 : week.indexOf(entry.firstDay);
+    const end = entry.lastDay > last ? week.length - 1 : week.indexOf(entry.lastDay);
+    const lane = occupied.findIndex((row) => row.slice(column, end + 1).every((taken) => !taken));
+    if (lane < 0) {
+      for (let day = column; day <= end; day += 1) hidden[day]! += 1;
+      continue;
+    }
+    occupied[lane]!.fill(true, column, end + 1);
+    bars.push({ entry, column, span: end - column + 1, lane, continuesBefore: entry.firstDay < first, continuesAfter: entry.lastDay > last });
+  }
+  return { bars, hidden };
 }
 
 /** Merges the window and open-ended pages without duplicates (the queries

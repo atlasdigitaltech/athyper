@@ -16,6 +16,8 @@ export interface CalendarPages {
   readonly loading: boolean;
   readonly failed: boolean;
   readonly hasNext: boolean;
+  /** The query's total, only under exact counts (foundation section 5). */
+  readonly total?: number;
   readonly loadMore: () => void;
 }
 
@@ -36,6 +38,7 @@ export function useCalendarPages(input: {
   const [rows, setRows] = useState<readonly EntityListRowV1[]>([]);
   const [cursor, setCursor] = useState<string | undefined>();
   const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [total, setTotal] = useState<number>();
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const latest = useRef(input);
@@ -51,6 +54,7 @@ export function useCalendarPages(input: {
   if (lastKey.current !== queryKey) {
     lastKey.current = queryKey;
     setRows([]);
+    setTotal(undefined);
     setCursor(undefined);
     setNextCursor(continuation ? (firstCursor ?? undefined) : undefined);
   }
@@ -76,6 +80,7 @@ export function useCalendarPages(input: {
           throw new TypeError("Calendar response authority no longer matches its descriptor");
         setRows((previous) => (cursor ? [...previous, ...page.rows] : page.rows));
         setNextCursor(page.pagination.hasNext ? page.pagination.nextCursor : undefined);
+        setTotal(page.pagination.countMode === "exact" ? page.pagination.total : undefined);
       })
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
@@ -88,5 +93,5 @@ export function useCalendarPages(input: {
   const loadMore = useCallback(() => {
     if (nextCursor && !loading) setCursor(nextCursor);
   }, [nextCursor, loading]);
-  return { rows, loading, failed, hasNext: nextCursor !== undefined, loadMore };
+  return { rows, loading, failed, hasNext: nextCursor !== undefined, ...(total === undefined ? {} : { total }), loadMore };
 }

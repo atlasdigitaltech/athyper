@@ -24,6 +24,7 @@ export function EntityRecordCard({
   selection,
   actions,
   context,
+  note,
   onOpenRecord,
   headingLevel = 2,
   intl,
@@ -43,6 +44,9 @@ export function EntityRecordCard({
   readonly actions?: ReactNode;
   /** Lane context for value renderers (for example, terminal lanes). */
   readonly context?: CardValueContext;
+  /** A line from the owning layout about this record (for example, when a
+   * calendar entry happens), shown under the heading. */
+  readonly note?: ReactNode;
   readonly onOpenRecord?: (row: EntityListRowV1) => void;
   readonly headingLevel?: 2 | 3;
   readonly intl: ReturnType<typeof useEntityI18n>;
@@ -116,6 +120,7 @@ export function EntityRecordCard({
           <div className="a-entity-list__card-actions">{actions}</div>
         ) : null}
       </div>
+      {note ? <p className="a-entity-list__card-note">{note}</p> : null}
       {layout.status ? (
         <div className="a-entity-list__card-status">{value(layout.status)}</div>
       ) : null}

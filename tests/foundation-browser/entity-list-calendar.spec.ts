@@ -107,15 +107,20 @@ test("Country-shaped rehearsal: updated_at as a datetime calendar with offset ed
 
 test("date ranges, open-ended records, +N more and the Unscheduled tray", async ({ page }) => {
   await mount(page, 1440, { entity: "work", defaultMode: "calendar" });
-  for (const label of [/October 5/, /October 6/, /October 7/]) await expect(day(page, label).getByRole("link", { name: /Kickoff workshop/ })).toBeVisible();
-  await expect(day(page, /October 8/).getByRole("link", { name: /Kickoff workshop/ })).toHaveCount(0);
-  await expect(day(page, /October 1,|October 1$/).getByRole("link", { name: /Vendor contract, open-ended/ })).toBeVisible();
+  // A range is one continuous bar from its first day; a date end is inclusive.
+  const kickoff = day(page, /October 5/).getByRole("link", { name: /Kickoff workshop/ });
+  await expect(kickoff).toHaveAttribute("style", /--cal-span: 3/);
+  for (const label of [/October 6/, /October 7/, /October 8/]) await expect(day(page, label).getByRole("link", { name: /Kickoff workshop/ })).toHaveCount(0);
+  // Open-ended from before the window: starts at the grid's first day and continues.
+  const vendor = day(page, /September 28/).getByRole("link", { name: /Vendor contract, open-ended/ });
+  await expect(vendor).toHaveAttribute("data-continues-after", "true");
+  await expect(vendor).toHaveAttribute("data-open-ended", "true");
   const issued = (await requests(page)).map(q => (q.filter ?? []).map(f => JSON.parse(f)));
   expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2026-11-02" }, { field: "ends_on", operator: "gte", value: "2026-09-28" }, { field: "ends_on", operator: "is_not_null" }]);
   expect(issued).toContainEqual([{ field: "starts_on", operator: "lt", value: "2026-11-02" }, { field: "ends_on", operator: "is_null" }]);
   expect(issued).toContainEqual([{ field: "starts_on", operator: "is_null" }]);
   const busy = day(page, /October 14/);
-  await expect(busy.getByRole("link")).toHaveCount(3); // the open-ended record plus two sprint tasks
+  await expect(busy.getByRole("link")).toHaveCount(2); // the open-ended bar holds lane 1 from the week's first day
   await busy.getByRole("button", { name: "+3 more" }).click();
   const dialog = page.getByRole("dialog", { name: /October 14, 2026/ });
   await expect(dialog.locator(".a-entity-list__card")).toHaveCount(6);
@@ -124,6 +129,8 @@ test("date ranges, open-ended records, +N more and the Unscheduled tray", async 
   await tray.locator("summary").click();
   await expect(tray).toContainText("Backlog grooming");
   await expect(tray).toContainText("Ends Oct 30, 2026");
+  await expect(tray.locator("summary")).toHaveText("Unscheduled"); // no count without exact counts
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-calendar-ranges.png", fullPage: true });
 });
 
 test("Agenda pages the window and reports overflow without inventing a total", async ({ page }) => {
@@ -137,6 +144,9 @@ test("Agenda pages the window and reports overflow without inventing a total", a
   await expect(page.getByRole("region", { name: /Thursday, October 1/ })).toContainText("Vendor contract");
   await expect(page.locator(".a-entity-calendar__agenda").getByText("Vendor contract")).toHaveCount(1);
   await expect.poll(() => new URL(page.url()).searchParams.get("cal.view")).toBe("agenda");
+  await expect(page.getByRole("region", { name: /Thursday, October 1/ }).locator(".a-entity-list__card-note")).toContainText("open-ended");
+  await page.evaluate(() => window.scrollTo(0, 0)); // sticky day headings render in place
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-calendar-agenda.png", fullPage: true });
 });
 
 test("an unavailable Calendar is a disabled, explained layout option", async ({ page }) => {
@@ -161,4 +171,11 @@ test("phones show Agenda only, and the month grid moves by keyboard", async ({ p
   await expect(day(page, /Friday, October 9/)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: /October 9, 2026/ })).toContainText("Steering review");
+  await page.keyboard.press("Escape");
+  await day(page, /Friday, October 9/).focus();
+  await page.keyboard.press("PageDown");
+  await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible();
+  await expect(day(page, /Monday, November 9/)).toBeFocused();
+  await page.keyboard.press("PageUp");
+  await expect(day(page, /Friday, October 9/)).toBeFocused();
 });

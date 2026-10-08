@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, type KeyboardEvent, type ReactNode } from "react";
+import React, { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import type { HttpClient } from "@athyper/platform-api-client";
 import type {
   EntityListDescriptorV1,
@@ -11,7 +11,7 @@ import type {
   ListFieldDescriptorV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
-import { addDays, addMonths, startOfMonth, weekRows, zonedToday } from "@athyper/platform-temporal";
+import { addDays, addMonths, shiftMonths, startOfMonth, weekRows, zonedToday } from "@athyper/platform-temporal";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Button, Dialog, DialogContent, SegmentedControl } from "@athyper/platform-ui";
 import { resolveCardLayout } from "../card-content";
@@ -27,10 +27,12 @@ import {
   mergeRows,
   openEndedFilters,
   placeEntries,
+  CALENDAR_LANES_PER_WEEK,
   trayFilters,
-  visibleChips,
+  weekLayout,
   windowFilters,
   type CalendarEntry,
+  type WeekBar,
 } from "./calendar-model";
 
 type EntityIntl = ReturnType<typeof useEntityI18n>;
@@ -96,6 +98,9 @@ export function EntityCalendar({
   const byDay = entriesByDay(entries, window);
   const layout = resolveCardLayout(descriptor, fields);
   const overflow = (pageCurrent && page?.pagination.hasNext && !more.rows.length) || more.hasNext || open.hasNext;
+  // Per-day counts are shown only when every record of the window is loaded,
+  // so a count is never a partial number (foundation section 5).
+  const complete = Boolean(pageCurrent && page) && !overflow;
   const total = page?.pagination.countMode === "exact" ? page.pagination.total : undefined;
   const [openDay, setOpenDay] = useState<string>();
   const label = (row: EntityListRowV1) => chipLabel(row, descriptor);
@@ -103,19 +108,21 @@ export function EntityCalendar({
   const setState = (patch: Partial<ListCalendarStateV1>) =>
     onCalendarChange({ calendar: { dateField: field.start, view: selection.view, ...patch } });
   const period = formatDay(intl, startOfMonth(anchor), { month: "long", year: "numeric" });
-  const card = (row: EntityListRowV1) => (
-    <EntityRecordCard key={row.id} descriptor={descriptor} layout={layout} row={row} query={state.query}
+  const card = (row: EntityListRowV1, note?: ReactNode) => (
+    <EntityRecordCard key={row.id} descriptor={descriptor} layout={layout} row={row} query={state.query} note={note}
       href={recordHref(row)} actions={renderActions(row)} onOpenRecord={onOpenRecord} headingLevel={3} intl={intl} />
   );
+  const entryCard = (entry: CalendarEntry) => card(entry.row, <When entry={entry} field={field} intl={intl} timeZone={timeZone} />);
+  const fieldName = field.label;
 
   return (
     <div className="a-entity-calendar">
       <div className="a-entity-calendar__toolbar">
+        <h2 className="a-entity-calendar__period" aria-live="polite">{period}</h2>
         <div className="a-entity-calendar__nav">
           <Button variant="secondary" size="small" onClick={() => navigate(today)}>{intl.message("list.calendar.today")}</Button>
-          <Button variant="ghost" size="small" aria-label={intl.message("list.calendar.previous")} onClick={() => navigate(addMonths(anchor, -1))}>‹</Button>
-          <Button variant="ghost" size="small" aria-label={intl.message("list.calendar.next")} onClick={() => navigate(addMonths(anchor, 1))}>›</Button>
-          <h2 className="a-entity-calendar__period" aria-live="polite">{period}</h2>
+          <Button variant="secondary" size="small" className="a-entity-calendar__step" aria-label={intl.message("list.calendar.previous")} onClick={() => navigate(addMonths(anchor, -1))}><span aria-hidden="true">‹</span></Button>
+          <Button variant="secondary" size="small" className="a-entity-calendar__step" aria-label={intl.message("list.calendar.next")} onClick={() => navigate(addMonths(anchor, 1))}><span aria-hidden="true">›</span></Button>
         </div>
         <div className="a-entity-calendar__choices">
           {calendar.dateFields.length > 1 ? (
@@ -139,33 +146,40 @@ export function EntityCalendar({
         </div>
       ) : null}
       {pageCurrent && page && !entries.length ? (
-        <p className="a-entity-calendar__empty">{intl.message("list.calendar.empty", { period })}</p>
-      ) : null}
-      {view === "month" ? (
-        <MonthGrid window={window} anchor={anchor} today={today} byDay={byDay} field={field}
-          intl={intl} timeZone={timeZone} label={label} recordHref={recordHref} onMore={setOpenDay} />
+        <div className="a-entity-calendar__nothing">
+          <strong>{intl.message("list.calendar.empty", { period })}</strong>
+          <span>{state.query?.trim()
+            ? intl.message("list.calendar.emptySearch", { query: state.query.trim() })
+            : intl.message("list.calendar.emptyField", { field: fieldName })}</span>
+          {unscheduled.rows.length ? <span>{intl.message("list.calendar.emptyTray", { field: fieldName })}</span> : null}
+        </div>
+      ) : view === "month" ? (
+        <MonthGrid window={window} anchor={anchor} today={today} entries={entries} byDay={byDay} field={field} complete={complete}
+          intl={intl} timeZone={timeZone} label={label} recordHref={recordHref} onMore={setOpenDay} onNavigate={navigate} />
       ) : (
-        <Agenda byDay={agendaByDay(entries, window)} intl={intl} card={card}
+        <Agenda byDay={agendaByDay(entries, window)} today={today} complete={complete} intl={intl} card={entryCard}
           loadMore={more.hasNext || open.hasNext ? () => { more.loadMore(); open.loadMore(); } : undefined} loading={more.loading || open.loading} />
       )}
       {tray ? (
         <details className="a-entity-calendar__tray">
-          <summary>{intl.message("list.calendar.unscheduled")}{unscheduled.rows.length ? ` · ${intl.number(unscheduled.rows.length)}${unscheduled.hasNext ? "+" : ""}` : ""}</summary>
+          <summary>
+            <span>{intl.message("list.calendar.unscheduled")}</span>
+            {unscheduled.total !== undefined ? <span className="a-entity-calendar__count">{intl.number(unscheduled.total)}</span> : null}
+          </summary>
+          <p className="a-entity-calendar__caption">{intl.message("list.calendar.trayCaption", { field: fieldName })}</p>
           {unscheduled.rows.length ? (
-            <div className="a-entity-calendar__cards">{unscheduled.rows.map((row) => (
-              <div key={row.id} className="a-entity-calendar__tray-item">
-                {field.end && row.values[field.end] ? <small>{intl.message("list.calendar.endsOn", { date: endLabel(intl, row.values[field.end], field) })}</small> : null}
-                {card(row)}
-              </div>
-            ))}</div>
-          ) : <p className="a-entity-calendar__empty">{intl.message("list.calendar.trayEmpty")}</p>}
+            <div className="a-entity-calendar__cards">{unscheduled.rows.map((row) => card(row,
+              field.end && row.values[field.end]
+                ? <strong>{intl.message("list.calendar.endsOn", { date: endLabel(intl, row.values[field.end], field) })}</strong>
+                : <strong>{intl.message("list.calendar.noDates")}</strong>))}</div>
+          ) : <p className="a-entity-calendar__caption">{intl.message("list.calendar.trayEmpty")}</p>}
           {unscheduled.hasNext ? <Button variant="secondary" size="small" loading={unscheduled.loading} onClick={unscheduled.loadMore}>{intl.message("list.calendar.loadMore")}</Button> : null}
         </details>
       ) : null}
       {openDay ? (
         <Dialog open onOpenChange={(value) => !value && setOpenDay(undefined)}>
           <DialogContent title={formatDay(intl, openDay, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} closeLabel={intl.message("list.calendar.close")}>
-            <div className="a-entity-calendar__cards">{(byDay.get(openDay) ?? []).map((entry) => card(entry.row))}</div>
+            <div className="a-entity-calendar__cards">{(byDay.get(openDay) ?? []).map(entryCard)}</div>
           </DialogContent>
         </Dialog>
       ) : null}
@@ -184,96 +198,171 @@ function endLabel(intl: EntityIntl, value: unknown, field: ListCalendarDateField
   return field.kind === "date" ? formatDay(intl, text.slice(0, 10), { day: "numeric", month: "short", year: "numeric" }) : intl.date(text, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function MonthGrid({ window, anchor, today, byDay, field, intl, timeZone, label, recordHref, onMore }: {
+function entryTone(entry: CalendarEntry, field: ListCalendarDateFieldV1): string {
+  return (field.tone ? field.tone.tones[String(entry.row.values[field.tone.field] ?? "")] : undefined) ?? "neutral";
+}
+
+/** When an entry happens, as the card's note: a day, a range, an open-ended
+ * start, or an instant with the person's time zone. */
+function When({ entry, field, intl, timeZone }: {
+  readonly entry: CalendarEntry;
+  readonly field: ListCalendarDateFieldV1;
+  readonly intl: EntityIntl;
+  readonly timeZone: string;
+}) {
+  const short = (day: string) => formatDay(intl, day, { day: "numeric", month: "short" });
+  if (entry.openEnded) {
+    const from = entry.startsAt ? intl.date(entry.startsAt, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone }) : short(entry.firstDay);
+    return <><strong>{intl.message("list.calendar.from", { date: from })}</strong><span>{intl.message("list.calendar.openEnded")} <span className="a-entity-calendar__arrow" aria-hidden="true">→</span></span></>;
+  }
+  if (entry.multiDay) return <strong>{short(entry.firstDay)} – {short(entry.lastDay)}</strong>;
+  if (field.kind === "datetime" && entry.startsAt)
+    return <><strong>{intl.date(entry.startsAt, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone })}</strong><span>{timeZone.replace(/_/g, " ")}</span></>;
+  return <><strong>{short(entry.firstDay)}</strong><span>{intl.message("list.calendar.allDay")}</span></>;
+}
+
+function MonthGrid({ window, anchor, today, entries, byDay, field, complete, intl, timeZone, label, recordHref, onMore, onNavigate }: {
   readonly window: { readonly start: string; readonly end: string };
   readonly anchor: string;
   readonly today: string;
+  readonly entries: readonly CalendarEntry[];
   readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
   readonly field: ListCalendarDateFieldV1;
+  readonly complete: boolean;
   readonly intl: EntityIntl;
   readonly timeZone: string;
   readonly label: (row: EntityListRowV1) => string;
   readonly recordHref: (row: EntityListRowV1) => string | undefined;
   readonly onMore: (day: string) => void;
+  readonly onNavigate: (anchor: string) => void;
 }) {
   const rows = weekRows(window);
   const month = startOfMonth(anchor);
   const [focus, setFocus] = useState(anchor);
+  const grid = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
   const focused = focus >= window.start && focus < window.end ? focus : anchor;
+  // After keyboard navigation into another month, focus follows the day.
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    grid.current?.querySelector<HTMLElement>(`[data-day="${focused}"]`)?.focus();
+  }, [focused]);
   const move = (event: KeyboardEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).getAttribute("role") !== "gridcell") return;
     const rtl = event.currentTarget.ownerDocument.defaultView?.getComputedStyle(event.currentTarget).direction === "rtl";
     const step: Record<string, number> = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: 7, ArrowUp: -7 };
     let next: string | undefined;
     if (event.key in step) next = addDays(focused, step[event.key]!);
+    else if (event.key === "PageDown" || event.key === "PageUp") next = shiftMonths(focused, event.key === "PageDown" ? 1 : -1);
     else if (event.key === "Home") next = rows.find((row) => row.includes(focused))![0];
     else if (event.key === "End") next = rows.find((row) => row.includes(focused))![6];
-    else if (event.key === "Enter" && (byDay.get(focused)?.length ?? 0) > 0 && (event.target as HTMLElement).getAttribute("role") === "gridcell") { event.preventDefault(); onMore(focused); return; }
-    if (!next || next < window.start || next >= window.end) return;
+    else if ((event.key === "Enter" || event.key === " ") && (byDay.get(focused)?.length ?? 0) > 0) { event.preventDefault(); onMore(focused); return; }
+    if (!next) return;
     event.preventDefault();
     setFocus(next);
-    event.currentTarget.querySelector<HTMLElement>(`[data-day="${next}"]`)?.focus();
+    refocus.current = true;
+    // A day in another month moves the calendar there; the anchor month owns the grid.
+    if (next.slice(0, 7) !== month.slice(0, 7) && (next < window.start || next >= window.end || event.key.startsWith("Page"))) onNavigate(next);
   };
   return (
-    <div className="a-entity-calendar__month" role="grid" tabIndex={-1} aria-label={formatDay(intl, month, { month: "long", year: "numeric" })} onKeyDown={move}>
+    <div ref={grid} className="a-entity-calendar__month" role="grid" tabIndex={-1} aria-label={formatDay(intl, month, { month: "long", year: "numeric" })} onKeyDown={move}>
       <div className="a-entity-calendar__weekdays" role="row">
         {rows[0]!.map((day) => (
           <span key={day} role="columnheader" title={formatDay(intl, day, { weekday: "long" })}>{formatDay(intl, day, { weekday: "short" })}</span>
         ))}
       </div>
-      {rows.map((row) => (
-        <div key={row[0]} className="a-entity-calendar__week" role="row">
-          {row.map((day) => {
-            const { shown, more } = visibleChips(byDay.get(day) ?? []);
-            return (
-              <div key={day} role="gridcell" data-day={day} tabIndex={day === focused ? 0 : -1}
-                aria-label={formatDay(intl, day, { weekday: "long", day: "numeric", month: "long" })}
-                className="a-entity-calendar__day" data-outside={day.slice(0, 7) !== month.slice(0, 7) || undefined} data-today={day === today || undefined}>
-                <span className="a-entity-calendar__date" aria-hidden="true">{formatDay(intl, day, { day: "numeric" })}</span>
-                {shown.map((entry) => {
-                  const href = recordHref(entry.row);
-                  const time = entry.startsAt && !entry.allDay && field.kind === "datetime" ? intl.date(entry.startsAt, { hour: "numeric", minute: "2-digit", timeZone }) : undefined;
-                  const tone = field.tone ? field.tone.tones[String(entry.row.values[field.tone.field] ?? "")] : undefined;
-                  const text = label(entry.row);
-                  const content = <>{time ? <time>{time}</time> : null}<span>{text}</span>{entry.openEnded && day === entry.lastDay ? <span aria-hidden="true"> →</span> : null}</>;
-                  const name = [text, time, entry.openEnded ? intl.message("list.calendar.openEnded") : undefined].filter(Boolean).join(", ");
-                  return href ? (
-                    <a key={entry.row.id} className="a-entity-calendar__chip" href={href} aria-label={name} tabIndex={-1}
-                      data-tone={tone ?? "neutral"} data-continues-before={entry.firstDay < day || undefined} data-continues-after={entry.lastDay > day || undefined}>{content}</a>
-                  ) : (
-                    <span key={entry.row.id} className="a-entity-calendar__chip" aria-label={name} data-tone={tone ?? "neutral"}
-                      data-continues-before={entry.firstDay < day || undefined} data-continues-after={entry.lastDay > day || undefined}>{content}</span>
-                  );
-                })}
-                {more ? (
-                  <button type="button" className="a-entity-calendar__more" tabIndex={-1} onClick={() => onMore(day)}>
-                    {intl.message("list.calendar.more", { count: more })}
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+      {rows.map((row) => {
+        const { bars, hidden } = weekLayout(entries, row);
+        return (
+          <div key={row[0]} className="a-entity-calendar__week" role="row" style={{ "--cal-lanes": CALENDAR_LANES_PER_WEEK } as CSSProperties}>
+            {row.map((day, column) => {
+              const count = byDay.get(day)?.length ?? 0;
+              const name = [
+                formatDay(intl, day, { weekday: "long", day: "numeric", month: "long" }),
+                complete ? intl.message("list.calendar.dayRecords", { count }) : undefined,
+                day === today ? intl.message("list.calendar.today") : undefined,
+              ].filter(Boolean).join(", ");
+              return (
+                <div key={day} role="gridcell" data-day={day} tabIndex={day === focused ? 0 : -1} aria-label={name}
+                  className="a-entity-calendar__day" data-outside={day.slice(0, 7) !== month.slice(0, 7) || undefined} data-today={day === today || undefined}>
+                  <span className="a-entity-calendar__date" aria-hidden="true">{formatDay(intl, day, { day: "numeric" })}</span>
+                  {bars.filter((bar) => bar.column === column).map((bar) => (
+                    <Bar key={bar.entry.row.id} bar={bar} field={field} intl={intl} timeZone={timeZone} text={label(bar.entry.row)} href={recordHref(bar.entry.row)} />
+                  ))}
+                  {hidden[column] ? (
+                    <button type="button" className="a-entity-calendar__more" tabIndex={-1} onClick={() => onMore(day)}>
+                      {intl.message("list.calendar.more", { count: hidden[column] })}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function Agenda({ byDay, intl, card, loadMore, loading }: {
-  readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
+/** One entry drawn across the days it covers in a week. It sits in the cell of
+ * its first day in that week, positioned against the week row. */
+function Bar({ bar, field, intl, timeZone, text, href }: {
+  readonly bar: WeekBar;
+  readonly field: ListCalendarDateFieldV1;
   readonly intl: EntityIntl;
-  readonly card: (row: EntityListRowV1) => ReactNode;
+  readonly timeZone: string;
+  readonly text: string;
+  readonly href: string | undefined;
+}) {
+  const { entry } = bar;
+  const time = entry.startsAt && !entry.allDay && field.kind === "datetime" ? intl.date(entry.startsAt, { hour: "numeric", minute: "2-digit", timeZone }) : undefined;
+  const ends = entry.openEnded && !bar.continuesAfter;
+  const content = (
+    <>
+      <i className="a-entity-calendar__dot" aria-hidden="true" />
+      {time ? <time>{time}</time> : null}
+      <span className="a-entity-calendar__label">{text}</span>
+      {ends ? <span className="a-entity-calendar__arrow" aria-hidden="true">→</span> : null}
+    </>
+  );
+  const props = {
+    className: "a-entity-calendar__chip",
+    "aria-label": [text, time, entry.openEnded ? intl.message("list.calendar.openEnded") : undefined].filter(Boolean).join(", "),
+    "data-tone": entryTone(entry, field),
+    "data-continues-before": bar.continuesBefore || undefined,
+    "data-continues-after": bar.continuesAfter || undefined,
+    "data-open-ended": entry.openEnded || undefined,
+    style: { "--cal-column": bar.column, "--cal-span": bar.span, "--cal-lane": bar.lane } as CSSProperties,
+  };
+  return href ? <a {...props} href={href} tabIndex={-1}>{content}</a> : <span {...props}>{content}</span>;
+}
+
+function Agenda({ byDay, today, complete, intl, card, loadMore, loading }: {
+  readonly byDay: ReadonlyMap<string, readonly CalendarEntry[]>;
+  readonly today: string;
+  readonly complete: boolean;
+  readonly intl: EntityIntl;
+  readonly card: (entry: CalendarEntry) => ReactNode;
   readonly loadMore?: () => void;
   readonly loading: boolean;
 }) {
   const days = [...byDay.keys()].sort();
   return (
     <div className="a-entity-calendar__agenda">
-      {days.map((day) => (
-        <section key={day} aria-label={formatDay(intl, day, { weekday: "long", day: "numeric", month: "long" })}>
-          <h3>{formatDay(intl, day, { weekday: "long", day: "numeric", month: "long" })}</h3>
-          <div className="a-entity-calendar__cards">{byDay.get(day)!.map((entry) => card(entry.row))}</div>
-        </section>
-      ))}
+      {days.map((day) => {
+        const name = formatDay(intl, day, { weekday: "long", day: "numeric", month: "long" });
+        return (
+          <section key={day} aria-label={name}>
+            <h3>
+              <span>{name}</span>
+              {day === today ? <span className="a-entity-calendar__today">{intl.message("list.calendar.today")}</span> : null}
+              {complete ? <small>{intl.message("list.calendar.dayRecords", { count: byDay.get(day)!.length })}</small> : null}
+            </h3>
+            <div className="a-entity-calendar__cards">{byDay.get(day)!.map(card)}</div>
+          </section>
+        );
+      })}
       {loadMore ? <Button variant="secondary" size="small" loading={loading} onClick={loadMore}>{intl.message("list.calendar.loadMore")}</Button> : null}
     </div>
   );

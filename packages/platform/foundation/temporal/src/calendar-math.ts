@@ -41,6 +41,15 @@ export function addMonths(day: string, count: number): string {
   return `${String(Math.floor(index / 12)).padStart(4, "0")}-${String((index % 12) + 1).padStart(2, "0")}-01`;
 }
 
+/** The same day of the month `count` months later, clamped to that month's
+ * last day (31 January plus one month is 28 or 29 February). */
+export function shiftMonths(day: string, count: number): string {
+  const first = addMonths(day, count);
+  const last = addDays(addMonths(first, 1), -1);
+  const target = `${first.slice(0, 8)}${day.slice(8, 10)}`;
+  return target > last ? last : target;
+}
+
 /** First day of the week containing `day`, for a week starting on `weekStart` (0 = Sunday). */
 export function startOfWeek(day: string, weekStart: number): string {
   return addDays(day, -((dayOfWeek(day) - weekStart + 7) % 7));

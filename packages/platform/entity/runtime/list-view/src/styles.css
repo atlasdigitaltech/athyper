@@ -115,6 +115,8 @@
 .a-entity-list__card-title{color:var(--a-foreground);font-size:var(--a-font-size-body);overflow-wrap:anywhere}
 .a-entity-list__card-actions{display:flex;flex:none;align-items:center;gap:var(--a-space-1);margin-inline-start:auto;margin-block:calc(var(--a-space-1) * -1)}
 .a-entity-list__card-actions [aria-haspopup=menu]{min-width:2rem;padding-inline:.5rem}
+.a-entity-list__card-note{display:flex;flex-wrap:wrap;gap:var(--a-space-1) var(--a-space-2);margin:0;color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
+.a-entity-list__card-note strong{color:var(--a-foreground);font-weight:var(--a-font-weight-medium)}
 .a-entity-list__card-status{display:flex;flex-wrap:wrap;gap:var(--a-space-1)}
 .a-entity-list__card dl{display:grid;gap:var(--a-space-1)}
 .a-entity-list__card dl div{display:grid;grid-template-columns:minmax(6.5rem,.45fr) minmax(0,1fr);gap:var(--a-space-2);align-items:baseline}

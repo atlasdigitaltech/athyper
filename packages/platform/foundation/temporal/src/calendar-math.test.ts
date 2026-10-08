@@ -6,6 +6,7 @@ import {
   addMonths,
   monthGridWindow,
   monthWindow,
+  shiftMonths,
   startOfWeek,
   weekRows,
   zonedDay,
@@ -17,6 +18,10 @@ test("calendar days move without a time zone", () => {
   assert.equal(addDays("2028-02-28", 1), "2028-02-29");
   assert.equal(addMonths("2026-12-15", 1), "2027-01-01");
   assert.equal(addMonths("2026-01-31", -1), "2025-12-01");
+  assert.equal(shiftMonths("2026-10-09", 1), "2026-11-09");
+  assert.equal(shiftMonths("2026-01-31", 1), "2026-02-28");
+  assert.equal(shiftMonths("2028-01-31", 1), "2028-02-29");
+  assert.equal(shiftMonths("2026-03-31", -1), "2026-02-28");
 });
 
 test("weeks start on the person's week start", () => {
