@@ -170,6 +170,10 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
   );
   const allowed = new Set([
     "node:http",
+    "@athyper/server-service-publication",
+    "@athyper/server-contract-publication",
+    "../composition/control-plane/resource-review.js",
+    "../composition/control-plane/resource-source-qualification.js",
     "node:fs/promises",
     "kysely",
     "@athyper/server-adapter-db-core",
@@ -182,6 +186,8 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
     "../config/control-plane.js",
     "../composition/control-plane/identity.js",
     "../composition/control-plane/product-command-runtime.js",
+    "../composition/control-plane/reference-resource-configuration.js",
+    "../composition/control-plane/resource-review-eligibility.js",
     "../composition/control-plane/control-plane.js",
     "../kernel/launch.js",
     "../diagnostics/telemetry/error-collector.js",

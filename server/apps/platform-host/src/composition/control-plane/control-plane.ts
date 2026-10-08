@@ -1,3 +1,5 @@
+import { registerControlResourceReview } from "./resource-review-routes.js";
+import type { createControlResourceReview } from "./resource-review.js";
 import {
   registerProductLabelEnrollmentRoutes,
   registerProductReferenceEnrollmentRoutes,
@@ -38,9 +40,15 @@ export function registerControlPlane(
     /** Installed scoped command resources only; never fall back to the review DB. */
     productLabelEnrollment?: Parameters<typeof createProductLabelEnrollment>[0];
     productReferenceEnrollment?: ProductReferenceEnrollmentOptions;
+    resourceReview?: ReturnType<typeof createControlResourceReview>;
   },
 ) {
   registerControlSession(application, options.authenticator, options.authority);
+  if (options.resourceReview)
+    registerControlResourceReview(application, {
+      authenticator: options.authenticator,
+      service: options.resourceReview,
+    });
   registerControlProductReview(application, options);
   if (options.productLabelEnrollment) {
     registerProductLabelEnrollmentRoutes(application, {

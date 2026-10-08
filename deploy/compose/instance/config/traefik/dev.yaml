@@ -2,7 +2,7 @@ http:
   routers:
     platform-control:
       # Human enrollment only. Do not intercept the separate workload /execute route.
-      rule: "Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/(activate|replace)$`) || PathRegexp(`^/api/platform-control/meta-entity-authoring/change-sets/[0-9a-fA-F-]{36}/(graph|adopt|submit|approve|enroll-labels)$`))"
+      rule: "Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/(activate|replace)$`) || PathRegexp(`^/api/platform-control/meta-entity-authoring/resources/[0-9a-fA-F-]{36}/review$`) || PathRegexp(`^/api/platform-control/meta-entity-authoring/change-sets/[0-9a-fA-F-]{36}/(graph|adopt|submit|approve|enroll-labels)$`))"
       entryPoints: [web]
       service: platform-control
       priority: 200

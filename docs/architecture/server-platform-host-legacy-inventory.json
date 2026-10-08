@@ -26,11 +26,11 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 379,
+    "operational-scripts:new": 382,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 146,
+    "routes:new": 147,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -115,7 +115,8 @@
       "legacyLocations": [],
       "currentLocations": [
         "deploy/compose/instance/compose.control-api.yaml",
-        "deploy/compose/instance/compose.product-command.yaml"
+        "deploy/compose/instance/compose.product-command.yaml",
+        "deploy/compose/instance/compose.resource-review.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -4336,6 +4337,7 @@
       "key": "entity_resource_dev_postgres",
       "legacyLocations": [],
       "currentLocations": [
+        "server/packages/services/publication/src/compilation/authoring-resource-review.postgres.test.ts",
         "server/packages/services/publication/src/compilation/entity-authoring-resource.postgres.test.ts",
         "server/packages/services/publication/src/compilation/reference-resource-reads.postgres.test.ts"
       ],
@@ -12739,12 +12741,48 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_current_source",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_current_source",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_current_source.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_history",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_history.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:20261008_entity_authoring_resource_projection",
       "category": "operational-scripts",
       "key": "20261008_entity_authoring_resource_projection",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_projection.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261008_entity_authoring_resource_review",
+      "category": "operational-scripts",
+      "key": "20261008_entity_authoring_resource_review",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_review.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -28963,6 +29001,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/platform-control/meta-entity-authoring/resources/:id/review",
+      "category": "routes",
+      "key": "post /api/platform-control/meta-entity-authoring/resources/:id/review",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/control-plane/resource-review-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

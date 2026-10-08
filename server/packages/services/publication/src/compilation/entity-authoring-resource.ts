@@ -8,14 +8,8 @@ import {
   type PublicationCanonicalizer,
   type PublicationArtifactDocumentV1,
 } from "@athyper/server-contract-publication";
-export interface EntityAuthoringResourceSource {
-  readonly releaseId: string;
-  readonly publicationKey: string;
-  readonly releaseNo: number;
-  readonly generatedAt: string;
-  readonly kind: EntityAuthoringResourceKind;
-  readonly payload: unknown;
-}
+import type { EntityAuthoringResourceSource } from "@athyper/server-contract-publication";
+export type { EntityAuthoringResourceSource } from "@athyper/server-contract-publication";
 export interface EntityAuthoringResourcePublication {
   /** Read the exact independently approved immutable source. No runtime DTO or
    * mutable authoring fallback. Resource hashes must bind the review decision. */

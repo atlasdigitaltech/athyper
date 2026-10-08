@@ -178,3 +178,5 @@ export {
   type InstalledReferenceResourcePin,
 } from "./installed-reference-resources.js";
 export { createProductReferenceResourcePolicies } from "./product-reference-resource-policies.js";
+
+export { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";

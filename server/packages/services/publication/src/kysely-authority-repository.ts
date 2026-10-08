@@ -1,3 +1,7 @@
+import {
+  parseEntityAuthoringResource,
+  type PublicationCanonicalizer,
+} from "@athyper/server-contract-publication";
 import type {
   AcknowledgeDeploymentInput,
   CreatePublicationArtifactInput,
@@ -17,12 +21,73 @@ type Database = Record<string, never>;
 type Row = Record<string, unknown>;
 
 export class KyselyPublicationAuthorityRepository implements PublicationAuthorityRepository {
-  constructor(private readonly database: Kysely<Database>) {}
+  constructor(
+    private readonly database: Kysely<Database>,
+    private readonly canonicalizer?: PublicationCanonicalizer,
+    private readonly resourceCommands = false,
+  ) {}
 
   async createRelease(
     input: CreatePublicationReleaseInput,
   ): Promise<PublicationRelease> {
-    return this.database.transaction().execute(async (transaction) => {
+    input = structuredClone(input);
+    const resource = input.authoringResourceSource;
+    if (resource) {
+      if (
+        !this.canonicalizer ||
+        input.entityReleaseId ||
+        input.businessPartnerDefinitionRevisionId ||
+        resource.releaseId !== input.id ||
+        resource.releaseNo !== input.releaseNo ||
+        resource.publicationKey !== input.publicationKey ||
+        input.releaseKind !== "publish" ||
+        input.compatibilityLevel !== "breaking" ||
+        Object.keys(resource).sort().join() !==
+          "generatedAt,kind,payload,publicationKey,releaseId,releaseNo" ||
+        !Number.isFinite(Date.parse(resource.generatedAt))
+      )
+        throw Error("PUBLICATION_RESOURCE_SOURCE_INVALID");
+      const payload = parseEntityAuthoringResource(
+        resource.kind,
+        resource.payload,
+      );
+      const bytes = this.canonicalizer.canonicalBytes(resource);
+      if (
+        bytes.length > 4194304 ||
+        this.canonicalizer.sha256(bytes) !== input.releaseHash ||
+        input.manifestHash !== input.releaseHash
+      )
+        throw Error("PUBLICATION_RESOURCE_HASH_MISMATCH");
+      if (
+        payload.schema === "entity.legacy-identity-review/1" &&
+        payload.proposerId !== input.actorId
+      )
+        throw Error("PUBLICATION_RESOURCE_AUTHOR_MISMATCH");
+      if (input.metadata && Object.keys(input.metadata).length)
+        throw Error("PUBLICATION_RESOURCE_METADATA_UNSUPPORTED");
+      input = {
+        ...input,
+        metadata: {
+          artifactKind: resource.kind,
+          authoringResourceSource: resource,
+        },
+      };
+    }
+    if (this.resourceCommands) {
+      if (!resource) throw Error("PUBLICATION_RESOURCE_SOURCE_REQUIRED");
+      const result = await sql<{
+        row: Row;
+      }>`SELECT publication.propose_authoring_resource(${JSON.stringify(resource)}::jsonb,${input.releaseHash}) AS row`.execute(
+        this.database,
+      );
+      const row = required(
+        result.rows[0]?.row,
+        "PUBLICATION_RELEASE_NOT_FOUND",
+      );
+      assertReleaseReplay(row, input);
+      return mapRelease(row);
+    }
+    const work = async (transaction: Kysely<Database>) => {
       const inserted = await sql<Row>`INSERT INTO publication.release
         (id,tenant_id,release_key,release_no,release_kind,status,compatibility_level,release_hash,manifest_hash,minimum_runtime_version,created_by,metadata)
         VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.publicationKey},${input.releaseNo},${input.releaseKind},'preparing',
@@ -39,7 +104,7 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
             VALUES(${input.id}::uuid,${input.businessPartnerDefinitionRevisionId}::uuid,${String(input.metadata?.["publishIdempotencyKey"] ?? input.id)},${input.actorId}::uuid)`.execute(
             transaction,
           );
-        } else {
+        } else if (!resource) {
           throw new Error("PUBLICATION_RELEASE_SOURCE_REQUIRED");
         }
       }
@@ -49,8 +114,22 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
         );
       const release = required(row.rows[0], "PUBLICATION_RELEASE_NOT_FOUND");
       assertReleaseReplay(release, input);
+      if (
+        resource &&
+        (release["created_by"] !== input.actorId ||
+          this.canonicalizer!.sha256(
+            this.canonicalizer!.canonicalBytes(object(release, "metadata")),
+          ) !==
+            this.canonicalizer!.sha256(
+              this.canonicalizer!.canonicalBytes(input.metadata),
+            ))
+      )
+        throw Error("PUBLICATION_RELEASE_IDEMPOTENCY_CONFLICT");
       return mapRelease(release);
-    });
+    };
+    return this.database.isTransaction
+      ? work(this.database)
+      : this.database.transaction().execute(work);
   }
 
   async getRelease(releaseId: string): Promise<PublicationRelease | null> {
@@ -68,6 +147,21 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
     readonly correlationId?: string;
     readonly evidence?: Readonly<Record<string, unknown>>;
   }): Promise<PublicationRelease> {
+    if (this.resourceCommands) {
+      if (
+        input.status !== "approved" ||
+        typeof input.evidence?.["sourceHash"] !== "string"
+      )
+        throw Error("RESOURCE_REVIEW_TRANSITION_INVALID");
+      const result = await sql<{
+        row: Row;
+      }>`SELECT publication.approve_authoring_resource(${input.releaseId}::uuid,${input.evidence["sourceHash"]}) AS row`.execute(
+        this.database,
+      );
+      return mapRelease(
+        required(result.rows[0]?.row, "PUBLICATION_RELEASE_NOT_FOUND"),
+      );
+    }
     const result =
       await sql<Row>`SELECT * FROM publication.fn_transition_release(${input.releaseId}::uuid,${input.status}::publication.release_status_d,${input.actorId}::uuid,${input.correlationId ?? null}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
         this.database,

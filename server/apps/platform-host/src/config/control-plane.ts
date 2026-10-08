@@ -57,10 +57,34 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
         labelPolicyFile: required(commandKeys[3]),
       }
     : undefined;
+  const referenceResourcePolicyFile =
+    environment.PLATFORM_CONTROL_REFERENCE_RESOURCE_POLICY_FILE?.trim();
+  if (
+    environment.PLATFORM_CONTROL_REFERENCE_RESOURCE_POLICY_FILE !== undefined &&
+    (!referenceResourcePolicyFile || !productCommands)
+  )
+    throw Error("CONTROL_REFERENCE_CONFIGURATION_REQUIRED");
+  const sourceDirectory =
+      environment.PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY?.trim(),
+    descriptorHash =
+      environment.PLATFORM_CONTROL_RESOURCE_DESCRIPTOR_HASH?.trim();
+  if (
+    (sourceDirectory || descriptorHash) &&
+    (!sourceDirectory ||
+      !descriptorHash ||
+      !/^\/[\s\S]+/.test(sourceDirectory) ||
+      !/^[a-f0-9]{64}$/.test(descriptorHash))
+  )
+    throw Error("CONTROL_RESOURCE_PRODUCER_CONFIGURATION_INVALID");
   return Object.freeze({
     authority,
     port,
     productCommands,
+    referenceResourcePolicyFile,
+    resourceProducer:
+      sourceDirectory && descriptorHash
+        ? { sourceDirectory, descriptorHash }
+        : undefined,
     listenHost,
     secretStore,
     databaseUrlFile: required("PLATFORM_CONTROL_DATABASE_URL_FILE"),

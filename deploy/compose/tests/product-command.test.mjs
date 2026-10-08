@@ -40,3 +40,20 @@ test("gateway enroll-labels is an exact change-set operation, not a broad contro
     assert.ok(!route.test(root + suffix));
   assert.ok(!section.includes("PathPrefix"));
 });
+
+test("gateway resource review accepts only the exact resource command path", () => {
+  const source = readFileSync(
+    new URL("../instance/config/traefik/dev.yaml", import.meta.url),
+    "utf8",
+  );
+  const pattern = [...source.matchAll(/PathRegexp\(`([^`]+)`\)/g)]
+    .map((m) => m[1])
+    .find((p) => p.includes("resources/"));
+  assert.ok(pattern);
+  const route = new RegExp(pattern);
+  const root =
+    "/api/platform-control/meta-entity-authoring/resources/00000000-0000-4000-8000-000000000001";
+  assert.ok(route.test(root + "/review"));
+  for (const suffix of ["/approve", "/review/extra", "/review-other", ""])
+    assert.ok(!route.test(root + suffix));
+});

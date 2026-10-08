@@ -1,0 +1,9 @@
+# Opt-in generated resource review for the isolated DEV control API.
+# This mounts proposals, not approvals, and does not enable reference enrollment.
+services:
+  control-api:
+    environment:
+      PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY: /run/resource-review
+      PLATFORM_CONTROL_RESOURCE_DESCRIPTOR_HASH: ${ATHYPER_RESOURCE_DESCRIPTOR_HASH:?set proposed descriptor content hash}
+    volumes:
+      - ${ATHYPER_RESOURCE_SOURCE_ROOT:?set read-only generated candidate directory}:/run/resource-review:ro

@@ -81,3 +81,4 @@ export { lowerNativeRuntimePublication } from "./compilation/native-runtime.js";
 export * from "./compilation/entity-authoring-resource.js";
 export { createApprovedAuthoringResourcePublication } from "./compilation/approved-authoring-resource-source.js";
 export { createFileAuthoringResourceSnapshotReader } from "./compilation/file-authoring-resource-source.js";
+export { createAuthoringResourceReview } from "./authoring-resource-review.js";

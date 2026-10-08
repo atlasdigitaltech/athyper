@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1230,
+    "identities": 1231,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 362,
+    "currentOnly": 363,
     "legacyOccurrences": 898,
-    "currentOccurrences": 428
+    "currentOccurrences": 429
   },
   "routes": [
     {
@@ -15980,6 +15980,21 @@
           "line": 80,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/submit",
           "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/resources/:param/review",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/resources/:param/review",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/control-plane/resource-review-routes.ts",
+          "line": 43,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/resources/:id/review",
+          "kind": "direct"
         }
       ],
       "status": "current-only"

@@ -1,3 +1,9 @@
+import { createControlResourceReview } from "../composition/control-plane/resource-review.js";
+import { createResourceSourceQualification } from "../composition/control-plane/resource-source-qualification.js";
+import { createFileAuthoringResourceSnapshotReader } from "@athyper/server-service-publication";
+import type { EntityAuthoringResourceSource } from "@athyper/server-contract-publication";
+import { parseReferenceResourceConfiguration } from "../composition/control-plane/reference-resource-configuration.js";
+import { createCurrentResourceReviewEligibility } from "../composition/control-plane/resource-review-eligibility.js";
 import { createControlProductCommandRuntime } from "../composition/control-plane/product-command-runtime.js";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
@@ -9,6 +15,8 @@ import {
 import { createKeycloakAuthAdapter } from "@athyper/server-adapter-auth-keycloak";
 import { createInfisicalSecretStore } from "@athyper/server-adapter-secretstore-infisical";
 import {
+  canonicalBytes,
+  sha256,
   TrustScopedPublicationKeyResolver,
   Ed25519PublicationSigner,
   Ed25519PublicationVerifier,
@@ -189,6 +197,58 @@ export async function startControlApi() {
           ),
           authority: config.authority,
           audit,
+          ...(config.referenceResourcePolicyFile
+            ? {
+                referenceResources: {
+                  ...parseReferenceResourceConfiguration(
+                    JSON.parse(
+                      (
+                        await readPrivateFile(
+                          config.referenceResourcePolicyFile,
+                        )
+                      ).toString("utf8"),
+                    ),
+                  ),
+                  authorityTenantId: config.authority.tenantId,
+                  verifier,
+                  authorizeReview: async (_tx, input) =>
+                    createCurrentResourceReviewEligibility({
+                      database,
+                      authority: config.authority,
+                    })(input),
+                  async audit(tx, context, input, result) {
+                    const event = await audit.record(
+                      {
+                        eventCode: "metadata.entity.product.enrollment",
+                        action: "reference_enrollment",
+                        outcome: "success",
+                        severity: "critical",
+                        tenantId: context.tenantId,
+                        actor: {
+                          kind: "user",
+                          principalId: context.principalId,
+                        },
+                        entityType: "metadata.entity_change_set",
+                        entityId: input.changeSetId,
+                        requestId: context.requestId,
+                        metadata: {
+                          idempotencyKey: input.idempotencyKey,
+                          sourceHash: input.expectedSourceHash,
+                          revision: result.revision,
+                        },
+                      },
+                      tx,
+                    );
+                    if (
+                      !event.id ||
+                      event.tenantId !== context.tenantId ||
+                      event.actor.principalId !== context.principalId
+                    )
+                      throw Error("PRODUCT_REFERENCE_AUDIT_REQUIRED");
+                  },
+                },
+              }
+            : {}),
         })
       : undefined;
     const drain = new HttpDrainController();
@@ -212,6 +272,25 @@ export async function startControlApi() {
           audit,
           authenticator,
           authority: config.authority,
+          ...(config.resourceProducer
+            ? {
+                resourceReview: createControlResourceReview({
+                  database,
+                  authority: config.authority,
+                  audit,
+                  canonical: { canonicalBytes, sha256 },
+                  readSnapshot: async (id) =>
+                    (await createFileAuthoringResourceSnapshotReader(
+                      config.resourceProducer!.sourceDirectory,
+                      4194304,
+                    )(id)) as EntityAuthoringResourceSource,
+                  qualify: createResourceSourceQualification(
+                    config.resourceProducer.descriptorHash,
+                    { canonicalBytes, sha256 },
+                  ),
+                }),
+              }
+            : {}),
           ...(productLabelEnrollment
             ? {
                 productLabelEnrollment,

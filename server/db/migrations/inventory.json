@@ -1888,6 +1888,48 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/45_reference_resource_reads.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_review.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_review.sql",
+      "sha256": "82cc228c89e8556dc5bd3404fdc64ff34f21c899b3ec6f858b6212ba127ba329",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Narrow authenticated control-host resource proposal/review functions and immutable generated sources; no approvals or resource rows installed.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/23_authoring_resource_review.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_history.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_history.sql",
+      "sha256": "a72acd153610ad7dce027073350b67ed16dbc89c3794909d12869d93218c1bcd",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Exact product-draft historical source read for authenticated review qualification; no source mutations or broad snapshot grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/24_authoring_resource_history.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_authoring_resource_current_source.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_current_source.sql",
+      "sha256": "dbee0cd69f90f88a55efc74a79f65232a08e59492b08c2582d2e2e795095b40b",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Exact current saved product graph for resource review; no normalized member table grants or source mutations.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/25_authoring_resource_current_source.sql"
+      ]
     }
   ]
 }

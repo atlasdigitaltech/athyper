@@ -3121,6 +3121,15 @@ Command-role resource reads use admission-bound functions rather than general
 publication/runtime table privileges. Descriptor access requires a live command
 admission; identity-review access additionally matches that admitted draft/entity.
 Current signature trust and independent review eligibility remain consumer checks.
+Generated resource proposal/review uses the existing publication ledger with a
+typed, immutable generated source and exact-source-hash commands. The authenticated
+control host supplies actor attribution, existing IAM authorization and transaction-
+bound audit; identity-review approval must match its nominated independent human.
+Consumer eligibility requires authenticated proposal/review provenance plus current
+human/governance eligibility. A release row alone does not attest that provenance.
+Current identity source qualification uses the immutable saved graph at the exact
+draft revision and verifies its hash; complete historical lineage remains required.
+
 The implemented optional bindings and DEV forward projection migration are recorded
 in the qualification runbook; neither declares actual enrollment or F6/F8/F9 passed.
 

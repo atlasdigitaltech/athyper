@@ -5,6 +5,77 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Authenticated resource producer/review integration — 2026-10-08
+
+Generated resource proposals now use the existing publication repository and
+`publication.release` ledger. The explicit typed source is preserved in immutable
+release metadata; this is generated resource output, not another writable Entity
+authoring graph. Proposal replay checks coordinates, hashes and attribution.
+The repository participates in an existing transaction instead of opening a
+nested transaction. A shared coordinator binds proposal/approval to the exact
+source hash, current authorization, semantic qualification and transactional audit.
+Named identity reviewers must match the authenticated approving principal.
+
+The isolated control host now registers the optional endpoint
+`POST /api/platform-control/meta-entity-authoring/resources/:id/review`, accepting
+only `action` (`propose` or `approve`) and `expectedSourceHash`. Generated source
+files come from the read-only host mount, never the HTTP request. Existing edit/
+review permission evaluation and platform-authority admission remain in force.
+No existing authentication or MFA behavior changes. Narrow SQL functions provide
+proposal/approval/read access; no general publication INSERT/UPDATE is granted.
+A trigger preserves generated source coordinates/content and established review
+attribution. The current reviewer adapter requires both authenticated proposal/
+approval audit evidence and current active human, identity-binding and tenant-wide
+IAM eligibility. Merely setting `approved_by` cannot satisfy that adapter.
+
+The control entrypoint binds configured reference policies to the existing trusted
+signature verifier, current eligibility adapter and transactional audit. Producer
+configuration uses `PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY` and
+`PLATFORM_CONTROL_RESOURCE_DESCRIPTOR_HASH`; installed-reference configuration
+uses `PLATFORM_CONTROL_REFERENCE_RESOURCE_POLICY_FILE`. The latter remains unset
+until actual approved resources are published and activated. The DEV-only compose
+resource-review overlay mounts proposed sources without enabling enrollment.
+
+DEV installed the following forward migrations after rollback rehearsals:
+
+| Migration                                               | SHA-256                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `20261008_entity_authoring_resource_review.sql`         | `82cc228c89e8556dc5bd3404fdc64ff34f21c899b3ec6f858b6212ba127ba329` |
+| `20261008_entity_authoring_resource_history.sql`        | `a72acd153610ad7dce027073350b67ed16dbc89c3794909d12869d93218c1bcd` |
+| `20261008_entity_authoring_resource_current_source.sql` | `dbee0cd69f90f88a55efc74a79f65232a08e59492b08c2582d2e2e795095b40b` |
+
+The two source readers expose exact product-draft history/current saved revision
+without general snapshot or normalized label-table grants. Current source graph
+and snapshot hash must both match the proposed source hash. Historical integrity,
+complete correspondence, plan hash and known compatibility findings are checked
+through the existing lineage validator. No historical graph or controls are edited.
+
+Three **unapproved** candidate files and their canonical hashes are recorded in
+`~/.athyper/instances/dev/workspace/resource-review-candidates-20261008/index.json`:
+a proposed descriptor bundle of the seven generated contract artifacts, plus the
+two previously prepared source-bound identity reviews. The descriptor bundle is
+proposed content, not an assertion that all its capabilities are deployment-qualified.
+The Platform Owner remains the nominated independent reviewer. All three pass
+read-only source qualification under the control role; this diagnostic deliberately
+has no authenticated review authority. The running DEV review endpoint returns 401
+without authentication and the health endpoint returns 200. The stored Admin
+session was refreshed. At 03:47 UTC, all three exact proposals and their replays
+returned HTTP 200 through the public gateway under the authenticated Platform
+Admin. Each replay preserved release ID and creation time; all statuses remain
+`preparing`. Token-free responses are in `proposal-receipts.json` beside the index.
+The gateway now routes only the exact resource-review path to the control host.
+
+Validation: publication suite 467 tests pass, contract suite and host/typechecks
+pass; the focused host group has 37 passing tests. The explicit PostgreSQL test
+proves proposal/approval replay, self-review rejection, immutable source and lack
+of authenticated provenance from bare fixture ledger approval; everything rolls
+back. Migration receipts confirm existing rows and heads unchanged.
+
+**Still pending:** independent named review, publication/
+activation with the approved-source worker adapter, installed resource pins and
+actual enrollment. No real resource approval was fabricated. Country/State Region
+ownership and identities remain unchanged; deployed F6/F8/F9 is not established.
+
 ## Approved-source adapter and scoped resource reads — 2026-10-08
 
 The publication service now provides a concrete approved-source adapter over the

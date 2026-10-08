@@ -140,3 +140,13 @@ export function parseEntityAuthoringResource(
   } else return fail();
   return structuredClone(value) as unknown as EntityAuthoringResource;
 }
+
+/** Immutable generated resource source; not a writable Entity authoring graph. */
+export interface EntityAuthoringResourceSource {
+  readonly releaseId: string;
+  readonly publicationKey: string;
+  readonly releaseNo: number;
+  readonly generatedAt: string;
+  readonly kind: EntityAuthoringResourceKind;
+  readonly payload: unknown;
+}
