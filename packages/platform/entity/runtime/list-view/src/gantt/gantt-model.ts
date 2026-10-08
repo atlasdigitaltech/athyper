@@ -207,13 +207,19 @@ function startValue(entry: DatedEntry, field: ListDateRangeFieldV1): number {
 /** The rows a Gantt draws: placed on the window, in start order (then server
  * order, which already ends with the internal record ID), capped at the row
  * ceiling. Open-ended rows from the second stream take their place in start
- * order rather than being appended. */
+ * order rather than being appended.
+ *
+ * `reached`: the loaded rows fill the ceiling, so no further page is
+ * requested. `truncated`: rows beyond the ceiling were loaded and are not
+ * drawn. Exactly 500 rows with nothing more to load is neither a truncation
+ * nor a reason for the ceiling notice; the view combines `reached` with
+ * whether more pages exist. */
 export function ganttEntries(
   rows: readonly EntityListRowV1[],
   field: ListDateRangeFieldV1,
   window: CalendarWindow,
   timeZone: string,
-): { readonly entries: readonly DatedEntry[]; readonly capped: boolean } {
+): { readonly entries: readonly DatedEntry[]; readonly reached: boolean; readonly truncated: boolean } {
   const placed = [...placeEntries(rows, field, window, timeZone)].sort(
     (left, right) =>
       startValue(left, field) - startValue(right, field) ||
@@ -221,7 +227,8 @@ export function ganttEntries(
   );
   return {
     entries: placed.slice(0, GANTT_ROW_CEILING),
-    capped: placed.length >= GANTT_ROW_CEILING,
+    reached: placed.length >= GANTT_ROW_CEILING,
+    truncated: placed.length > GANTT_ROW_CEILING,
   };
 }
 

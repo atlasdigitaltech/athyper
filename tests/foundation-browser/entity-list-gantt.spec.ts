@@ -369,3 +369,11 @@ test("the label column is 16rem in wide lists and 12rem below 64rem; full labels
   await bar(page, /^Unassigned audit, /).focus();
   await expect.poll(truncated).toBe(false); // keyboard focus reveals the full label
 });
+
+test("exactly 500 rows with nothing more to load shows neither the ceiling notice nor Load more", async ({ page }) => {
+  // 495 bulk rows + 4 base window rows = 499 in one window page, plus 1 open-ended row.
+  await mount(page, 1440, { defaultMode: "gantt", many: 495, pageSize: 500 });
+  await expect(page.locator(".a-entity-gantt__row")).toHaveCount(500);
+  await expect(page.getByText(/Showing the first 500 records/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Load more rows" })).toHaveCount(0);
+});

@@ -201,11 +201,12 @@ describe("Gantt bars and milestones", () => {
     const capped = ganttEntries(many, range, quarter, "UTC");
     assert.equal(GANTT_ROW_CEILING, 500);
     assert.equal(capped.entries.length, GANTT_ROW_CEILING);
-    assert.equal(capped.capped, true);
-    assert.equal(
-      ganttEntries(many.slice(0, 10), range, quarter, "UTC").capped,
-      false,
-    );
+    assert.deepEqual([capped.reached, capped.truncated], [true, true]);
+    // Exactly the ceiling: no further page is requested, but nothing was cut off.
+    const exactly = ganttEntries(many.slice(0, GANTT_ROW_CEILING), range, quarter, "UTC");
+    assert.deepEqual([exactly.entries.length, exactly.reached, exactly.truncated], [GANTT_ROW_CEILING, true, false]);
+    const few = ganttEntries(many.slice(0, 10), range, quarter, "UTC");
+    assert.deepEqual([few.reached, few.truncated], [false, false]);
   });
 });
 

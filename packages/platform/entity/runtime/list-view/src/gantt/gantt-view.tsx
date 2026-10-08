@@ -159,12 +159,20 @@ export function EntityGantt({
   });
   const rows =
     pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows) : [];
-  const { entries, capped } = ganttEntries(rows, field, window, timeZone);
+  const { entries, reached, truncated } = ganttEntries(
+    rows,
+    field,
+    window,
+    timeZone,
+  );
   const hasNext = Boolean(
     (pageCurrent && page?.pagination.hasNext && !more.rows.length) ||
     more.hasNext ||
     open.hasNext,
   );
+  // The ceiling notice claims records exist past the ceiling, so it shows
+  // only when rows were cut off or more pages remain once the ceiling is reached.
+  const capped = truncated || (reached && hasNext);
   const exact = page?.pagination.countMode === "exact";
   const total = exact ? page?.pagination.total : undefined;
   // Counts only under exact counts and only when every row of the window is loaded.
