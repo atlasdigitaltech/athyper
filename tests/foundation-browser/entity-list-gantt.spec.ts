@@ -324,30 +324,47 @@ test("phones show the dated list; rows move by keyboard; right to left mirrors t
   });
 });
 
-test("the list title carries no record count in Gantt, under either count mode; Table keeps it", async ({ page }) => {
+test("the list title carries no record count in Gantt, under either count mode; Table keeps it", async ({
+  page,
+}) => {
   // The page query is only the window stream: a count would omit open-ended
   // and Unscheduled records and rows past the ceiling.
   for (const exact of [false, true]) {
     await mount(page, 1440, { defaultMode: "gantt", exact });
-    await expect(page.getByRole("grid", { name: "Q4 2026 Gantt chart" })).toBeVisible();
-    await expect(page.locator(".a-entity-list__header").first()).not.toContainText(/\d+ records?/);
+    await expect(
+      page.getByRole("grid", { name: "Q4 2026 Gantt chart" }),
+    ).toBeVisible();
+    await expect(
+      page.locator(".a-entity-list__header").first(),
+    ).not.toContainText(/\d+ records?/);
   }
   await mount(page, 1440, { defaultMode: "table", exact: true });
-  await expect(page.locator(".a-entity-list__header").first()).toContainText(/\d+ records/);
+  await expect(page.locator(".a-entity-list__header").first()).toContainText(
+    /\d+ records/,
+  );
 });
 
-test("the label column is 16rem in wide lists and 12rem below 64rem; full labels by tooltip, name and focus", async ({ page }) => {
+test("the label column is 16rem in wide lists and 12rem below 64rem; full labels by tooltip, name and focus", async ({
+  page,
+}) => {
   await mount(page, 1440, { defaultMode: "gantt" });
   const label = page.locator(".a-entity-gantt__label").first();
   await expect(label).toBeVisible();
-  const rem = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  const rem = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).fontSize),
+  );
   expect((await label.boundingBox())!.width).toBeCloseTo(16 * rem, 0);
   await page.setViewportSize({ width: 900, height: 1000 });
-  await expect.poll(async () => Math.round((await label.boundingBox())!.width)).toBe(Math.round(12 * rem));
-  const name = page.locator(".a-entity-gantt__row", { hasText: "Unassigned audit" }).locator(".a-entity-gantt__name");
+  await expect
+    .poll(async () => Math.round((await label.boundingBox())!.width))
+    .toBe(Math.round(12 * rem));
+  const name = page
+    .locator(".a-entity-gantt__row", { hasText: "Unassigned audit" })
+    .locator(".a-entity-gantt__name");
   await expect(name).toHaveAttribute("title", "Unassigned audit");
   await expect(bar(page, /^Unassigned audit, /)).toBeVisible(); // the accessible name carries the full label
-  const truncated = () => name.evaluate((element) => element.scrollWidth > element.clientWidth + 1);
+  const truncated = () =>
+    name.evaluate((element) => element.scrollWidth > element.clientWidth + 1);
   expect(await truncated()).toBe(true);
   await bar(page, /^Unassigned audit, /).focus();
   await expect.poll(truncated).toBe(false); // keyboard focus reveals the full label

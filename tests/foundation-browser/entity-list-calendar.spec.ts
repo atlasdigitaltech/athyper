@@ -314,15 +314,27 @@ test("phones show Agenda only, and the month grid moves by keyboard", async ({
   await expect(day(page, /Friday, October 9/)).toBeFocused();
 });
 
-test("the list title carries no record count in Calendar, under either count mode; Table keeps it", async ({ page }) => {
+test("the list title carries no record count in Calendar, under either count mode; Table keeps it", async ({
+  page,
+}) => {
   // The page query is only Calendar's window stream: a count would omit
   // open-ended and Unscheduled records (foundation section 5).
   for (const exact of [false, true]) {
     await mount(page, 1440, { entity: "work", defaultMode: "calendar", exact });
-    await expect(page.getByRole("heading", { name: "October 2026" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "October 2026" }),
+    ).toBeVisible();
     await expect(page.locator(".a-entity-dated__tray")).toBeVisible();
-    await expect(page.locator(".a-entity-list__header").first()).not.toContainText(/\d+ records?/);
+    await expect(
+      page.locator(".a-entity-list__header").first(),
+    ).not.toContainText(/\d+ records?/);
   }
-  await mount(page, 1440, { entity: "work", defaultMode: "table", exact: true });
-  await expect(page.locator(".a-entity-list__header").first()).toContainText(/\d+ records/);
+  await mount(page, 1440, {
+    entity: "work",
+    defaultMode: "table",
+    exact: true,
+  });
+  await expect(page.locator(".a-entity-list__header").first()).toContainText(
+    /\d+ records/,
+  );
 });
