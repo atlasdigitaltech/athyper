@@ -4,11 +4,20 @@ import {
   uiComponentColumns,
   type UiComponentContract,
 } from "@athyper/server-contract-meta-entity-authoring";
-const mock = vi.hoisted(() => ({ execute: vi.fn() }));
+const mock = vi.hoisted(() => ({
+  execute: vi.fn(),
+  statements: [] as string[],
+}));
 vi.mock("kysely", () => ({
-  sql: Object.assign(() => ({ execute: mock.execute }), {
-    join: (v: unknown) => v,
-  }),
+  sql: Object.assign(
+    (parts: TemplateStringsArray) => {
+      mock.statements.push(parts.join("?"));
+      return { execute: mock.execute };
+    },
+    {
+      join: (v: unknown) => v,
+    },
+  ),
 }));
 import {
   resolveNativeComponentResources,
@@ -52,20 +61,18 @@ const installed = () => ({
 });
 let policy: NativeComponentResourcePolicy;
 beforeEach(() => {
-  mock.execute
-    .mockReset()
-    .mockResolvedValue({
-      rows: [
-        {
-          row: Object.fromEntries(
-            Object.entries(uiComponentColumns).map(([key, col]) => [
-              col.name,
-              contract[key as keyof UiComponentContract],
-            ]),
-          ),
-        },
-      ],
-    });
+  mock.execute.mockReset().mockResolvedValue({
+    rows: [
+      {
+        row: Object.fromEntries(
+          Object.entries(uiComponentColumns).map(([key, col]) => [
+            col.name,
+            contract[key as keyof UiComponentContract],
+          ]),
+        ),
+      },
+    ],
+  });
   policy = {
     maximumComponents: 10,
     admit: vi.fn(async () => {}),
@@ -147,4 +154,11 @@ it("requires host admission, exact catalogue rows and a bounded transactional re
       policy,
     ),
   ).rejects.toThrow("COMPONENT_RESOURCE_TRANSACTION_REQUIRED");
+});
+
+it("uses read-only catalogue access while still requiring independent installed evidence", async () => {
+  mock.statements.length = 0;
+  await resolveNativeComponentResources(tx, scope, [id], policy);
+  expect(mock.statements.join(" ")).not.toMatch(/FOR (SHARE|UPDATE|KEY SHARE)/);
+  expect(policy.installed).toHaveBeenCalledOnce();
 });

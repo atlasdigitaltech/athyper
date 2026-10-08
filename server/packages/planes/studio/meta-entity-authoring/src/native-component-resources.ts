@@ -86,9 +86,11 @@ export async function resolveNativeComponentResources(
       runtimeComponents: [],
       evidence: [],
     };
+  // Immutable catalogue rows require SELECT only. Mutable installation/revocation
+  // evidence is independently resolved by policy.installed in this transaction.
   const result = await sql<{
     row: Record<string, unknown>;
-  }>`SELECT to_jsonb(c) AS row FROM metadata.ui_component_contract c WHERE c.id IN (${sql.join(ids.map((id) => sql`${id}::uuid`))}) AND (c.tenant_id IS NULL OR c.tenant_id=${scope.tenantId}::uuid) ORDER BY c.id FOR SHARE`.execute(
+  }>`SELECT to_jsonb(c) AS row FROM metadata.ui_component_contract c WHERE c.id IN (${sql.join(ids.map((id) => sql`${id}::uuid`))}) AND (c.tenant_id IS NULL OR c.tenant_id=${scope.tenantId}::uuid) ORDER BY c.id`.execute(
     tx,
   );
   if (result.rows.length !== ids.length) fail("COMPONENT_RESOURCE_NOT_FOUND");

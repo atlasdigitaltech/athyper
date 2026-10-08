@@ -30,3 +30,4 @@ export * from "./native-root-contract.js";
 export * from "./native-storage-transition.js";
 
 export * from "./ui-component-contract.js";
+export * from "./ui-component-resource.js";

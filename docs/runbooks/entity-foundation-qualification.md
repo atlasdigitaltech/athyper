@@ -251,6 +251,42 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Component source and projection preparation — 8 October
+
+The current publication pipeline supports descriptor, identity-review and live-read
+resource kinds, but not a UI-component resource kind or catalogue activation installer.
+An empty catalogue cannot be fixed by treating the native compilation fixture as reviewed
+installation evidence. This remains engineering work, not merely a missing user approval.
+
+Added the closed typed `entity.ui-component-resource/1` source and
+`compileUiComponentProjection`. Source hashes cover the declaration and explicit
+implementation binding; release hashes and installed status are derived only after the
+independent qualification callback validates evidence. Wrong source/implementation hashes,
+invalid release hashes, injected projection properties and invalid applicability reject.
+The helper performs no database writes and is not a publication or installation adapter.
+
+Fixed an adjacent integration issue: catalogue resolution used `FOR SHARE`, requiring
+UPDATE privileges despite its SELECT-only role. Immutable catalogue reads now use SELECT;
+the independent installed-resource/host policy remains mandatory in the transaction.
+
+Two unapproved Studio surface candidates are prepared at
+`~/.athyper/instances/dev/workspace/component-resource-candidates-20261008/index.json`:
+shared list (`EntityListRuntime`) and detail (`EntityDetailRuntime`), tied to actual package
+source inventories. The index explicitly records missing approval, host registration and
+publication support. These hashes describe package-local source, not transitive dependency
+or deployed bundle qualification. No field-display candidate, other-plane qualification,
+approved release hash or installation evidence was invented.
+
+Remaining implementation: add the component resource to the existing publication
+contract/review/compiler/dispatch/activation path, establish runtime-registration and
+field-display evidence, then project approved resources into the catalogue under restricted
+installation authority. Installed proposal resolution and F6/F8/F9 remain unfinished.
+No DEV migration, catalogue row, replacement draft, publication or activation occurred.
+
+Validation: 876 authoring tests passed (nine opt-in tests skipped); component source
+and projection/resolver tests, contract/native-test typechecks, formatting and source
+candidate parsing passed.
+
 ### Scoped component catalogue validation reads installed — 8 October
 
 Forward migration `20261008_entity_product_component_validation_read.sql` adds SELECT

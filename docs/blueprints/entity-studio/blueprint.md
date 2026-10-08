@@ -1173,6 +1173,23 @@ Composite read-operation FK uses read_operation_change_set_id. Cross-draft selec
 
 **DDL status:** typed catalogue generated in `41_ui_component_catalogue.generated.sql` from `ui-component-contract.ts`; installed empty in DEV by forward migration `20261007_entity_ui_component_catalogue.sql`. Resource installation and approved host composition are not yet qualified.
 
+**Resource source/projection boundary:** `ui-component-resource.ts` defines the closed
+`entity.ui-component-resource/1` source. It includes the typed declaration and explicit
+package/export/runtime-key/implementation-source hash. It excludes `manifestHash`,
+`publicationReleaseHash` and installed `status`: a release cannot contain its own hash
+in its source bytes. The manifest hash covers the complete source, including implementation
+binding. `compileUiComponentProjection` validates that source and requires independent
+publication evidence matching both source and implementation before deriving an active
+catalogue row. It does not create approval, write rows or register a publication kind.
+The owning publication adapter must establish review, activation, registered runtime
+support and installation evidence; callers cannot use this helper as authorization.
+
+Immutable catalogue resolution uses SELECT only. It must not require UPDATE privileges
+through `FOR SHARE`; mutable release/revocation/host evidence remains the responsibility
+of the existing transaction-bound installed-resource policy. Package-local source hashes
+in preparation artifacts are review inputs, not proof of deployed bundle integrity or
+qualified cross-plane support.
+
 Read-only governed catalogue projection of installed shared UI contracts. It is the single palette authority; authoring cannot upload or edit implementation code.
 
 PK id supplied by the registered resource; unique tenant/owner/namespace/key/version/level; tenant_id NULL for platform registry or explicit qualified tenant resource. No entity_id/change_set_id. Ownership/audit belongs to the publication resource. Referencing FKs resolve the expected component_level and exact manifest. No navigation-group component level is exposed. DB registration alone does not prove plane/host installation. option_keys can only enumerate the typed options declared on bindings below; geometry/scope is not an option copy.
