@@ -338,6 +338,19 @@ Container tiers stay on the entity list breakpoint scale (40/48/64rem), and colo
 
 **Fixture boundary.** The synthetic entities are test data, modelled like Board's and Calendar's. Any Gantt need for new entity metadata, a new table or a real pilot entity is Entity onboarding with its own approval, not a layout fixture.
 
+**Delivery status (8 October 2026).** Implementation, not publication: no real entity publishes Gantt yet.
+
+- P-G3, the shared progress reader: `594d42e85`.
+- P-G2, the date-scale rename as a pure move: `c8b003122`; its expansion (`startOfQuarter`, `quarterOf`, `startOfYear`, `daysBetween`, `DatePeriod`, `periodWindow`): `3d0ca12d4`.
+- P-G1 commit 1, move and rename the 12 generic exports per the section 4 map: `9bef62cfd`. Commit 2, rename and generalize the 4 layout-bound helpers: `c3650c2ee`. Calendar keeps thin adapters (`calendarSelection`, `calendarPeriod`, `calendarRange`).
+- Shared date-layout parts, so Gantt reuses rather than duplicates Calendar's agenda, tray, "when" note and empty state: `61ecf4c94` (`date-range/date-range-parts.tsx`, `date-range.css`).
+- G-runtime (sections 5.1, 5.5, 5.6 and the section 6 runtime codes): `6a0b53150`, verified on synthetic fixtures (`tests/foundation-browser/entity-list-gantt.spec.ts`, registered in `test:country-browser`). As built:
+  - The published date-range parser and the per-viewer date-range resolution are shared with Calendar (`list-date-range-descriptor.ts`, `list-date-range.ts`), so both layouts apply one set of eligibility rules.
+  - The group field's choices come from the field's authorized choice projection (`filterOptions`) and tones (`statusTones`); the published descriptor carries only `group.field`. A masked field has no projection, so it is omitted.
+  - Group counts appear only under exact counts with every row of the window loaded and the ceiling not reached.
+  - Group collapse is display state for the session; it is not saved in Phase 1.
+- Not landed: G-authoring (decision 8 open; behind the metadata-cleanup gate) and the component catalogue row (a publication gate, as for Calendar).
+
 ## 13. Dependencies and risks
 
 | Dependency or risk                              | Consequence                                                                                   | Handling                                                                                 |
