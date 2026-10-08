@@ -7,6 +7,26 @@ working-tree metadata draft, or onboard additional entities.
 
 ## Live-read resource publication transport — 2026-10-08
 
+Active-resource reader follow-up: `withLockedLocalLiveReadResources` now reads exact
+local activation coordinates with shared head/release/payload row locks in the
+caller transaction, enforces tenant/plane and size bounds, and invokes the existing
+signed-resource verifier before the protected callback. The accessor expires when
+the callback exits; missing resources prevent callback execution. It intentionally
+supports active installations only. Driver-fixture tests cover signed resources on
+three planes, exact retrieval, missing-row rejection and callback-lifetime enforcement.
+They do not prove PostgreSQL lock contention or application-role privileges. Records
+composition, current-security/provider/identity coverage and deployed qualification
+remain unfinished; no DEV grants, native conversion or activation changed here.
+
+Reason for withheld handover: DEV Studio reports both existing heads as `active`
+with NULL `failure_code` (Country 13, State Region 1, activated 1 October). This is
+ledger evidence, not a new end-to-end UI test. They are not recorded failed releases
+blocking successors. The control entrypoint still does not supply `nativeConversion`
+to product-command composition. The replacement drafts therefore have no installed
+whole-source conversion path, and new live-read resources lack their complete
+consumer evidence composition. Publication was not attempted; there is no new
+publication failure being hidden as an approval delay.
+
 Manual-test handover check (2026-10-08): read-only DEV Studio queries confirm Country
 draft `28e155d7-9f18-48fd-9f4d-847ff80f7e87` and State Region draft
 `9672c64b-b40f-43ce-8a2f-e0fbebd1154e` remain product drafts at revision 4 with

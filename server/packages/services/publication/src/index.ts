@@ -84,3 +84,5 @@ export { createFileAuthoringResourceSnapshotReader } from "./compilation/file-au
 export { createAuthoringResourceReview } from "./authoring-resource-review.js";
 
 export * from "./live-read-resource-verification.js";
+
+export * from "./locked-live-read-resources.js";

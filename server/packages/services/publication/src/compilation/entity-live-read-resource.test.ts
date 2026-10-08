@@ -1,3 +1,5 @@
+import { Kysely, PostgresDialect } from "kysely";
+import { withLockedLocalLiveReadResources } from "../locked-live-read-resources.js";
 import { verifyLocalLiveReadResource } from "../live-read-resource-verification.js";
 import { expect, it, vi } from "vitest";
 import { createHash, generateKeyPairSync, sign, verify } from "node:crypto";
@@ -194,6 +196,85 @@ it.each(
       canonical,
     };
     expect(await verifyLocalLiveReadResource(verification)).toEqual(f.resource);
+    // Driver fixture exercises SQL construction and signature/closure semantics;
+    // it does not claim actual PostgreSQL lock or application-role qualification.
+    const statements: string[] = [];
+    let selectedRows: unknown[] = [
+      {
+        publication_key: installation.publicationKey,
+        source_release_id: installation.releaseId,
+        source_release_no: "1",
+        row_version: "1",
+        artifact_hash: installation.artifactHash,
+        payload_hash: installation.payloadHash,
+        payload_json: installation.payload,
+        signed_document: installation.signedDocument,
+      },
+    ];
+    const database = new Kysely<Record<string, never>>({
+      dialect: new PostgresDialect({
+        pool: {
+          connect: async () => ({
+            query: async (sql: string) => {
+              statements.push(sql);
+              return {
+                rows: sql.includes("SELECT h.publication_key")
+                  ? selectedRows
+                  : [],
+              };
+            },
+            release() {},
+          }),
+          end: async () => {},
+        } as never,
+      }),
+    });
+    const binding = {
+      publicationKey: installation.publicationKey,
+      releaseId: installation.releaseId,
+      artifactHash: installation.artifactHash,
+      pin: f.resource.pin,
+    };
+    let escaped: (() => unknown) | undefined;
+    await database.transaction().execute(async (transaction) => {
+      const value = await withLockedLocalLiveReadResources(
+        {
+          ...verification,
+          transaction,
+          bindings: [binding],
+          maximumResources: 8,
+          maximumBytes: 1_000_000,
+        },
+        async (resources) => {
+          escaped = () => resources.read(f.resource.pin);
+          expect(resources.generation).toMatch(/^[a-f0-9]{64}$/);
+          return resources.read(f.resource.pin);
+        },
+      );
+      expect(value).toEqual(f.resource);
+      expect(escaped).toThrow();
+    });
+    expect(statements.some((s) => s.includes("FOR SHARE OF h,r,p"))).toBe(true);
+    const work = vi.fn(async () => {});
+    selectedRows = [];
+    await expect(
+      database.transaction().execute((transaction) =>
+        withLockedLocalLiveReadResources(
+          {
+            ...verification,
+            transaction,
+            bindings: [binding],
+            maximumResources: 8,
+            maximumBytes: 1_000_000,
+          },
+          work,
+        ),
+      ),
+    ).rejects.toThrow();
+    expect(work).not.toHaveBeenCalled();
+    expect(statements.at(-1)?.toLowerCase()).toContain("rollback");
+    await database.destroy();
+
     for (const manifestChange of [
       { mediaType: "unsupported" },
       { descriptorSchemaVersion: "99" },

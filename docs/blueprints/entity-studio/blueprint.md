@@ -3152,6 +3152,12 @@ and retain the original signed document in the immutable derived payload project
 for request-time key-trust verification. Signature verification alone does not
 establish installed authority, current-security coverage or F9 correspondence; the
 record reader still requires its transaction-bound evidence adapter and head locks.
+The shared active-resource reader locks exact local head/release/payload rows in
+publication-key order within the supplied transaction, revalidates signatures and
+pins, and exposes resources only during its callback. The protected data read must
+remain inside that transaction. This bounded reader rejects superseded installations;
+it does not discover current security, establish provider/identity coverage or grant
+row-lock privileges. Those remain consuming-host integration requirements.
 
 The 8 October DEV checkpoint now includes independent authenticated Owner review,
 published/activated/acknowledged resource releases and actual Admin-command ownership
