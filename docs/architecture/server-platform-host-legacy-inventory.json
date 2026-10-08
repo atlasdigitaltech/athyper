@@ -30,7 +30,7 @@
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 148,
+    "routes:new": 149,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -29149,6 +29149,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/notifications/src/notification-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
+      "category": "routes",
+      "key": "post /api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

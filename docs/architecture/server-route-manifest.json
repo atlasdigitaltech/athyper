@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1232,
+    "identities": 1233,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 364,
+    "currentOnly": 365,
     "legacyOccurrences": 898,
-    "currentOccurrences": 430
+    "currentOccurrences": 431
   },
   "routes": [
     {
@@ -15925,6 +15925,21 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/bootstrap-native",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/bootstrap-native",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
+          "line": 143,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/convert-native",
       "method": "POST",
       "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/convert-native",
@@ -15932,7 +15947,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 108,
+          "line": 150,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/convert-native",
           "kind": "direct"
         }
@@ -15962,7 +15977,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 114,
+          "line": 156,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/initialize-ownership",
           "kind": "direct"
         }
@@ -15977,7 +15992,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 120,
+          "line": 165,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
           "kind": "direct"
         }
