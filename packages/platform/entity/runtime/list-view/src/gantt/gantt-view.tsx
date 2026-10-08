@@ -50,7 +50,7 @@ import {
   DatedEntryNote,
   NothingScheduled,
   UnscheduledTray,
-  datedRowLabel,
+  datedRowParts,
   datedTone,
   formatDay,
   type EntityIntl,
@@ -687,7 +687,19 @@ function GanttRow({
 }) {
   const { entry } = bar;
   const row = entry.row;
-  const label = datedRowLabel(row, descriptor);
+  // Gantt's row label is the readable identity and, when declared, the title
+  // (blueprint section 8); Calendar's title-first label is a different rule.
+  const { identity, title } = datedRowParts(row, descriptor);
+  const label = [identity, title].filter(Boolean).join(" ");
+  const labelContent = (
+    <>
+      {identity ? (
+        <span className="a-entity-gantt__identity">{identity}</span>
+      ) : null}
+      {identity && title ? " " : null}
+      {title ? <span className="a-entity-gantt__title">{title}</span> : null}
+    </>
+  );
   const tone = datedTone(row, field);
   const status = field.tone
     ? String(
@@ -766,11 +778,11 @@ function GanttRow({
             tabIndex={-1}
             title={label}
           >
-            {label}
+            {labelContent}
           </a>
         ) : (
           <span className="a-entity-gantt__name" title={label}>
-            {label}
+            {labelContent}
           </span>
         )}
         {status ? (

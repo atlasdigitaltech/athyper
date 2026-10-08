@@ -22,30 +22,45 @@ export function formatDay(
   return intl.date(`${day}T00:00:00Z`, { ...options, timeZone: "UTC" });
 }
 
-/** The readable label of a record on a date layout: the title role, otherwise
- * the readable identity. Never the internal record ID. */
-export function datedRowLabel(
+type LabelDescriptor = {
+  readonly fields: readonly {
+    readonly key: string;
+    readonly semanticRole?: string;
+  }[];
+  readonly entity: { readonly identityField: string };
+};
+
+function displayed(row: EntityListRowV1, key: string): string | undefined {
+  const value = row.displayValues?.[key] ?? row.values[key];
+  return value === undefined || value === null || value === "" ? undefined : String(value);
+}
+
+/** A record's published readable identity and, when the surface declares a
+ * title role, its title. Never the internal record ID. */
+export function datedRowParts(
   row: EntityListRowV1,
-  descriptor: {
-    readonly fields: readonly {
-      readonly key: string;
-      readonly semanticRole?: string;
-    }[];
-    readonly entity: { readonly identityField: string };
-  },
-): string {
-  const title = descriptor.fields.find(
+  descriptor: LabelDescriptor,
+): { readonly identity?: string; readonly title?: string } {
+  const titleField = descriptor.fields.find(
     (item) =>
       item.semanticRole === "title" &&
       item.key !== descriptor.entity.identityField,
   );
-  const value =
-    (title
-      ? (row.displayValues?.[title.key] ?? row.values[title.key])
-      : undefined) ??
-    row.displayValues?.[descriptor.entity.identityField] ??
-    row.values[descriptor.entity.identityField];
-  return value === undefined || value === null ? "" : String(value);
+  const identity = displayed(row, descriptor.entity.identityField);
+  const title = titleField ? displayed(row, titleField.key) : undefined;
+  return { ...(identity ? { identity } : {}), ...(title ? { title } : {}) };
+}
+
+/** Calendar's bar label: the title role, otherwise the readable identity
+ * (Calendar blueprint section 8). Gantt's row label is different on purpose:
+ * the identity and, when declared, the title (Gantt blueprint section 8), so
+ * it uses {@link datedRowParts} directly. */
+export function datedRowLabel(
+  row: EntityListRowV1,
+  descriptor: LabelDescriptor,
+): string {
+  const { identity, title } = datedRowParts(row, descriptor);
+  return title ?? identity ?? "";
 }
 
 /** The declared tone of a record for a date range, or neutral. */

@@ -129,7 +129,7 @@ test("bars, one-day bars, open-ended records, groups and progress over the windo
   await expect(
     bar(
       page,
-      /^Kickoff workshop, plan, October 5, 2026 to October 7, 2026, 40% complete$/,
+      /^WI-100 Kickoff workshop, plan, October 5, 2026 to October 7, 2026, 40% complete$/,
     ),
   ).toBeVisible();
   // A date range ending on its start day is a one-day bar, not a milestone.
@@ -205,7 +205,7 @@ test("milestones come only from a date range declared without an end", async ({
   await mount(page, 1440, { defaultMode: "gantt", milestones: true });
   // No tone is declared for this range, so the label carries no status text.
   await expect(
-    bar(page, /^One-day review, October 9, 2026, milestone, 100% complete$/),
+    bar(page, /^WI-101 One-day review, October 9, 2026, milestone, 100% complete$/),
   ).toBeVisible();
   await expect(
     page.locator(".a-entity-gantt__milestone").first(),
@@ -361,12 +361,12 @@ test("the label column is 16rem in wide lists and 12rem below 64rem; full labels
   const name = page
     .locator(".a-entity-gantt__row", { hasText: "Unassigned audit" })
     .locator(".a-entity-gantt__name");
-  await expect(name).toHaveAttribute("title", "Unassigned audit");
-  await expect(bar(page, /^Unassigned audit, /)).toBeVisible(); // the accessible name carries the full label
+  await expect(name).toHaveAttribute("title", "WI-105 Unassigned audit");
+  await expect(bar(page, /^WI-105 Unassigned audit, /)).toBeVisible(); // the accessible name carries the full label
   const truncated = () =>
     name.evaluate((element) => element.scrollWidth > element.clientWidth + 1);
   expect(await truncated()).toBe(true);
-  await bar(page, /^Unassigned audit, /).focus();
+  await bar(page, /^WI-105 Unassigned audit, /).focus();
   await expect.poll(truncated).toBe(false); // keyboard focus reveals the full label
 });
 
@@ -376,4 +376,12 @@ test("exactly 500 rows with nothing more to load shows neither the ceiling notic
   await expect(page.locator(".a-entity-gantt__row")).toHaveCount(500);
   await expect(page.getByText(/Showing the first 500 records/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load more rows" })).toHaveCount(0);
+});
+
+test("the row label leads with the readable identity, then the title", async ({ page }) => {
+  await mount(page, 1440, { defaultMode: "gantt" });
+  const label = page.locator(".a-entity-gantt__row", { hasText: "Kickoff workshop" }).locator(".a-entity-gantt__name");
+  await expect(label.locator(".a-entity-gantt__identity")).toHaveText("WI-100");
+  await expect(label.locator(".a-entity-gantt__title")).toHaveText("Kickoff workshop");
+  await expect(label).toHaveText("WI-100 Kickoff workshop");
 });

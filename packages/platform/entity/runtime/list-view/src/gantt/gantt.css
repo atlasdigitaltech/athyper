@@ -209,6 +209,10 @@
 a.a-entity-gantt__name:hover {
   text-decoration: underline;
 }
+.a-entity-gantt__title {
+  color: var(--a-muted-foreground);
+  font-weight: var(--a-font-weight-regular);
+}
 /* A keyboard user sees the full label a pointer user gets from the tooltip:
    the focused row's label wraps instead of truncating. */
 .a-entity-gantt__row:focus-within .a-entity-gantt__name {
