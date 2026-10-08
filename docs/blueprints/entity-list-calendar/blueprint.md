@@ -298,10 +298,10 @@ ListLocationStateV1.calendarAnchor?: string;   // YYYY-MM-DD; location only, nev
 
 **Design reference.** The visual design follows the owner-supplied [Neon Calendar prototype](../../prototypes/Neon%20Calendar%20Prototype.html), built in design-system tokens (aligned in `0daa0a832`). Where the prototype and this blueprint differ, this blueprint and the shared framework rules win:
 
-- The Layout is chosen only in Display settings, as below; the prototype's quick Table/Cards/Calendar switch in the toolbar is not added.
+- The Layout is chosen only in Display settings, as below; the prototype's quick Table/Cards/Calendar switch in the toolbar is not added. **Owner decision (8 October 2026):** rejected for now, "AGreed reject this item and later manual QA test in UI we decide..."; it may be revisited after manual QA, as a shared list toolbar change for every layout.
 - An entry bar opens its record. In the prototype it opens the day popover; here the day popover opens from "+N more", Enter or Space on the day.
 - Counts follow the count-mode rule (foundation section 5). The Unscheduled count appears only under exact counts, and a per-day count (agenda headings, day accessible names) only when every record of the window is loaded.
-- Cards are the shared record card with `cardContent` precedence, plus a "when" line in its note slot. The prototype's card layout is not copied.
+- Cards are the shared record card with `cardContent` precedence, plus a "when" line in its note slot. The prototype's card layout (identity tile, subtitle, value chips) is not copied. **Owner decision (8 October 2026):** parked, "agreed with recommendation to park...". It returns with Studio authoring after the metadata cleanup, as declared card-content properties shared by Cards, Board and Calendar, never inferred from field order.
 - The overflow notice offers "Open Agenda" only; the toolbar's Filters button sits directly above it.
 - Typography uses the design-system sans font; the prototype's display font is not in the design system.
 - The prototype's inspector drawer is a review tool, not product.
