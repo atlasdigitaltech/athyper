@@ -87,7 +87,9 @@ Sort and column comparisons must stay order-sensitive. Normalizing them would hi
 
 **Clarification (8 October 2026, after approval).** "Normalized" in the table means shape and value normalization, not order. `parseSaveableListState` and `filterInputValue` put values into one form, but neither reorders filters. So today all four comparisons are order-sensitive in practice. For filters this errs safe: reordering filters alone can show "modified", but a real change is never hidden. The rule permits order normalization for filters and saved-view state; it does not require it. This corrects the table's description and changes neither the rule nor the code.
 
-## 7. Renderer traits (added 9 October 2026; describes as-built behaviour)
+## 7. Renderer traits (approved 9 October 2026)
+
+**Approval.** The project owner (nchandravel-atlas) approved this section on 9 October 2026: "e new foundation section 7 documents behaviour you already approved go ahead".
 
 Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now also carries each renderer's traits: what the layout takes over from the shared list chrome. A new layout declares its traits in the registry; the list reads `listModeTraits(mode)` and never compares mode names for these decisions. The trait record is required for every renderer kind, so a new layout cannot be registered without declaring them, and a mode without a renderer gets no traits.
 
