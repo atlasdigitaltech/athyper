@@ -184,6 +184,7 @@ import {
   readSavedViews,
   saveableViewState,
   inheritSavedViews,
+  pruneRetiredSavedViews,
   savedViewStorageKey,
   writeDisplayPreferences,
   writeSavedViews,
@@ -856,6 +857,12 @@ function EntityCollectionRuntime({
             savedViewStorageKey(next),
           );
         }
+        if (
+          !embedding &&
+          typeof window !== "undefined" &&
+          pruneRetiredSavedViews(savedViewStorageKey(next), next) > 0
+        )
+          setActionNotice(listNotice("list.notice.savedViewRetired"));
         if (controller.signal.aborted) return;
         next = withRenderableModes(next, { board: !embedding });
         if (embedding?.options.recordAccess === "readOnly")

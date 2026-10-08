@@ -41,7 +41,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint, scopeCompilers));
       for (const relationship of input.viewRelationships ?? []) conditions.push(compileStandardViewRelationship(input.descriptor, input.tenantId, relationship));
       for (const filter of input.filters ?? []) {
-        validateFilterValue(filter);
+        validateFilterValue(filter, input.descriptor.fields.find((field) => field.key === filter.field)?.type);
         conditions.push(filterCondition(input.descriptor, filter));
       }
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));

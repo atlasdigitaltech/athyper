@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./view-modes";
+export * from "./filter-values";
 export * from "./board";
 export * from "./experience";
 export * from "./parsers";

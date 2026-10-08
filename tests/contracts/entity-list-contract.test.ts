@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   decodeListLocationState,
+  isListDateValue,
+  isListInstantValue,
+  parseSaveableListState,
+  temporalFilterValueError,
   ENTITY_LIST_MAX_FILTERS,
   ENTITY_LIST_MAX_SEARCH_LENGTH,
   ENTITY_LIST_MAX_URL_LENGTH,
@@ -288,6 +292,43 @@ describe("entity list browser contract", () => {
     duplicate.laneFields[0]!.lanes[1]!.values = ["active"];
     assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: duplicate } }), /exactly one lane/);
     assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, board: { laneFields: [{ ...board.laneFields[0], field: "missing" }] } } }), /listed field/);
+  });
+
+  it("requires date filter values to be written exactly as they are compared", () => {
+    assert.equal(isListDateValue("2026-10-08"), true);
+    assert.equal(isListDateValue("2026-02-30"), false);
+    assert.equal(isListDateValue("2026-10-08T00:00:00Z"), false);
+    assert.equal(isListInstantValue("2026-10-08T14:30:00Z"), true);
+    assert.equal(isListInstantValue("2026-10-08T14:30:00.125+08:00"), true);
+    assert.equal(isListInstantValue("2026-10-08T14:30:00"), false, "no offset");
+    assert.equal(isListInstantValue("2026-10-08T14:30Z"), false, "no seconds");
+    assert.equal(isListInstantValue("2026-10-08T14:30:00+0800"), false, "malformed offset");
+    assert.equal(isListInstantValue("2026-10-08"), false, "date on a datetime field");
+    assert.equal(temporalFilterValueError("date", "between", ["2026-10-01", "2026-10-31"]), undefined);
+    assert.match(temporalFilterValueError("date", "in", ["2026-10-01", "2026-10-01T00:00:00Z"]) ?? "", /YYYY-MM-DD/);
+    assert.equal(temporalFilterValueError("datetime", "eq", null), undefined);
+    assert.equal(temporalFilterValueError("datetime", "relative", "today"), undefined);
+    assert.equal(temporalFilterValueError("string", "eq", "2026-10-08T14:30:00"), undefined);
+  });
+
+  it("drops only the malformed date filter from a link, and refuses it in stored state", () => {
+    const payload = {
+      ...descriptorPayload,
+      fields: [
+        ...descriptorPayload.fields,
+        { key: "due_on", label: "Due on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt"], sortable: true, groupable: false, aggregations: [] },
+        { key: "updated_at", label: "Updated", valueKind: "datetime", defaultVisible: false, defaultOrder: 4, filterOperators: ["gte", "lt"], sortable: true, groupable: false, aggregations: [] },
+      ],
+    };
+    const descriptor = parseEntityListDescriptor(payload);
+    const good = encodeURIComponent(JSON.stringify({ operator: "gte", value: "2026-10-01" }));
+    const local = encodeURIComponent(JSON.stringify({ operator: "lt", value: "2026-10-08T14:30:00" }));
+    const state = decodeListLocationState(`?filter.due_on=${good}&filter.updated_at=${local}`, descriptor);
+    assert.deepEqual(state.filters, [{ field: "due_on", operator: "gte", value: "2026-10-01" }]);
+    assert.throws(
+      () => parseSaveableListState({ ...descriptor.surface.defaultState, filters: [{ field: "updated_at", operator: "lt", value: "2026-10-08T14:30:00" }] }, descriptor),
+      /RFC 3339/,
+    );
   });
 
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {

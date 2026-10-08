@@ -55,7 +55,7 @@ export function readSavedViews(key: string, descriptor: EntityListDescriptorV1):
         return [{
           id: item["id"].slice(0, 128),
           name: item["name"].trim().slice(0, 80),
-          state: parseSaveableListState(item["state"], descriptor),
+          state: parseStoredListState(item["state"], descriptor),
         }];
       } catch {
         return [];
@@ -66,6 +66,38 @@ export function readSavedViews(key: string, descriptor: EntityListDescriptorV1):
     removeStorageItem(key);
     return descriptor.viewCatalog?.views.filter(view=>view.compatible)??[];
   }
+}
+
+/** Parses a stored view and refuses one that would not apply exactly as saved.
+ * The parser skips filters, sort levels or a group whose field or operator is
+ * no longer available; for a stored view that would silently widen or reorder
+ * its results, so the view is treated as out of date instead. This is the same
+ * rule the server applies to stored views (`validateViewState`). */
+export function parseStoredListState(raw: unknown, descriptor: EntityListDescriptorV1): SaveableListStateV1 {
+  const parsed = parseSaveableListState(raw, descriptor);
+  const value = raw as Record<string, unknown>;
+  const length = (items: unknown) => (Array.isArray(items) ? items.length : 0);
+  if (length(value.filters) !== parsed.filters.length || length(value.sort) !== parsed.sort.length || (value.group !== undefined && value.group !== parsed.group))
+    throw new TypeError("Saved view no longer applies exactly as saved");
+  return parsed;
+}
+
+/** Removes browser-saved views that no longer apply exactly as saved and
+ * returns how many were removed, so the list can say so once. */
+export function pruneRetiredSavedViews(key: string, descriptor: EntityListDescriptorV1): number {
+  const value = readStorageJson(key);
+  if (!Array.isArray(value)) return 0;
+  const kept = value.filter((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    try {
+      parseStoredListState((candidate as Record<string, unknown>)["state"], descriptor);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (kept.length !== value.length) writeStorageItem(key, JSON.stringify(kept));
+  return value.length - kept.length;
 }
 
 export function writeSavedViews(key: string, views: readonly SavedListView[]): void {

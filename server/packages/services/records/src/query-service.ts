@@ -678,8 +678,8 @@ function validateQueryFields(
 ): void {
   const map = new Map(fields.map((field) => [field.key, field]));
   for (const filter of query.filters ?? []) {
-    validateFilterValue(filter);
     const field = map.get(filter.field);
+    validateFilterValue(filter, field?.type);
     if (!field?.filterable || !readable.has(filter.field))
       throw new RecordServiceError(
         400,

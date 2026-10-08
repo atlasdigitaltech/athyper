@@ -1,10 +1,14 @@
 import type { RecordFilter } from "@athyper/server-contract-records";
-import { ENTITY_LIST_RELATIVE_DATE_VALUES } from "@athyper/contract-platform-entity-list";
+import { ENTITY_LIST_RELATIVE_DATE_VALUES, temporalFilterValueError } from "@athyper/contract-platform-entity-list";
 import { RecordServiceError } from "./errors.js";
 
 const relativeDates = new Set<string>(ENTITY_LIST_RELATIVE_DATE_VALUES);
 const scalar = (value: unknown) => typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value));
-export function validateFilterValue(filter: RecordFilter): void {
+/** Validates a filter value before it reaches SQL. `fieldType` is the field's
+ * declared type: date and datetime values must be written exactly (a date as
+ * YYYY-MM-DD, an instant with an explicit offset), because the value is
+ * compared in SQL as given. */
+export function validateFilterValue(filter: RecordFilter, fieldType?: string): void {
   const value = filter.value;
   let valid = false;
   switch (filter.operator) {
@@ -17,5 +21,6 @@ export function validateFilterValue(filter: RecordFilter): void {
     case "gt": case "gte": case "lt": case "lte": valid = scalar(value); break;
     default: throw new RecordServiceError(400, "FILTER_OPERATOR_NOT_ALLOWED", "Unsupported filter operator");
   }
+  if (valid && temporalFilterValueError(fieldType, filter.operator, filter.value as never)) valid = false;
   if (!valid) throw new RecordServiceError(400, "INVALID_FILTER_VALUE", "Invalid value for filter operator", { field: filter.field, operator: filter.operator });
 }

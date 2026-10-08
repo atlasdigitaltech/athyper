@@ -11,6 +11,7 @@ export interface ListNotice {
 const VISIBLE_NOTICE_KEYS: ReadonlySet<string> = new Set([
   "list.notice.viewUnavailableSystem",
   "list.notice.layoutUnavailable",
+  "list.notice.savedViewRetired",
   "list.board.laneFieldUnavailable",
 ]);
 

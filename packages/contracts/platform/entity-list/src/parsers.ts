@@ -37,6 +37,7 @@ import type {
   SaveableListStateV1,
 } from "./types";
 import { ENTITY_LIST_VIEW_MODES } from "./view-modes";
+import { temporalFilterValueError } from "./filter-values";
 import {
   parseListBoard,
   parseListBoardState,
@@ -723,7 +724,9 @@ function stateRules(
     fields: new Map(descriptor.fields.map((field) => [field.key, field])),
     identityField: descriptor.entity.identityField,
     supportedModes: new Set(descriptor.surface.supportedModes),
-    defaultMode: descriptor.surface.defaultState.mode,
+    // Optional: state can be parsed against a partial descriptor (as in the
+    // saved-view service), which then falls back to the first supported mode.
+    defaultMode: descriptor.surface.defaultState?.mode,
     ...(descriptor.surface.board ? { board: descriptor.surface.board } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
@@ -767,6 +770,11 @@ function parseState(
       item.value === undefined
         ? undefined
         : json(item.value, `filters[${index}].value`);
+    // A date value that would not be compared exactly as written is an
+    // error, not a skip: links drop just this filter, and stored views,
+    // which promise exact results, fail as a whole.
+    const temporalError = temporalFilterValueError(descriptor.valueKind, operator, value);
+    if (temporalError) throw new TypeError(`filters[${index}].value ${temporalError}`);
     filters.push(
       Object.freeze({
         field,

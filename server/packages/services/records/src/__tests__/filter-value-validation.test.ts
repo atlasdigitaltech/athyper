@@ -14,3 +14,16 @@ it.each([
 ])("accepts valid %s", (operator, value) => {
   expect(() => validateFilterValue({ field: "field", operator, value } as RecordFilter)).not.toThrow();
 });
+it.each([
+  ["date", "gte", "2026-10-08T00:00:00Z"], ["date", "lt", "2026-02-30"], ["date", "between", ["2026-10-01", "10/31/2026"]],
+  ["datetime", "gte", "2026-10-08T14:30:00"], ["datetime", "lt", "2026-10-08T14:30Z"], ["datetime", "eq", "2026-10-08T14:30:00+0800"],
+  ["datetime", "in", ["2026-10-08T14:30:00Z", "2026-10-08"]],
+])("rejects a %s %s value that is not written exactly as compared", (fieldType, operator, value) => {
+  expect(() => validateFilterValue({ field: "field", operator, value } as RecordFilter, fieldType)).toThrowError(expect.objectContaining({ statusCode: 400, code: "INVALID_FILTER_VALUE" }));
+});
+it.each([
+  ["date", "gte", "2026-10-08"], ["date", "between", ["2026-10-01", "2026-10-31"]], ["datetime", "lt", "2026-10-08T14:30:00Z"],
+  ["datetime", "gte", "2026-10-08T14:30:00.5+08:00"], ["datetime", "eq", null], ["datetime", "relative", "this_month"], ["string", "eq", "2026-10-08T14:30:00"],
+])("accepts a %s %s value written exactly", (fieldType, operator, value) => {
+  expect(() => validateFilterValue({ field: "field", operator, value } as RecordFilter, fieldType)).not.toThrow();
+});
