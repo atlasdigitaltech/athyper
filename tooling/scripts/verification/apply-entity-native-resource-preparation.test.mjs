@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  productComponentValidationReadMigrationName,
   nativeFieldKeyUniquenessMigrationName,
   nativeFieldContractTriggerMigrationName,
   nativeIdentityAdoptionMigrationName,
@@ -741,6 +742,56 @@ test("field-key replacement preserves legacy NULL-tenant uniqueness and native i
   );
   assert.match(
     preparationSql(source, digest, true, nativeFieldKeyUniquenessMigrationName),
+    /COMMIT;/,
+  );
+});
+
+test("component catalogue reads require referenced active product resources and admitted draft scope", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/54_product_component_validation_read.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        productComponentValidationReadMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.ok(source.includes(canonical));
+  for (const text of [
+    "AS RESTRICTIVE",
+    "tenant_id IS NULL AND status='active'",
+    "entity_command_private.admitted",
+    "component_format_id",
+    "relforcerowsecurity",
+  ])
+    assert.ok(canonical.includes(text));
+  assert.doesNotMatch(
+    canonical,
+    /GRANT (INSERT|UPDATE|DELETE|ALL)|SECURITY DEFINER|DISABLE|DROP CONSTRAINT/,
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      productComponentValidationReadMigrationName,
+    ),
+    /ROLLBACK;/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      productComponentValidationReadMigrationName,
+    ),
     /COMMIT;/,
   );
 });

@@ -186,6 +186,67 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
           ),
         ).toThrow();
       }
+      // Real admission and new catalogue policies; reduced resource/member tables
+      // isolate authorization, not component publication or semantic qualification.
+      q(`CREATE TABLE metadata.ui_component_contract(id uuid,tenant_id uuid,status text);
+        ALTER TABLE metadata.ui_component_contract ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE metadata.ui_component_contract FORCE ROW LEVEL SECURITY;
+        CREATE TABLE metadata.entity_surface(tenant_id uuid,change_set_id uuid,component_contract_id uuid);
+        CREATE TABLE metadata.entity_surface_section(LIKE metadata.entity_surface);
+        CREATE TABLE metadata.entity_surface_field_binding(tenant_id uuid,change_set_id uuid,component_display_id uuid,component_input_id uuid,component_filter_id uuid,component_format_id uuid);
+        GRANT SELECT ON metadata.entity_surface,metadata.entity_surface_section,metadata.entity_surface_field_binding TO athyper_product_command_app;`);
+      const components = Array.from({ length: 10 }, () => randomUUID());
+      q(
+        components
+          .map(
+            (id, index) =>
+              `INSERT INTO metadata.ui_component_contract VALUES('${id}',${index === 7 ? `'${tenant}'` : "NULL"},'${index === 6 ? "deprecated" : "active"}');`,
+          )
+          .join(""),
+      );
+      q(`INSERT INTO metadata.entity_surface VALUES(NULL,'${target}','${components[0]}'),(NULL,'${target}','${components[6]}'),(NULL,'${target}','${components[7]}'),(NULL,'${randomUUID()}','${components[8]}');
+        INSERT INTO metadata.entity_surface_section VALUES(NULL,'${target}','${components[1]}');
+        INSERT INTO metadata.entity_surface_field_binding VALUES(NULL,'${target}','${components[2]}','${components[3]}','${components[4]}','${components[5]}');`);
+      q(
+        read(
+          "ddl/planes/studio/metadata/54_product_component_validation_read.sql",
+        ),
+      );
+      const count =
+        "SELECT count(*) FROM metadata.ui_component_contract;ROLLBACK;";
+      expect(q(session + enter + count)).toMatch(/^6$/m);
+      expect(q(session + count)).toMatch(/^0$/m);
+      expect(
+        q(
+          session +
+            enter +
+            `SET LOCAL app.current_principal_id='${randomUUID()}';` +
+            count,
+        ),
+      ).toMatch(/^0$/m);
+      expect(
+        q(
+          session +
+            enter +
+            `SET LOCAL app.current_tenant_id='${randomUUID()}';` +
+            count,
+        ),
+      ).toMatch(/^0$/m);
+      // Even an additional permissive policy cannot widen this role's scope.
+      q(
+        "CREATE POLICY proof_broad_read ON metadata.ui_component_contract FOR SELECT TO athyper_product_command_app USING(true);",
+      );
+      expect(q(session + enter + count)).toMatch(/^6$/m);
+      for (const mutation of [
+        "INSERT INTO metadata.ui_component_contract DEFAULT VALUES",
+        "UPDATE metadata.ui_component_contract SET status='deprecated'",
+        "DELETE FROM metadata.ui_component_contract",
+        "TRUNCATE metadata.ui_component_contract",
+      ])
+        expect(() => q(session + enter + mutation + ";ROLLBACK;")).toThrow();
+      q("UPDATE entity_command_private.admission SET revoked=true;");
+      expect(() => q(session + enter + count)).toThrow();
+      q("UPDATE entity_command_private.admission SET revoked=false;");
       expect(() => q(session + insert() + "COMMIT;")).toThrow();
       expect(() => q(session + enter + insert(other) + "COMMIT;")).toThrow();
       expect(() =>

@@ -2168,6 +2168,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/53_native_field_key_uniqueness.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_product_component_validation_read.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_product_component_validation_read.sql",
+      "sha256": "6e540c9c1fd54137c6fe91668c3f651c8161faf187b500eed7caf0e76bc0fac5",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Read only active product component resources referenced by a transaction-admitted draft; no installation or write grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/54_product_component_validation_read.sql"
+      ]
     }
   ]
 }

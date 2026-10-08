@@ -640,6 +640,16 @@ constraint and enabled deferred snapshot guard. Existing duplicate identities bl
 installation; the migration does not rewrite data or remove pending cutover checks.
 These constraints do not independently attest whole-graph or runtime qualification.
 
+**Product-command component validation reads:** Forward migration
+`54_product_component_validation_read.sql` grants SELECT only, fenced by permissive
+and restrictive RLS policies. An active NULL-tenant catalogue row is visible only when
+its exact ID is referenced by a surface, section or display/input/filter/format binding
+in the transaction-admitted product draft. Admission retains actor, authority tenant,
+login, transaction, backend, expiry and revocation checks. This is validation access;
+it does not authorize catalogue browsing, installation, mutation or publication, and
+does not substitute for installed resource evidence. Missing component rows still block
+the native typed guards. Tenant-owned components require their separate governed path.
+
 **Fresh native write ordering:** The shared bootstrap persists navigation groups before
 sections, sections before field bindings, and dependent reference members (including
 view fields and predicates) after those bindings. View rows precede their view-field

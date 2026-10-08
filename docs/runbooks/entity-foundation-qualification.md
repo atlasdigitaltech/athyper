@@ -251,6 +251,35 @@ runner tests and migration layout check passed (162 classified files, 154 retain
 Installed proposal resolution, complete native graph persistence/compiler proof and
 F6/F8/F9 live-read composition remain open. No replacement draft/publication/activation.
 
+### Scoped component catalogue validation reads installed — 8 October
+
+Forward migration `20261008_entity_product_component_validation_read.sql` adds SELECT
+with matching permissive/restrictive policies: only active product components referenced
+by the admitted draft's surfaces, sections or four field-component bindings are visible.
+No catalogue write/installation grants or new resource rows were introduced. Admission
+continues to bind actor, authority tenant, login, backend, transaction, expiry and revocation.
+SHA-256: `6e540c9c1fd54137c6fe91668c3f651c8161faf187b500eed7caf0e76bc0fac5`.
+
+DEV rollback rehearsal, installation and ledger replay passed; authorization and activation
+heads were unchanged. Receipts `component-read-{rehearsal,installation,replay}.json` are in
+the existing private backup directory. Actual drafts remain revision 4, seven pending
+checks remain, and no replacement draft, publication or activation occurred.
+
+The opt-in PostgreSQL product-creation test passes with the real admission implementation
+and new policies. It covers six reference locations; excludes unrelated, foreign-tenant
+and deprecated rows; denies no-admission/wrong-actor/wrong-tenant reads; verifies a broad
+permissive policy cannot bypass the restrictive fence; rejects writes, truncation and
+revoked admission. Reduced member/catalogue fixtures isolate authorization; they do not
+attest component publication. All 23 migration-runner tests pass.
+
+The restored canonical bootstrap now passes the catalogue permission check and reaches
+`NATIVE_TYPED_ROW_INVALID:entity_surface`. Predicate-level inspection identifies absent
+component catalogue references for the rehearsal's surfaces. This is resource completeness,
+not another permission failure: no synthetic resources were installed in DEV. The restored
+copy uses synthetic admission/resources and copy-only pending-check removal, and rolls
+back; it is not deployed qualification. Approved component resource installation, installed
+proposal resolution and deployed F6/F8/F9 remain unfinished.
+
 ### Native bootstrap dependency ordering corrected — 8 October
 
 `native-bootstrap-plans.ts` now separates navigation groups from the remaining reference
