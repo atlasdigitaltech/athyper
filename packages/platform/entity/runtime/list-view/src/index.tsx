@@ -93,6 +93,8 @@ import {
 import { boardSummaryState } from "./board/board-model";
 import { EntityBoard } from "./board/board-view";
 import { calendarRange } from "./calendar/calendar-model";
+import { ganttRange } from "./gantt/gantt-model";
+import { EntityGantt } from "./gantt/gantt-view";
 import { dateRangePageState } from "./date-range/date-range-model";
 import { EntityCalendar } from "./calendar/calendar-view";
 import {
@@ -804,6 +806,17 @@ function EntityCollectionRuntime({
           // Board's summary query groups by the lane field instead.
           boardLaneField:
             state.mode === "board" ? (state.board?.laneField ?? null) : null,
+          // Gantt's page query is the window query for this field, zoom and anchor.
+          gantt:
+            state.mode === "gantt"
+              ? [
+                  state.gantt?.dateField ?? null,
+                  state.gantt?.zoom ?? null,
+                  state.ganttAnchor ?? null,
+                  localization.timeZone,
+                  localization.weekStart,
+                ]
+              : null,
           // Calendar's page query is the window query for this field, view and anchor.
           calendar:
             state.mode === "calendar"
@@ -972,6 +985,7 @@ function EntityCollectionRuntime({
         next = withRenderableModes(next, {
           board: !embedding,
           calendar: !embedding,
+          gantt: !embedding,
         });
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
@@ -1120,7 +1134,8 @@ function EntityCollectionRuntime({
           dateRangePageState(
             boardSummaryState(state, descriptor),
             descriptor,
-            calendarRange(state, descriptor, localization),
+            calendarRange(state, descriptor, localization) ??
+              ganttRange(state, descriptor, localization),
             localization.timeZone,
           ),
           descriptor,
@@ -1793,6 +1808,36 @@ function EntityCollectionRuntime({
                 }
               />
             ) : page &&
+              state.mode === "gantt" &&
+              descriptor.surface.gantt &&
+              !embedding ? (
+              <EntityGantt
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                state={state}
+                page={page}
+                pageCurrent={resultsCurrent}
+                scope={scopeCoordinate}
+                widthTier={widthTier}
+                fields={fields}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                timeZone={localization.timeZone}
+                weekStart={localization.weekStart}
+                recordHref={(row) => recordHref(descriptor, row)}
+                onOpenRecord={onOpenRecord}
+                renderActions={(row) => (
+                  <RowMenu
+                    descriptor={descriptor}
+                    row={row}
+                    intl={entityIntl}
+                  />
+                )}
+                onGanttChange={(change) =>
+                  update({ ...state, ...change }, "replace")
+                }
+              />
+            ) : page &&
               state.mode === "board" &&
               descriptor.surface.board &&
               !embedding ? (
@@ -1908,7 +1953,10 @@ function EntityCollectionRuntime({
                 />
               </>
             ) : null}
-            {page && state.mode !== "board" && state.mode !== "calendar" ? (
+            {page &&
+            state.mode !== "board" &&
+            state.mode !== "calendar" &&
+            state.mode !== "gantt" ? (
               <EntityListPagination
                 hideSinglePageControls={Boolean(section)}
                 descriptor={descriptor}
@@ -2630,8 +2678,10 @@ function ListChrome({
                       ) ||
                       embedding.initialControl === "display"),
                 ).map((item) => item.key)
-              : state.mode === "board" || state.mode === "calendar"
-                ? // Board lanes and calendar days are the grouping; a saved group stays for Table and Cards.
+              : state.mode === "board" ||
+                  state.mode === "calendar" ||
+                  state.mode === "gantt"
+                ? // Board lanes, calendar days and Gantt rows supply their own grouping; a saved group stays for Table and Cards.
                   LIST_DRAWERS.filter((item) => item.key !== "group").map(
                     (item) => item.key,
                   )
@@ -5194,7 +5244,10 @@ function modeUnavailableReasonKey(code: string): string {
     return "list.mode.reason.laneFieldUnavailable";
   if (code === "LIST_BOARD_COUNTS_UNAVAILABLE")
     return "list.mode.reason.countsUnavailable";
-  if (code === "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE")
+  if (
+    code === "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE" ||
+    code === "LIST_GANTT_DATE_FIELD_UNAVAILABLE"
+  )
     return "list.mode.reason.dateFieldUnavailable";
   return "list.mode.reason.unsupported";
 }

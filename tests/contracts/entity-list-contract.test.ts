@@ -363,6 +363,39 @@ describe("entity list browser contract", () => {
     assert.equal(ranged.surface.calendar?.dateFields[0]?.endNullable, false);
   });
 
+  it("parses a viewer's Gantt, normalizes its state and keeps the anchor out of saved state", () => {
+    const fields = [
+      ...descriptorPayload.fields,
+      { key: "starts_on", label: "Starts on", valueKind: "date", defaultVisible: false, defaultOrder: 3, filterOperators: ["gte", "lt", "is_null"], sortable: true, groupable: false, aggregations: [] },
+      { key: "done", label: "Done", valueKind: "decimal", defaultVisible: false, defaultOrder: 4, filterOperators: [], sortable: false, groupable: false, aggregations: [] },
+    ];
+    const gantt = {
+      defaultZoom: "quarter",
+      dateFields: [{ start: "starts_on", label: "Starts on", kind: "date", unscheduled: true }],
+      group: { field: "status", label: "Status", choices: [{ value: "active", label: "Active", tone: "success" }, { value: "retired", label: "Retired" }] },
+      progress: { field: "done", label: "Done" },
+    };
+    const payload = { ...descriptorPayload, fields, surface: { ...descriptorPayload.surface, supportedModes: ["table", "compact", "gantt"], gantt } };
+    const descriptor = parseEntityListDescriptor(payload);
+    assert.deepEqual(descriptor.surface.gantt?.group?.choices.map((choice) => choice.value), ["active", "retired"]);
+    assert.deepEqual(descriptor.surface.defaultState.gantt, { dateField: "starts_on", zoom: "quarter" });
+
+    const shared = decodeListLocationState("?view=gantt&gantt=2026-11-15&gantt.zoom=year", descriptor);
+    assert.equal(shared.mode, "gantt");
+    assert.equal(shared.ganttAnchor, "2026-11-15");
+    assert.deepEqual(shared.gantt, { dateField: "starts_on", zoom: "year" });
+    const encoded = encodeListLocationState(shared, descriptor);
+    assert.equal(encoded.get("gantt"), "2026-11-15");
+    assert.equal(encoded.get("gantt.zoom"), "year");
+    assert.equal("ganttAnchor" in toSaveableListState(shared), false);
+    assert.deepEqual(decodeListLocationState("?view=gantt&gantt.zoom=week&gantt.field=retired", descriptor).gantt, { dateField: "starts_on", zoom: "quarter" });
+
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, supportedModes: ["table"] } }), /exactly when Gantt/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, defaultZoom: "week" } } }), /renderable zoom/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, progress: { field: "status", label: "Status" } } } }), /integer or decimal/);
+    assert.throws(() => parseEntityListDescriptor({ ...payload, surface: { ...payload.surface, gantt: { ...gantt, group: { ...gantt.group, field: "starts_on" } } } }), /listed enum field/);
+  });
+
   it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);

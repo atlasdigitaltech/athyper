@@ -1,0 +1,53 @@
+/* Gantt list view mode. Shared toolbar, notices, agenda and tray come from
+   date-range.css; tone comes from published choice tones via data-tone; every
+   colour is a design-system token. Three local layout constants have no
+   design-system token (Gantt blueprint section 11). */
+.a-entity-gantt{--gantt-label-width:12rem;--gantt-min-column:.75rem;--gantt-min-bar:.375rem;--gantt-row:2.375rem;--gantt-bar:.875rem;display:grid;gap:var(--a-space-3);min-width:0;padding:var(--a-space-3)}
+.a-entity-list--compact .a-entity-gantt{--gantt-row:1.75rem;--gantt-bar:.625rem}
+
+.a-entity-gantt__chart{overflow-x:auto;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface)}
+.a-entity-gantt__head,.a-entity-gantt__row{display:grid;grid-template-columns:var(--gantt-label-width) minmax(0,1fr);min-inline-size:calc(var(--gantt-label-width) + var(--gantt-columns,12) * var(--gantt-min-column))}
+.a-entity-gantt__head{position:sticky;z-index:3;inset-block-start:0;border-block-end:var(--a-border-width) solid var(--a-border);background:var(--a-muted)}
+.a-entity-gantt__label-head{display:flex;align-items:center;padding:0 var(--a-space-3);border-inline-end:var(--a-border-width) solid var(--a-border);color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-medium);letter-spacing:var(--a-tracking-wide);text-transform:uppercase}
+.a-entity-gantt__scale{position:relative;block-size:3.25rem}
+.a-entity-gantt__tier{position:absolute;inset-inline:0;inset-block-start:0;block-size:1.625rem;border-block-end:var(--a-border-width) solid var(--a-border)}
+.a-entity-gantt__tier--lower{inset-block-start:1.625rem;border-block-end:0}
+.a-entity-gantt__tier>span{position:absolute;inset-block:0;display:flex;align-items:center;overflow:hidden;padding-inline:var(--a-space-1);border-inline-start:var(--a-border-width) solid var(--a-border);color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);font-variant-numeric:tabular-nums;white-space:nowrap}
+.a-entity-gantt__tier:not(.a-entity-gantt__tier--lower)>span{padding-inline:var(--a-space-2);color:var(--a-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium)}
+.a-entity-gantt__today-tag{position:absolute;z-index:1;inset-block-start:.125rem;padding:0 var(--a-space-2);border-radius:var(--a-radius-round);background:var(--a-primary);color:var(--a-primary-foreground);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-medium);transform:translateX(-50%)}
+[dir=rtl] .a-entity-gantt__today-tag{transform:translateX(50%)}
+
+.a-entity-gantt__body{position:relative}
+.a-entity-gantt__lines{position:absolute;z-index:0;inset-block:0;inset-inline-start:var(--gantt-label-width);inset-inline-end:0;pointer-events:none}
+.a-entity-gantt__lines>i{position:absolute;inset-block:0;border-inline-start:var(--a-border-width) solid color-mix(in srgb,var(--a-border) 65%,transparent)}
+.a-entity-gantt__lines>b{position:absolute;inset-block:0;inline-size:2px;margin-inline-start:-1px;background:var(--a-primary);opacity:.85}
+
+.a-entity-gantt__group{position:relative;z-index:1;border-block-end:var(--a-border-width) solid var(--a-border);background:var(--a-muted)}
+.a-entity-gantt__group button{position:sticky;inset-inline-start:0;display:flex;align-items:center;gap:var(--a-space-2);min-block-size:2rem;padding:0 var(--a-space-3);border:0;background:none;color:var(--a-foreground);font:inherit;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-strong);cursor:pointer}
+.a-entity-gantt__group button:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:calc(var(--a-focus-width) * -1)}
+.a-entity-gantt__chevron{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+[dir=rtl] .a-entity-gantt__group button[aria-expanded=false] .a-entity-gantt__chevron{transform:scaleX(-1)}
+
+.a-entity-gantt__row{position:relative;min-block-size:var(--gantt-row);border-block-end:var(--a-border-width) solid color-mix(in srgb,var(--a-border) 70%,transparent)}
+.a-entity-gantt__label{position:sticky;z-index:2;inset-inline-start:0;display:flex;align-items:center;gap:var(--a-space-1);min-inline-size:0;padding-block:0;padding-inline:var(--a-space-3) var(--a-space-1);border-inline-end:var(--a-border-width) solid var(--a-border);background:var(--a-surface)}
+.a-entity-gantt__row:hover .a-entity-gantt__label,.a-entity-gantt__row:focus-within .a-entity-gantt__label{background:color-mix(in srgb,var(--a-primary) 6%,var(--a-surface))}
+.a-entity-gantt__dot{flex:none;inline-size:.5rem;block-size:.5rem;border-radius:var(--a-radius-round);background:var(--dated-tone)}
+.a-entity-gantt__name{flex:1;min-inline-size:0;overflow:hidden;color:var(--a-foreground);font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium);text-decoration:none;text-overflow:ellipsis;white-space:nowrap}
+a.a-entity-gantt__name:hover{text-decoration:underline}
+/* Visually hidden: tone is never the only status signal (blueprint section 8). */
+.a-entity-gantt__status{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.a-entity-gantt__actions{flex:none}
+
+.a-entity-gantt__track{position:relative;z-index:1;outline:none}
+.a-entity-gantt__track:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:calc(var(--a-focus-width) * -1)}
+.a-entity-gantt__bar{position:absolute;inset-block-start:50%;box-sizing:border-box;block-size:var(--gantt-bar);margin-block-start:calc(var(--gantt-bar) / -2);overflow:hidden;border:var(--a-border-width) solid var(--dated-tone);border-radius:var(--a-radius-sm);background:color-mix(in srgb,var(--dated-tone) 22%,var(--a-surface))}
+.a-entity-gantt__fill{position:absolute;inset-block:0;inset-inline-start:0;background:var(--dated-tone);opacity:.92}
+.a-entity-gantt__bar[data-open-ended]{border-inline-end-style:dashed;background-image:repeating-linear-gradient(135deg,color-mix(in srgb,var(--dated-tone) 45%,transparent) 0 4px,transparent 4px 8px)}
+.a-entity-gantt__bar[data-continues-before]{border-inline-start-width:0;border-start-start-radius:0;border-end-start-radius:0}
+.a-entity-gantt__bar[data-continues-after]{border-inline-end-width:0;border-start-end-radius:0;border-end-end-radius:0}
+.a-entity-gantt__milestone{position:absolute;inset-block-start:50%;inline-size:.8125rem;block-size:.8125rem;border-radius:2px;background:var(--dated-tone);box-shadow:0 0 0 2px var(--a-surface);transform:translate(-50%,-50%) rotate(45deg)}
+[dir=rtl] .a-entity-gantt__milestone{transform:translate(50%,-50%) rotate(45deg)}
+
+@container entity-list (width < 40rem){
+  .a-entity-gantt{padding:var(--a-space-2)}
+}

@@ -1,5 +1,6 @@
 import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
+import { resolveListGantt } from "./list-gantt.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -1438,6 +1439,18 @@ export function compileEntityListDescriptor(
     calendarResolution && "calendar" in calendarResolution
       ? calendarResolution.calendar
       : undefined;
+  const ganttResolution = descriptor.listPresentation?.gantt
+    ? resolveListGantt({
+        gantt: descriptor.listPresentation.gantt,
+        fields: ordered,
+        entityFields: descriptor.fields,
+        masked,
+      })
+    : undefined;
+  const gantt =
+    ganttResolution && "gantt" in ganttResolution
+      ? ganttResolution.gantt
+      : undefined;
   const { supported: modes, unavailable: unavailableModes } = resolveModes(
     descriptor.listPresentation?.supportedModes,
     {
@@ -1451,6 +1464,12 @@ export function compileEntityListDescriptor(
         calendarResolution && "unavailable" in calendarResolution
           ? calendarResolution.unavailable
           : calendar
+            ? undefined
+            : "LIST_MODE_UNSUPPORTED",
+      gantt:
+        ganttResolution && "unavailable" in ganttResolution
+          ? ganttResolution.unavailable
+          : gantt
             ? undefined
             : "LIST_MODE_UNSUPPORTED",
     },
@@ -1504,6 +1523,7 @@ export function compileEntityListDescriptor(
     ...(unavailableModes.length ? { unavailableModes } : {}),
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
+    ...(gantt ? { gantt } : {}),
     ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
     filterPresentation,
@@ -1565,6 +1585,7 @@ export function compileEntityListDescriptor(
       ...(unavailableModes.length ? { unavailableModes } : {}),
       ...(board ? { board } : {}),
       ...(calendar ? { calendar } : {}),
+      ...(gantt ? { gantt } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey

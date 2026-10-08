@@ -64,9 +64,19 @@ export const ENTITY_LIST_MAX_SEARCH_LENGTH = 512;
  * validator derives from; never restate a range elsewhere. */
 export type EntityListRelativeDateRange =
   | { readonly kind: "days"; readonly from: number; readonly to: number }
-  | { readonly kind: "calendar"; readonly unit: "week" | "month" | "quarter" | "year"; readonly from: number; readonly to: number };
-const days = (from: number, to: number) => Object.freeze({ kind: "days" as const, from, to });
-const calendar = (unit: "week" | "month" | "quarter" | "year", from: number, to: number) => Object.freeze({ kind: "calendar" as const, unit, from, to });
+  | {
+      readonly kind: "calendar";
+      readonly unit: "week" | "month" | "quarter" | "year";
+      readonly from: number;
+      readonly to: number;
+    };
+const days = (from: number, to: number) =>
+  Object.freeze({ kind: "days" as const, from, to });
+const calendar = (
+  unit: "week" | "month" | "quarter" | "year",
+  from: number,
+  to: number,
+) => Object.freeze({ kind: "calendar" as const, unit, from, to });
 export const ENTITY_LIST_RELATIVE_DATE_RANGES = Object.freeze({
   today: days(0, 1),
   yesterday: days(-1, 0),
@@ -92,8 +102,11 @@ export type EntityListRelativeDateValue =
 export const ENTITY_LIST_RELATIVE_DATE_VALUES = Object.freeze(
   Object.keys(ENTITY_LIST_RELATIVE_DATE_RANGES),
 ) as readonly EntityListRelativeDateValue[];
-export function entityListRelativeDateRange(value: unknown): EntityListRelativeDateRange | undefined {
-  return typeof value === "string" && Object.hasOwn(ENTITY_LIST_RELATIVE_DATE_RANGES, value)
+export function entityListRelativeDateRange(
+  value: unknown,
+): EntityListRelativeDateRange | undefined {
+  return typeof value === "string" &&
+    Object.hasOwn(ENTITY_LIST_RELATIVE_DATE_RANGES, value)
     ? ENTITY_LIST_RELATIVE_DATE_RANGES[value as EntityListRelativeDateValue]
     : undefined;
 }
@@ -161,6 +174,7 @@ export interface SaveableListStateV1 {
   readonly spreadsheet?: SpreadsheetStateV1;
   readonly board?: import("./board").ListBoardStateV1;
   readonly calendar?: import("./calendar").ListCalendarStateV1;
+  readonly gantt?: import("./gantt").ListGanttStateV1;
 }
 
 export interface ListLocationStateV1 extends SaveableListStateV1 {
@@ -171,10 +185,12 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
   readonly pageSize?: number;
   /** Calendar position (`YYYY-MM-DD`). Location only: never saved with a view. */
   readonly calendarAnchor?: string;
+  /** Gantt position (`YYYY-MM-DD`). Location only: never saved with a view. */
+  readonly ganttAnchor?: string;
 }
 
 export interface ListFieldDescriptorV1 {
-  readonly referenceLookup?: {readonly dependencies: readonly string[]};
+  readonly referenceLookup?: { readonly dependencies: readonly string[] };
   readonly key: string;
   readonly label: string;
   /** Optional metadata-defined catalogue section used by field discovery controls. */
@@ -182,7 +198,9 @@ export interface ListFieldDescriptorV1 {
   readonly valueKind: ListValueKind;
   readonly semanticRole?: string;
   readonly cardPriority?: ListCardPriority;
-  readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
+  readonly statusTones?: Readonly<
+    Record<string, "neutral" | "success" | "warning" | "danger">
+  >;
   readonly rendererKey?: string;
   readonly formatting?: Readonly<Record<string, JsonValue>>;
   /** Authorized, bounded choices suitable for enum or reference filter editors. */
@@ -297,6 +315,8 @@ export interface EntityListDescriptorV1 {
     readonly cardContent?: import("./board").ListCardContentV1;
     /** Date fields and default view this viewer can use; present only when Calendar is supported. */
     readonly calendar?: import("./calendar").ListCalendarV1;
+    /** Date ranges, zoom, group and progress this viewer can use; present only when Gantt is supported. */
+    readonly gantt?: import("./gantt").ListGanttV1;
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;
@@ -338,7 +358,7 @@ export interface EntityListDescriptorV1 {
 }
 
 export interface EntityListRowV1 {
-  readonly displayValues?: Readonly<Record<string,string>>;
+  readonly displayValues?: Readonly<Record<string, string>>;
   readonly id: string;
   readonly version?: number;
   readonly values: Readonly<Record<string, JsonValue>>;

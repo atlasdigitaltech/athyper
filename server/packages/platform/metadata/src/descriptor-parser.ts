@@ -9,6 +9,10 @@ import {
   validatePublishedListCalendar,
 } from "./list-calendar-descriptor.js";
 import {
+  parsePublishedListGantt,
+  validatePublishedListGantt,
+} from "./list-gantt-descriptor.js";
+import {
   validateEntityLiveReadContractV1,
   parseStructuredProjection,
   validateDirectoryScopeFields,
@@ -948,6 +952,9 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(item["calendar"] === undefined
       ? {}
       : { calendar: parsePublishedListCalendar(item["calendar"]) }),
+    ...(item["gantt"] === undefined
+      ? {}
+      : { gantt: parsePublishedListGantt(item["gantt"]) }),
   };
 }
 
@@ -1049,6 +1056,7 @@ function validateListPresentation(
     requireField(presentation.identityField, "listPresentation.identityField");
   validatePublishedListBoard(presentation, byKey);
   validatePublishedListCalendar(presentation, byKey);
+  validatePublishedListGantt(presentation, byKey);
   for (const key of Object.keys(presentation.localizedLabels?.fields ?? {}))
     requireField(key, "listPresentation.localizedLabels.fields");
   const columns =

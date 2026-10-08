@@ -1,6 +1,9 @@
 import { parseEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
-import { fallbackQuickFields, preferredFilterOperator } from "./filter-defaults";
+import {
+  fallbackQuickFields,
+  preferredFilterOperator,
+} from "./filter-defaults";
 import { parseEntityScopeFilters } from "./scope-filters";
 import { parsePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
@@ -44,6 +47,8 @@ import {
   parseListCalendarState,
   type ListCalendarV1,
 } from "./calendar";
+import { isListDateAnchor } from "./date-range";
+import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import {
   parseListBoard,
   parseListBoardState,
@@ -204,23 +209,39 @@ export function parseEntityListDescriptor(
       ? undefined
       : parseListBoard(surfaceRecord.board, new Set(fieldByKey.keys()));
   if (Boolean(board) !== supportedModes.includes("board"))
-    throw new TypeError("surface.board is required exactly when Board is supported");
+    throw new TypeError(
+      "surface.board is required exactly when Board is supported",
+    );
   const calendar =
     surfaceRecord.calendar === undefined
       ? undefined
       : parseListCalendar(surfaceRecord.calendar, fieldByKey);
   if (Boolean(calendar) !== supportedModes.includes("calendar"))
-    throw new TypeError("surface.calendar is required exactly when Calendar is supported");
+    throw new TypeError(
+      "surface.calendar is required exactly when Calendar is supported",
+    );
+  const gantt =
+    surfaceRecord.gantt === undefined
+      ? undefined
+      : parseListGantt(surfaceRecord.gantt, fieldByKey);
+  if (Boolean(gantt) !== supportedModes.includes("gantt"))
+    throw new TypeError(
+      "surface.gantt is required exactly when Gantt is supported",
+    );
   const cardContent =
     surfaceRecord.cardContent === undefined
       ? undefined
-      : parseListCardContent(surfaceRecord.cardContent, new Set(fieldByKey.keys()));
+      : parseListCardContent(
+          surfaceRecord.cardContent,
+          new Set(fieldByKey.keys()),
+        );
   const defaultState = parseState(surfaceRecord.defaultState, {
     fields: fieldByKey,
     identityField,
     supportedModes: new Set(supportedModes),
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
+    ...(gantt ? { gantt } : {}),
     maxSortLevels,
     allowedPageSizes: new Set(allowedPageSizes),
     defaultPageSize,
@@ -283,7 +304,13 @@ export function parseEntityListDescriptor(
       : {}),
     schemaVersion: 1,
     plane: oneOf(record.plane, ["neon", "mesh", "studio"] as const, "plane"),
-    ...(record.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(record.localizedLabels) }),
+    ...(record.localizedLabels === undefined
+      ? {}
+      : {
+          localizedLabels: parsePresentationLocalization(
+            record.localizedLabels,
+          ),
+        }),
     entity,
     revision: Object.freeze({
       release: integer(revisionRecord.release, "revision.release", 1),
@@ -312,6 +339,7 @@ export function parseEntityListDescriptor(
       ...(unavailableModes.length ? { unavailableModes } : {}),
       ...(board ? { board } : {}),
       ...(calendar ? { calendar } : {}),
+      ...(gantt ? { gantt } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")
@@ -434,7 +462,18 @@ function parseDataOperations(
     "dataOperations.import.importableFields",
   ).filter((key) => fields.has(key));
   return Object.freeze({
-    ...(root.workspaceHref === undefined ? {} : { workspaceHref: (() => { const href = root.workspaceHref; if (typeof href !== "string") throw new TypeError("Invalid transfer workspace href"); if (!/^\/(?!\/)[a-zA-Z0-9/_-]+$/.test(href)) throw new TypeError("Invalid transfer workspace href"); return href; })() }),
+    ...(root.workspaceHref === undefined
+      ? {}
+      : {
+          workspaceHref: (() => {
+            const href = root.workspaceHref;
+            if (typeof href !== "string")
+              throw new TypeError("Invalid transfer workspace href");
+            if (!/^\/(?!\/)[a-zA-Z0-9/_-]+$/.test(href))
+              throw new TypeError("Invalid transfer workspace href");
+            return href;
+          })(),
+        }),
     export: Object.freeze({
       currentPage: parseDataOperation(
         exportRecord.currentPage,
@@ -631,7 +670,17 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
         id: text(row.id, `rows[${index}].id`),
         ...(version !== undefined ? { version } : {}),
         values: jsonObject(row.values, `rows[${index}].values`),
-        ...(row.displayValues === undefined ? {} : {displayValues: Object.fromEntries(Object.entries(object(row.displayValues,"display values")).filter(([key])=>Object.hasOwn(object(row.values,"values"),key)).map(([key,value])=>[key,text(value,"display value")]))}),
+        ...(row.displayValues === undefined
+          ? {}
+          : {
+              displayValues: Object.fromEntries(
+                Object.entries(object(row.displayValues, "display values"))
+                  .filter(([key]) =>
+                    Object.hasOwn(object(row.values, "values"), key),
+                  )
+                  .map(([key, value]) => [key, text(value, "display value")]),
+              ),
+            }),
         ...(decoration ? { decoration } : {}),
       });
     }),
@@ -742,7 +791,10 @@ function stateRules(
     // saved-view service), which then falls back to the first supported mode.
     defaultMode: descriptor.surface.defaultState?.mode,
     ...(descriptor.surface.board ? { board: descriptor.surface.board } : {}),
-    ...(descriptor.surface.calendar ? { calendar: descriptor.surface.calendar } : {}),
+    ...(descriptor.surface.calendar
+      ? { calendar: descriptor.surface.calendar }
+      : {}),
+    ...(descriptor.surface.gantt ? { gantt: descriptor.surface.gantt } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -758,6 +810,7 @@ interface StateRules {
   readonly defaultMode?: ListViewMode;
   readonly board?: ListBoardV1;
   readonly calendar?: ListCalendarV1;
+  readonly gantt?: ListGanttV1;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -789,8 +842,13 @@ function parseState(
     // A date value that would not be compared exactly as written is an
     // error, not a skip: links drop just this filter, and stored views,
     // which promise exact results, fail as a whole.
-    const temporalError = temporalFilterValueError(descriptor.valueKind, operator, value);
-    if (temporalError) throw new TypeError(`filters[${index}].value ${temporalError}`);
+    const temporalError = temporalFilterValueError(
+      descriptor.valueKind,
+      operator,
+      value,
+    );
+    if (temporalError)
+      throw new TypeError(`filters[${index}].value ${temporalError}`);
     filters.push(
       Object.freeze({
         field,
@@ -844,8 +902,15 @@ function parseState(
     record.spreadsheet === undefined
       ? undefined
       : parseSpreadsheet(record.spreadsheet, rules.fields);
-  const board = rules.board ? parseListBoardState(record.board, rules.board) : undefined;
-  const calendar = rules.calendar ? parseListCalendarState(record.calendar, rules.calendar) : undefined;
+  const board = rules.board
+    ? parseListBoardState(record.board, rules.board)
+    : undefined;
+  const calendar = rules.calendar
+    ? parseListCalendarState(record.calendar, rules.calendar)
+    : undefined;
+  const gantt = rules.gantt
+    ? parseListGanttState(record.gantt, rules.gantt)
+    : undefined;
   const base = {
     ...(optionalCode(record.standardViewKey, "standardViewKey")
       ? {
@@ -867,6 +932,7 @@ function parseState(
     ...(spreadsheet ? { spreadsheet } : {}),
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
+    ...(gantt ? { gantt } : {}),
   };
   if (!rules.includeLocation) return Object.freeze(base);
   const pageSize =
@@ -895,17 +961,34 @@ function parseState(
     ...(pageSize !== undefined && rules.allowedPageSizes.has(pageSize)
       ? { pageSize }
       : { pageSize: rules.defaultPageSize }),
-    ...(rules.calendar && isListCalendarAnchor(record.calendarAnchor) ? { calendarAnchor: record.calendarAnchor } : {}),
+    ...(rules.calendar && isListCalendarAnchor(record.calendarAnchor)
+      ? { calendarAnchor: record.calendarAnchor }
+      : {}),
+    ...(rules.gantt && isListDateAnchor(record.ganttAnchor)
+      ? { ganttAnchor: record.ganttAnchor }
+      : {}),
   });
 }
 
-function parseStatusTones(value: unknown, name: string): Readonly<Record<string, "neutral" | "success" | "warning" | "danger">> {
+function parseStatusTones(
+  value: unknown,
+  name: string,
+): Readonly<Record<string, "neutral" | "success" | "warning" | "danger">> {
   const tones = object(value, name);
-  if (Object.keys(tones).length > 100) throw new TypeError(`${name} exceeds 100 statuses`);
-  return Object.freeze(Object.fromEntries(Object.entries(tones).map(([status, tone]) => {
-    if (!/^[a-z][a-z0-9_.-]{0,62}$/.test(status) || !["neutral", "success", "warning", "danger"].includes(String(tone))) throw new TypeError(`${name} is invalid`);
-    return [status, tone as "neutral" | "success" | "warning" | "danger"];
-  })));
+  if (Object.keys(tones).length > 100)
+    throw new TypeError(`${name} exceeds 100 statuses`);
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(tones).map(([status, tone]) => {
+        if (
+          !/^[a-z][a-z0-9_.-]{0,62}$/.test(status) ||
+          !["neutral", "success", "warning", "danger"].includes(String(tone))
+        )
+          throw new TypeError(`${name} is invalid`);
+        return [status, tone as "neutral" | "success" | "warning" | "danger"];
+      }),
+    ),
+  );
 }
 
 function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
@@ -995,8 +1078,24 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
           ),
         }
       : {}),
-    ...(field.statusTones === undefined ? {} : { statusTones: parseStatusTones(field.statusTones, `fields[${index}].statusTones`) }),
-    ...(field.referenceLookup === undefined ? {} : {referenceLookup: {dependencies: array(object(field.referenceLookup,"reference lookup").dependencies,"dependencies").map(value=>code(value,"dependency"))}}),
+    ...(field.statusTones === undefined
+      ? {}
+      : {
+          statusTones: parseStatusTones(
+            field.statusTones,
+            `fields[${index}].statusTones`,
+          ),
+        }),
+    ...(field.referenceLookup === undefined
+      ? {}
+      : {
+          referenceLookup: {
+            dependencies: array(
+              object(field.referenceLookup, "reference lookup").dependencies,
+              "dependencies",
+            ).map((value) => code(value, "dependency")),
+          },
+        }),
     ...(filterOptions ? { filterOptions } : {}),
     defaultVisible: boolean(
       field.defaultVisible,
@@ -1271,9 +1370,14 @@ function parseUnavailableModes(
       const entry = object(item, name);
       const mode = oneOf(entry.mode, MODES, `${name}.mode`);
       if (supported.has(mode) || seen.has(mode))
-        throw new TypeError(`${name}.mode must be a declared, unsupported mode listed once`);
+        throw new TypeError(
+          `${name}.mode must be a declared, unsupported mode listed once`,
+        );
       seen.add(mode);
-      return Object.freeze({ mode, code: reasonCode(entry.code, `${name}.code`) });
+      return Object.freeze({
+        mode,
+        code: reasonCode(entry.code, `${name}.code`),
+      });
     }),
   );
 }
@@ -1388,13 +1492,19 @@ export function parseEntityApplicationDescriptor(
     scope = object(value.scope, "scope");
   if (value.schemaVersion !== 1)
     throw new TypeError("Unsupported application descriptor");
-  const intakeSurfaces = parseEntityIntakeSurfaces(value["intakeSurfaces"] ?? []);
-  const intakeFlows=parseEntityIntakeFlows(value.intakeFlows ?? []);
+  const intakeSurfaces = parseEntityIntakeSurfaces(
+    value["intakeSurfaces"] ?? [],
+  );
+  const intakeFlows = parseEntityIntakeFlows(value.intakeFlows ?? []);
   return Object.freeze({
     schemaVersion: 1,
-    ...(value.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(value.localizedLabels) }),
-    ...(intakeFlows.length ? {intakeFlows} : {}),
-    ...(intakeSurfaces.length ? {intakeSurfaces} : {}),
+    ...(value.localizedLabels === undefined
+      ? {}
+      : {
+          localizedLabels: parsePresentationLocalization(value.localizedLabels),
+        }),
+    ...(intakeFlows.length ? { intakeFlows } : {}),
+    ...(intakeSurfaces.length ? { intakeSurfaces } : {}),
     plane: oneOf(value.plane, ["neon", "mesh", "studio"] as const, "plane"),
     entity: Object.freeze({
       code: code(entity.code, "entity.code"),

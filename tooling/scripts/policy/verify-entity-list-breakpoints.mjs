@@ -13,6 +13,7 @@ export const LIST_STYLESHEETS = [
   "packages/platform/entity/runtime/list-view/src/board/board.css",
   "packages/platform/entity/runtime/list-view/src/date-range/date-range.css",
   "packages/platform/entity/runtime/list-view/src/calendar/calendar.css",
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt.css",
   "packages/platform/entity/runtime/collection-controls/src/styles.css",
 ];
 /** Viewport overlay breakpoint (drawers, dialogs, fixed menus, page header). */

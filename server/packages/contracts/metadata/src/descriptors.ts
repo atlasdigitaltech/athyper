@@ -226,22 +226,35 @@ export interface EntityListBoardDescriptor {
   }[];
 }
 
-/** Published Calendar projection. Fields are declared explicitly; a null end
- * means open-ended. The default view is one this release can render. */
+/** A published date range, shared by the date layouts (Calendar, Gantt).
+ * Fields are declared explicitly; a null end means open-ended. */
+export interface EntityListDateRangeDescriptor {
+  readonly start: string;
+  readonly end?: string;
+  readonly tone?: {
+    readonly field: string;
+    readonly choices: readonly {
+      readonly value: string;
+      readonly label: string;
+      readonly tone: import("@athyper/contract-platform-entity-list").ListCalendarTone;
+    }[];
+  };
+}
+
+/** Published Calendar projection. The default view is one this release can render. */
 export interface EntityListCalendarDescriptor {
   readonly defaultView: import("@athyper/contract-platform-entity-list").ListCalendarView;
-  readonly dateFields: readonly {
-    readonly start: string;
-    readonly end?: string;
-    readonly tone?: {
-      readonly field: string;
-      readonly choices: readonly {
-        readonly value: string;
-        readonly label: string;
-        readonly tone: import("@athyper/contract-platform-entity-list").ListCalendarTone;
-      }[];
-    };
-  }[];
+  readonly dateFields: readonly EntityListDateRangeDescriptor[];
+}
+
+/** Published Gantt projection: its own date ranges, an optional group field
+ * (an entity enum) and progress field (integer or decimal), and a default
+ * zoom this release can render. */
+export interface EntityListGanttDescriptor {
+  readonly defaultZoom: import("@athyper/contract-platform-entity-list").ListGanttZoom;
+  readonly dateFields: readonly EntityListDateRangeDescriptor[];
+  readonly group?: { readonly field: string };
+  readonly progress?: { readonly field: string };
 }
 
 /** Compiled projection of the surface's binding_kind = summary placements. */
@@ -277,6 +290,7 @@ export interface EntityListPresentationDescriptor {
   readonly supportedModes?: readonly EntityListViewMode[];
   readonly board?: EntityListBoardDescriptor;
   readonly calendar?: EntityListCalendarDescriptor;
+  readonly gantt?: EntityListGanttDescriptor;
   readonly cardContent?: EntityListCardContentDescriptor;
   /** @deprecated Use limits.defaultPageSize. */
   readonly defaultPageSize?: number;

@@ -31,6 +31,8 @@ export function saveableViewState(state: ListLocationStateV1): SaveableListState
     ...(state.board ? { board: state.board } : {}),
     // The calendar's date field and view are saved; its anchor never is.
     ...(state.calendar ? { calendar: state.calendar } : {}),
+    // Gantt's date field and zoom are saved; its anchor never is.
+    ...(state.gantt ? { gantt: state.gantt } : {}),
   });
 }
 
