@@ -53,7 +53,8 @@
     "src/product-reference-enrollment.test.ts",
     "src/product-reference-enrollment-routes.test.ts",
     "src/installed-reference-resources.test.ts",
-    "src/product-reference-resource-policies.test.ts"
+    "src/product-reference-resource-policies.test.ts",
+    "src/native-bootstrap-application.test.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

@@ -52,6 +52,21 @@ Names and SQL types below define the intended contract. Metadata sample IDs such
 
 **Phase 1 implementation boundary:** deliver the dependency-complete typed contract, shared command/codec path, governed host bootstrap and Country/State Region read-only inspection/preview slice. Live reads additionally require F6 and F8; no synthetic preview attests live-data authorization. Existing controls needed by this subset remain mandatory. AI authoring, capability expansion, custom-value writes/overlays, release sets and Integration-owned authoring are later scope; parked workflow/case/print/integration automation remains NOT AUTHORIZED as stated in 7.9.4. A dictionary entry specifies a target contract, not a commitment to implement it in Phase 1.
 
+**Owner-approved DEV delivery sequence (8 October):** the immediate server-only
+handover starts from fresh native Country/State Region drafts in the existing DEV
+environment. A verified recoverable backup precedes scoped disposal of obsolete
+Entity authoring/publication state. Preserve IAM, business data, platform services,
+applied migration history and independent publication review. Legacy conversion and
+historical identity reconstruction are separate acceptance work, not prerequisites
+for this fresh-native demonstration. Root creation, typed whole-graph persistence,
+initial/saved history, exact readback, compilation and reader compatibility form one
+atomic command; an interrupted or rejected command must leave no partial draft.
+Replay requires fresh current authorization. Operation initialization uses only the
+specifically approved source-bound initializer, never a default or client-supplied
+protected value. Native bootstrap does not attest deployed F6/F8/F9, publication or
+activation. Execution evidence and remaining integration gaps belong in the existing
+[qualification runbook](../../runbooks/entity-foundation-qualification.md).
+
 **F0 source decision (supersedes the earlier in-Markdown proposal):** the canonical executable authoring contract belongs in `server/packages/contracts/meta-entity-authoring`, as a closed typed contract definition generating schema, descriptors, mappings and the blueprint's repetitive contract tables. This blueprint remains the sole design authority for rationale, scope and governance; package definitions implement that reviewed design. Generate section 3 and applicable comparison/ledger/specimen regions from the contract plus pinned source evidence. Do not generate narrative rationale or pretend repository-derived specimens come from schema alone. Until the package definition and generator qualify, existing tables are reviewed migration inputs, explicitly not executable or generated authority. The first owned-label contract/generator now exists as the bounded proof recorded in section 7.9.3; full reference qualification remains pending. Generated regions and package definitions cannot both be independently edited; CI fails drift, and semantic changes update the contract and affected rationale in one review.
 
 ### 1.1 Studio authoring and consuming-plane responsibilities

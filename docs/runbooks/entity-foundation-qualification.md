@@ -74,6 +74,37 @@ Fresh native root creation, whole-graph command composition, target-specific app
 installation and live-read adapters remain unfinished. No data reset, new draft
 creation, operation insertion, Entity publication or activation occurred.
 
+### Fresh native bootstrap command — repository implementation
+
+`KyselyMetaEntityAuthoringRepository.executeNativeBootstrap` now connects the
+insert-only typed graph planner to root creation, revision advancement, initial
+and saved immutable snapshots, exact native readback, the existing native release
+compiler and runtime projection/parser. An installed server policy resolves the
+proposal; request data contains only coordinates, proposal hash and idempotency key.
+Admission and schema/resource qualification run again on replay. Missing host policy,
+changed proposal/history, reader storage mismatch and failed audit reject. A savepoint
+rolls back root, members, history and receipt even when a caller catches the failure
+inside its own transaction. Compilation/parsing here does not publish a release or
+attest live storage/security qualification.
+
+Evidence: 855 authoring tests passed, seven opt-in PostgreSQL tests skipped. Production
+and native-test typechecks passed. Eight new transaction-protocol scenarios use a
+simulated SQL transport and the real compiler/parser; they do not establish canonical
+PostgreSQL grants, constraints or authenticated DEV execution. The existing compiler
+fixture is shared without changing its assertions or protected-control values.
+
+Deployment remains explicitly incomplete. The existing governance resolver admits an
+already-created draft, and the application's grants do not create a fresh product
+root. The private operation-source installation table also requires an existing target
+FK, so preallocation/installation must be integrated with root creation rather than
+inserting a placeholder via an administrator. A narrowly scoped creation admission,
+qualified native constraint/grant installation, real proposal/resource resolution and
+target-specific initializer installation remain required. Deployed F6/F8/F9 adapters,
+independent publication review and activation follow. No additional general owner
+approval is requested; these are implementation gaps. No DEV data was reset, no
+replacement draft was created and no new Entity release was published or activated
+by this checkpoint. The refreshed Admin session was not used to fabricate evidence.
+
 ## Live-read resource publication transport — 2026-10-08
 
 Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`

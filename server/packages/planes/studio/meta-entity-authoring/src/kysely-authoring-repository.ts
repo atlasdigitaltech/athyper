@@ -1,4 +1,9 @@
 import {
+  applyNativeBootstrap,
+  type NativeBootstrapInput,
+  type NativeBootstrapPolicy,
+} from "./native-bootstrap-application.js";
+import {
   applyLegacyIdentityInstallation,
   type LegacyIdentityInstallationPolicy,
 } from "./legacy-identity-installation.js";
@@ -185,7 +190,46 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly enrollmentApplicationPolicy?: LegacyEnrollmentApplicationPolicy,
     private readonly ownershipPolicy?: LegacyOwnershipPolicy,
     private readonly identityInstallationPolicy?: LegacyIdentityInstallationPolicy,
+    private readonly bootstrapPolicy?: NativeBootstrapPolicy,
   ) {}
+  async executeNativeBootstrap(input: NativeBootstrapInput) {
+    const policy = this.bootstrapPolicy;
+    if (!policy)
+      throw new AuthoringPolicyError(
+        "NATIVE_BOOTSTRAP_HOST_NOT_CONFIGURED",
+        "An installed native authoring composition is required.",
+      );
+    return atomic(this.database, async (tx) => {
+      await sql`SAVEPOINT native_bootstrap`.execute(tx);
+      try {
+        const repository = new KyselyMetaEntityAuthoringRepository(
+          tx,
+          undefined,
+          undefined,
+          undefined,
+          policy.host,
+        );
+        const result = await applyNativeBootstrap(tx, input, policy, {
+          empty: () => repository.loadGraphParts(input.changeSetId, false),
+          native: async (root) => {
+            const graph = await repository.nativeSnapshot(tx, input, root);
+            if (graph.contractSchema !== "athyper.meta-entity-contract/2.5")
+              throw new AuthoringPolicyError(
+                "NATIVE_BOOTSTRAP_READBACK_VERSION_INVALID",
+                "Expanded native readback required.",
+              );
+            return graph;
+          },
+        });
+        await sql`RELEASE SAVEPOINT native_bootstrap`.execute(tx);
+        return result;
+      } catch (error) {
+        await sql`ROLLBACK TO SAVEPOINT native_bootstrap`.execute(tx);
+        await sql`RELEASE SAVEPOINT native_bootstrap`.execute(tx);
+        throw error;
+      }
+    });
+  }
   async executeLegacyIdentityInstallation(input: LegacyOwnershipInput) {
     const policy = this.identityInstallationPolicy;
     if (!policy)
