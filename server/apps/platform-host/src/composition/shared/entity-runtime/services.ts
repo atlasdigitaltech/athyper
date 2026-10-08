@@ -28,12 +28,19 @@ type MutationOptions = Parameters<
 >[0];
 
 export interface EntityServiceOptions {
+  /** Installed, transaction-bound evidence only; absence must fail closed for
+   * version-1.1 reads. Read evidence is not a mutation authorization port. */
+  readonly liveReadEvidence?: Parameters<
+    typeof createEntityReadRuntime<RecordTransaction>
+  >[0]["liveReadEvidence"];
   readonly common: Omit<
     MutationOptions,
     "history" | "aggregateExecutor" | "mutationPolicies" | "collectionScopes"
   >;
   readonly listMetadata: MetadataReader;
-  readonly admitDescriptor: Parameters<typeof createEntityActivityProvider>[0]["admitDescriptor"];
+  readonly admitDescriptor: Parameters<
+    typeof createEntityActivityProvider
+  >[0]["admitDescriptor"];
   readonly reader: PinnedCompiledEntityReader;
   readonly fallbackCollectionScopes?: RecordCollectionScopeResolver;
   readonly presentation?: Parameters<
@@ -75,6 +82,9 @@ export function createEntityServices(options: EntityServiceOptions) {
   });
   const listExecutionOptions = {
     ...common,
+    ...(options.liveReadEvidence
+      ? { liveReadEvidence: options.liveReadEvidence }
+      : {}),
     metadata: listMetadata,
     ...(collectionScopes ? { collectionScopes } : {}),
   };

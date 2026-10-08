@@ -677,6 +677,11 @@ export interface ServiceRegistrationDependencies {
   /** Optional trusted adapter; never inferred from configuration or replaced with a stub. */
   readonly contactVerification?: ContactVerificationFactory;
   readonly repository?: RecordRepository<RecordTransaction>;
+  /** Trusted consuming-plane composition; not populated from an HTTP request.
+   * Supplying this port does not attest deployment readiness or resource review. */
+  readonly entityLiveReadEvidence?: Parameters<
+    typeof createEntityServices
+  >[0]["liveReadEvidence"];
   readonly workflowRepository?: WorkflowRepository<RecordTransaction>;
   readonly workflowCommandExecutions?: CommandExecutionStore<
     RecordTransaction,
@@ -3999,6 +4004,7 @@ export function registerServices(
       () =>
         createEntityServices({
           admitDescriptor,
+          liveReadEvidence: dependencies.entityLiveReadEvidence,
           common,
           listMetadata,
           reader: container.platform.compiledEntityReader!,

@@ -7,6 +7,16 @@ working-tree metadata draft, or onboard additional entities.
 
 ## Live-read resource publication transport — 2026-10-08
 
+Host composition follow-up: `ServiceRegistrationDependencies.entityLiveReadEvidence`
+now passes an explicitly installed evidence port into `createEntityServices` and
+its shared list/detail/pinned-parent read composition. It is separate from mutation
+authorization. No environment flag or request can fabricate this dependency. The
+deployment readiness gate remains closed for unqualified version-1.1 resources.
+Focused host tests: 37 passed, including missing/rejecting evidence preventing
+repository list/detail calls. Host typecheck passes. This closes a dependency
+forwarding gap only: no production evidence adapter is supplied by the entrypoint,
+and no native conversion, publication or activation occurred in this follow-up.
+
 Active-resource reader follow-up: `withLockedLocalLiveReadResources` now reads exact
 local activation coordinates with shared head/release/payload row locks in the
 caller transaction, enforces tenant/plane and size bounds, and invokes the existing

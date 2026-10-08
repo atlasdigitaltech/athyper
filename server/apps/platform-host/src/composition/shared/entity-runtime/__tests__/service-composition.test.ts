@@ -102,7 +102,11 @@ const descriptor: EntityRuntimeDescriptor = {
   ),
 };
 
-function fixture() {
+function fixture(
+  liveReadEvidence?: Parameters<
+    typeof createEntityServices
+  >[0]["liveReadEvidence"],
+) {
   const persistence = createInMemoryRecordPersistence();
   persistence.seed(descriptor, tenantId, [
     {
@@ -170,6 +174,7 @@ function fixture() {
     resolve: vi.fn(async () => null),
   } as unknown as PinnedCompiledEntityReader;
   const services = createEntityServices({
+    liveReadEvidence,
     common: {
       metadata,
       authorizer,
@@ -230,12 +235,10 @@ describe("shared Entity service composition", () => {
 
   it("passes locked parent constraints separately from caller filters and rejects a missing parent", async () => {
     const { services, persistence } = fixture();
-    const list = vi
-      .spyOn(persistence.repository, "list")
-      .mockResolvedValue({
-        data: [],
-        pagination: { pageSize: 0, hasMore: false, countMode: "none" },
-      });
+    const list = vi.spyOn(persistence.repository, "list").mockResolvedValue({
+      data: [],
+      pagination: { pageSize: 0, hasMore: false, countMode: "none" },
+    });
     const scopeCoordinate = {
       parentEntityCode: "owner_record",
       parentRecordId: first,
@@ -376,4 +379,65 @@ describe("shared Entity service composition", () => {
         .status,
     ).toBe(403);
   });
+});
+
+it("passes live-read evidence to both shared list and detail and fails closed when absent", async () => {
+  const pin = {
+    owner: "test",
+    namespace: "entity",
+    key: "security",
+    version: 1,
+    hash: "c".repeat(64),
+  };
+  const live: EntityRuntimeDescriptor = {
+    ...descriptor,
+    schema: "athyper.entity-runtime-descriptor/1.1",
+    releaseId: first,
+    liveReadContract: {
+      schema: "entity.live-read/1",
+      source: {
+        entityId: other,
+        releaseId: first,
+        contractHash: descriptor.contractHash,
+        tenantId: null,
+      },
+      security: pin,
+      storageAuthority: { ...pin, key: "storage" },
+    },
+  };
+  for (const supplied of [false, true]) {
+    const withLockedEvidence = vi.fn(
+      async (_input: unknown, _work: unknown) => {
+        throw Error("INSTALLED_EVIDENCE_REJECTED");
+      },
+    );
+    const f = fixture(supplied ? { withLockedEvidence } : undefined);
+    f.metadata.getEntityDescriptor.mockResolvedValue(live);
+    const list = vi.spyOn(f.persistence.repository, "list");
+    const get = vi.spyOn(f.persistence.repository, "get");
+    for (const read of [
+      () => f.services.queries.list({ context, entityCode: live.entityCode }),
+      () =>
+        f.services.queries.get({
+          context,
+          entityCode: live.entityCode,
+          recordId: first,
+        }),
+    ]) {
+      if (supplied)
+        await expect(read()).rejects.toThrow("INSTALLED_EVIDENCE_REJECTED");
+      else
+        await expect(read()).rejects.toMatchObject({
+          code: "ENTITY_LIVE_READ_EVIDENCE_REQUIRED",
+        });
+    }
+    expect(list).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+    expect(withLockedEvidence).toHaveBeenCalledTimes(supplied ? 2 : 0);
+    if (supplied)
+      expect(withLockedEvidence.mock.calls[0]?.[0]).toMatchObject({
+        context,
+        descriptor: live,
+      });
+  }
 });
