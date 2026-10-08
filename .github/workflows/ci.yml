@@ -266,6 +266,13 @@ jobs:
           ATHYPER_NATIVE_CONSTRAINT_POSTGRES: "1"
         run: pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-core-layout.postgres.test.ts src/native-ai-reconciliation.postgres.test.ts src/legacy-enrollment.postgres.test.ts src/native-constraint-compatibility.postgres.test.ts
 
+      - name: Rehearse native Entity review and publication admission on PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          PRODUCT_REVIEW_POSTGRES: "1"
+          NATIVE_PUBLICATION_POSTGRES: "1"
+        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-review.postgres.test.ts src/composition/shared/publication/native-publication-authority.postgres.test.ts
+
       - name: Rehearse restricted component installation on PostgreSQL
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:

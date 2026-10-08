@@ -3,6 +3,19 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261009_native_publication_authority.sql",
+      "path": "migrations/20261009_native_publication_authority.sql",
+      "sha256": "3eceb9c3f3b0d8c5f0d4b62af944153cf0e344dc869381d6ce1e04f45b85337c",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Native human-publication admission uses exact 2.5 snapshots, submission/approval receipts and canonical typed targets; retains enrolled workload, source hash, predecessor and release-integrity checks. Native revisions/releases preserve their schema version.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/36_native_publication_authority.sql",
+        "ddl/common/shared/98_security_definer_privileges.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261009_native_review_transition.sql",
       "path": "migrations/20261009_native_review_transition.sql",
       "sha256": "4fe1f674e9b6f7915aec645534797df7473983e98f11f90ce769bd31600139dc",

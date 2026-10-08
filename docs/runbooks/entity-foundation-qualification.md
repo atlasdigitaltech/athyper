@@ -608,15 +608,63 @@ source-bound `submit-request-<draft-id>.json` files. These are actual authentica
 Admin actions, not synthetic Owner approval. Independent review, publication,
 activation and live-read acceptance remain pending.
 
-**Remaining engineering:** replace the legacy worker source/adoption checks,
-`prepareSystemReferenceRelease` marker-based target preparation and legacy target
-qualification together; native validation snapshots must declare schema 2.5 instead
-of the legacy 2.1 constant. Preserve enrolled workload authority, exact source and
-compiler hashes, review separation, atomic release allocation and recovery. Then
-connect installed live-read resource resolution/runtime verification, review the
+**Native worker admission/preparation candidate — implemented/tested, not installed (9 October):**
+
+- `publication/36_native_publication_authority.sql` and registered forward migration
+  `20261009_native_publication_authority.sql` replace current human-policy admission
+  with exact native 2.5 source/revision, creator submission, independent approval and
+  typed target checks against both snapshot and canonical `entity_target` rows.
+  No adoption receipt or layout marker is required. Existing workload enrollment,
+  actor separation, revocation, predecessor and release-integrity checks remain.
+- Validation snapshots and allocated release rows retain schema version 2.5;
+  first/successor release allocation no longer stamps a native source as 2.1.
+  Native target compliance and publication-key checks use the native contract.
+- The existing `prepareSystemReferenceRelease` now prepares native immutable bytes
+  within its enclosing release transaction. Exact source/descriptor hashes, stored
+  signature coordinates and declared targets must match. Single-context native
+  output cannot be copied across planes. Legacy historical/non-native preparation
+  remains separate; this does not let current native human policies fall back.
+- The restored-database proof exposed a missing `entity_target` read on the actual
+  restricted publication function owner. The ownership contract and generated DDL
+  now declare SELECT for that definer role only, with RLS restricted to native
+  NULL-tenant product targets. No runtime/control membership or target writes are
+  granted. The upgrade contains the same targeted grant/policy.
+- Canonical order matters: the new routines live after the existing publication
+  routines in `publication/36`, so clean setup cannot overwrite them with the older
+  definitions later. Applied historical migration files remain unchanged.
+
+Executed evidence: **924 authoring tests pass, 11 opt-in tests skipped**. The native
+preparation tests cover exact immutable target output and failed-pin rollback;
+production/test authoring typechecks pass. The disposable PostgreSQL admission test
+accepts submit/approve without adoption and rejects missing/stale review, wrong
+actor/tenant, self-review, revoked humans, changed graph and target drift. Both
+Country and State Region saved graphs also passed the new internal admission
+function in `athyper_native_review_rehearsal`, using synthetic review transitions
+that rolled back. The function ran with its actual restricted definer owner;
+calling its internal contract from the administrative harness does **not** prove
+an enrolled authenticated publishing workload or confer Owner approval.
+Evidence scripts/results are `review-evidence/native-worker-admission-{country,state-region}.{sql,txt}`
+under the existing reset workspace. CI explicitly enables the disposable review
+and native-publication PostgreSQL tests; ordinary test discovery alone skips them.
+
+Executable regression commands:
+
+```sh
+PRODUCT_REVIEW_POSTGRES=1 NATIVE_PUBLICATION_POSTGRES=1 \
+  pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run \
+  src/composition/control-plane/product-review.postgres.test.ts \
+  src/composition/shared/publication/native-publication-authority.postgres.test.ts
+pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run
+```
+
+**Remaining engineering:** production service/worker source loading and validation
+still call the legacy graph API. They must use the installed native compiler/source
+composition; coordinated worker compilation/activation must consume exact native
+source/target pins. Install the candidate only with that connected host path and
+transaction/replay evidence. Then connect installed live-read resources, review
 concrete candidates, publish, activate and verify standard list/detail access.
-No worker replacement, live-read qualification, Entity publication, activation or
-manual-test handover is claimed by this source-reader installation.
+Both actual DEV drafts remain `in_review` at revision 2; no Owner approval, new
+Entity release, activation or manual-test handover occurred in this checkpoint.
 
 L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
 

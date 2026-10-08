@@ -5099,6 +5099,12 @@ BEGIN
         "privileges": [
           "SELECT"
         ]
+      },
+      {
+        "relation": "metadata.entity_target",
+        "privileges": [
+          "SELECT"
+        ]
       }
     ],
     "functions": [
@@ -5284,6 +5290,12 @@ BEGIN
         "command": "SELECT",
         "using": "(EXISTS ( SELECT 1\n   FROM ((publication.deployment d\n     JOIN publication.artifact a ON ((a.id = d.artifact_id)))\n     JOIN publication.release r ON ((r.id = a.publication_release_id)))\n  WHERE ((d.id = deployment_acknowledgement.deployment_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
         "reason": "Read only current-authority signed deployment coordinates and acknowledgements for exact recovery admission."
+      },
+      {
+        "relation": "metadata.entity_target",
+        "command": "SELECT",
+        "using": "(tenant_id IS NULL AND EXISTS (SELECT 1 FROM metadata.entity_change_set c WHERE c.id=entity_target.change_set_id AND c.entity_id=entity_target.entity_id AND c.tenant_id IS NULL AND c.source_kind=''product'' AND c.native_core_layout_version=2))",
+        "reason": "Native publication verifies exact canonical target enrollment. Definer-only read; no caller role membership or target mutation."
       }
     ]
   },
