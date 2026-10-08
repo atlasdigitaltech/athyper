@@ -4,6 +4,7 @@ import type {
   ListFieldDescriptorV1,
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { progressPercent } from "./progress-value";
 
 /** Presentation context a card supplies to its value renderers. */
 export interface CardValueContext {
@@ -25,14 +26,8 @@ export function renderCardValue(
   // It deliberately does not infer status/date/number decoration.
   if (field.rendererKey === "text") return display;
   if (field.rendererKey === "number.progress") {
-    const number =
-      typeof value === "number"
-        ? value
-        : typeof value === "string"
-          ? Number(value)
-          : Number.NaN;
-    if (!Number.isFinite(number)) return undefined;
-    const percent = Math.max(0, Math.min(100, Math.round(number)));
+    const percent = progressPercent(value);
+    if (percent === undefined) return undefined;
     return (
       <span className="a-entity-list__progress">
         <span className="a-entity-list__progress-track" aria-hidden="true">
