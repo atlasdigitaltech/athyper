@@ -5,6 +5,7 @@ import type {
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { resolveEntityStatusTone } from "@athyper/contract-platform-entity-runtime";
+import { renderCardValue, type CardValueContext } from "./card-renderers";
 import { formatFieldValue } from "./field-format";
 
 export function renderFieldValue(
@@ -13,9 +14,12 @@ export function renderFieldValue(
   query?: string,
   intl?: ReturnType<typeof useEntityI18n>,
   displayLabel?: string,
+  context?: CardValueContext,
 ): ReactNode {
   const display = displayLabel ?? formatFieldValue(value, field, intl),
     highlighted = highlightText(display, query);
+  const registered = renderCardValue(value, field, highlighted, intl, context);
+  if (registered !== undefined) return registered;
   if (field.semanticRole === "status") {
     return (
       <span

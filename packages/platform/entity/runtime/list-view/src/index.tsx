@@ -71,6 +71,8 @@ import { formatFieldValue } from "./field-format";
 import { highlightText, renderFieldValue } from "./field-value";
 import { EntityRecordCard } from "./record-card";
 import { LIST_MODE_RENDERER_MISSING, listRendererKind, withRenderableModes } from "./mode-renderers";
+import { boardSummaryState } from "./board/board-model";
+import { EntityBoard } from "./board/board-view";
 import {
   fallbackQuickFields,
   resolveEntityText,
@@ -215,6 +217,7 @@ import {
 import {
   portableListHref,
   readListLocation,
+  requestedLaneFieldUnavailable,
   requestedLayoutUnavailable,
   writeListLocation,
 } from "./location";
@@ -734,6 +737,8 @@ function EntityCollectionRuntime({
           columns: state.columns,
           cursor: state.cursor ?? null,
           pageSize: state.pageSize ?? null,
+          // Board's summary query groups by the lane field instead.
+          boardLaneField: state.mode === "board" ? (state.board?.laneField ?? null) : null,
         }
       : null,
   );
@@ -852,7 +857,7 @@ function EntityCollectionRuntime({
           );
         }
         if (controller.signal.aborted) return;
-        next = withRenderableModes(next);
+        next = withRenderableModes(next, { board: !embedding });
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
         const effectiveSearch = entityLocationSearch(
@@ -913,6 +918,8 @@ function EntityCollectionRuntime({
           setActionNotice(listNotice("list.notice.viewUnavailableSystem"));
         else if (!embedding && requestedLayoutUnavailable(next, effectiveSearch))
           setActionNotice(listNotice("list.notice.layoutUnavailable"));
+        else if (!embedding && requestedLaneFieldUnavailable(next, effectiveSearch))
+          setActionNotice(listNotice("list.board.laneFieldUnavailable"));
         const parameters = new URLSearchParams(effectiveSearch),
           preferences = readDisplayPreferences(
             next.plane,
@@ -988,7 +995,7 @@ function EntityCollectionRuntime({
     client
       .request(entityListOperation, {
         params: { entityCode },
-        query: entityListQuery(state, descriptor, scopeCoordinate),
+        query: entityListQuery(boardSummaryState(state, descriptor), descriptor, scopeCoordinate),
         signal: controller.signal,
       })
       .then((next) => {
@@ -1579,6 +1586,24 @@ function EntityCollectionRuntime({
           ) : null}
           {loading && !page ? (
             <LoadingTable columns={fields.length} />
+          ) : page && state.mode === "board" && descriptor.surface.board && !embedding ? (
+            <EntityBoard
+              key={authorityKey}
+              client={client}
+              descriptor={descriptor}
+              state={state}
+              summary={page}
+              summaryCurrent={resultsCurrent && pageState?.mode === "board" && pageState.board?.laneField === state.board?.laneField}
+              scope={scopeCoordinate}
+              widthTier={widthTier}
+              fields={fields}
+              refreshKey={`${authorityKey}:${refreshAttempt}`}
+              recordHref={(row) => recordHref(descriptor, row)}
+              onOpenRecord={onOpenRecord}
+              renderActions={(row) => <RowMenu descriptor={descriptor} row={row} intl={entityIntl} />}
+              onBoardChange={(board) => update({ ...state, board }, "replace")}
+              onShowTable={() => resetAndUpdate({ mode: "table" }, "push")}
+            />
           ) : page ? (
             <>
               <EntityRows
@@ -1644,7 +1669,7 @@ function EntityCollectionRuntime({
               />
             </>
           ) : null}
-          {page ? (
+          {page && state.mode !== "board" ? (
             <EntityListPagination
               hideSinglePageControls={Boolean(section)}
               descriptor={descriptor}
@@ -2316,7 +2341,10 @@ function ListChrome({
                       ) ||
                       embedding.initialControl === "display"),
                 ).map((item) => item.key)
-              : undefined
+              : state.mode === "board"
+                ? // Lanes are the grouping on a board; a saved group stays for Table and Cards.
+                  LIST_DRAWERS.filter((item) => item.key !== "group").map((item) => item.key)
+                : undefined
           }
           active={activeDrawer}
           onSelect={setActiveDrawer}
@@ -3789,10 +3817,12 @@ function DisplaySettingsDialog({
                 ...unavailableModes.map(({ mode: item }) => ({
                   value: item,
                   disabled: true,
+                  // One accessible name ("Board, unavailable"); the visible label stays short.
                   label: (
                     <>
-                      {displayIntl.message(`list.mode.${item}`)}
+                      <span aria-hidden="true">{displayIntl.message(`list.mode.${item}`)}</span>
                       <span className="a-visually-hidden">
+                        {displayIntl.message(`list.mode.${item}`)}
                         {displayIntl.message("list.display.unavailableSuffix")}
                       </span>
                     </>
@@ -4713,7 +4743,10 @@ function searchHint(descriptor: EntityListDescriptorV1): string {
 /** Catalogue key for the reason a declared layout is unavailable. Unknown
  * codes use the generic "not supported" reason rather than the raw code. */
 function modeUnavailableReasonKey(code: string): string {
-  return code === LIST_MODE_RENDERER_MISSING ? "list.mode.reason.rendererMissing" : "list.mode.reason.unsupported";
+  if (code === LIST_MODE_RENDERER_MISSING) return "list.mode.reason.rendererMissing";
+  if (code === "LIST_BOARD_LANE_FIELD_UNAVAILABLE") return "list.mode.reason.laneFieldUnavailable";
+  if (code === "LIST_BOARD_COUNTS_UNAVAILABLE") return "list.mode.reason.countsUnavailable";
+  return "list.mode.reason.unsupported";
 }
 function listCountLabel(page: EntityListResultV1 | undefined, intl: ReturnType<typeof useEntityI18n>): string | undefined {
   const count = page?.pagination.total;

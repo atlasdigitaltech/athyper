@@ -6,12 +6,12 @@ import type {
 import type { ListWidthTier } from "./presentation-tier";
 
 /** The shared renderer families a list body can use. */
-export type ListRendererKind = "table" | "cards";
+export type ListRendererKind = "table" | "cards" | "board";
 
 /** Mode → renderer registry. A mode is rendered only through an entry here;
  * adding a layout means registering its renderer, not adding a branch. */
 const LIST_MODE_RENDERERS: Readonly<Partial<Record<ListViewMode, ListRendererKind>>> =
-  Object.freeze({ table: "table", compact: "cards" });
+  Object.freeze({ table: "table", compact: "cards", board: "board" });
 
 export const LIST_MODE_RENDERER_MISSING = "LIST_MODE_RENDERER_MISSING";
 
@@ -24,7 +24,8 @@ export function listRendererKind(
 ): ListRendererKind | undefined {
   const registered = LIST_MODE_RENDERERS[mode];
   if (!registered) return undefined;
-  return widthTier === "narrow" ? "cards" : registered;
+  // Board presents one lane at a time when narrow; other layouts become cards.
+  return widthTier === "narrow" && registered !== "board" ? "cards" : registered;
 }
 
 /** Moves supported modes that this runtime cannot render into
@@ -32,11 +33,14 @@ export function listRendererKind(
  * state, list body) sees only modes it can draw. */
 export function withRenderableModes(
   descriptor: EntityListDescriptorV1,
+  /** Hosts that cannot place a board (for example, record choosers) pass false. */
+  options: { readonly board?: boolean } = {},
 ): EntityListDescriptorV1 {
   const { supportedModes, defaultState } = descriptor.surface;
-  const missing = supportedModes.filter((mode) => !LIST_MODE_RENDERERS[mode]);
+  const drawable = (mode: ListViewMode) => Boolean(LIST_MODE_RENDERERS[mode]) && (mode !== "board" || options.board !== false);
+  const missing = supportedModes.filter((mode) => !drawable(mode));
   if (!missing.length) return descriptor;
-  const renderable = supportedModes.filter((mode) => LIST_MODE_RENDERERS[mode]);
+  const renderable = supportedModes.filter(drawable);
   const fallback: ListViewMode = renderable[0] ?? "table";
   const unavailableModes: readonly ListUnavailableModeV1[] = [
     ...(descriptor.surface.unavailableModes ?? []),

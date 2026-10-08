@@ -11,13 +11,15 @@ describe("list mode renderer registry", () => {
     assert.equal(listRendererKind("compact", undefined), "cards");
   });
 
-  it("presents every registered mode as cards at narrow width", () => {
+  it("presents table and compact as cards at narrow width, and keeps the board", () => {
     for (const mode of ENTITY_LIST_VIEW_MODES.filter((item) => item === "table" || item === "compact"))
       assert.equal(listRendererKind(mode, "narrow"), "cards");
+    assert.equal(listRendererKind("board", "wide"), "board");
+    assert.equal(listRendererKind("board", "narrow"), "board");
   });
 
   it("never draws an unregistered mode through another renderer", () => {
-    for (const mode of ["board", "dashboard", "spreadsheet"] as const) {
+    for (const mode of ["dashboard", "spreadsheet"] as const) {
       assert.equal(listRendererKind(mode, "wide"), undefined);
       assert.equal(listRendererKind(mode, "narrow"), undefined);
     }
@@ -26,25 +28,30 @@ describe("list mode renderer registry", () => {
   it("moves supported modes without a renderer into unavailableModes", () => {
     const descriptor = {
       surface: {
-        supportedModes: ["board", "table", "compact"],
+        supportedModes: ["spreadsheet", "table", "compact"],
         unavailableModes: [{ mode: "dashboard", code: "LIST_MODE_UNSUPPORTED" }],
-        defaultState: { mode: "board" },
+        defaultState: { mode: "spreadsheet" },
       },
     } as unknown as EntityListDescriptorV1;
     const normalized = withRenderableModes(descriptor);
     assert.deepEqual(normalized.surface.supportedModes, ["table", "compact"]);
     assert.deepEqual(normalized.surface.unavailableModes, [
       { mode: "dashboard", code: "LIST_MODE_UNSUPPORTED" },
-      { mode: "board", code: LIST_MODE_RENDERER_MISSING },
+      { mode: "spreadsheet", code: LIST_MODE_RENDERER_MISSING },
     ]);
     assert.equal(normalized.surface.defaultState.mode, "table");
   });
 
-  it("drops a board projection together with an unrenderable Board mode", () => {
+  it("keeps Board for list pages and drops it, with its projection, for choosers", () => {
     const descriptor = {
-      surface: { supportedModes: ["table", "board"], board: { laneFields: [] }, defaultState: { mode: "table" } },
+      surface: { supportedModes: ["table", "board"], board: { laneFields: [] }, defaultState: { mode: "board" } },
     } as unknown as EntityListDescriptorV1;
-    assert.equal(withRenderableModes(descriptor).surface.board, undefined);
+    assert.equal(withRenderableModes(descriptor), descriptor);
+    const chooser = withRenderableModes(descriptor, { board: false });
+    assert.deepEqual(chooser.surface.supportedModes, ["table"]);
+    assert.equal(chooser.surface.board, undefined);
+    assert.equal(chooser.surface.defaultState.mode, "table");
+    assert.deepEqual(chooser.surface.unavailableModes, [{ mode: "board", code: LIST_MODE_RENDERER_MISSING }]);
   });
 
   it("returns the same descriptor when every supported mode has a renderer", () => {

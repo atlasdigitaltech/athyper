@@ -10,6 +10,7 @@ import { Card } from "@athyper/platform-ui";
 import { EntityLink } from "./entity-navigation";
 import { formatFieldValue } from "./field-format";
 import { highlightText, renderFieldValue } from "./field-value";
+import type { CardValueContext } from "./card-renderers";
 import type { RecordCardLayout } from "./record-card-layout";
 
 /** Shared record card for every card-based list layout. Row controls are
@@ -22,6 +23,7 @@ export function EntityRecordCard({
   href,
   selection,
   actions,
+  context,
   onOpenRecord,
   headingLevel = 2,
   intl,
@@ -39,6 +41,8 @@ export function EntityRecordCard({
   };
   /** Row-level controls (bookmark, row menu) rendered by the owning list. */
   readonly actions?: ReactNode;
+  /** Lane context for value renderers (for example, terminal lanes). */
+  readonly context?: CardValueContext;
   readonly onOpenRecord?: (row: EntityListRowV1) => void;
   readonly headingLevel?: 2 | 3;
   readonly intl: ReturnType<typeof useEntityI18n>;
@@ -63,7 +67,7 @@ export function EntityRecordCard({
       }
     },
     value = (field: ListFieldDescriptorV1) =>
-      renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key]),
+      renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key], context),
     details = (items: readonly ListFieldDescriptorV1[]) => (
       <dl>
         {items.map((field) => (

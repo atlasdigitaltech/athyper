@@ -336,6 +336,13 @@ A parallel metadata cleanup (Country and State Region first) is editing Studio a
 | E — First real pilot  | Board metadata authored for an eligible Entity                                                                                                                                                                            | Depends on C, D and native list activation                      | After C and D           |
 | F — Phase 1b          | Studio List settings panel and Board editor                                                                                                                                                                               | Composer host chain (section 13)                                | Unchanged               |
 
+**Delivery status (8 October 2026).** Step A landed in `ab6d253a8`; step B1 (contracts, published parsing, per-viewer resolution) in `4e3cba009`; step B2 (the Board renderer) follows. Step B2 implementation notes:
+
+- In Board mode the list's existing page query is sent as the summary query (`group=<laneField>`, smallest allowed page size). It supplies the exact lane counts and total and reuses the list's authority, error and retry handling. Each expanded lane in view then fetches its own page, so the budget stays `1 + lanes`.
+- Board cards reuse `EntityRecordCard` with the row menu. The bookmark star is not shown on Board cards yet, because bookmark membership is loaded only for the main page rows. Showing it needs a membership read for lane rows.
+- The Group drawer is hidden in Board mode. A saved group is kept for Table and Cards.
+- Not yet done: relabelling Columns as "Card fields" in Board mode (section 7). The Columns control already drives the card body when no `cardContent` is published.
+
 **Visual reference.** The owner-approved Board prototypes (8 October 2026) set the visual direction for step B: tone-accented lanes with a tinted background and tone count pill, a "Terminal" tag, collapsed lanes as a narrow vertical strip, a distribution summary built only from the lane counts already fetched, lane chips at narrow width, and the shared record card with a hover lift. Styling uses design-system tokens and the existing list breakpoints; no new font or dependency is added.
 
 ## 13. Dependencies and risks

@@ -50,6 +50,16 @@ export function requestedLayoutUnavailable(descriptor: EntityListDescriptorV1, s
   return requested !== undefined && requested !== null && !descriptor.surface.supportedModes.some((mode) => mode === requested);
 }
 
+/** True when a shared link or the selected saved view names a lane field the
+ * viewer cannot use; the decoded state then uses the first usable one. */
+export function requestedLaneFieldUnavailable(descriptor: EntityListDescriptorV1, search = window.location.search): boolean {
+  const board = descriptor.surface.board;
+  if (!board) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get("lane") ?? savedViewBase(parameters.get("vid"), descriptor)?.board?.laneField;
+  return typeof requested === "string" && !board.laneFields.some((item) => item.field === requested);
+}
+
 function savedViewBase(id: string | null | undefined, descriptor: EntityListDescriptorV1): SaveableListStateV1 | undefined {
   if (!id) return undefined;
   return readSavedViews(savedViewStorageKey(descriptor), descriptor).find((view) => view.id === id)?.state;

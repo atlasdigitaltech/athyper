@@ -10,6 +10,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const TIER_SOURCE = "packages/platform/entity/runtime/list-view/src/presentation-tier.ts";
 export const LIST_STYLESHEETS = [
   "packages/platform/entity/runtime/list-view/src/styles.css",
+  "packages/platform/entity/runtime/list-view/src/board/board.css",
   "packages/platform/entity/runtime/collection-controls/src/styles.css",
 ];
 /** Viewport overlay breakpoint (drawers, dialogs, fixed menus, page header). */
