@@ -115,3 +115,21 @@ test("restore compares PostgreSQL-rendered semantics while preserving exact pred
     /RESTORE_SCHEMA_MISMATCH/,
   );
 });
+
+test("cleanup planning needs an explicit scope and never permits scope on destructive/reset mode", () => {
+  assert.deepEqual(
+    parseArguments([
+      "--mode",
+      "plan-cleanup",
+      "--scope",
+      "/private/scope.json",
+    ]),
+    { mode: "plan-cleanup", scope: "/private/scope.json" },
+  );
+  for (const args of [
+    ["--mode", "plan-cleanup"],
+    ["--mode", "reset", "--scope", "/x"],
+    ["--mode", "plan-cleanup", "--scope", "/x", "--scope", "/y"],
+  ])
+    assert.throws(() => parseArguments(args));
+});

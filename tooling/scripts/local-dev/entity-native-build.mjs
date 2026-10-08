@@ -13,6 +13,11 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import {
+  buildCleanupPlan,
+  validateCleanupScope,
+} from "./entity-cleanup-plan.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const container = "athyper-dev-db-1";
 const database = "athyper_studio";
@@ -21,13 +26,24 @@ export function parseArguments(args) {
   let seen = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--") continue;
+    if (args[i] === "--scope" && !result.scope) {
+      result.scope = args[++i];
+      if (!result.scope) throw Error("LOCAL_BUILD_SCOPE_REQUIRED");
+      continue;
+    }
     if (args[i] !== "--mode" || seen)
       throw Error("LOCAL_BUILD_ARGUMENT_INVALID");
     result.mode = args[++i];
     seen = true;
   }
-  if (!["inspect", "backup-verify", "verify", "reset"].includes(result.mode))
+  if (
+    !["inspect", "backup-verify", "verify", "reset", "plan-cleanup"].includes(
+      result.mode,
+    )
+  )
     throw Error("LOCAL_BUILD_MODE_INVALID");
+  if ((result.mode === "plan-cleanup") !== Boolean(result.scope))
+    throw Error("LOCAL_BUILD_SCOPE_REQUIRED");
   return result;
 }
 export function assertLocalTarget(value) {
@@ -192,7 +208,7 @@ export function restoreComparison(original, restored) {
       throw Error(`LOCAL_BUILD_RESTORE_SCHEMA_MISMATCH:${key}`);
 }
 
-async function execute(mode, directory, report) {
+async function execute(mode, directory, report, scope) {
   const labels = JSON.parse(
     run([
       "docker",
@@ -215,6 +231,21 @@ async function execute(mode, directory, report) {
     role: "postgres",
     authority: "administrative-inspection-only",
   });
+  if (mode === "plan-cleanup") {
+    const plan = await createCleanupPlan(scope);
+    writeJson(join(directory, "cleanup-plan.json"), plan);
+    report.stages.push({
+      id: "cleanup-dispositions",
+      status: plan.blockers.length ? "blocked" : "passed",
+      candidateRows: plan.candidateRows,
+      tables: plan.tables.length,
+      blockers: plan.blockers.length,
+      executable: false,
+      logicalDependencies: "not-established",
+    });
+    report.ready = false;
+    return;
+  }
   const before = inventory(database);
   writeJson(join(directory, "inventory.json"), before);
   report.stages.push({
@@ -333,8 +364,128 @@ async function execute(mode, directory, report) {
     report.stages.push({ id, status: "not-run" });
   report.ready = false;
 }
+function literal(value) {
+  return "'" + String(value).replaceAll("'", "''") + "'";
+}
+async function createCleanupPlan(scope) {
+  const keys = new Map(
+    jsonQuery(
+      database,
+      `SELECT n.nspname AS schema,c.relname AS name,
+    array_agg(a.attname ORDER BY u.ord) AS columns FROM pg_constraint p
+    JOIN pg_class c ON c.oid=p.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    CROSS JOIN LATERAL unnest(p.conkey) WITH ORDINALITY u(attnum,ord)
+    JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=u.attnum
+    WHERE p.contype='p' GROUP BY n.nspname,c.relname`,
+    ).map((t) => [t.schema + "." + t.name, t.columns]),
+  );
+  const table = (schema, name) =>
+    quoteIdentifier(schema) + "." + quoteIdentifier(name);
+  const tuple = (schema, name, alias) => {
+    const columns = keys.get(schema + "." + name);
+    if (!columns?.length)
+      throw Error("CLEANUP_PRIMARY_KEY_REQUIRED:" + schema + "." + name);
+    return (
+      "jsonb_build_array(" +
+      columns
+        .map((c) => alias + "." + quoteIdentifier(c) + "::text")
+        .join(",") +
+      ")"
+    );
+  };
+  const columns = new Map(
+    jsonQuery(
+      database,
+      `SELECT n.nspname AS schema,c.relname AS name,array_agg(a.attname ORDER BY a.attnum) AS columns
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+    WHERE c.relkind IN ('r','p') GROUP BY n.nspname,c.relname`,
+    ).map((t) => [t.schema + "." + t.name, t.columns]),
+  );
+  const scopeIds = scope.entityIds.map(literal).join(",");
+  const entities = jsonQuery(
+    database,
+    `SELECT id FROM metadata.entity WHERE id IN (${scopeIds})
+    AND tenant_id IS NULL AND ownership_model='system'`,
+  );
+  if (entities.length !== scope.entityIds.length)
+    throw Error("CLEANUP_PRODUCT_SCOPE_MISMATCH");
+  return buildCleanupPlan(scope, {
+    async edges() {
+      return jsonQuery(
+        database,
+        `SELECT ns.nspname AS "sourceSchema",s.relname AS "sourceTable",
+      nt.nspname AS "targetSchema",t.relname AS "targetTable",c.conname AS name,
+      ARRAY(SELECT a.attname FROM unnest(c.conkey) WITH ORDINALITY u(num,ord) JOIN pg_attribute a ON a.attrelid=s.oid AND a.attnum=u.num ORDER BY u.ord) AS "sourceColumns",
+      ARRAY(SELECT a.attname FROM unnest(c.confkey) WITH ORDINALITY u(num,ord) JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=u.num ORDER BY u.ord) AS "targetColumns"
+      FROM pg_constraint c JOIN pg_class s ON s.oid=c.conrelid JOIN pg_namespace ns ON ns.oid=s.relnamespace
+      JOIN pg_class t ON t.oid=c.confrelid JOIN pg_namespace nt ON nt.oid=t.relnamespace
+      WHERE c.contype='f' ORDER BY ns.nspname,s.relname,c.conname`,
+      );
+    },
+    async roots(name) {
+      return jsonQuery(
+        database,
+        `SELECT ${tuple("metadata", name, "r")} AS key
+      FROM ${table("metadata", name)} r WHERE r.entity_id IN (${scopeIds}) AND r.tenant_id IS NULL ORDER BY key`,
+      ).map((r) => r.key);
+    },
+    async children(edge, parentKeys) {
+      const result = [];
+      for (let offset = 0; offset < parentKeys.length; offset += 100) {
+        const tuples = parentKeys
+          .slice(offset, offset + 100)
+          .map((k) => literal(JSON.stringify(k)) + "::jsonb")
+          .join(",");
+        const join = edge.sourceColumns
+          .map(
+            (c, i) =>
+              "c." +
+              quoteIdentifier(c) +
+              "=p." +
+              quoteIdentifier(edge.targetColumns[i]),
+          )
+          .join(" AND ");
+        // PostgreSQL FK equality skips null child keys. Join equality preserves that behavior.
+        const attrs =
+          columns.get(edge.sourceSchema + "." + edge.sourceTable) ?? [];
+        const fences = [];
+        if (attrs.includes("entity_id"))
+          fences.push(`c.entity_id IN (${scopeIds})`);
+        if (attrs.includes("change_set_id"))
+          fences.push(
+            `EXISTS(SELECT 1 FROM metadata.entity_change_set owned WHERE owned.id=c.change_set_id AND owned.entity_id IN (${scopeIds}) AND owned.tenant_id IS NULL)`,
+          );
+        if (attrs.includes("tenant_id")) fences.push("c.tenant_id IS NULL");
+        // Metadata rows without a declared owner require explicit disposition,
+        // even when an FK points into an obsolete graph.
+        if (
+          edge.sourceSchema === "metadata" &&
+          !attrs.includes("entity_id") &&
+          !attrs.includes("change_set_id")
+        )
+          fences.push("false");
+        const scoped = fences.length
+          ? "(" + fences.join(" AND ") + ") IS TRUE"
+          : "true";
+        result.push(
+          ...jsonQuery(
+            database,
+            `SELECT DISTINCT ${tuple(edge.sourceSchema, edge.sourceTable, "c")} AS key, ${scoped} AS scoped
+          FROM ${table(edge.sourceSchema, edge.sourceTable)} c JOIN ${table(edge.targetSchema, edge.targetTable)} p ON ${join}
+          WHERE ${tuple(edge.targetSchema, edge.targetTable, "p")} IN (${tuples}) ORDER BY key`,
+          ),
+        );
+      }
+      return result;
+    },
+  });
+}
+
 export async function main(args) {
-  const { mode } = parseArguments(args);
+  const { mode, scope: scopePath } = parseArguments(args);
+  const scope = scopePath
+    ? validateCleanupScope(JSON.parse(readFileSync(resolve(scopePath), "utf8")))
+    : undefined;
   // No destructive implementation is exposed before graph/startup acceptance.
   if (mode === "reset")
     throw Error("LOCAL_RESET_BLOCKED:L1_AND_RESET_MANIFEST_NOT_ESTABLISHED");
@@ -365,7 +516,7 @@ export async function main(args) {
     stages: [],
   };
   try {
-    await execute(mode, directory, report);
+    await execute(mode, directory, report, scope);
   } catch (error) {
     report.ready = false;
     report.error = error.message;
@@ -375,7 +526,14 @@ export async function main(args) {
   process.stdout.write(
     JSON.stringify({ directory, ...report }, null, 2) + "\n",
   );
-  return report.error || (mode === "verify" && !report.ready) ? 1 : 0;
+  return report.error ||
+    report.stages.some(
+      (stage) =>
+        stage.id === "cleanup-dispositions" && stage.status === "blocked",
+    ) ||
+    (mode === "verify" && !report.ready)
+    ? 1
+    : 0;
 }
 if (
   process.argv[1] &&

@@ -97,6 +97,22 @@ The first run (`entity-native-build-8ac888a9-f8ca-4e97-ac04-bff9387f0bcc`) resto
 
 The actual `--mode verify` run returned exit 1 with `ready=false`, L1 blocked and reset/bootstrap/replay/live reads/publication not run. Receipt: `~/.athyper/instances/dev/workspace/entity-native-build-75151685-fe2b-4c4d-b056-69c0ad33ca6b/result.json`. This verifies honest incomplete reporting, not positive production acceptance.
 
+### Row-scoped cleanup and declared-operation preparation — 9 October
+
+The preparation CLI now supports the read-only command:
+
+```sh
+pnpm db:setup:rebuild-entity-metadata --mode plan-cleanup --scope /home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-native-cleanup-scope-20261009.json
+```
+
+The private scope file names the two approved product entity IDs, database and purpose. This finite cleanup selection is data, not a runtime Entity allowlist. The planner preserves Entity roots, seeds candidate obsolete draft/release/field-identity rows, follows actual FK column pairs and primary-key tuples (including composite keys), checks declared owner/tenant scope, terminates cycles and reports protected or out-of-scope dependents. AI/onboarding and the general publication ledger are never automatically enrolled for deletion. Missing primary keys or exceeded traversal/row budgets reject. No DELETE/DDL statements are emitted; `executable=false` is unconditional until a separate reset implementation proves its remaining prerequisites.
+
+Actual read-only run: `~/.athyper/instances/dev/workspace/entity-native-build-698d536d-f6e1-4804-9ec2-a56255b9fd0c/cleanup-plan.json` and `result.json`; 1,551 candidate rows across 23 tables, zero protected/out-of-scope FK findings in this run. Included candidates: 16 change sets, 14 Entity releases, 31 field identities, 63 labels, 326 fields, 652 surface-field bindings, 47 draft snapshots and four obsolete source-initializer records. This is candidate FK closure, not authority to clear publication heads: logical resource/publication/activation dependencies remain unclassified and the source was not quiesced. Recompute before destructive use. No rows changed.
+
+`createDeclaredOperationBootstrap` now implements the approved source-free operation preparation contract. Trusted configuration pins an initialization declaration hash with exact entity/draft/member coordinates, operation keys/full-operation hashes and explicitly false values; omission/true values, altered members, duplicate/extra declaration properties, other targets and populated roots reject. Preparation checks creation admission and locks the fresh native revision-one root, then emits insert-only operation plans through the existing canonical writer. It reads no revision-4 operations and grants no ordinary protected-state update access. This is an implementation component accepted by the existing bootstrap policy, **not installed host configuration, DB grants or actual initialization of the four DEV operations**. The actual approved two-entity declaration still awaits complete graph assembly; the profile marker/hash alone is not human review or permission.
+
+Validation: 23 authoring tests pass, including the declared initializer through canonical bootstrap/compile/replay with simulated SQL transport; no old source-reader query occurs. This is not PostgreSQL application-role proof. Thirteen cleanup/preparation Node tests pass and cover finite scope, owner boundaries, preserved dependents, cycles/composite keys, malformed keys and explicit CLI scope. Fresh-identity allocation and the concrete production resource resolver remain unfinished. No reset, new native draft or activation occurred.
+
 ### L1 — complete graphs, fresh identities and approved initial values
 
 Pin the maintained source definitions and declared target scope. Assemble both graphs through shared code selected by metadata. Include root/provenance, fields/types/keys, relations, labels, navigation/sections/views/bindings, selected components, operations, exact permission semantics, storage/runtime settings, supported AI declarations and dependencies. AI can be processed last but cannot silently disappear from the accepted graph.
@@ -105,7 +121,7 @@ Report source coverage alongside diagnostics. A zero finding count is insufficie
 
 Allocate fresh field identities for the new graphs and persist them through the canonical command. Bind stable proposed IDs to the proposal before retry; do not allocate a new set on every command attempt. A fresh reset run may have new identities. Prove uniqueness, valid parent/reference membership, atomic rollback and replay without duplicate allocation. No old identity adoption or historical mapping resource is required by this profile.
 
-Implement trusted local bootstrap initialization for exactly the four approved list/read operations with their declared `requires_mfa=false`. This replaces the old `ApprovedOperationBootstrap` source-copy dependency for this profile; implementation is still pending. Bind the scope through approved proposal/operation coordinates, not entity-name dispatch or a blanket false default. Ordinary mutation clients remain unable to write protected state. No revision-4 rows or initializer reservations are needed after the rebuild.
+Implement trusted local bootstrap initialization for exactly the four approved list/read operations with their declared `requires_mfa=false`. The declared-operation preparation implementation now satisfies the existing bootstrap policy shape without source copying; actual complete proposal binding, production startup installation and final DB guards/grants are still pending. Bind the scope through approved proposal/operation coordinates, not entity-name dispatch or a blanket false default. Ordinary mutation clients remain unable to write protected state. No revision-4 rows or initializer reservations are needed after the rebuild.
 
 Exit: both complete native graphs compile with supported resource bindings; all required paths are accounted for, and proposed IDs/operation declarations remain stable for execution and replay.
 
@@ -223,7 +239,7 @@ Close applicable checklist items or record a specific owner disposition before p
 
 ### Latest execution and next action
 
-**This update:** L0a preparation tooling implemented/tested and actual Studio backup/temporary restore verification executed; source database unchanged. No reset, fresh identities, replacement native drafts, Entity publication or activation occurred. The dump is restored and the temporary target removed; broader cleanup closure, complete graph/startup assembly and application-role bootstrap remain unfinished. The next implementation is L1 (fresh identities/approved operation initialization, both complete graphs and production composition) alongside explicit row-level cleanup dispositions. L2 destructive execution remains gated on that readiness, not another general owner approval. Milestone A and Milestone B are not complete.
+**This update:** row-scoped candidate cleanup planning executed read-only (1,551 rows/23 tables), and source-free declared operation preparation implemented/tested through the canonical transaction protocol fixture. Complete real graphs, fresh-identity persistence, production startup resource composition and logical publication/activation cleanup dispositions remain unfinished. No destructive setup, new identity, replacement draft, Entity publication or activation occurred. L2 remains gated on L1 and complete scope readiness; Milestones A and B are not complete.
 
 ## Historical evidence boundary
 

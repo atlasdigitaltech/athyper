@@ -114,6 +114,7 @@ export * from "./legacy-native-resources-adapter.js";
 
 export * from "./native-supplemental-save.js";
 export * from "./native-operation-bootstrap.js";
+export * from "./native-declared-operation-bootstrap.js";
 export type {
   NativeBootstrapInput,
   NativeBootstrapPolicy,

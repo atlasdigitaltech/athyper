@@ -8,6 +8,7 @@
     "incremental": false
   },
   "include": [
+    "src/native-declared-operation-bootstrap.test.ts",
     "src/native-core-layout-command-reducer.test.ts",
     "src/native-core-layout-persistence.test.ts",
     "src/native-supplemental-storage.test.ts",

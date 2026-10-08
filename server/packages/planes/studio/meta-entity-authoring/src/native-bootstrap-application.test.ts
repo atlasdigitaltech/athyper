@@ -1,3 +1,4 @@
+import { createDeclaredOperationBootstrap } from "./native-declared-operation-bootstrap.js";
 import { Kysely, PostgresDialect, type Transaction } from "kysely";
 import { expect, it, vi } from "vitest";
 import { nativeReleaseFixture } from "./native-release-compilation.fixtures.js";
@@ -70,6 +71,10 @@ function fixture() {
             identity_status: "reserved",
             introduced_change_set_id: input.changeSetId,
           })),
+      };
+    if (text.startsWith("SELECT c.id FROM metadata.entity_change_set c"))
+      return {
+        rows: root && revision === 1 ? [{ id: input.changeSetId }] : [],
       };
     if (text.startsWith("SELECT request_hash"))
       return { rows: receipt ? [receipt] : [] };
@@ -379,4 +384,48 @@ it("writes layout bindings before dependent view fields through the canonical bo
   expect(view).toBeGreaterThan(-1);
   expect(viewField).toBeGreaterThan(binding);
   expect(viewField).toBeGreaterThan(view);
+});
+
+it("uses declared local initialization through canonical persistence and replay without legacy source reads", async () => {
+  const f = fixture();
+  const declaration = {
+    schema: "entity.local-operation-initialization/1" as const,
+    targets: [
+      {
+        entityId: f.input.entityId,
+        changeSetId: f.input.changeSetId,
+        operations: f.graph.operations.map((o) => ({
+          id: o.id,
+          operationKey: o.operationKey,
+          operationHash: sha256(o),
+          requiresMfa: false as const,
+        })),
+      },
+    ],
+  };
+  const operations = createDeclaredOperationBootstrap({
+    profile: "owner-approved-local-native",
+    approvedDeclarationHash: sha256(declaration),
+    declaration,
+  });
+  const original = f.policy.prepare;
+  f.policy.prepare = async (tx, input) => ({
+    ...(await original(tx, input)),
+    operations,
+  });
+  const first = await f.run();
+  expect(first.replay).toBe(false);
+  expect(await f.run()).toEqual({ ...first, replay: true });
+  expect(
+    f.query.mock.calls.some(([query]) =>
+      query.includes("read_operation_bootstrap_source"),
+    ),
+  ).toBe(false);
+  const inserts = f.query.mock.calls.filter(([query]) =>
+    /insert into\s+"metadata"\."entity_operation"/i.test(query),
+  );
+  expect(inserts.length).toBeGreaterThan(0);
+  expect(inserts.every(([query]) => query.includes('"requires_mfa"'))).toBe(
+    true,
+  );
 });
