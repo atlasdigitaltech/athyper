@@ -1,3 +1,4 @@
+import { createNativeBootstrapStartup } from "../composition/control-plane/native-bootstrap-startup.js";
 import { createDeployedComponentQualification } from "../composition/shared/publication/component-qualification.js";
 import { createResourceVerifier } from "../composition/control-plane/resource-verifier.js";
 import { createControlResourceReview } from "../composition/control-plane/resource-review.js";
@@ -187,8 +188,72 @@ export async function startControlApi() {
       commandConnections.push(connection);
       return connection;
     };
+    const nativeBootstrap = config.nativeBootstrapConfigurationFile
+      ? createNativeBootstrapStartup({
+          configuration: JSON.parse(
+            (
+              await readPrivateFile(config.nativeBootstrapConfigurationFile)
+            ).toString("utf8"),
+          ),
+          authorityTenantId: config.authority.tenantId,
+          loader: {
+            canonicalizer: { canonicalBytes, sha256 },
+            verifier: resourceVerifier,
+            runtimeVersion: "1.0.0",
+            store: {
+              async get() {
+                throw Error("NATIVE_COMPONENT_LOCKED_BYTES_REQUIRED");
+              },
+              async putImmutable() {
+                throw Error("NATIVE_COMPONENT_READER_IS_READ_ONLY");
+              },
+            },
+            uiComponents: {
+              qualify:
+                createDeployedComponentQualification(process.env, {
+                  canonicalBytes,
+                  sha256,
+                }) ??
+                (() => {
+                  throw Error(
+                    "NATIVE_COMPONENT_DEPLOYMENT_CONFIGURATION_REQUIRED",
+                  );
+                })(),
+            },
+          },
+          audit: async (tx, input, result) => {
+            const event = await audit.record(
+              {
+                eventCode: "metadata.entity.authoring",
+                tenantId: config.authority.tenantId,
+                actor: { kind: "user", principalId: input.actorId },
+                entityType: "metadata.entity_change_set",
+                entityId: input.changeSetId,
+                action: "native_bootstrap",
+                outcome: "success",
+                metadata: {
+                  idempotencyKey: input.idempotencyKey,
+                  proposalHash: input.proposalHash,
+                  revision: result.revision,
+                  graphHash: result.graphHash,
+                  compiledHash: result.compiledHash,
+                  replay: result.replay,
+                },
+              },
+              tx,
+            );
+            if (
+              !event.id ||
+              event.actor.principalId !== input.actorId ||
+              event.tenantId !== config.authority.tenantId
+            )
+              throw Error("PRODUCT_REFERENCE_AUDIT_REQUIRED");
+          },
+        })
+      : {};
     const productLabelEnrollment = config.productCommands
       ? await createControlProductCommandRuntime({
+          ...nativeBootstrap,
           governanceDatabase: database,
           issuerDatabase: await commandConnection(
             config.productCommands.issuerDatabaseUrlFile,

@@ -46,3 +46,50 @@ it("preserves missing values and avoids inferred status decoration for explicit 
   );
   assert.equal(rendered, "<span>active</span>");
 });
+
+it("explicit list text preserves boolean values and missing-value distinctions", () => {
+  const render = (value: boolean | null) =>
+    renderToStaticMarkup(
+      <span>
+        {renderFieldValue(value, { ...field, valueKind: "boolean" })}
+      </span>,
+    );
+  assert.equal(render(true), "<span>Yes</span>");
+  assert.equal(render(false), "<span>No</span>");
+  assert.equal(render(null), "<span>—</span>");
+});
+it("explicit list enum text uses the declared option label and escapes it", () => {
+  const rendered = renderToStaticMarkup(
+    <span>
+      {renderFieldValue("active", {
+        ...field,
+        valueKind: "enum",
+        filterOptions: [{ value: "active", label: "Active <safe>" }],
+      })}
+    </span>,
+  );
+  assert.equal(rendered, "<span>Active &lt;safe&gt;</span>");
+});
+it("explicit list datetime text formats an instant without interpreting markup", () => {
+  const value = "2026-10-09T00:00:00.000Z";
+  const expected = new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+  assert.equal(
+    renderToStaticMarkup(
+      <span>
+        {renderFieldValue(value, { ...field, valueKind: "datetime" })}
+      </span>,
+    ),
+    `<span>${expected}</span>`,
+  );
+  assert.equal(
+    renderToStaticMarkup(
+      <span>
+        {renderFieldValue("<invalid>", { ...field, valueKind: "datetime" })}
+      </span>,
+    ),
+    "<span>&lt;invalid&gt;</span>",
+  );
+});

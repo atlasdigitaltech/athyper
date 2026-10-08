@@ -29,15 +29,15 @@ The subsequent request authorizes recording this detailed plan. These are owner 
 
 Implementation baseline reviewed in this conversation: `e8518cc2e` (proposal bundle construction). Latest reported read-only DEV inspection: both existing drafts revision 4, native version unset, seven pending constraints. That inspection was administrative, not application-role write evidence. The latest audit reconciliation inspected inbound FKs and selected dependent row counts as recorded under L2; it did not requalify draft writes or refresh every earlier baseline value. The harness must refresh the complete baseline before setup.
 
-| ID  | Deliverable                               | Status      | Available evidence / actual gap                                                                                                                | Next action                                                                            |
-| --- | ----------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| L0a | Non-destructive local preparation harness | In progress | Repaired command; seven tests pass; actual Studio dump restored successfully; reset/production acceptance not implemented                      | Complete logical cleanup dispositions and L1 graph/startup integration before reset    |
-| L1  | Complete native proposals                 | In progress | Bundle transport and component mappings exist; two complete real native graphs and fresh identity/operation initialization are not established | Assemble both graphs, retain source coverage, resolve required diagnostics             |
-| L2  | Clean schema and startup composition      | In progress | Existing preparation/guards and readers exist; new clean profile not installed and native startup composition incomplete                       | Connect config/resolver; implement maintained final schema/setup and restricted grants |
-| L3  | Actual native bootstrap and replay        | Not started | No replacement native draft execution established                                                                                              | Execute authenticated commands after L1/L2, verify exact readback/replay/rollback      |
-| L4  | Working local live-read integration       | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                                                      | Implement bounded validation and actual storage/security/identity composition          |
-| L5  | Human review, publication and activation  | Not started | Existing infrastructure/component releases are not new native Entity delivery                                                                  | Submit concrete Entity candidates and use independent review/worker paths              |
-| L6  | Local manual-test handover                | Not started | Old-release testing cannot establish this milestone                                                                                            | Verify new activated releases in standard UI and deliver exact identifiers             |
+| ID  | Deliverable                               | Status      | Available evidence / actual gap                                                                                           | Next action                                                                                         |
+| --- | ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| L0a | Non-destructive local preparation harness | In progress | Repaired command; seven tests pass; actual Studio dump restored successfully; reset/production acceptance not implemented | Complete logical cleanup dispositions and L1 graph/startup integration before reset                 |
+| L1  | Complete native proposals                 | In progress | Both real graphs assembled and compiled; expanded list-display resource remains a proposal, not installed support         | Qualify/publish expanded display resource and validate graphs against installed bindings            |
+| L2  | Clean schema and startup composition      | In progress | Production startup composition implemented; final clean profile and real startup configuration not installed              | Install pinned configuration after final schema/setup, restricted grants and component installation |
+| L3  | Actual native bootstrap and replay        | Not started | No replacement native draft execution established                                                                         | Execute authenticated commands after L1/L2, verify exact readback/replay/rollback                   |
+| L4  | Working local live-read integration       | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                                 | Implement bounded validation and actual storage/security/identity composition                       |
+| L5  | Human review, publication and activation  | Not started | Existing infrastructure/component releases are not new native Entity delivery                                             | Submit concrete Entity candidates and use independent review/worker paths                           |
+| L6  | Local manual-test handover                | Not started | Old-release testing cannot establish this milestone                                                                       | Verify new activated releases in standard UI and deliver exact identifiers                          |
 
 Status vocabulary: **Not started / In progress / Blocked / Complete**. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
 
@@ -67,17 +67,17 @@ Use the actual production environment/file configuration loader and composition,
 
 The harness has explicit **reset/fresh-build** and **resume/verify** modes. Reset never occurs on routine verification or replay. One run reports passed/failed/blocked/not-run for each stage; a failed or blocked required exit makes the overall run non-successful. Negative tests expected to reject are separate from positive acceptance. Run all independently evaluable diagnostics, marking dependent checks blocked rather than falsely passed.
 
-| Command/capability                                                                                                                          | Current executable status                                                                             | Use / required correction                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm db:setup:rebuild-entity-metadata`                                                                                                     | Delegated script repaired; inspect/backup-verify/verify modes implemented; reset deliberately rejects | Default inspects only; use explicit modes below; this is not yet a working destructive reset                                     |
-| `pnpm exec tsx server/apps/platform-host/scripts/operations/build-native-bootstrap-proposals.ts <native-input.json> <new-output-directory>` | Existing offline bundle constructor                                                                   | Accepts already-complete native graphs; does not assemble source, authorize writes or configure startup                          |
-| Integrated local reset/bootstrap/verify command                                                                                             | **Not implemented / no executable invocation claimed**                                                | Record exact supported command/flags here only when implemented                                                                  |
-| Authenticated Entity bootstrap, review and worker invocation                                                                                | Existing framework pieces; complete local-profile execution not established                           | Record real invocation and sanitized result when assembled; no placeholder command counted as evidence                           |
-| `pnpm dev:publish`                                                                                                                          | Existing DEV overlay/machine-credential tooling                                                       | Not an accepted substitute for human Admin/Owner Entity review; use the authenticated shared path unless compatibility is proven |
+| Command/capability                                                                                                                          | Current executable status                                                                             | Use / required correction                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:setup:rebuild-entity-metadata`                                                                                                     | Delegated script repaired; inspect/backup-verify/verify modes implemented; reset deliberately rejects | Default inspects only; use explicit modes below; this is not yet a working destructive reset                                                 |
+| `pnpm exec tsx server/apps/platform-host/scripts/operations/build-native-bootstrap-proposals.ts <native-input.json> <new-output-directory>` | Existing offline bundle constructor                                                                   | Accepts complete graphs or entity.native-reference-input/1 definitions plus actual read-only catalogue inspection; does not authorize writes |
+| Integrated local reset/bootstrap/verify command                                                                                             | **Not implemented / no executable invocation claimed**                                                | Record exact supported command/flags here only when implemented                                                                              |
+| Authenticated Entity bootstrap, review and worker invocation                                                                                | Existing framework pieces; complete local-profile execution not established                           | Record real invocation and sanitized result when assembled; no placeholder command counted as evidence                                       |
+| `pnpm dev:publish`                                                                                                                          | Existing DEV overlay/machine-credential tooling                                                       | Not an accepted substitute for human Admin/Owner Entity review; use the authenticated shared path unless compatibility is proven             |
 
 Keep the transport manifest's strict shape unchanged. Diagnostics are qualification output, not a new authoring property bag. One run-level header records time, code revision, environment, source/proposal hashes and relevant resource identities; each finding needs only code, source path, classification and status. Do not print credentials or tokens. Record actual login/effective role and admission outcome at the relevant command boundary, not six repetitive dossiers.
 
-Store machine-readable results in the existing private qualification workspace, e.g. `~/.athyper/instances/dev/workspace/`, and link the exact run location here after execution. No new report file or evidence framework is required. No local-build result path is claimed to exist yet. The existing 8 October backup path below is historical recovery evidence, not a backup of future changes.
+Store machine-readable results in the existing private qualification workspace, e.g. `~/.athyper/instances/dev/workspace/`, and link the exact run location here after execution. No new report file or evidence framework is required. Executed local-build result paths are recorded below. The existing 8 October backup path below is historical recovery evidence, not a backup of future changes.
 
 ### L0a executed preparation — 9 October 2026 local time
 
@@ -130,6 +130,69 @@ pnpm --filter @athyper/server-platform-host exec vitest run src/composition/cont
 Validation for this checkpoint: the full authoring package passes 906 tests (11 environment-dependent skips); the fresh-identity PostgreSQL check passes separately; the host runtime/resource suites pass 27 tests. Authoring native-test TypeScript and changed-file formatting pass. The broader host typecheck reports `entity-views-routes.ts:317` using `group` against `SaveableListStateV1` (`groups`); whole-tree formatting reports six concurrent files outside this change. These are not reported green or included in this change. Migration layout verification passes (172 classified files, 164 retained SQL).
 
 `58_native_fresh_identity_privileges.sql` is maintained clean-build DDL, not an installed DEV migration. The production entrypoint still lacks the complete proposal/resource resolver configuration. Both real complete graphs, startup assembly and cleanup dispositions remain necessary before reset. No DEV identity inserts, replacement draft commits or new activations are reported by this checkpoint.
+
+### L1 graph and production startup implementation — 9 October 2026
+
+Implemented the shared `buildNativeReferenceProduct` assembler and production
+`assembleNativeBootstrapCompilation` composition. The maintained reference definitions
+supply fields, relations, labels, readable identity, navigation, views, permissions,
+storage/provider settings and AI; actual catalogue facts supply storage types and hashes.
+Fresh member and identity coordinates are allocated once into the immutable proposal.
+UUID presentation, unsupported source features, missing targets and incompatible storage
+reject. List and detail components are selected separately by declared data type.
+
+`control-api.ts` now constructs and supplies native bootstrap composition through
+`PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE`. The private absolute-path JSON
+file uses `entity.local-native-startup/1`: proposal manifest/hash, final database schema
+pin, command budgets, component publication pins, exact approved operation declarations,
+and explicit target/domain/reference/identity contracts. Current authenticated admission,
+component verification/deployment, descriptor and storage checks remain on the command
+path. No callback or authority is accepted from proposal JSON. This code is implemented;
+a real startup configuration has **not** been installed or the service restarted for it.
+
+Executed proposal generation against DEV using the application login
+`athyper_dev_product_command` in a read-only transaction (no write admission):
+
+```sh
+pnpm --filter @athyper/server-platform-host exec tsx scripts/operations/build-native-bootstrap-proposals.ts \
+  /home/chandravel_natarajan/.athyper/instances/dev/workspace/native-reference-assembly-20261009/input.json \
+  /home/chandravel_natarajan/.athyper/instances/dev/workspace/native-reference-assembly-20261009/proposals
+```
+
+The input uses `entity.native-reference-input/1`, maintained definition documents,
+explicit graph/target/component coordinates and a private database URL file. Manifest
+hash: `e8201afb133f1fa7e2dc20cb78f352ca24cac7f81a34e057c0ca88a5c512bc47`.
+The same workspace's `compilation-results.json` records successful native compilation
+and runtime parsing with actual catalogue facts and **proposal component semantics**:
+
+| Entity       | Fields / fresh identities | Sections / bindings | AI fields | Proposed draft ID (not a database draft) |
+| ------------ | ------------------------- | ------------------- | --------- | ---------------------------------------- |
+| Country      | 22 / 22                   | 4 / 43              | 19        | `f3aaa770-da84-4aad-83fd-9af62a305299`   |
+| State Region | 9 / 9                     | 2 / 17              | 6         | `6f64254e-8d1d-429b-9929-e98df9f38dcf`   |
+
+**Concrete remaining resource gap:** installed list text v2 supports string only;
+these graphs also need enum, boolean and datetime list fields. The installed detail
+component cannot satisfy list usage. Workspace `list-text-candidate.json` proposes those
+capabilities, retaining the existing implementation pin; `candidate-status.json`
+explicitly records approval and deployed qualification as not established. Existing
+component declarations were inspected administratively, not loaded as application-role
+installation evidence. Seven renderer conformance tests pass, but they do not constitute
+new deployment evidence or independent publication approval. Compiler-only resource pins
+in this semantic rehearsal are not installed authority.
+
+Validation: full authoring package **909 passed, 11 environment-dependent skips**;
+four host composition/runtime suites **32 passed**; native-test TypeScript passes.
+The broader host typecheck still fails at `entity-views-routes.ts:317` (`group`
+versus `groups`) in concurrent Tree work; it is not claimed green.
+
+The production entrypoint regression test verifies that the real entrypoint constructs
+and supplies the composition, alongside executable factory tests and both-entity compiler
+and runtime-reader tests. It does not prove authenticated endpoint execution. The current
+next step is expanded component qualification/approval/installation, final cleanup/schema
+setup and real pinned startup configuration, followed by whole-graph application-role
+commit/readback/replay/rollback. No DEV cleanup, replacement draft write, Entity
+publication or activation occurred in this checkpoint. Existing revision-4 drafts remain
+unchanged. Formal F6/F8/F9 acceptance is not established.
 
 ### L1 — complete graphs, fresh identities and approved initial values
 

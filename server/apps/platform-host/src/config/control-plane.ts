@@ -64,6 +64,16 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
     (!referenceResourcePolicyFile || !productCommands)
   )
     throw Error("CONTROL_REFERENCE_CONFIGURATION_REQUIRED");
+  const nativeBootstrapConfigurationFile =
+    environment.PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE?.trim();
+  if (
+    environment.PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE !==
+      undefined &&
+    (!nativeBootstrapConfigurationFile?.startsWith("/") ||
+      !productCommands ||
+      !referenceResourcePolicyFile)
+  )
+    throw Error("CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_REQUIRED");
   const sourceDirectory =
       environment.PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY?.trim(),
     descriptorHash =
@@ -81,6 +91,7 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
     port,
     productCommands,
     referenceResourcePolicyFile,
+    nativeBootstrapConfigurationFile,
     referenceTrustFile:
       environment.PLATFORM_CONTROL_REFERENCE_TRUST_FILE?.trim() || undefined,
     resourceProducer:

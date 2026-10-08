@@ -213,3 +213,7 @@ export { projectNativeComponentEvidence } from "./native-component-resources.js"
 export { readNativeStorageCatalogue } from "./native-storage-catalogue.js";
 
 export { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
+export {
+  buildNativeReferenceProduct,
+  type NativeReferenceProductInput,
+} from "./authoring/native-product.js";
