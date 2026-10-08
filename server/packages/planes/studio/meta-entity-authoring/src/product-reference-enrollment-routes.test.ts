@@ -8,14 +8,16 @@ import {
   AuthoringPolicyError,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { ProductCommandCleanupError } from "./product-command-authority.js";
-const { ownership, identities } = vi.hoisted(() => ({
+const { ownership, identities, conversion } = vi.hoisted(() => ({
   ownership: vi.fn(),
   identities: vi.fn(),
+  conversion: vi.fn(),
 }));
 vi.mock("./product-reference-enrollment.js", () => ({
   createProductReferenceEnrollment: () => ({
     initializeOwnership: ownership,
     installIdentities: identities,
+    convertNative: conversion,
   }),
 }));
 import { registerProductReferenceEnrollmentRoutes } from "./product-reference-enrollment-routes.js";
@@ -34,7 +36,7 @@ const body = {
   expectedSourceHash: "a".repeat(64),
   idempotencyKey: "reference-command-001",
 };
-async function fixture() {
+async function fixture(native = false) {
   const app = express();
   app.use(express.json());
   const context = { principalId: id, tenantId: id } as VerifiedRequestContext;
@@ -42,6 +44,9 @@ async function fixture() {
     database: {} as never,
     authority: {} as never,
     resolvePolicies: vi.fn(),
+    ...(native
+      ? { nativeConversion: { resolve: vi.fn(), audit: vi.fn() } }
+      : {}),
     authenticate: (req, res, next) => {
       if (!req.headers.authorization) {
         res.sendStatus(401);
@@ -125,4 +130,30 @@ it("preserves conflict, denial and committed cleanup failure distinctions", asyn
         outcome: "committed",
       });
   }
+});
+
+it("keeps native conversion unregistered without an installed host binding", async () => {
+  const f = await fixture();
+  expect((await f.send("convert-native")).status).toBe(404);
+  expect(conversion).not.toHaveBeenCalled();
+});
+it("authenticates native conversion and rejects request-supplied evidence", async () => {
+  const f = await fixture(true);
+  expect((await f.send("convert-native", body, false)).status).toBe(401);
+  for (const extra of [
+    { policy: {} },
+    { candidate: {} },
+    { schemaHash: "a".repeat(64) },
+    { tenantId: id },
+  ])
+    expect((await f.send("convert-native", { ...body, ...extra })).status).toBe(
+      400,
+    );
+  expect(conversion).not.toHaveBeenCalled();
+  conversion.mockResolvedValue({ revision: 3 });
+  expect((await f.send("convert-native")).status).toBe(200);
+  expect(conversion).toHaveBeenCalledExactlyOnceWith(f.context, {
+    ...body,
+    changeSetId: id,
+  });
 });

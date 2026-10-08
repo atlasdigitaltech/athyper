@@ -3143,6 +3143,15 @@ All 14 historical release hashes remain valid; three breaking rebind findings re
 explicit. See the existing qualification runbook for exact evidence. This proves
 the enrollment stage, not native cutover or complete deployed F6/F8/F9 qualification.
 
+Native conversion uses the existing product-command authority and canonical
+repository transaction. Its request carries only source coordinates, expected
+revision/hash and idempotency key; installed composition resolves conversion and
+compiler resources. The command bridge requires canonical schema qualification
+and transactional audit on application and replay. Missing installed composition
+leaves the route unregistered. This server bridge does not attest whole-source
+resource readiness, authorize removing cutover constraints or qualify live reads;
+current implementation and DEV evidence remain in the qualification runbook.
+
 
 F0 includes a first-class resources inventory alongside relational property mappings. Each entry records resource key, schema version and schema hash, content version/hash where applicable, owning package/service, producer, consuming adapters, dependency pins, trust/revocation policy and conformance-suite identifier/results. Pending identifiers/hashes are explicit pending evidence, never fabricated values. Distinguish a resolver interface schema from its implementation version and a catalogue schema from a particular catalogue publication. Resource inventory entries are typed contract inputs; runtime publication content remains owned by its existing resource service.
 

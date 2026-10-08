@@ -104,6 +104,13 @@ export function registerProductReferenceEnrollmentRoutes(
         next(error);
       }
     };
+  if (options.nativeConversion)
+    app.post(
+      "/api/platform-control/meta-entity-authoring/change-sets/:id/convert-native",
+      options.authenticate,
+      express.json({ limit: 4096 }),
+      handler(service.convertNative),
+    );
   app.post(
     "/api/platform-control/meta-entity-authoring/change-sets/:id/initialize-ownership",
     options.authenticate,

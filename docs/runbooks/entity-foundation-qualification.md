@@ -5,6 +5,47 @@ Scope: shared Entity Framework hardening using Country and Principal. This is
 not authorization to expand Atlas, restructure deployment planes, publish every
 working-tree metadata draft, or onboard additional entities.
 
+## Native conversion command bridge — 2026-10-08
+
+The existing product-reference command service now supports native conversion through
+its issuer/application separation and serializable transaction. The optional
+`convert-native` route accepts only draft coordinates, expected revision/source hash
+and an idempotency key. Actor, product scope, candidate, schema and resource evidence
+cannot be supplied by the caller. The host must resolve the conversion policy inside
+the admitted transaction; the bridge always wraps it with canonical schema
+qualification before calling the existing atomic repository conversion. Conversion
+and replay both use the host's transactional audit sink. Audit failure propagates to
+the outer transaction. Unit coverage of this bridge is not a deployed rollback proof.
+
+The optional route is not registered without its installed composition. DEV does not
+have that composition yet; this checkpoint does not enable the route or cutover.
+Existing ownership and identity commands retain their installed bindings.
+
+Read-only DEV inspection of the actual `athyper_dev_product_command` login records
+schema fingerprint `c105b6e472988ad71326bc299f33ef086353a73fa47d905c430bd8ac95f3593c`
+in private `resource-review-candidates-20261008/native-cutover-schema.json`. It finds
+seven pending cutover constraints: change set, field, operation, runtime profile,
+surface, section and field binding. This is an inspection candidate, not independently
+qualified schema evidence. `metadata.ui_component_contract` contains zero rows.
+Both enrolled drafts remain at revision 4, with native markers unset.
+
+The remaining work is engineering, not a request to repeat enrollment approval:
+
+- Resolve whole-source conversion against installed component/catalogue/provider,
+  authorization and initialization evidence; the whole-source positive tests still
+  use synthetic contexts. Package and rehearse the restricted native-write grants
+  and guard transition with that exact conversion.
+- Execute canonical conversion, exact native readback, history, replay and rollback
+  under the application login before changing DEV cutover markers.
+- Implement the version-1.1 live-read resource producer/installation and Records
+  evidence adapter. The native compiler currently emits version 1.0; the host still
+  rejects live-read readiness without F6/F8/F9 evidence. Signed descriptor and
+  identity-review resources qualify enrollment, not those live-read resources.
+
+Validation: 838 authoring tests pass (6 opt-in skips), 12 focused host tests pass;
+authoring and host typechecks pass. No DEV DDL, grants, native conversion,
+publication or activation is performed in this checkpoint. No MFA or UI change.
+
 ## Published resources and actual reference enrollment — 2026-10-08
 
 This checkpoint supersedes the pending producer/review status below. Platform Owner

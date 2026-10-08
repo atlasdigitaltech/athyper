@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 363 |
+| Current-only identities | 364 |
 | Legacy occurrences | 898 |
-| Current occurrences | 429 |
+| Current occurrences | 430 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -1035,6 +1035,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/operations/notifications/deliveries/:param/replay` | 0 | 1 |
 | current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/adopt` | 0 | 1 |
 | current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/approve` | 0 | 1 |
+| current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/convert-native` | 0 | 1 |
 | current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/enroll-labels` | 0 | 1 |
 | current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/initialize-ownership` | 0 | 1 |
 | current-only | POST | `/api/platform-control/meta-entity-authoring/change-sets/:param/install-identities` | 0 | 1 |

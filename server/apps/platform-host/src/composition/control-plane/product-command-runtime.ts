@@ -22,6 +22,10 @@ export async function createControlProductCommandRuntime(options: {
   authority: PlatformAuthority;
   labels: NormalizedAuthoringPolicy;
   audit: AuditRecorder<Database>;
+  nativeConversion?: Pick<
+    NonNullable<ProductReferenceEnrollmentOptions["nativeConversion"]>,
+    "resolve"
+  >;
   referenceResources?: Parameters<
     typeof createProductReferenceResourcePolicies
   >[0];
@@ -137,6 +141,8 @@ export async function createControlProductCommandRuntime(options: {
         throw Error("PRODUCT_COMMAND_AUDIT_REQUIRED");
     },
   };
+  if (options.nativeConversion && !options.referenceResources)
+    throw Error("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
   if (options.referenceResources) {
     if (
       options.referenceResources.authorityTenantId !==
@@ -160,6 +166,43 @@ export async function createControlProductCommandRuntime(options: {
     runtime.referenceEnrollment = {
       database: runtime.database,
       authority: runtime.authority,
+      ...(options.nativeConversion
+        ? {
+            nativeConversion: {
+              resolve: options.nativeConversion.resolve,
+              async audit(tx, context, command, result) {
+                const event = await options.audit.record(
+                  {
+                    eventCode: "metadata.entity.product.enrollment",
+                    action: "convert_native",
+                    outcome: "success",
+                    severity: "critical",
+                    tenantId: context.tenantId,
+                    actor: { kind: "user", principalId: context.principalId },
+                    entityType: "metadata.entity_change_set",
+                    entityId: command.changeSetId,
+                    requestId: context.requestId,
+                    metadata: {
+                      sourceHash: result.sourceHash,
+                      targetHash: result.targetHash,
+                      revision: result.revision,
+                      idempotencyKey: command.idempotencyKey,
+                    },
+                  },
+                  tx,
+                );
+                if (
+                  !event.id ||
+                  event.tenantId !== context.tenantId ||
+                  event.actor.principalId !== context.principalId
+                )
+                  throw Error("PRODUCT_COMMAND_AUDIT_REQUIRED");
+              },
+            } satisfies NonNullable<
+              ProductReferenceEnrollmentOptions["nativeConversion"]
+            >,
+          }
+        : {}),
       resolvePolicies: createProductReferenceResourcePolicies({
         ...options.referenceResources,
         ...resourceConfig,

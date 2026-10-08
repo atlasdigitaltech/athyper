@@ -197,6 +197,23 @@ it("binds reference policies only with exact configuration and restricted read p
     const runtime = await createControlProductCommandRuntime({
       ...f.options,
       referenceResources,
+      nativeConversion: { resolve: vi.fn() },
+    });
+    const conversion = runtime.referenceEnrollment!.nativeConversion!;
+    await conversion.audit(
+      f.commandDatabase as never,
+      {
+        tenantId: authority.tenantId,
+        principalId: "human",
+        requestId: "request",
+      } as never,
+      { changeSetId: "draft", idempotencyKey: "conversion" } as never,
+      { revision: 5, sourceHash: "before", targetHash: "after" } as never,
+    );
+    expect(f.audit.record.mock.calls[0]?.[1]).toBe(f.commandDatabase);
+    expect(f.audit.record.mock.calls[0]?.[0]).toMatchObject({
+      action: "convert_native",
+      metadata: { sourceHash: "before", targetHash: "after", revision: 5 },
     });
     expect(runtime.referenceEnrollment?.database).toBe(f.commandDatabase);
     await expect(
@@ -208,6 +225,20 @@ it("binds reference policies only with exact configuration and restricted read p
     ).rejects.toThrow("RESOURCE_READ_PRIVILEGE_REQUIRED");
   } finally {
     await denied.destroy();
+    await f.close();
+  }
+});
+
+it("does not enable native conversion without installed reference resource configuration", async () => {
+  const f = await fixture();
+  try {
+    await expect(
+      createControlProductCommandRuntime({
+        ...f.options,
+        nativeConversion: { resolve: vi.fn() },
+      }),
+    ).rejects.toThrow("PRODUCT_NATIVE_REFERENCE_RESOURCES_REQUIRED");
+  } finally {
     await f.close();
   }
 });

@@ -13,6 +13,16 @@ import type {
 } from "./legacy-ownership-initialization.js";
 import type { LegacyIdentityInstallationPolicy } from "./legacy-identity-installation.js";
 
+import type {
+  NativeConversionApplicationPolicy,
+  NativeConversionApplicationInput,
+  applyNativeGraphConversion,
+} from "./native-conversion-application.js";
+import {
+  withCanonicalNativeSchemaQualification,
+  type InstalledNativeSchemaEvidence,
+} from "./native-schema-qualification.js";
+
 type Database = Kysely<Record<string, never>>;
 type Tx = Transaction<Record<string, never>>;
 export type ProductReferenceCommand = Omit<
@@ -24,6 +34,24 @@ export interface ProductReferenceEnrollmentOptions {
   authority: ReturnType<
     typeof createProductCommandAuthority<VerifiedRequestContext>
   >;
+  /** Optional installed composition, never request-supplied. Schema qualification
+   * is mandatory here, including replay; authoring admission alone is insufficient. */
+  nativeConversion?: {
+    resolve(
+      tx: Tx,
+      context: VerifiedRequestContext,
+      command: NativeConversionApplicationInput,
+    ): Promise<{
+      policy: NativeConversionApplicationPolicy;
+      schema: InstalledNativeSchemaEvidence;
+    }>;
+    audit(
+      tx: Tx,
+      context: VerifiedRequestContext,
+      command: NativeConversionApplicationInput,
+      result: Awaited<ReturnType<typeof applyNativeGraphConversion>>,
+    ): Promise<void>;
+  };
   /** Resolves and pins current installed descriptor, audit and review resources
    * inside each admitted transaction. No static fixture policy or request DTO. */
   resolvePolicies(
@@ -43,10 +71,18 @@ export function createProductReferenceEnrollment(
   if (!options.resolvePolicies || !options.authority || !options.database)
     throw Error("PRODUCT_REFERENCE_RUNTIME_REQUIRED");
   async function execute(
-    kind: "ownership" | "identities",
+    kind: "ownership" | "identities" | "native-format-conversion",
     context: VerifiedRequestContext,
     input: ProductReferenceCommand,
   ) {
+    if (
+      kind === "native-format-conversion" &&
+      (!options.nativeConversion?.resolve || !options.nativeConversion.audit)
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_CONVERSION_HOST_NOT_CONFIGURED",
+        "Installed conversion resources and transactional audit are required.",
+      );
     const capturedContext = structuredClone(context);
     // Reject authority injection even for callers bypassing the HTTP parser.
     if (
@@ -86,6 +122,43 @@ export function createProductReferenceEnrollment(
             "PRODUCT_REFERENCE_ADMISSION_REQUIRED",
             "An admitted exact product command is required.",
           );
+        if (admitted.kind === "native-format-conversion") {
+          const binding = options.nativeConversion!;
+          const resolved = await binding.resolve(
+            tx,
+            structuredClone(capturedContext),
+            structuredClone(admitted.input),
+          );
+          if (!resolved?.policy || !resolved.schema)
+            throw new AuthoringPolicyError(
+              "NATIVE_CONVERSION_HOST_NOT_CONFIGURED",
+              "Installed conversion and schema evidence are required.",
+            );
+          const policy = withCanonicalNativeSchemaQualification(
+            resolved.policy,
+            resolved.schema,
+          );
+          const repository = new KyselyMetaEntityAuthoringRepository(
+            tx,
+            undefined,
+            undefined,
+            undefined,
+            policy.host,
+            policy,
+          );
+          const result = await repository.executeNativeConversion(
+            admitted.input,
+          );
+          // Audit participates in the same admission transaction, including replay.
+          // Failure rolls back the conversion rather than obscuring a committed write.
+          await binding.audit(
+            tx,
+            structuredClone(capturedContext),
+            structuredClone(admitted.input),
+            structuredClone(result),
+          );
+          return result;
+        }
         const policies = await options.resolvePolicies(
           tx,
           structuredClone(capturedContext),
@@ -120,6 +193,10 @@ export function createProductReferenceEnrollment(
     });
   }
   return {
+    convertNative: (
+      context: VerifiedRequestContext,
+      input: ProductReferenceCommand,
+    ) => execute("native-format-conversion", context, input),
     initializeOwnership: (
       context: VerifiedRequestContext,
       input: ProductReferenceCommand,

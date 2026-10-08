@@ -1,23 +1,40 @@
 import { expect, it, vi, beforeEach } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { ProductReferenceEnrollmentOptions } from "./product-reference-enrollment.js";
-const { transport, ownership, identities, database, query } = vi.hoisted(
-  () => ({
-    transport: vi.fn(),
-    ownership: vi.fn(),
-    identities: vi.fn(),
-    database: { isTransaction: true },
-    query: vi.fn(),
-  }),
-);
+const {
+  transport,
+  ownership,
+  identities,
+  conversion,
+  constructed,
+  qualify,
+  database,
+  query,
+} = vi.hoisted(() => ({
+  transport: vi.fn(),
+  ownership: vi.fn(),
+  identities: vi.fn(),
+  conversion: vi.fn(),
+  constructed: vi.fn(),
+  qualify: vi.fn(),
+  database: { isTransaction: true },
+  query: vi.fn(),
+}));
 vi.mock("./product-command-authority.js", () => ({
   withProductCommandAuthority: transport,
 }));
 vi.mock("./kysely-authoring-repository.js", () => ({
   KyselyMetaEntityAuthoringRepository: class {
+    constructor(...args: unknown[]) {
+      constructed(...args);
+    }
+    executeNativeConversion = conversion;
     executeLegacyOwnershipInitialization = ownership;
     executeLegacyIdentityInstallation = identities;
   },
+}));
+vi.mock("./native-schema-qualification.js", () => ({
+  withCanonicalNativeSchemaQualification: qualify,
 }));
 vi.mock("kysely", () => ({ sql: () => ({ execute: query }) }));
 import { createProductReferenceEnrollment } from "./product-reference-enrollment.js";
@@ -41,7 +58,9 @@ beforeEach(() => {
   ownership.mockResolvedValue({ revision: 3 });
   identities.mockResolvedValue({ revision: 4 });
 });
-function fixture() {
+function fixture(
+  nativeConversion?: ProductReferenceEnrollmentOptions["nativeConversion"],
+) {
   const resolvePolicies = vi.fn(async (..._args: unknown[]) => ({
     ownership: { authoringSchemaHash: "a".repeat(64) },
     identities: { authoringSchemaHash: "a".repeat(64) },
@@ -50,6 +69,7 @@ function fixture() {
     database,
     authority: {},
     resolvePolicies,
+    nativeConversion,
   } as unknown as ProductReferenceEnrollmentOptions);
   return { service, resolvePolicies };
 }
@@ -117,4 +137,72 @@ it("snapshots request context before asynchronous governance", async () => {
   expect(f.resolvePolicies.mock.calls[0]?.[1]).toMatchObject({
     principalId: "actor",
   });
+});
+
+it("does not issue native admission without installed conversion and audit", async () => {
+  await expect(
+    fixture().service.convertNative(context, command),
+  ).rejects.toMatchObject({ code: "NATIVE_CONVERSION_HOST_NOT_CONFIGURED" });
+  expect(transport).not.toHaveBeenCalled();
+});
+it("qualifies the schema and audits canonical conversion and replay in the admitted transaction", async () => {
+  const policy = {
+    host: { commands: { authoringSchemaHash: "a".repeat(64) } },
+  };
+  const schema = {
+    database: "athyper_studio",
+    applicationRole: "product_writer",
+    schemaHash: "b".repeat(64),
+  };
+  const wrapped = { ...policy, qualified: true };
+  const resolve = vi.fn(async () => ({ policy, schema }));
+  const audit = vi.fn();
+  const f = fixture({ resolve, audit } as unknown as NonNullable<
+    ProductReferenceEnrollmentOptions["nativeConversion"]
+  >);
+  qualify.mockReturnValue(wrapped);
+  const result = {
+    changeSetId: "draft",
+    revision: 3,
+    changed: true,
+    sourceHash: command.expectedSourceHash,
+    targetHash: "c".repeat(64),
+  };
+  conversion.mockResolvedValue(result);
+  for (let i = 0; i < 2; i++)
+    expect(await f.service.convertNative(context, command)).toEqual(result);
+  expect(transport).toHaveBeenCalledTimes(2);
+  expect(transport.mock.calls[0]![0].command.kind).toBe(
+    "native-format-conversion",
+  );
+  expect(qualify).toHaveBeenCalledWith(policy, schema);
+  expect(constructed.mock.calls[0]?.[0]).toBe(database);
+  expect(constructed.mock.calls[0]?.[5]).toBe(wrapped);
+  expect(resolve).toHaveBeenCalledTimes(2);
+  expect(f.resolvePolicies).not.toHaveBeenCalled();
+  expect(audit).toHaveBeenCalledWith(
+    database,
+    context,
+    { ...command, actorId: "actor", tenantId: null },
+    result,
+  );
+});
+it("propagates audit failure inside the transaction and rejects absent schema before writing", async () => {
+  const resolve = vi.fn(async () => ({ policy: {}, schema: undefined }));
+  const audit = vi.fn(async () => {
+    throw Error("audit unavailable");
+  });
+  const f = fixture({ resolve, audit } as unknown as NonNullable<
+    ProductReferenceEnrollmentOptions["nativeConversion"]
+  >);
+  await expect(f.service.convertNative(context, command)).rejects.toMatchObject(
+    { code: "NATIVE_CONVERSION_HOST_NOT_CONFIGURED" },
+  );
+  expect(conversion).not.toHaveBeenCalled();
+  resolve.mockResolvedValue({ policy: {}, schema: {} as never });
+  qualify.mockReturnValue({ host: {} });
+  conversion.mockResolvedValue({ revision: 3 });
+  await expect(f.service.convertNative(context, command)).rejects.toThrow(
+    "audit unavailable",
+  );
 });
