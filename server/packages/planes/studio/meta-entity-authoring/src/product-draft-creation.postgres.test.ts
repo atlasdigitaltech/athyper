@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
+import { nativeAiMembers } from "@athyper/server-contract-meta-entity-authoring";
 // Real application-role admission/RLS, minimal root schema and synthetic issuer.
 // No authenticated DEV command, initializer, native graph or publication evidence.
 it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
@@ -110,16 +111,14 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
       q(
         `CREATE TRIGGER proof_root_scope BEFORE INSERT ON metadata.entity_change_set FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_change_set();`,
       );
-      for (const table of [
-        "entity_ai_profile",
-        "entity_ai_field",
-        "entity_ai_binding",
-        "entity_ai_reference",
-        "entity_ai_term",
-      ])
+      for (const d of Object.values(nativeAiMembers)) {
+        const columns = Object.values(d.columns)
+          .map((c) => `${c.column} ${c.sqlType}`)
+          .join(",");
         q(
-          `CREATE TABLE metadata.${table}(id uuid,tenant_id uuid,change_set_id uuid); ALTER TABLE metadata.${table} ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.${table} FORCE ROW LEVEL SECURITY;`,
+          `CREATE TABLE metadata.${d.table}(id uuid,tenant_id uuid,change_set_id uuid,entity_id uuid,created_by uuid,ungranted text,${columns}); ALTER TABLE metadata.${d.table} ENABLE ROW LEVEL SECURITY; ALTER TABLE metadata.${d.table} FORCE ROW LEVEL SECURITY;`,
         );
+      }
       const entity = randomUUID(),
         other = randomUUID(),
         target = randomUUID(),
@@ -166,7 +165,7 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
         "entity_ai_term",
       ]) {
         q(
-          `INSERT INTO metadata.${table} VALUES('${randomUUID()}',NULL,'${target}'),('${randomUUID()}',NULL,'${randomUUID()}');`,
+          `INSERT INTO metadata.${table}(id,tenant_id,change_set_id) VALUES('${randomUUID()}',NULL,'${target}'),('${randomUUID()}',NULL,'${randomUUID()}');`,
         );
         expect(
           q(
@@ -182,10 +181,82 @@ it.skipIf(process.env.ATHYPER_PRODUCT_CREATION_POSTGRES !== "1")(
           q(
             session +
               enter +
-              `INSERT INTO metadata.${table} VALUES('${randomUUID()}',NULL,'${target}'); COMMIT;`,
+              `INSERT INTO metadata.${table}(id,tenant_id,change_set_id) VALUES('${randomUUID()}',NULL,'${target}'); COMMIT;`,
           ),
         ).toThrow();
       }
+      // The complete native graph includes entity-facing AI declarations.
+      // Exercise real creation admission + insert fences with reduced tables:
+      // this proves privileges, not provider semantics or whole-graph validity.
+      const grants = read(
+        "ddl/planes/studio/metadata/49_native_bootstrap_privileges.sql",
+      );
+      q(grants.slice(0, grants.indexOf("GRANT UPDATE")));
+      q(
+        read(
+          "ddl/planes/studio/metadata/56_native_bootstrap_ai_privileges.sql",
+        ),
+      );
+      q(
+        insert() +
+          `UPDATE metadata.entity_change_set SET source_kind='product',native_core_layout_version=2,lock_version=1 WHERE id='${target}';`,
+      );
+      const aiInsert = (
+        table: string,
+        e = entity,
+        draft = target,
+        author = actor,
+        tenantValue = "NULL",
+        extra = "",
+      ) =>
+        `INSERT INTO metadata.${table}(id,entity_id,change_set_id,created_by,tenant_id${table === "entity_ai_term" ? ",origin_kind" : ""}${extra ? ",ungranted" : ""}) VALUES('${randomUUID()}','${e}','${draft}','${author}',${tenantValue}${table === "entity_ai_term" ? ",'authored'" : ""}${extra ? ",'forged'" : ""});`;
+      for (const d of Object.values(nativeAiMembers).filter(
+        (d) => d.table !== "entity_ai_term",
+      )) {
+        q(session + enter + aiInsert(d.table) + "ROLLBACK;");
+        for (const invalid of [
+          aiInsert(d.table, other),
+          aiInsert(d.table, entity, randomUUID()),
+          aiInsert(d.table, entity, target, randomUUID()),
+          aiInsert(d.table, entity, target, actor, `'${tenant}'`),
+          aiInsert(d.table, entity, target, actor, "NULL", "ungranted"),
+          `UPDATE metadata.${d.table} SET id='${randomUUID()}';`,
+          `DELETE FROM metadata.${d.table};`,
+        ])
+          expect(() => q(session + enter + invalid + "ROLLBACK;")).toThrow();
+        expect(() => q(session + aiInsert(d.table) + "ROLLBACK;")).toThrow();
+        q(
+          `CREATE POLICY proof_broad_insert ON metadata.${d.table} FOR INSERT TO athyper_product_command_app WITH CHECK(true);`,
+        );
+        expect(() =>
+          q(session + enter + aiInsert(d.table, other) + "ROLLBACK;"),
+        ).toThrow();
+      }
+      expect(() =>
+        q(session + enter + aiInsert("entity_ai_term") + "ROLLBACK;"),
+      ).toThrow();
+      expect(() =>
+        q(
+          session +
+            enter +
+            `INSERT INTO metadata.entity_ai_profile(id,entity_id,change_set_id,created_by,tenant_id,vocabulary_locale) VALUES('${randomUUID()}','${entity}','${target}','${actor}',NULL,'en'); ROLLBACK;`,
+        ),
+      ).toThrow();
+      q(
+        `UPDATE metadata.entity_change_set SET lock_version=2 WHERE id='${target}';`,
+      );
+      expect(() =>
+        q(session + enter + aiInsert("entity_ai_profile") + "ROLLBACK;"),
+      ).toThrow();
+      q(
+        `UPDATE metadata.entity_change_set SET lock_version=1 WHERE id='${target}'; UPDATE entity_command_private.admission SET creation_entity_id=NULL;`,
+      );
+      expect(() =>
+        q(session + enter + aiInsert("entity_ai_profile") + "ROLLBACK;"),
+      ).toThrow();
+      q(
+        `UPDATE entity_command_private.admission SET creation_entity_id='${entity}'; DELETE FROM metadata.entity_change_set WHERE id='${target}';`,
+      );
       // Real admission and new catalogue policies; reduced resource/member tables
       // isolate authorization, not component publication or semantic qualification.
       q(`CREATE TABLE metadata.ui_component_contract(id uuid,tenant_id uuid,status text);

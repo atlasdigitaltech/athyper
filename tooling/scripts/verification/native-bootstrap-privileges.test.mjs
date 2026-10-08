@@ -8,6 +8,7 @@ import {
   referenceMembers,
   nativeOperationMember,
   nativeRetiredColumns,
+  nativeAiMembers,
 } from "../../../server/packages/contracts/meta-entity-authoring/src/index.ts";
 import { BRANCH_COLUMNS } from "../../../server/packages/planes/studio/meta-entity-authoring/src/graph-storage-columns.ts";
 const canonical = readFileSync(
@@ -81,4 +82,50 @@ test("native grants cover only the selected descriptor columns and insert-only s
   );
   assert.match(canonical, /NEW.requires_mfa=b.requires_mfa/);
   assert.match(canonical, /FOR SHARE OF b,s,e,o/);
+});
+
+test("AI bootstrap grants cover typed columns, retain scope fences and exclude learned promotion", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/56_native_bootstrap_ai_privileges.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const actual = new Map(
+    [
+      ...source.matchAll(
+        /GRANT INSERT\(([^)]+)\) ON metadata\.(\w+) TO athyper_product_command_app;/g,
+      ),
+    ].map((m) => [m[2], m[1].split(",").sort()]),
+  );
+  const expected = new Map(
+    Object.values(nativeAiMembers)
+      .filter((d) => d.table !== "entity_ai_term")
+      .map((d) => [
+        d.table,
+        [
+          "id",
+          "change_set_id",
+          "entity_id",
+          "tenant_id",
+          "created_by",
+          ...Object.values(d.columns).map((c) => c.column),
+        ].sort(),
+      ]),
+  );
+  assert.deepEqual(actual, expected);
+  for (const table of expected.keys()) {
+    assert.ok(
+      source.includes(
+        `native_bootstrap_insert_fence ON metadata.${table} AS RESTRICTIVE`,
+      ),
+    );
+  }
+  assert.match(source, /WITH CHECK\(vocabulary_locale IS NULL AND/);
+  assert.doesNotMatch(source, /ON metadata\.entity_ai_term/);
+  assert.doesNotMatch(
+    source,
+    /GRANT (ALL|UPDATE|DELETE|SELECT)|DROP |CREATE FUNCTION/,
+  );
 });

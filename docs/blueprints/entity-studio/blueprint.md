@@ -73,7 +73,13 @@ created, and the source reader grants nothing while it is absent. Source FKs and
 private evidence privileges remain intact. Insert-only native member grants require
 the creation ticket, matching product root, actor and initial revision. Native operation
 INSERT additionally checks and locks the approved source value in PostgreSQL; no
-protected-value UPDATE/DELETE authority follows from bootstrap. Pending cutover checks
+protected-value UPDATE/DELETE authority follows from bootstrap. Complete reference proposals
+also retain their existing entity-facing AI profile, field, binding and reference declarations.
+Their insert-only persistence uses the same creation-ticket/root/actor/revision fence; this
+is not an AI editor or provider-execution authority. Vocabulary/term persistence remains
+unsupported by the current compiler: no term INSERT grant is installed and profile
+`vocabulary_locale` must remain NULL. Existing scoped read policies and semantic resource
+qualification still apply. Pending cutover checks
 are removed only after canonical whole-graph application qualification. Native bootstrap does not attest deployed F6/F8/F9, publication or
 activation. Execution evidence and remaining integration gaps belong in the existing
 [qualification runbook](../../runbooks/entity-foundation-qualification.md).
@@ -1305,6 +1311,11 @@ remain mandatory. The installed resource resolver must supply qualified schema, 
 compiler/reader and existing approved initializer evidence before the endpoint is enabled;
 this proposal reader alone does not establish B0 or F6/F8/F9. Competing bootstrap
 compositions reject rather than select one implicitly.
+The consuming native projection distinguishes field placements from badge placements on
+a detail surface. A badge may reference a field that is also displayed in a section; it
+must not select that field's renderer or produce a false duplicate-field error. Multiple
+field placements that cannot be represented by the field-level runtime contract continue
+to reject. Legacy untyped field placements retain their existing decoding behavior.
 The product-command runtime also accepts bootstrap resource composition that replaces
 compiler component rosters with exact installed evidence. It binds the proposal hash,
 descriptor hash, native snapshot version and host release, preserves the existing approved

@@ -177,3 +177,36 @@ it("rejects ambiguous detail selection and duplicate detail field bindings", () 
   }));
   expect(project).toThrow("NATIVE_PROJECTION_DETAIL_BINDING_AMBIGUOUS");
 });
+
+it("keeps a badge over the same field separate from its detail renderer", () => {
+  const { native, project } = fixture();
+  native.surfaces = [{ id: "detail", surfaceKind: "detail", isDefault: true }];
+  const field = {
+    entitySurfaceId: "detail",
+    entityFieldId: "code",
+    bindingKind: "field",
+    displayConfig: { rendererKey: "text" },
+  };
+  const badge = {
+    entitySurfaceId: "detail",
+    entityFieldId: "code",
+    bindingKind: "badge",
+    displayConfig: { rendererKey: "badge-only" },
+  };
+  // Order must not determine which renderer gets projected.
+  for (const bindings of [
+    [badge, field],
+    [field, badge],
+  ]) {
+    native.surfaceFieldBindings = bindings;
+    expect(project().fields.find((f) => f.key === "code")?.detail).toEqual({
+      rendererKey: "text",
+    });
+  }
+  native.surfaceFieldBindings = [badge];
+  expect(
+    project().fields.find((f) => f.key === "code")?.detail,
+  ).toBeUndefined();
+  native.surfaceFieldBindings = [badge, field, { ...field }];
+  expect(project).toThrow("NATIVE_PROJECTION_DETAIL_BINDING_AMBIGUOUS");
+});

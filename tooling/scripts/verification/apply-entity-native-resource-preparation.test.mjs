@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   preparationSql,
+  nativeBootstrapAiPrivilegesMigrationName,
   productComponentResourceReadMigrationName,
   componentResourceReviewMigrationName,
   componentCatalogueInstallationMigrationName,
@@ -912,5 +913,46 @@ test("component evidence preparation remains command-scoped and grants only rout
       productComponentResourceReadMigrationName,
     ),
     /COMMIT;/,
+  );
+});
+
+test("AI bootstrap forward migration preserves existing applied sources and rehearses transactionally", () => {
+  const canonical = readFileSync(
+    new URL(
+      "../../../server/db/ddl/planes/studio/metadata/56_native_bootstrap_ai_privileges.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/scripts/operations/upgrades/entity-product-command/" +
+        nativeBootstrapAiPrivilegesMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.equal(
+    source,
+    "BEGIN;\nSET LOCAL lock_timeout='5s';\n" + canonical + "COMMIT;\n",
+  );
+  const digest = createHash("sha256").update(source).digest("hex");
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      false,
+      nativeBootstrapAiPrivilegesMigrationName,
+    ),
+    /ROLLBACK;\n$/,
+  );
+  assert.match(
+    preparationSql(
+      source,
+      digest,
+      true,
+      nativeBootstrapAiPrivilegesMigrationName,
+    ),
+    /athyper_schema_migration_v1/,
   );
 });

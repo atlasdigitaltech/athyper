@@ -2238,6 +2238,20 @@
       "canonicalPaths": [
         "ddl/common/runtime_meta/15_locked_live_read_resources.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261008_entity_native_bootstrap_ai_privileges.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261008_entity_native_bootstrap_ai_privileges.sql",
+      "sha256": "879dcb5a787f8b666e94d4c6a5d70e5d5aa0b624d5f6629979dddca71ece3be2",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Insert-only entity AI declaration persistence for admitted fresh native roots; learned provenance, update/delete, execution and publication authority are not granted.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/56_native_bootstrap_ai_privileges.sql"
+      ]
     }
   ]
 }

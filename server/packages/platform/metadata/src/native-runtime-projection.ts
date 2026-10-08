@@ -338,6 +338,10 @@ export function compileNativeRuntimeProjection(input: {
   const detailBindings = rows("surfaceFieldBindings").filter(
     (binding) =>
       binding.status !== "deprecated" &&
+      // Badges have their own compiled record-presentation contract. They may
+      // intentionally reuse a field displayed in a section; they do not select
+      // that field's detail renderer. Legacy field bindings have no kind.
+      (binding.bindingKind === undefined || binding.bindingKind === "field") &&
       binding.entitySurfaceId === detailSurface?.id,
   );
   const intakeFlows = compileEntityIntakeFlows(native);

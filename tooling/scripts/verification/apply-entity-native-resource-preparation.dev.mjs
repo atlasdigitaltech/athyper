@@ -1,3 +1,5 @@
+export const nativeBootstrapAiPrivilegesMigrationName =
+  "20261008_entity_native_bootstrap_ai_privileges.sql";
 export const lockedLiveReadResourcesMigrationName =
   "20261008_entity_locked_live_read_resources.sql";
 export const productComponentResourceReadMigrationName =
@@ -91,6 +93,7 @@ export function preparationSql(
 ) {
   assert.ok(
     [
+      nativeBootstrapAiPrivilegesMigrationName,
       lockedLiveReadResourcesMigrationName,
       productComponentResourceReadMigrationName,
       componentCatalogueInstallationMigrationName,
@@ -170,6 +173,7 @@ export function runPreparation(args) {
     "--live-read-resource-review",
     "--component-catalogue-installation",
     "--component-resource-review",
+    "--native-bootstrap-ai-privileges",
     "--locked-live-read-resources",
     "--product-component-resource-read",
     "--product-component-validation-read",
@@ -226,6 +230,7 @@ export function runPreparation(args) {
       "--live-read-resource-review",
       "--component-catalogue-installation",
       "--component-resource-review",
+      "--native-bootstrap-ai-privileges",
       "--locked-live-read-resources",
       "--product-component-resource-read",
       "--product-component-validation-read",
@@ -250,7 +255,7 @@ export function runPreparation(args) {
     ].filter((option) => !allowed.has(option)).length <= 1,
     "Select one preparation kind",
   );
-  const selectedMigration = !allowed.has("--locked-live-read-resources")
+  let selectedMigration = !allowed.has("--locked-live-read-resources")
     ? lockedLiveReadResourcesMigrationName
     : !allowed.has("--component-catalogue-installation")
       ? componentCatalogueInstallationMigrationName
@@ -373,6 +378,8 @@ export function runPreparation(args) {
                                                                                 )
                                                                               ? migrationName
                                                                               : rootMigrationName;
+  if (!allowed.has("--native-bootstrap-ai-privileges"))
+    selectedMigration = nativeBootstrapAiPrivilegesMigrationName;
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),

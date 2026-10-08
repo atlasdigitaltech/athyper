@@ -189,6 +189,57 @@ and production/native-test typechecks, migration layout and formatting passed.
 Both original drafts remain revision 4 with no native marker.
 No replacement draft, new Entity publication or activation occurred.
 
+### Complete-graph persistence and reader corrections — 8 October, 15:03 UTC
+
+The reference definitions contain nonempty entity-facing AI declarations. The canonical
+bootstrap writer already writes them, but the application role previously had only scoped
+SELECT on those families. Forward migration
+`20261008_entity_native_bootstrap_ai_privileges.sql` now grants column-specific INSERT
+on profile, field, binding and reference rows, fenced by the existing creation admission,
+product root, actor and initial revision. No UPDATE/DELETE, term INSERT, learned-candidate
+promotion or provider-execution authority is added. Non-NULL profile vocabulary is rejected,
+consistent with the compiler's existing unsupported-vocabulary diagnostic. Earlier applied
+migration bytes remain unchanged.
+
+Installed Studio DEV hash:
+`879dcb5a787f8b666e94d4c6a5d70e5d5aa0b624d5f6629979dddca71ece3be2`.
+Rollback rehearsal, application and ledger replay passed. Private receipts:
+`~/.athyper/instances/dev/workspace/native-bootstrap-ai-20261008/application.json`
+and `replay.json`. Receipt field `authorizationAndHeadsUnchanged` refers to the
+runner's row fingerprint; the documented INSERT privileges intentionally changed.
+Both source drafts remain revision 4, and all seven pending cutover checks remain.
+
+The whole-source test also exposed seven reader failures introduced by detail-renderer
+projection: badge and field bindings for the same field were incorrectly treated as
+ambiguous field placements. The shared projection now selects only field placements for
+detail renderers, leaving badges to their record-presentation contract. Genuine duplicate
+field bindings still reject; binding order does not select a renderer. This code correction
+is tested, not a claim that a replacement Entity release has been deployed.
+
+Executed verification:
+
+- `ATHYPER_PRODUCT_CREATION_POSTGRES=1 pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/product-draft-creation.postgres.test.ts`
+  — passed. Restricted application login, real admission transport and canonical policy
+  SQL; reduced member tables, not whole-graph or authenticated DEV qualification.
+  Positive inserts and negative entity/draft/actor/tenant/revision/column/mutation tests
+  pass, including a conflicting permissive policy and denied vocabulary/term writes.
+- `pnpm --filter @athyper/server-plane-studio-meta-entity-authoring test`
+  — 880 passed, 10 opt-in tests skipped; the PostgreSQL test above ran separately.
+- `pnpm --filter @athyper/server-platform-metadata test`
+  — 207 passed, two skipped. Both package typechecks passed.
+- `node tooling/scripts/testing/run-foundation-tests.mjs tooling/scripts/verification/native-bootstrap-privileges.test.mjs tooling/scripts/verification/apply-entity-native-resource-preparation.test.mjs`
+  — 29 passed.
+- `node server/db/scripts/checks/ddl/migration-layout.mjs`
+  — 171 classified files, 163 retained SQL files.
+
+**Handover remains incomplete.** The actual control API still lacks the complete native
+proposal and production compiler/provider/identity resource resolver configuration.
+Neither migration installation nor fixture compilation establishes that resolver. Actual
+bootstrap/replay, approved security/storage resources, deployed F6/F8/F9 and independent
+Entity review/publication/activation remain required. No replacement draft or Entity
+activation was produced by this correction; do not use the older active releases as
+acceptance evidence for the new path.
+
 ### Expanded detail component deployed and activated — 8 October
 
 `shared.entity.detail-text` version 2 is now published and active in Studio. Platform
