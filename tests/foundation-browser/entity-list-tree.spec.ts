@@ -164,6 +164,20 @@ test.describe("A1 grouped tree", () => {
     await expect(headingRow(page, "Blocked for posting")).toBeFocused();
   });
 
+  test("selection covers records loaded inside groups, and the header selects every loaded record", async ({ page }) => {
+    await mount(page, 1440, { exact: true }, "?groups=status,account_type");
+    await headingRow(page, "Asset").getByRole("button", { name: /Expand Asset/ }).click();
+    const nested = page.locator('tr[aria-level="3"]', { hasText: "1110" });
+    await nested.getByRole("checkbox").check();
+    await expect(page.locator(".a-entity-list__selection-bar")).toContainText("1 selected");
+    await expect(page.getByText("Selection includes loaded records only.")).toBeVisible();
+    // Under exact counts the page itself has no rows; the header selects what is loaded.
+    await page.getByRole("checkbox", { name: "Select loaded records" }).check();
+    const loaded = await page.locator('tr[aria-level="3"]').count();
+    expect(loaded).toBeGreaterThan(1);
+    await expect(page.locator(".a-entity-list__selection-bar")).toContainText(`${loaded} selected`);
+  });
+
   test("the Group dialog offers up to three levels from groupable fields", async ({ page }) => {
     await mount(page, 1440, { exact: true });
     await page.getByRole("button", { name: "Controls", exact: true }).click();
@@ -264,9 +278,20 @@ test.describe("B1 Tree layout", () => {
     await expect(node(page, "1113")).toHaveAttribute("aria-level", "5");
     for (const code of ["1000", "1100", "1110", "1111"]) await expect(node(page, code)).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByRole("navigation", { name: "Path" }).locator("[aria-current=location]")).toHaveText("1113 USD collection account");
-    // Applied once: the location drops the link.
-    await expect.poll(() => page.url()).not.toContain("tree.node");
+    // The link stays in the location; switching layout drops it.
+    expect(page.url()).toContain(`tree.node=${idOf(5)}`);
     expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+    await page.reload();
+    await page.evaluate(value => Object.assign(window, { treeFixture: value }), { tree: true });
+    await page.addStyleTag({ content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}" });
+    await page.addScriptTag({ content: script });
+    await expect(node(page, "1113")).toBeFocused();
+    await page.getByRole("button", { name: "Controls", exact: true }).click();
+    await page.getByRole("menuitem", { name: /^Display settings/ }).click();
+    await page.getByRole("dialog").getByRole("radiogroup", { name: "Layout" }).getByRole("radio", { name: "Table" }).check();
+    await page.getByRole("button", { name: "Save settings" }).click();
+    await expect(page.getByRole("treegrid")).toHaveCount(0);
+    await expect.poll(() => page.url()).not.toContain("tree.node");
   });
 
   test("a deep link deeper than the maximum depth explains itself", async ({ page }) => {

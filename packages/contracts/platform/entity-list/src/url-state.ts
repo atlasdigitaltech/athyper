@@ -260,7 +260,8 @@ export function encodeListLocationState(
       parameters.set("gantt.zoom", normalized.gantt.zoom);
   }
   if (normalized.ganttAnchor) parameters.set("gantt", normalized.ganttAnchor);
-  if (normalized.treeNode) parameters.set("tree.node", normalized.treeNode);
+  if (normalized.treeNode && normalized.mode === "tree")
+    parameters.set("tree.node", normalized.treeNode);
   if (normalized.board && base.board) {
     if (normalized.board.laneField !== base.board.laneField)
       parameters.set("lane", normalized.board.laneField);

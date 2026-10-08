@@ -993,7 +993,8 @@ function parseState(
     ...(rules.gantt && isListDateAnchor(record.ganttAnchor)
       ? { ganttAnchor: record.ganttAnchor }
       : {}),
-    ...(rules.tree && isListTreeNode(record.treeNode)
+    // A Tree deep link belongs to the Tree layout: another layout drops it.
+    ...(rules.tree && mode === "tree" && isListTreeNode(record.treeNode)
       ? { treeNode: record.treeNode }
       : {}),
   });

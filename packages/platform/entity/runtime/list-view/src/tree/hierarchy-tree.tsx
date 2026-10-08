@@ -84,10 +84,10 @@ export function useHierarchyTree(input: {
   readonly source: HierarchySource | undefined;
   /** The roots page, once current. */
   readonly rootsPage: EntityListResultV1 | undefined;
-  /** `tree.node` from the location. */
+  /** `tree.node` from the location. It stays in the location (a reload
+   * reveals the node again); it is revealed once per mount, so later search
+   * or filter changes do not reapply it. */
   readonly revealId?: string;
-  /** Called once a deep link has been handled, so the link is not reapplied. */
-  readonly onRevealed?: () => void;
 }): HierarchyTree | undefined {
   const { descriptor, source, rootsPage } = input;
   const tree = descriptor.surface.tree;
@@ -255,7 +255,6 @@ export function useHierarchyTree(input: {
     const finish = (result?: TreeNotice) => {
       if (at !== epoch.current) return;
       if (result) setNotice(result);
-      latest.current.onRevealed?.();
     };
     void (async () => {
       const state = source.query;

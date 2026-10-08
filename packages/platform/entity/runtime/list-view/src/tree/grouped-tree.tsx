@@ -45,6 +45,7 @@ interface TreeContext {
   readonly intl: EntityIntl;
   readonly command?: TreeCommand;
   readonly renderRecords: (rows: readonly EntityListRowV1[], level: number) => ReactNode;
+  readonly onGroupRows?: (key: string, rows: readonly EntityListRowV1[]) => void;
 }
 const Context = createContext<TreeContext | undefined>(undefined);
 
@@ -98,7 +99,7 @@ function choicesFor(field: ListFieldDescriptorV1, intl: EntityIntl) {
 /** Records grouped under headings for up to three grouping fields, each group
  * loading its own content (Tree blueprint section 7.1). Table renders rows
  * inside the list's table body; Cards renders nested sections. */
-export function GroupedTree({ descriptor, groups, levelOne, source, variant, columnCount, intl, command, renderRecords }: {
+export function GroupedTree({ descriptor, groups, levelOne, source, variant, columnCount, intl, command, renderRecords, onGroupRows }: {
   readonly descriptor: EntityListDescriptorV1;
   readonly groups: readonly string[];
   /** Level-1 buckets from the list's own groups-only page, under exact counts. */
@@ -109,10 +110,13 @@ export function GroupedTree({ descriptor, groups, levelOne, source, variant, col
   readonly intl: EntityIntl;
   readonly command?: TreeCommand;
   readonly renderRecords: (rows: readonly EntityListRowV1[], level: number) => ReactNode;
+  /** Each last-level group's loaded records (empty when it unmounts), so
+   * selection can cover every loaded record. Must be stable. */
+  readonly onGroupRows?: (key: string, rows: readonly EntityListRowV1[]) => void;
 }) {
   const fields = groups.map((key) => descriptor.fields.find((field) => field.key === key)).filter((field): field is ListFieldDescriptorV1 => Boolean(field));
   if (!fields.length) return null;
-  const ctx: TreeContext = { descriptor, fields, source, variant, columnCount, intl, ...(command ? { command } : {}), renderRecords };
+  const ctx: TreeContext = { descriptor, fields, source, variant, columnCount, intl, ...(command ? { command } : {}), renderRecords, ...(onGroupRows ? { onGroupRows } : {}) };
   const headings = groupHeadings(fields[0]!, choicesFor(fields[0]!, intl), source.exact ? (levelOne ?? []) : undefined);
   return (
     <Context.Provider value={ctx}>
@@ -168,6 +172,12 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     scope: source.scope,
     refreshKey: source.refreshKey,
   });
+  const reportRows = ctx.onGroupRows;
+  useEffect(() => {
+    if (!reportRows || !last) return;
+    reportRows(key, records.rows);
+    return () => reportRows(key, []);
+  }, [reportRows, last, key, records.rows]);
   const count = source.exact && heading.count !== undefined ? heading.count : undefined;
   const shown = visible && expanded;
   let children: ReactNode = null;

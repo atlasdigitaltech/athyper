@@ -709,6 +709,45 @@ describe("safe entity list service", () => {
     expect(uncounted.groups).toBeUndefined();
   });
 
+  it("emits tree row fields only on hierarchy responses (Tree blueprint section 5.3)", async () => {
+    const tree: EntityRuntimeDescriptor = {
+      ...descriptor,
+      fields: [
+        ...descriptor.fields,
+        {
+          key: "parent",
+          storagePath: "parent_uuid",
+          type: "reference",
+          required: false,
+          writableOn: [],
+          filterable: true,
+        },
+      ],
+      hierarchy: { parentField: "parent", maxDepth: 5 },
+    };
+    const lists = createTestListService({
+      metadata: { getEntityDescriptor: async () => tree },
+      descriptor: tree,
+      authorizer: allowReadOnly(),
+      rows: [
+        { partner_uuid: "p-1", tenant_id: context.tenantId, partner_code: "1000", display_name: "Root", parent_uuid: null, row_version: 1 },
+        { partner_uuid: "p-2", tenant_id: context.tenantId, partner_code: "1100", display_name: "Child", parent_uuid: "p-1", row_version: 1 },
+        { partner_uuid: "p-3", tenant_id: context.tenantId, partner_code: "1200", display_name: "Orphan", parent_uuid: "p-hidden", row_version: 1 },
+      ],
+    });
+    const request = { context, entityCode: tree.entityCode, sort: [{ field: "code", direction: "asc" as const }] };
+    const flat = await lists.list(request);
+    expect(flat.rows).toHaveLength(3);
+    for (const row of flat.rows) {
+      expect(row).not.toHaveProperty("hasChildren");
+      expect(row).not.toHaveProperty("parentOutsideView");
+    }
+    const roots = await lists.list({ ...request, filters: [{ field: "parent", operator: "is_null" }], hierarchy: "nodes" });
+    expect(roots.rows.map((row) => [row.values["code"], row.hasChildren, "parentOutsideView" in row])).toEqual([["1000", true, false]]);
+    const orphans = await lists.list({ ...request, hierarchy: "orphans" });
+    expect(orphans.rows.map((row) => [row.values["code"], row.hasChildren, row.parentOutsideView])).toEqual([["1200", false, true]]);
+  });
+
   it("offers a field for grouping only when it is bounded by class", async () => {
     const field = (key: string, type: string, extra: Record<string, unknown> = {}) => ({
       key, storagePath: key, type, required: false, writableOn: [], filterable: true, list: { groupable: true }, ...extra,

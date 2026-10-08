@@ -919,7 +919,9 @@ function EntityCollectionRuntime({
     { entityCode: string; pathname: string } | undefined
   >(undefined);
   const [loadedAuthorityKey, setLoadedAuthorityKey] = useState<string>();
-  const [treeRows, setTreeRows] = useState<readonly EntityListRowV1[]>([]);
+  const [loadedRows, setLoadedRows] = useState<readonly EntityListRowV1[]>(
+    [],
+  );
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -1259,6 +1261,9 @@ function EntityCollectionRuntime({
               : config.display.defaults.layout,
           };
         }
+        // A Tree deep link belongs to the Tree layout: switching away drops it.
+        if (next.treeNode && next.mode !== "tree")
+          next = { ...next, treeNode: undefined };
         setState(next);
         if (!embedding) writeLocation(next, descriptor, history);
         embedding?.onStateChange?.(next);
@@ -1579,10 +1584,11 @@ function EntityCollectionRuntime({
     ? embedding.options.mode === "choose" &&
       embedding.selectionAllowed !== false
     : true;
-  // Tree rows load outside the page; selection covers every loaded record.
+  // Tree nodes and grouped records load outside the page; selection covers
+  // every loaded record.
   const selectedRows = [
     ...new Map(
-      [...(page?.rows ?? []), ...(state?.mode === "tree" ? treeRows : [])].map(
+      [...(page?.rows ?? []), ...loadedRows].map(
         (row) => [row.id, row],
       ),
     ).values(),
@@ -1945,10 +1951,7 @@ function EntityCollectionRuntime({
                   }}
                   pageCurrent={resultsCurrent}
                   revealId={state.treeNode}
-                  onRevealed={() =>
-                    update({ ...state, treeNode: undefined }, "replace")
-                  }
-                  onTreeRows={setTreeRows}
+                  onLoadedRows={setLoadedRows}
                   query={(pageState ?? state).query}
                   filtered={(pageState?.filters ?? state.filters).length > 0}
                   loading={loading || (!error && !resultsCurrent)}
@@ -4376,8 +4379,7 @@ function EntityRows({
   groupedSource,
   pageCurrent = true,
   revealId,
-  onRevealed,
-  onTreeRows,
+  onLoadedRows,
 }: {
   readonly emptyContent?: EntityDirectoryEmbedding["emptyContent"];
   readonly emptyAction?: React.ReactNode;
@@ -4410,11 +4412,10 @@ function EntityRows({
   readonly groupedSource?: GroupedTreeSource;
   /** Whether `page` answers the current state (the Tree's roots arrive with it). */
   readonly pageCurrent?: boolean;
-  /** Tree deep link (`tree.node`) and its completion. */
+  /** Tree deep link (`tree.node`). */
   readonly revealId?: string;
-  readonly onRevealed?: () => void;
-  /** The records the Tree has loaded, for selection. */
-  readonly onTreeRows?: (rows: readonly EntityListRowV1[]) => void;
+  /** Records loaded outside the page (Tree nodes, grouped records), for selection. */
+  readonly onLoadedRows?: (rows: readonly EntityListRowV1[]) => void;
 }) {
   // Layouts with their own grouping (Tree) keep a saved group for Table and Cards.
   const ownGrouping = listModeTraits(mode).ownGrouping;
@@ -4425,12 +4426,39 @@ function EntityRows({
     source: mode === "tree" ? groupedSource : undefined,
     rootsPage: pageCurrent ? page : undefined,
     revealId,
-    onRevealed,
   });
-  const treeLoadedRows = hierarchy?.loadedRows;
+  // Grouped records load per group, outside the page.
+  const [groupRows, setGroupRows] = useState<
+    ReadonlyMap<string, readonly EntityListRowV1[]>
+  >(() => new Map());
+  const reportGroupRows = useCallback(
+    (key: string, rows: readonly EntityListRowV1[]) =>
+      setGroupRows((current) => {
+        if ((current.get(key) ?? []) === rows || (!rows.length && !current.has(key)))
+          return current;
+        const next = new Map(current);
+        if (rows.length) next.set(key, rows);
+        else next.delete(key);
+        return next;
+      }),
+    [],
+  );
+  const groupLoadedRows = useMemo(
+    () => [
+      ...new Map(
+        [...groupRows.values()].flat().map((row) => [row.id, row]),
+      ).values(),
+    ],
+    [groupRows],
+  );
+  const loadedRows = hierarchy
+    ? hierarchy.loadedRows
+    : grouped
+      ? groupLoadedRows
+      : undefined;
   useEffect(() => {
-    onTreeRows?.(treeLoadedRows ?? []);
-  }, [treeLoadedRows, onTreeRows]);
+    onLoadedRows?.(loadedRows ?? []);
+  }, [loadedRows, onLoadedRows]);
   const [treeCommand, setTreeCommand] = useState<TreeCommand>();
   const sendTreeCommand = (
     command:
@@ -4538,8 +4566,9 @@ function EntityRows({
     else next.delete(id);
     onSelectionChange(next);
   };
-  // In Tree, selection covers the records loaded so far (Tree blueprint section 8).
-  const selectableRows = hierarchy ? hierarchy.loadedRows : page.rows;
+  // In Tree and Group by, selection covers the records loaded so far (Tree
+  // blueprint section 8): under exact counts a grouped page has no rows.
+  const selectableRows = loadedRows ?? page.rows;
   const pageSelected =
     selectableRows.length > 0 &&
     selectableRows.every((row) => selectedIds.has(row.id));
@@ -4709,6 +4738,11 @@ function EntityRows({
           {intl.message("list.group.uncounted")}
         </p>
       )}
+      {selectedIds.size ? (
+        <p className="a-entity-tree__caption">
+          {intl.message("list.tree.selectionLoaded")}
+        </p>
+      ) : null}
     </div>
   ) : null;
   if (rendererKind === "cards" && grouped)
@@ -4725,6 +4759,7 @@ function EntityRows({
           intl={intl}
           command={treeCommand}
           renderRecords={(rows) => cards(rows, 3)}
+          onGroupRows={reportGroupRows}
         />
       </div>
     );
@@ -4914,7 +4949,9 @@ function EntityRows({
                 ) : (
                   <Checkbox
                     disabled={singleSelection}
-                    aria-label={intl.message("list.row.selectPage")}
+                    aria-label={intl.message(
+                      loadedRows ? "list.row.selectLoaded" : "list.row.selectPage",
+                    )}
                     checked={pageSelected}
                     onChange={(event) => {
                       const next = new Set(singleSelection ? [] : selectedIds);
@@ -5037,6 +5074,7 @@ function EntityRows({
               intl={intl}
               command={treeCommand}
               renderRecords={(rows, level) => tableRows(rows, level)}
+              onGroupRows={reportGroupRows}
             />
           ) : group
             ? pageGroups.flatMap((item) => [

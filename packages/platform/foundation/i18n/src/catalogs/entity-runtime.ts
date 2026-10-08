@@ -1412,6 +1412,7 @@ export const entityRuntimeMessages = {
     "تحديد {record}",
   ],
   "list.row.selectAny": ["Select record", "Pilih rekod", "تحديد سجل"],
+  "list.row.selectLoaded": ["Select loaded records", "Pilih rekod yang dimuatkan", "تحديد السجلات المحمّلة"],
   "list.row.selectPage": [
     "Select current page",
     "Pilih halaman semasa",

@@ -139,4 +139,9 @@ it("computes child existence and orphans inside the visible set with aliased cor
   statements.length = 0;
   await repository.list({ ...input, filters: [], hierarchy: { mode: "orphans", parentField: "parent" } });
   expect(statements[0]).toContain('("__tree_row"."parent_id" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "app"."gl_account" AS "__tree_parent" WHERE "__tree_parent"."id" = "__tree_row"."parent_id" AND "tenant_id" =');
+  // An ordinary request computes no child existence and returns no child flags.
+  statements.length = 0;
+  const flat = await repository.list(input);
+  expect(flat.hasChildren).toBeUndefined();
+  expect(statements.join("\n")).not.toContain("__tree");
 });
