@@ -1,0 +1,10 @@
+# Opt-in only for a conformance-reviewed, pinned renderer deployment.
+# This supplies implementation evidence, never human resource approval.
+services:
+  control-api:
+    environment:
+      PUBLICATION_COMPONENT_DEPLOYMENT_ROOT: /run/component-deployment
+      PUBLICATION_COMPONENT_DEPLOYMENT_MANIFEST: component-manifest.json
+      PUBLICATION_COMPONENT_DEPLOYMENT_HASH: ${ATHYPER_COMPONENT_DEPLOYMENT_HASH:?set exact deployment manifest hash}
+    volumes:
+      - ${ATHYPER_COMPONENT_DEPLOYMENT_ROOT:?set verified standalone deployment root}:/run/component-deployment:ro

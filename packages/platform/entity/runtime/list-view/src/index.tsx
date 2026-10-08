@@ -1,13 +1,24 @@
 "use client";
+export { renderFieldValue } from "./field-value";
 import { entityReferenceChoicesOperation } from "@athyper/platform-api-client";
 import { FilterReferenceLoader } from "./filter-editor";
-import { EntityLink, EntityNavigationProvider, useEntityNavigate } from "./entity-navigation";
+import {
+  EntityLink,
+  EntityNavigationProvider,
+  useEntityNavigate,
+} from "./entity-navigation";
 import { groupedRows } from "./grouped-rows";
 import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
 import { entityLocationSearch } from "./entity-location";
 import { retryRequiresDescriptor } from "./retry-policy";
-import { CollectionDensitySettings, CollectionDraftFooter, CollectionSortEditor, CollectionViewsManager, FilterOperatorMenu } from "@athyper/platform-collection-controls";
+import {
+  CollectionDensitySettings,
+  CollectionDraftFooter,
+  CollectionSortEditor,
+  CollectionViewsManager,
+  FilterOperatorMenu,
+} from "@athyper/platform-collection-controls";
 import { isListViewAllowed, constrainEmbeddedViewState } from "./view-policy";
 import { lookupInitialState } from "./lookup-directory";
 import {
@@ -66,11 +77,18 @@ import {
   listNotice,
   type ListNotice,
 } from "./list-notice";
-import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
+import {
+  localizeEntityErrorModel,
+  localizedEntityError,
+} from "@athyper/platform-i18n/entity-errors";
 import { formatFieldValue } from "./field-format";
 import { highlightText, renderFieldValue } from "./field-value";
 import { EntityRecordCard } from "./record-card";
-import { LIST_MODE_RENDERER_MISSING, listRendererKind, withRenderableModes } from "./mode-renderers";
+import {
+  LIST_MODE_RENDERER_MISSING,
+  listRendererKind,
+  withRenderableModes,
+} from "./mode-renderers";
 import { boardSummaryState } from "./board/board-model";
 import { EntityBoard } from "./board/board-view";
 import {
@@ -319,21 +337,48 @@ export interface EntityDirectoryEmbedding {
 export interface EntityListSectionOptions {
   /** The section's create action, shown inside the empty state while there are no rows. */
   readonly emptyAction?: ReactNode;
-  readonly onSummary?: (summary: Readonly<{ total?: number; constrained: boolean }>) => void;
+  readonly onSummary?: (
+    summary: Readonly<{ total?: number; constrained: boolean }>,
+  ) => void;
 }
 /** The records a page stands for, when known: the server total, or the rows of a lone first page. */
-function knownTotal(page: EntityListResultV1 | undefined, state: ListLocationStateV1): number | undefined {
+function knownTotal(
+  page: EntityListResultV1 | undefined,
+  state: ListLocationStateV1,
+): number | undefined {
   if (!page) return undefined;
   if (typeof page.pagination.total === "number") return page.pagination.total;
-  return !page.pagination.hasNext && !state.cursor && !state.pageIndex ? page.rows.length : undefined;
+  return !page.pagination.hasNext && !state.cursor && !state.pageIndex
+    ? page.rows.length
+    : undefined;
 }
 function constrainedList(state: ListLocationStateV1): boolean {
-  return state.filters.length > 0 || Boolean(state.query?.trim()) || Boolean(state.savedViewId);
+  return (
+    state.filters.length > 0 ||
+    Boolean(state.query?.trim()) ||
+    Boolean(state.savedViewId)
+  );
 }
-function SectionSummary({ section, page, state }: { readonly section?: EntityListSectionOptions | undefined; readonly page?: EntityListResultV1 | undefined; readonly state: ListLocationStateV1 }) {
-  const total = knownTotal(page, state), constrained = constrainedList(state), report = section?.onSummary;
+function SectionSummary({
+  section,
+  page,
+  state,
+}: {
+  readonly section?: EntityListSectionOptions | undefined;
+  readonly page?: EntityListResultV1 | undefined;
+  readonly state: ListLocationStateV1;
+}) {
+  const total = knownTotal(page, state),
+    constrained = constrainedList(state),
+    report = section?.onSummary;
   useEffect(() => {
-    if (report && page) report(Object.freeze({ ...(total === undefined ? {} : { total }), constrained }));
+    if (report && page)
+      report(
+        Object.freeze({
+          ...(total === undefined ? {} : { total }),
+          constrained,
+        }),
+      );
   }, [report, page, total, constrained]);
   return null;
 }
@@ -402,24 +447,32 @@ export function EntityListRuntime(props: EntityListRuntimeProps) {
   const effective = {
     ...props,
     scopeCoordinate:
-      !props.onScopeCoordinateChange && selection?.entityCode === props.entityCode && selection.parentScope === parentScope
+      !props.onScopeCoordinateChange &&
+      selection?.entityCode === props.entityCode &&
+      selection.parentScope === parentScope
         ? selection.value
         : props.scopeCoordinate,
-    onScopeCoordinateChange: (value: EntityListScopeCoordinateV1 | undefined) =>
-      props.onScopeCoordinateChange ? props.onScopeCoordinateChange(value) : setSelection({ entityCode: props.entityCode, value, parentScope }),
+    onScopeCoordinateChange: (
+      value: EntityListScopeCoordinateV1 | undefined,
+    ) =>
+      props.onScopeCoordinateChange
+        ? props.onScopeCoordinateChange(value)
+        : setSelection({ entityCode: props.entityCode, value, parentScope }),
   };
   return (
-    <EntityNavigationProvider navigate={props.onNavigate}><SurfaceErrorBoundary
-      resetKey={props.entityCode}
-      message={intl.message("error.unavailable")}
-      retryLabel={intl.message("entity.retry")}
-    >
-      {props.applicationOnly ? (
-        <EntityApplicationRuntime {...effective} />
-      ) : (
-        <EntityCollectionRuntime {...effective} />
-      )}
-    </SurfaceErrorBoundary></EntityNavigationProvider>
+    <EntityNavigationProvider navigate={props.onNavigate}>
+      <SurfaceErrorBoundary
+        resetKey={props.entityCode}
+        message={intl.message("error.unavailable")}
+        retryLabel={intl.message("entity.retry")}
+      >
+        {props.applicationOnly ? (
+          <EntityApplicationRuntime {...effective} />
+        ) : (
+          <EntityCollectionRuntime {...effective} />
+        )}
+      </SurfaceErrorBoundary>
+    </EntityNavigationProvider>
   );
 }
 function EntityApplicationRuntime(props: EntityListRuntimeProps) {
@@ -739,7 +792,8 @@ function EntityCollectionRuntime({
           cursor: state.cursor ?? null,
           pageSize: state.pageSize ?? null,
           // Board's summary query groups by the lane field instead.
-          boardLaneField: state.mode === "board" ? (state.board?.laneField ?? null) : null,
+          boardLaneField:
+            state.mode === "board" ? (state.board?.laneField ?? null) : null,
         }
       : null,
   );
@@ -756,27 +810,48 @@ function EntityCollectionRuntime({
     descriptor?.scope.fingerprint,
     descriptor?.revision.descriptorHash,
   ]);
-  const loadReferenceChoices = useCallback<NonNullable<React.ContextType<typeof FilterReferenceLoader>>>(async (field, input) => {
-    const expectedScope = activeChoiceScope.current;
-    const reference = descriptor?.fields.find(item => item.key === field)?.referenceLookup;
-    const dependencies = Object.fromEntries((reference?.dependencies ?? []).flatMap(key => {
-      const value = state?.filters.find(filter => filter.field === key && filter.operator === "eq")?.value;
-      return typeof value === "string" && value ? [[key, value]] : [];
-    }));
-    const result = await client.request(entityReferenceChoicesOperation, {
-      params: { entityCode, fieldKey: field },
-      query: {
-        ...(input.query ? { query: input.query } : {}),
-        ...(input.cursor ? { cursor: input.cursor } : {}),
-        ...(input.value ? { value: input.value } : {}),
-        ...(Object.keys(dependencies).length ? { dependencies: JSON.stringify(dependencies) } : {}),
-      },
-      signal: input.signal,
-    });
-    if (input.signal.aborted || expectedScope !== activeChoiceScope.current)
-      throw new DOMException("Reference context changed", "AbortError");
-    return result;
-  }, [descriptor?.fields, descriptor?.scope.fingerprint, descriptor?.revision.descriptorHash, state?.filters, client, entityCode, authorityKey]);
+  const loadReferenceChoices = useCallback<
+    NonNullable<React.ContextType<typeof FilterReferenceLoader>>
+  >(
+    async (field, input) => {
+      const expectedScope = activeChoiceScope.current;
+      const reference = descriptor?.fields.find(
+        (item) => item.key === field,
+      )?.referenceLookup;
+      const dependencies = Object.fromEntries(
+        (reference?.dependencies ?? []).flatMap((key) => {
+          const value = state?.filters.find(
+            (filter) => filter.field === key && filter.operator === "eq",
+          )?.value;
+          return typeof value === "string" && value ? [[key, value]] : [];
+        }),
+      );
+      const result = await client.request(entityReferenceChoicesOperation, {
+        params: { entityCode, fieldKey: field },
+        query: {
+          ...(input.query ? { query: input.query } : {}),
+          ...(input.cursor ? { cursor: input.cursor } : {}),
+          ...(input.value ? { value: input.value } : {}),
+          ...(Object.keys(dependencies).length
+            ? { dependencies: JSON.stringify(dependencies) }
+            : {}),
+        },
+        signal: input.signal,
+      });
+      if (input.signal.aborted || expectedScope !== activeChoiceScope.current)
+        throw new DOMException("Reference context changed", "AbortError");
+      return result;
+    },
+    [
+      descriptor?.fields,
+      descriptor?.scope.fingerprint,
+      descriptor?.revision.descriptorHash,
+      state?.filters,
+      client,
+      entityCode,
+      authorityKey,
+    ],
+  );
   useEffect(
     () => () => {
       for (const controller of filterChoiceControllers.current)
@@ -826,17 +901,26 @@ function EntityCollectionRuntime({
     if (scopePending) return () => controller.abort();
     previousAuthorityKey.current = authorityKey;
     // Let immediately superseded effects cancel before transport dispatch.
-    Promise.resolve().then(() => {
-      controller.signal.throwIfAborted();
-      return client.request(entityListDescriptorOperation, {
-        params: { entityCode },
-        query: { ...entityListScopeQuery(scopeCoordinate), includeViews: "true", ...(viewNamespace ? { surface: viewNamespace } : {}) },
-        signal: controller.signal,
-      });
-    })
+    Promise.resolve()
+      .then(() => {
+        controller.signal.throwIfAborted();
+        return client.request(entityListDescriptorOperation, {
+          params: { entityCode },
+          query: {
+            ...entityListScopeQuery(scopeCoordinate),
+            includeViews: "true",
+            ...(viewNamespace ? { surface: viewNamespace } : {}),
+          },
+          signal: controller.signal,
+        });
+      })
       .then(async (raw) => {
         let next = viewNamespace ? { ...raw, viewNamespace } : raw;
-        if (next.serverViews && !next.viewCatalog && next.scope.status === "ready") {
+        if (
+          next.serverViews &&
+          !next.viewCatalog &&
+          next.scope.status === "ready"
+        ) {
           const viewCatalog = await client.request(entityViewsOperation, {
             params: { entityCode },
             query: {
@@ -923,9 +1007,15 @@ function EntityCollectionRuntime({
           nextState.savedViewId === "system"
         )
           setActionNotice(listNotice("list.notice.viewUnavailableSystem"));
-        else if (!embedding && requestedLayoutUnavailable(next, effectiveSearch))
+        else if (
+          !embedding &&
+          requestedLayoutUnavailable(next, effectiveSearch)
+        )
           setActionNotice(listNotice("list.notice.layoutUnavailable"));
-        else if (!embedding && requestedLaneFieldUnavailable(next, effectiveSearch))
+        else if (
+          !embedding &&
+          requestedLaneFieldUnavailable(next, effectiveSearch)
+        )
           setActionNotice(listNotice("list.board.laneFieldUnavailable"));
         const parameters = new URLSearchParams(effectiveSearch),
           preferences = readDisplayPreferences(
@@ -1002,7 +1092,11 @@ function EntityCollectionRuntime({
     client
       .request(entityListOperation, {
         params: { entityCode },
-        query: entityListQuery(boardSummaryState(state, descriptor), descriptor, scopeCoordinate),
+        query: entityListQuery(
+          boardSummaryState(state, descriptor),
+          descriptor,
+          scopeCoordinate,
+        ),
         signal: controller.signal,
       })
       .then((next) => {
@@ -1022,7 +1116,11 @@ function EntityCollectionRuntime({
       .catch((cause) => {
         if (!controller.signal.aborted) {
           const failure = asTransportError(cause);
-          if (retryRequiresDescriptor(failure)) { setPage(undefined); setPageState(undefined); setPageContextKey(undefined); }
+          if (retryRequiresDescriptor(failure)) {
+            setPage(undefined);
+            setPageState(undefined);
+            setPageContextKey(undefined);
+          }
           setError(failure);
         }
       })
@@ -1138,12 +1236,26 @@ function EntityCollectionRuntime({
           pageIndex: state.pageIndex ?? 0,
           cursor: state.cursor,
           standardViewKey: state.standardViewKey,
-          parentScope: scopeCoordinate?.parentEntityCode && scopeCoordinate.parentRecordId && scopeCoordinate.relationshipKey
-            ? { parentEntityCode: scopeCoordinate.parentEntityCode, parentRecordId: scopeCoordinate.parentRecordId, relationshipKey: scopeCoordinate.relationshipKey,
-                ...(scopeCoordinate.parentDescriptorHash ? {parentDescriptorHash: scopeCoordinate.parentDescriptorHash} : {}) }
-            : undefined,
+          parentScope:
+            scopeCoordinate?.parentEntityCode &&
+            scopeCoordinate.parentRecordId &&
+            scopeCoordinate.relationshipKey
+              ? {
+                  parentEntityCode: scopeCoordinate.parentEntityCode,
+                  parentRecordId: scopeCoordinate.parentRecordId,
+                  relationshipKey: scopeCoordinate.relationshipKey,
+                  ...(scopeCoordinate.parentDescriptorHash
+                    ? {
+                        parentDescriptorHash:
+                          scopeCoordinate.parentDescriptorHash,
+                      }
+                    : {}),
+                }
+              : undefined,
           directory:
-            !scopeCoordinate?.parentEntityCode && !descriptor.scope.workContext && scopeCoordinate
+            !scopeCoordinate?.parentEntityCode &&
+            !descriptor.scope.workContext &&
+            scopeCoordinate
               ? {
                   operatingOrganizationIds:
                     scopeCoordinate.operatingOrganizationIds ??
@@ -1183,15 +1295,26 @@ function EntityCollectionRuntime({
       ? resolveEntityText(descriptor.surface.header.description, locale)
       : undefined
     : descriptor?.surface.description;
-  const resultsCurrent = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`;
+  const resultsCurrent =
+    !loading &&
+    !error &&
+    pageContextKey === `${authorityKey}:${serverQueryKey}`;
   // Lists follow the app density (Utilities / profile) on the page root. They set
   // their own data-density only for an explicit override: a density saved for this
   // list on this device, a non-default ?density=, or a host-configured lookup.
   const densityOverride = useMemo(() => {
     if (!state || !descriptor) return undefined;
     if (embedding) return state.density;
-    const saved = readDisplayPreferences(descriptor.plane, entityDisplayPreferenceNamespace(descriptor))?.density;
-    return saved ?? (state.density !== descriptor.surface.defaultState.density ? state.density : undefined);
+    const saved = readDisplayPreferences(
+      descriptor.plane,
+      entityDisplayPreferenceNamespace(descriptor),
+    )?.density;
+    return (
+      saved ??
+      (state.density !== descriptor.surface.defaultState.density
+        ? state.density
+        : undefined)
+    );
   }, [state, descriptor, embedding]);
   useEffect(() => {
     const pending = pendingResultsReveal.current;
@@ -1238,7 +1361,12 @@ function EntityCollectionRuntime({
     ) : (
       <EntityNavigation sections={descriptor.navigation} />
     );
-  if (scopePending || !descriptor || loadedAuthorityKey !== authorityKey || loadedClient !== client)
+  if (
+    scopePending ||
+    !descriptor ||
+    loadedAuthorityKey !== authorityKey ||
+    loadedClient !== client
+  )
     return (
       <>
         {error ? scopeControl : null}
@@ -1455,305 +1583,353 @@ function EntityCollectionRuntime({
     }
   };
 
-
-
   return (
     <FilterReferenceLoader.Provider value={loadReferenceChoices}>
-    <FilterChoiceLoader.Provider
-      value={(field) => {
-        const expectedScope = activeChoiceScope.current;
-        const key = JSON.stringify([expectedScope, field]);
-        const existing = filterChoiceRequests.current.get(key);
-        if (existing) return existing;
-        const controller = new AbortController();
-        filterChoiceControllers.current.add(controller);
-        const request = client
-          .request(entityListDescriptorOperation, {
-            params: { entityCode },
-            query: {
-              ...entityListScopeQuery(scopeCoordinate),
-              filterChoiceField: field,
-            },
-            signal: controller.signal,
-          })
-          .then((result) => {
-            if (
-              controller.signal.aborted ||
-              expectedScope !== activeChoiceScope.current
-            )
-              return;
-            setDescriptor((current) =>
-              current &&
-              current.scope.fingerprint === result.scope.fingerprint &&
-              current.revision.descriptorHash === result.revision.descriptorHash
-                ? {
-                    ...current,
-                    fields: current.fields.map((item) =>
-                      item.key === field
-                        ? {
-                            ...item,
-                            filterOptions:
-                              result.fields.find(
-                                (candidate) => candidate.key === field,
-                              )?.filterOptions ?? [],
-                          }
-                        : item,
-                    ),
-                  }
-                : current,
-            );
-          })
-          .finally(() => {
-            filterChoiceControllers.current.delete(controller);
-            if (filterChoiceRequests.current.get(key) === request)
-              filterChoiceRequests.current.delete(key);
-          });
-        filterChoiceRequests.current.set(key, request);
-        return request;
-      }}
-    >
-      <PageFrame
-        width="wide"
-        className={`a-entity-list a-entity-list--${state.density}${embedding ? " a-entity-list--embedded" : ""}`}
-        data-density={densityOverride}
-      >
-        {!contentOnly ? (
-          <>
-            <PageHeader
-              className="a-entity-list__header"
-              level="collection"
-              title={title}
-              description={listHeaderInformation(description, recordCountText(entityIntl, availableCount))}
-              icon={<HeaderIcon />}
-              actions={headerActions}
-            />
-            <EntityNavigation
-              sections={descriptor.navigation}
-              currentSurfaceKey={descriptor.currentSurfaceKey}
-            />
-          </>
-        ) : null}
-        <div ref={panelRef} className="a-entity-list__panel" data-presentation={section ? "section" : undefined}>
-          <SectionSummary section={section} page={page} state={pageState ?? state} />
-          <ListChrome
-            toolbarAction={toolbarAction}
-            widthTier={widthTier}
-            embedding={embedding}
-            client={client}
-            scopeCoordinate={scopeCoordinate}
-            onCatalogChange={(viewCatalog) =>
-              setDescriptor((current) =>
-                current ? { ...current, viewCatalog } : current,
+      <FilterChoiceLoader.Provider
+        value={(field) => {
+          const expectedScope = activeChoiceScope.current;
+          const key = JSON.stringify([expectedScope, field]);
+          const existing = filterChoiceRequests.current.get(key);
+          if (existing) return existing;
+          const controller = new AbortController();
+          filterChoiceControllers.current.add(controller);
+          const request = client
+            .request(entityListDescriptorOperation, {
+              params: { entityCode },
+              query: {
+                ...entityListScopeQuery(scopeCoordinate),
+                filterChoiceField: field,
+              },
+              signal: controller.signal,
+            })
+            .then((result) => {
+              if (
+                controller.signal.aborted ||
+                expectedScope !== activeChoiceScope.current
               )
-            }
-            descriptor={descriptor}
-            state={state}
-            page={page}
-            scopeControl={scopeControl}
-            pageActions={pageActions}
-            loading={loading}
-            resultsCurrent={resultsCurrent}
-            actionNotice={actionNotice}
-            onActionNotice={setActionNotice}
-            onOpenDataOperations={() => { if (resultsCurrent) setDataOperationsLaunch("picker"); }}
-            onRefresh={() => setRefreshAttempt((value) => value + 1)}
-            onChange={resetAndUpdate}
-          />
-          {dataOperationsLaunch && resultsCurrent ? (
-            <DataOperationsControl
-              client={client}
-              descriptor={descriptor}
-              state={state}
-              page={page}
-              selectedRows={selectedRows}
-              scopeCoordinate={scopeCoordinate}
-              activeViewName={
-                readSavedViews(
-                  savedViewStorageKey(descriptor),
-                  descriptor,
-                ).find((view) => view.id === state.savedViewId)?.name ??
-                "Default view"
-              }
-              onStatus={(text) =>
-                setActionNotice(listNotice("list.notice.text", { text }))
-              }
-              open
-              launch={dataOperationsLaunch}
-              onOpenChange={(open) => {
-                if (!open) setDataOperationsLaunch(undefined);
-              }}
-            />
-          ) : null}
-          {error ? (
-            <ErrorState
-              error={error}
-              retry={retryResults}
-              compact={Boolean(page)}
-            />
-          ) : null}
-          {loading && !page ? (
-            <LoadingTable columns={fields.length} />
-          ) : page && state.mode === "board" && descriptor.surface.board && !embedding ? (
-            <EntityBoard
-              key={authorityKey}
-              client={client}
-              descriptor={descriptor}
-              state={state}
-              summary={page}
-              summaryCurrent={resultsCurrent && pageState?.mode === "board" && pageState.board?.laneField === state.board?.laneField}
-              scope={scopeCoordinate}
-              widthTier={widthTier}
-              fields={fields}
-              refreshKey={`${authorityKey}:${refreshAttempt}`}
-              recordHref={(row) => recordHref(descriptor, row)}
-              onOpenRecord={onOpenRecord}
-              renderActions={(row) => <RowMenu descriptor={descriptor} row={row} intl={entityIntl} />}
-              onBoardChange={(board) => update({ ...state, board }, "replace")}
-              onShowTable={() => resetAndUpdate({ mode: "table" }, "push")}
-            />
-          ) : page ? (
+                return;
+              setDescriptor((current) =>
+                current &&
+                current.scope.fingerprint === result.scope.fingerprint &&
+                current.revision.descriptorHash ===
+                  result.revision.descriptorHash
+                  ? {
+                      ...current,
+                      fields: current.fields.map((item) =>
+                        item.key === field
+                          ? {
+                              ...item,
+                              filterOptions:
+                                result.fields.find(
+                                  (candidate) => candidate.key === field,
+                                )?.filterOptions ?? [],
+                            }
+                          : item,
+                      ),
+                    }
+                  : current,
+              );
+            })
+            .finally(() => {
+              filterChoiceControllers.current.delete(controller);
+              if (filterChoiceRequests.current.get(key) === request)
+                filterChoiceRequests.current.delete(key);
+            });
+          filterChoiceRequests.current.set(key, request);
+          return request;
+        }}
+      >
+        <PageFrame
+          width="wide"
+          className={`a-entity-list a-entity-list--${state.density}${embedding ? " a-entity-list--embedded" : ""}`}
+          data-density={densityOverride}
+        >
+          {!contentOnly ? (
             <>
-              <EntityRows
-                key={`${authorityKey}:${state.group ?? ""}`}
-                descriptor={descriptor}
-                page={page}
-                fields={fields}
-                mode={state.mode}
-                widthTier={widthTier}
-                filters={pageState?.filters ?? state.filters}
-                onFilters={(field, filters) => resetAndUpdate({ filters: [...state.filters.filter(item => item.field !== field), ...filters] }, "push")}
-                sort={pageState?.sort ?? state.sort}
-                group={(pageState ?? state).group}
-                query={(pageState ?? state).query}
-                filtered={(pageState?.filters ?? state.filters).length > 0}
-                loading={loading || (!error && !resultsCurrent)}
-                emptyContent={embedding?.emptyContent}
-                emptyAction={section?.emptyAction ?? embedding?.emptyAction}
-                recordLink={embedding?.recordHref}
-                onOpenRecord={onOpenRecord}
-                singleSelection={embedding?.options.selectionMode === "single"}
-                chooser={Boolean(embedding)}
-                selectionEnabled={selectionEnabled && resultsCurrent}
-                selectedIds={
-                  embedding
-                    ? new Set(embedding.selectedRows.map((row) => row.id))
-                    : selectedIds
-                }
-                bookmarkedIds={bookmarkedIds}
-                pendingBookmarkIds={resultsCurrent ? pendingBookmarkIds : new Set(page.rows.map(row => row.id))}
-                onBookmark={(row, favourite) =>
-                  !embedding &&
-                  void mutateBookmarks(favourite ? "add" : "remove", [row])
-                }
-                onSelectionChange={(next) => {
-                  if (embedding) {
-                    const candidates = new Map(
-                      [...embedding.selectedRows, ...(page?.rows ?? [])].map(
-                        (row) => [row.id, row],
-                      ),
-                    );
-                    embedding.onSelectionChange(
-                      [...next].flatMap((id) =>
-                        candidates.has(id) ? [candidates.get(id)!] : [],
-                      ),
-                    );
-                  } else setSelectedIds(next);
-                  setAllMatchingSelected(false);
-                }}
-                onSort={(field, additive) =>
-                  resetAndUpdate(
-                    {
-                      sort: nextSort(
-                        state.sort,
-                        field,
-                        descriptor.limits.maxSortLevels,
-                        additive,
-                      ),
-                    },
-                    "push",
-                  )
-                }
+              <PageHeader
+                className="a-entity-list__header"
+                level="collection"
+                title={title}
+                description={listHeaderInformation(
+                  description,
+                  recordCountText(entityIntl, availableCount),
+                )}
+                icon={<HeaderIcon />}
+                actions={headerActions}
+              />
+              <EntityNavigation
+                sections={descriptor.navigation}
+                currentSurfaceKey={descriptor.currentSurfaceKey}
               />
             </>
           ) : null}
-          {page && state.mode !== "board" ? (
-            <EntityListPagination
-              hideSinglePageControls={Boolean(section)}
-              descriptor={descriptor}
-              state={pageState ?? state}
+          <div
+            ref={panelRef}
+            className="a-entity-list__panel"
+            data-presentation={section ? "section" : undefined}
+          >
+            <SectionSummary
+              section={section}
               page={page}
-              loading={!resultsCurrent}
-              onFirst={() => resetAndUpdate({}, "push")}
-              cursorHistory={cursorHistory}
-              onPrevious={() => {
-                if (!resultsCurrent) return;
-                pendingResultsReveal.current = resultSetKey;
-                const cursor = cursorHistory.at(-1);
-                setCursorHistory(cursorHistory.slice(0, -1));
-                setSelectedIds(new Set());
-                setAllMatchingSelected(false);
-                update(
-                  {
-                    ...state,
-                    cursor,
-                    pageIndex: Math.max(
-                      0,
-                      (state.pageIndex ?? cursorHistory.length) - 1,
-                    ),
-                  },
-                  "push",
-                );
-              }}
-              onNext={() => {
-                if (!resultsCurrent) return;
-                pendingResultsReveal.current = resultSetKey;
-                setCursorHistory([...cursorHistory, state.cursor]);
-                setSelectedIds(new Set());
-                setAllMatchingSelected(false);
-                update(
-                  {
-                    ...state,
-                    cursor: page.pagination.nextCursor,
-                    pageIndex: (state.pageIndex ?? 0) + 1,
-                  },
-                  "push",
-                );
-              }}
-              onPageSize={(pageSize) => resetAndUpdate({ pageSize }, "push")}
+              state={pageState ?? state}
             />
-          ) : loading ? (
-            <LoadingFooter />
-          ) : null}
-        </div>
-        {!embedding && resultsCurrent && selectionEnabled && selectedIds.size ? (
-          <SelectionBar
-            descriptor={descriptor}
-            page={page}
-            selectedRows={selectedRows}
-            bookmarkedIds={bookmarkedIds}
-            selectedCount={selectedIds.size}
-            allMatching={allMatchingSelected}
-            onBookmarks={(operation) =>
-              void mutateBookmarks(operation, selectedRows)
-            }
-            onSelectAllMatching={() => setAllMatchingSelected(true)}
-            onExport={
-              !state.standardViewKey &&
-              descriptor.dataOperations?.export.selected.state === "enabled"
-                ? () =>
-                    setDataOperationsLaunch(
-                      allMatchingSelected ? "filtered" : "selected",
+            <ListChrome
+              toolbarAction={toolbarAction}
+              widthTier={widthTier}
+              embedding={embedding}
+              client={client}
+              scopeCoordinate={scopeCoordinate}
+              onCatalogChange={(viewCatalog) =>
+                setDescriptor((current) =>
+                  current ? { ...current, viewCatalog } : current,
+                )
+              }
+              descriptor={descriptor}
+              state={state}
+              page={page}
+              scopeControl={scopeControl}
+              pageActions={pageActions}
+              loading={loading}
+              resultsCurrent={resultsCurrent}
+              actionNotice={actionNotice}
+              onActionNotice={setActionNotice}
+              onOpenDataOperations={() => {
+                if (resultsCurrent) setDataOperationsLaunch("picker");
+              }}
+              onRefresh={() => setRefreshAttempt((value) => value + 1)}
+              onChange={resetAndUpdate}
+            />
+            {dataOperationsLaunch && resultsCurrent ? (
+              <DataOperationsControl
+                client={client}
+                descriptor={descriptor}
+                state={state}
+                page={page}
+                selectedRows={selectedRows}
+                scopeCoordinate={scopeCoordinate}
+                activeViewName={
+                  readSavedViews(
+                    savedViewStorageKey(descriptor),
+                    descriptor,
+                  ).find((view) => view.id === state.savedViewId)?.name ??
+                  "Default view"
+                }
+                onStatus={(text) =>
+                  setActionNotice(listNotice("list.notice.text", { text }))
+                }
+                open
+                launch={dataOperationsLaunch}
+                onOpenChange={(open) => {
+                  if (!open) setDataOperationsLaunch(undefined);
+                }}
+              />
+            ) : null}
+            {error ? (
+              <ErrorState
+                error={error}
+                retry={retryResults}
+                compact={Boolean(page)}
+              />
+            ) : null}
+            {loading && !page ? (
+              <LoadingTable columns={fields.length} />
+            ) : page &&
+              state.mode === "board" &&
+              descriptor.surface.board &&
+              !embedding ? (
+              <EntityBoard
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                state={state}
+                summary={page}
+                summaryCurrent={
+                  resultsCurrent &&
+                  pageState?.mode === "board" &&
+                  pageState.board?.laneField === state.board?.laneField
+                }
+                scope={scopeCoordinate}
+                widthTier={widthTier}
+                fields={fields}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                recordHref={(row) => recordHref(descriptor, row)}
+                onOpenRecord={onOpenRecord}
+                renderActions={(row) => (
+                  <RowMenu
+                    descriptor={descriptor}
+                    row={row}
+                    intl={entityIntl}
+                  />
+                )}
+                onBoardChange={(board) =>
+                  update({ ...state, board }, "replace")
+                }
+                onShowTable={() => resetAndUpdate({ mode: "table" }, "push")}
+              />
+            ) : page ? (
+              <>
+                <EntityRows
+                  key={`${authorityKey}:${state.group ?? ""}`}
+                  descriptor={descriptor}
+                  page={page}
+                  fields={fields}
+                  mode={state.mode}
+                  widthTier={widthTier}
+                  filters={pageState?.filters ?? state.filters}
+                  onFilters={(field, filters) =>
+                    resetAndUpdate(
+                      {
+                        filters: [
+                          ...state.filters.filter(
+                            (item) => item.field !== field,
+                          ),
+                          ...filters,
+                        ],
+                      },
+                      "push",
                     )
-                : undefined
-            }
-            onClear={() => {
-              setSelectedIds(new Set());
-              setAllMatchingSelected(false);
-            }}
-          />
-        ) : null}
-      </PageFrame>
-    </FilterChoiceLoader.Provider>
+                  }
+                  sort={pageState?.sort ?? state.sort}
+                  group={(pageState ?? state).group}
+                  query={(pageState ?? state).query}
+                  filtered={(pageState?.filters ?? state.filters).length > 0}
+                  loading={loading || (!error && !resultsCurrent)}
+                  emptyContent={embedding?.emptyContent}
+                  emptyAction={section?.emptyAction ?? embedding?.emptyAction}
+                  recordLink={embedding?.recordHref}
+                  onOpenRecord={onOpenRecord}
+                  singleSelection={
+                    embedding?.options.selectionMode === "single"
+                  }
+                  chooser={Boolean(embedding)}
+                  selectionEnabled={selectionEnabled && resultsCurrent}
+                  selectedIds={
+                    embedding
+                      ? new Set(embedding.selectedRows.map((row) => row.id))
+                      : selectedIds
+                  }
+                  bookmarkedIds={bookmarkedIds}
+                  pendingBookmarkIds={
+                    resultsCurrent
+                      ? pendingBookmarkIds
+                      : new Set(page.rows.map((row) => row.id))
+                  }
+                  onBookmark={(row, favourite) =>
+                    !embedding &&
+                    void mutateBookmarks(favourite ? "add" : "remove", [row])
+                  }
+                  onSelectionChange={(next) => {
+                    if (embedding) {
+                      const candidates = new Map(
+                        [...embedding.selectedRows, ...(page?.rows ?? [])].map(
+                          (row) => [row.id, row],
+                        ),
+                      );
+                      embedding.onSelectionChange(
+                        [...next].flatMap((id) =>
+                          candidates.has(id) ? [candidates.get(id)!] : [],
+                        ),
+                      );
+                    } else setSelectedIds(next);
+                    setAllMatchingSelected(false);
+                  }}
+                  onSort={(field, additive) =>
+                    resetAndUpdate(
+                      {
+                        sort: nextSort(
+                          state.sort,
+                          field,
+                          descriptor.limits.maxSortLevels,
+                          additive,
+                        ),
+                      },
+                      "push",
+                    )
+                  }
+                />
+              </>
+            ) : null}
+            {page && state.mode !== "board" ? (
+              <EntityListPagination
+                hideSinglePageControls={Boolean(section)}
+                descriptor={descriptor}
+                state={pageState ?? state}
+                page={page}
+                loading={!resultsCurrent}
+                onFirst={() => resetAndUpdate({}, "push")}
+                cursorHistory={cursorHistory}
+                onPrevious={() => {
+                  if (!resultsCurrent) return;
+                  pendingResultsReveal.current = resultSetKey;
+                  const cursor = cursorHistory.at(-1);
+                  setCursorHistory(cursorHistory.slice(0, -1));
+                  setSelectedIds(new Set());
+                  setAllMatchingSelected(false);
+                  update(
+                    {
+                      ...state,
+                      cursor,
+                      pageIndex: Math.max(
+                        0,
+                        (state.pageIndex ?? cursorHistory.length) - 1,
+                      ),
+                    },
+                    "push",
+                  );
+                }}
+                onNext={() => {
+                  if (!resultsCurrent) return;
+                  pendingResultsReveal.current = resultSetKey;
+                  setCursorHistory([...cursorHistory, state.cursor]);
+                  setSelectedIds(new Set());
+                  setAllMatchingSelected(false);
+                  update(
+                    {
+                      ...state,
+                      cursor: page.pagination.nextCursor,
+                      pageIndex: (state.pageIndex ?? 0) + 1,
+                    },
+                    "push",
+                  );
+                }}
+                onPageSize={(pageSize) => resetAndUpdate({ pageSize }, "push")}
+              />
+            ) : loading ? (
+              <LoadingFooter />
+            ) : null}
+          </div>
+          {!embedding &&
+          resultsCurrent &&
+          selectionEnabled &&
+          selectedIds.size ? (
+            <SelectionBar
+              descriptor={descriptor}
+              page={page}
+              selectedRows={selectedRows}
+              bookmarkedIds={bookmarkedIds}
+              selectedCount={selectedIds.size}
+              allMatching={allMatchingSelected}
+              onBookmarks={(operation) =>
+                void mutateBookmarks(operation, selectedRows)
+              }
+              onSelectAllMatching={() => setAllMatchingSelected(true)}
+              onExport={
+                !state.standardViewKey &&
+                descriptor.dataOperations?.export.selected.state === "enabled"
+                  ? () =>
+                      setDataOperationsLaunch(
+                        allMatchingSelected ? "filtered" : "selected",
+                      )
+                  : undefined
+              }
+              onClear={() => {
+                setSelectedIds(new Set());
+                setAllMatchingSelected(false);
+              }}
+            />
+          ) : null}
+        </PageFrame>
+      </FilterChoiceLoader.Provider>
     </FilterReferenceLoader.Provider>
   );
 }
@@ -2058,17 +2234,25 @@ function ListChrome({
           <ObjectSearch
             ref={searchRef}
             id={searchId}
-            label={entityIntl.message("list.searchLabel", { entity: descriptor.entity.pluralLabel })}
+            label={entityIntl.message("list.searchLabel", {
+              entity: descriptor.entity.pluralLabel,
+            })}
             value={query}
             onValueChange={setQuery}
             placeholder={
               widthTier === "narrow"
-                ? entityIntl.message("list.searchLabel", { entity: descriptor.entity.pluralLabel })
-                : entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })
+                ? entityIntl.message("list.searchLabel", {
+                    entity: descriptor.entity.pluralLabel,
+                  })
+                : entityIntl.message("list.searchPlaceholder", {
+                    field: searchHint(descriptor),
+                  })
             }
             description={
               widthTier === "narrow"
-                ? entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })
+                ? entityIntl.message("list.searchPlaceholder", {
+                    field: searchHint(descriptor),
+                  })
                 : undefined
             }
             maxLength={ENTITY_LIST_MAX_SEARCH_LENGTH}
@@ -2084,7 +2268,9 @@ function ListChrome({
             { savedViewId: "system" },
             embedding?.options.views.allowedViewKeys,
           ) ? (
-            <MenuItem onClick={reset}>{entityIntl.message("list.systemDefault")}</MenuItem>
+            <MenuItem onClick={reset}>
+              {entityIntl.message("list.systemDefault")}
+            </MenuItem>
           ) : null}
           {eligibleViews.map((view) => (
             <MenuItem
@@ -2120,9 +2306,19 @@ function ListChrome({
               variant={filterCount ? "primary" : "secondary"}
               size="small"
               aria-label={
-                filterCount ? entityIntl.message("list.activeFilters", { count: filterCount }) : entityIntl.message("list.filters")
+                filterCount
+                  ? entityIntl.message("list.activeFilters", {
+                      count: filterCount,
+                    })
+                  : entityIntl.message("list.filters")
               }
-              title={filterCount ? entityIntl.message("list.activeFilters", { count: filterCount }) : entityIntl.message("list.filters")}
+              title={
+                filterCount
+                  ? entityIntl.message("list.activeFilters", {
+                      count: filterCount,
+                    })
+                  : entityIntl.message("list.filters")
+              }
               onClick={() => setActiveDrawer("filters")}
             >
               <FilterIcon size={16} />
@@ -2146,12 +2342,16 @@ function ListChrome({
               size="small"
               aria-label={
                 state.sort.length > 1
-                  ? entityIntl.message("list.sortRules", { count: state.sort.length })
+                  ? entityIntl.message("list.sortRules", {
+                      count: state.sort.length,
+                    })
                   : entityIntl.message("list.sort")
               }
               title={
                 state.sort.length > 1
-                  ? entityIntl.message("list.sortRules", { count: state.sort.length })
+                  ? entityIntl.message("list.sortRules", {
+                      count: state.sort.length,
+                    })
                   : entityIntl.message("list.sort")
               }
               onClick={() => setActiveDrawer("sort")}
@@ -2175,12 +2375,18 @@ function ListChrome({
               className="a-entity-list__toolbar-action a-entity-list__columns-action"
               variant="secondary"
               size="small"
-              aria-label={entityIntl.message("list.visibleColumns", { count: state.columns.length })}
-              title={entityIntl.message("list.visibleColumns", { count: state.columns.length })}
+              aria-label={entityIntl.message("list.visibleColumns", {
+                count: state.columns.length,
+              })}
+              title={entityIntl.message("list.visibleColumns", {
+                count: state.columns.length,
+              })}
               onClick={() => setActiveDrawer("columns")}
             >
               <ColumnsIcon size={16} />
-              <span>{listDrawerText("columns", descriptor, entityIntl).title}</span>
+              <span>
+                {listDrawerText("columns", descriptor, entityIntl).title}
+              </span>
               <span className="a-entity-list__action-count" aria-hidden="true">
                 {state.columns.length}
               </span>
@@ -2227,7 +2433,9 @@ function ListChrome({
                   value={
                     {
                       filters: `${filterCount} active`,
-                      views: activeView?.name ?? entityIntl.message("list.systemDefault"),
+                      views:
+                        activeView?.name ??
+                        entityIntl.message("list.systemDefault"),
                       sort: `${state.sort.length} ${state.sort.length === 1 ? "level" : "levels"}`,
                       columns: `${state.columns.length} visible`,
                       group: groupLabel,
@@ -2246,8 +2454,7 @@ function ListChrome({
                   disabled={action.disabled}
                   value={action.reason}
                   onClick={() => {
-                    if (action.href && !action.disabled)
-                      navigate(action.href);
+                    if (action.href && !action.disabled) navigate(action.href);
                   }}
                 />
               ))}
@@ -2263,7 +2470,9 @@ function ListChrome({
                     disabled={!resultsCurrent || Boolean(state.standardViewKey)}
                     value={
                       state.standardViewKey
-                        ? entityIntl.message("list.standardViewExportUnavailable")
+                        ? entityIntl.message(
+                            "list.standardViewExportUnavailable",
+                          )
                         : undefined
                     }
                     onClick={onOpenDataOperations}
@@ -2277,7 +2486,9 @@ function ListChrome({
               <ListMenuItem
                 className="a-entity-list__mobile-only"
                 icon={<RefreshCwIcon size={16} />}
-                label={entityIntl.message(refreshRequested ? "list.refreshing" : "list.refresh")}
+                label={entityIntl.message(
+                  refreshRequested ? "list.refreshing" : "list.refresh",
+                )}
                 onClick={() => {
                   setRefreshRequested(true);
                   onActionNotice(listNotice("list.notice.refreshing"));
@@ -2304,12 +2515,17 @@ function ListChrome({
             <button
               type="button"
               className="a-entity-list__view-status-open"
-              aria-label={entityIntl.message("list.viewStatusOpen", { name: activeView.name })}
+              aria-label={entityIntl.message("list.viewStatusOpen", {
+                name: activeView.name,
+              })}
               disabled={embedding?.options.views.allowSwitching === false}
               onClick={() => setActiveDrawer("views")}
             >
               <span>
-                {entityIntl.message(dirty ? "list.viewStatusModified" : "list.viewStatus", { name: activeView.name })}
+                {entityIntl.message(
+                  dirty ? "list.viewStatusModified" : "list.viewStatus",
+                  { name: activeView.name },
+                )}
               </span>
             </button>
             {!embedding || embedding.options.views.allowSwitching ? (
@@ -2350,7 +2566,9 @@ function ListChrome({
                 ).map((item) => item.key)
               : state.mode === "board"
                 ? // Lanes are the grouping on a board; a saved group stays for Table and Cards.
-                  LIST_DRAWERS.filter((item) => item.key !== "group").map((item) => item.key)
+                  LIST_DRAWERS.filter((item) => item.key !== "group").map(
+                    (item) => item.key,
+                  )
                 : undefined
           }
           active={activeDrawer}
@@ -2359,7 +2577,10 @@ function ListChrome({
           descriptor={descriptor}
           context={{
             // The server's tenant-wide "access" label adds nothing; real collection scopes are named.
-            label: scopeLabel && scopeLabel.key !== "access" ? `${descriptor.surface.title} · ${scopeLabel.value}` : descriptor.surface.title,
+            label:
+              scopeLabel && scopeLabel.key !== "access"
+                ? `${descriptor.surface.title} · ${scopeLabel.value}`
+                : descriptor.surface.title,
             detail: !resultsCurrent
               ? entityIntl.message("list.controls.updating")
               : recordCountText(entityIntl, resultCountLabel),
@@ -2783,7 +3004,9 @@ function FilterDialog({
                             label={`Operator for quick ${field.label} filter`}
                             value={operator}
                             operators={field.filterOperators}
-                            labelFor={(candidate) => operatorLabel(candidate, field)}
+                            labelFor={(candidate) =>
+                              operatorLabel(candidate, field)
+                            }
                             onChange={(next) => {
                               setQuickOperators({
                                 ...quickOperators,
@@ -2886,7 +3109,9 @@ function FilterDialog({
                               label={`Operator for ${field?.label ?? `filter ${index + 1}`}`}
                               value={item.operator}
                               operators={operators}
-                              labelFor={(operator) => operatorLabel(operator, field)}
+                              labelFor={(operator) =>
+                                operatorLabel(operator, field)
+                              }
                               onChange={(operator) =>
                                 replaceItem({ ...item, operator, value: "" })
                               }
@@ -2941,9 +3166,15 @@ function FilterDialog({
                     fields={filterable}
                     selected={draft.map((item) => item.field)}
                     placeholder={filterIntl.message("list.fields.search")}
-                    checkboxLabel={(field) => filterIntl.message("list.filters.useField", { field: field.label })}
+                    checkboxLabel={(field) =>
+                      filterIntl.message("list.filters.useField", {
+                        field: field.label,
+                      })
+                    }
                     onSelect={add}
-                    onDeselect={(field) => setDraft(draft.filter((item) => item.field !== field.key))}
+                    onDeselect={(field) =>
+                      setDraft(draft.filter((item) => item.field !== field.key))
+                    }
                     onClose={() => setFilterPickerOpen(false)}
                   />
                 ) : (
@@ -2975,11 +3206,15 @@ function FilterDialog({
               draft.length +
               (directoryDraft.operatingOrganizationIds?.length ?? 0) +
               (directoryDraft.companyCodeIds?.length ?? 0) +
-              (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0);
+              (descriptor.scope.quickFilters?.filter(
+                (filter) => directoryDraft[filter.key],
+              ).length ?? 0);
             return (
               <strong>
                 {pending
-                  ? filterIntl.message("list.footer.filtersReady", { count: pending })
+                  ? filterIntl.message("list.footer.filtersReady", {
+                      count: pending,
+                    })
                   : filterIntl.message("list.footer.filtersCleared")}
               </strong>
             );
@@ -3090,7 +3325,9 @@ function SortDialog({
               selected={draft.map((item) => item.field)}
               limitReached={count >= limit}
               placeholder={sortIntl.message("list.fields.search")}
-              checkboxLabel={(field) => sortIntl.message("list.sort.useField", { field: field.label })}
+              checkboxLabel={(field) =>
+                sortIntl.message("list.sort.useField", { field: field.label })
+              }
               onSelect={(field) => add(field.key)}
               onDeselect={(field) => remove(field.key)}
               onClose={() => setPickerOpen(false)}
@@ -3108,36 +3345,40 @@ function SortDialog({
           )
         }
         footer={
-      <Drawer.Footer>
-        {dirty ? (
-          <Drawer.FooterSummary>
-            <strong>{sortIntl.message("list.footer.sortReady", { count: draft.length })}</strong>
-          </Drawer.FooterSummary>
-        ) : null}
-        <Drawer.FooterActions>
-          <Button
-            variant="ghost"
-            size="small"
-            disabled={
-              JSON.stringify(draft) ===
-              JSON.stringify(descriptor.surface.defaultState.sort)
-            }
-            onClick={() => setDraft(descriptor.surface.defaultState.sort)}
-          >
-            Reset sort
-          </Button>
-          <Button
-            size="small"
-            disabled={!dirty}
-            onClick={() => {
-              onApply(draft);
-              onOpenChange(false);
-            }}
-          >
-            Apply sort
-          </Button>
-        </Drawer.FooterActions>
-      </Drawer.Footer>
+          <Drawer.Footer>
+            {dirty ? (
+              <Drawer.FooterSummary>
+                <strong>
+                  {sortIntl.message("list.footer.sortReady", {
+                    count: draft.length,
+                  })}
+                </strong>
+              </Drawer.FooterSummary>
+            ) : null}
+            <Drawer.FooterActions>
+              <Button
+                variant="ghost"
+                size="small"
+                disabled={
+                  JSON.stringify(draft) ===
+                  JSON.stringify(descriptor.surface.defaultState.sort)
+                }
+                onClick={() => setDraft(descriptor.surface.defaultState.sort)}
+              >
+                Reset sort
+              </Button>
+              <Button
+                size="small"
+                disabled={!dirty}
+                onClick={() => {
+                  onApply(draft);
+                  onOpenChange(false);
+                }}
+              >
+                Apply sort
+              </Button>
+            </Drawer.FooterActions>
+          </Drawer.Footer>
         }
       />
     </>
@@ -3302,7 +3543,10 @@ function ColumnsDialog({
                     </button>
                     {identity ? (
                       // The identity column cannot be hidden: say so instead of a disabled checkbox.
-                      <span className="a-entity-list__column-lock" title={columnsIntl.message("list.columns.alwaysShown")}>
+                      <span
+                        className="a-entity-list__column-lock"
+                        title={columnsIntl.message("list.columns.alwaysShown")}
+                      >
                         <LockIcon size={16} aria-hidden="true" />
                       </span>
                     ) : (
@@ -3315,7 +3559,9 @@ function ColumnsDialog({
                     <span className="a-entity-list__column-name">
                       <strong>{field.label}</strong>
                       <small>
-                        {identity ? columnsIntl.message("list.columns.alwaysShown") : field.key}
+                        {identity
+                          ? columnsIntl.message("list.columns.alwaysShown")
+                          : field.key}
                       </small>
                     </span>
                     <ReorderMenu
@@ -3355,48 +3601,53 @@ function ColumnsDialog({
               </p>
             ) : null}
             {availableGroups.map((group) => {
-              const collapsible = group.label === SYSTEM_FIELD_GROUP && !normalizedSearch,
+              const collapsible =
+                  group.label === SYSTEM_FIELD_GROUP && !normalizedSearch,
                 groupOpen = !collapsible || systemOpen;
               return (
-              <div className="a-entity-list__column-group" key={group.label}>
-                {collapsible ? (
-                  <button
-                    type="button"
-                    className="a-entity-list__field-group-toggle"
-                    aria-expanded={groupOpen}
-                    onClick={() => setSystemOpen(!groupOpen)}
-                  >
-                    <span>{group.label}</span>
-                    <span>{group.fields.length}</span>
-                    <ChevronDownIcon size={14} className="a-disclosure-caret" aria-hidden="true" />
-                  </button>
-                ) : (
-                  <h4>
-                    {group.label}
-                    <span>{group.fields.length}</span>
-                  </h4>
-                )}
-                {groupOpen ? (
-                <div className="a-entity-list__column-list a-entity-list__column-list--available">
-                  {group.fields.map((field) => (
-                    <label key={field.key}>
-                      <Checkbox
-                        aria-label={`Show ${field.label}`}
-                        checked={false}
-                        disabled={
-                          columns.length >= ENTITY_LIST_MAX_VISIBLE_COLUMNS
-                        }
-                        onChange={() => add(field)}
+                <div className="a-entity-list__column-group" key={group.label}>
+                  {collapsible ? (
+                    <button
+                      type="button"
+                      className="a-entity-list__field-group-toggle"
+                      aria-expanded={groupOpen}
+                      onClick={() => setSystemOpen(!groupOpen)}
+                    >
+                      <span>{group.label}</span>
+                      <span>{group.fields.length}</span>
+                      <ChevronDownIcon
+                        size={14}
+                        className="a-disclosure-caret"
+                        aria-hidden="true"
                       />
-                      <span className="a-entity-list__column-name">
-                        <strong>{field.label}</strong>
-                        <small>{field.key}</small>
-                      </span>
-                    </label>
-                  ))}
+                    </button>
+                  ) : (
+                    <h4>
+                      {group.label}
+                      <span>{group.fields.length}</span>
+                    </h4>
+                  )}
+                  {groupOpen ? (
+                    <div className="a-entity-list__column-list a-entity-list__column-list--available">
+                      {group.fields.map((field) => (
+                        <label key={field.key}>
+                          <Checkbox
+                            aria-label={`Show ${field.label}`}
+                            checked={false}
+                            disabled={
+                              columns.length >= ENTITY_LIST_MAX_VISIBLE_COLUMNS
+                            }
+                            onChange={() => add(field)}
+                          />
+                          <span className="a-entity-list__column-name">
+                            <strong>{field.label}</strong>
+                            <small>{field.key}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-                ) : null}
-              </div>
               );
             })}
             {!availableGroups.length ? (
@@ -3415,7 +3666,11 @@ function ColumnsDialog({
       <Drawer.Footer>
         {dirty ? (
           <Drawer.FooterSummary>
-            <strong>{columnsIntl.message("list.footer.columnsReady", { count: columns.length })}</strong>
+            <strong>
+              {columnsIntl.message("list.footer.columnsReady", {
+                count: columns.length,
+              })}
+            </strong>
           </Drawer.FooterSummary>
         ) : null}
         <Drawer.FooterActions>
@@ -3614,28 +3869,54 @@ function SavedViewsDialog({
       manageShared={Boolean(caps?.manageShared)}
       saveSummary="Includes filters, sorting, grouping, columns, layout, and density. Search and work context are not saved."
       nameInputId="entity-list-view-name"
-      onApply={(id) => apply(id === undefined || id === "system" ? undefined : viewOf(id))}
-      {...(writable && !(descriptor.serverViews && !catalog) ? { onSave: save } : {})}
+      onApply={(id) =>
+        apply(id === undefined || id === "system" ? undefined : viewOf(id))
+      }
+      {...(writable && !(descriptor.serverViews && !catalog)
+        ? { onSave: save }
+        : {})}
       {...(writable && catalog
         ? {
-            onMakeDefault: (id: string) => void command({ action: "default", id, target: "personal" }),
+            onMakeDefault: (id: string) =>
+              void command({ action: "default", id, target: "personal" }),
             onCopy: (id: string) => void command({ action: "copy", id }),
             onSaveLocal: (id: string) => {
               const view = viewOf(id);
               if (view)
-                void command({ action: "create", name: view.name, visibility: "personal", state: view.state }, true);
+                void command(
+                  {
+                    action: "create",
+                    name: view.name,
+                    visibility: "personal",
+                    state: view.state,
+                  },
+                  true,
+                );
             },
           }
         : {})}
       {...(writable && caps?.setSharedDefault
-        ? { onSetSharedDefault: (id: string) => void command({ action: "default", id, target: "shared" }) }
+        ? {
+            onSetSharedDefault: (id: string) =>
+              void command({ action: "default", id, target: "shared" }),
+          }
         : {})}
       {...(writable
         ? {
             onRename: (id: string, name: string) =>
-              command({ action: "update", id, version: viewOf(id)?.version, name }),
+              command({
+                action: "update",
+                id,
+                version: viewOf(id)?.version,
+                name,
+              }),
             onUpdate: (id: string) =>
-              void command({ action: "update", id, version: viewOf(id)?.version, state: saveableViewState(state) }),
+              void command({
+                action: "update",
+                id,
+                version: viewOf(id)?.version,
+                state: saveableViewState(state),
+              }),
             onDelete: (id: string) =>
               void command({ action: "delete", id }).then((success) => {
                 if (success && (state.savedViewId ?? "system") === id) apply();
@@ -3690,7 +3971,10 @@ function DisplaySettingsDialog({
   // Standalone lists follow the app density unless the person chose one for
   // this list; host-configured lookups keep their explicit density.
   const appDensity: ListLocationStateV1["density"] = (() => {
-    const value = typeof document === "undefined" ? undefined : document.documentElement.dataset.density;
+    const value =
+      typeof document === "undefined"
+        ? undefined
+        : document.documentElement.dataset.density;
     return value === "compact" || value === "spacious" ? value : "comfortable";
   })();
   const initialFollow = () =>
@@ -3699,7 +3983,9 @@ function DisplaySettingsDialog({
     state.density === descriptor.surface.defaultState.density;
   const preferences = effectivePreferences(),
     [followApp, setFollowApp] = useState(initialFollow),
-    [density, setDensity] = useState(initialFollow() ? appDensity : state.density),
+    [density, setDensity] = useState(
+      initialFollow() ? appDensity : state.density,
+    ),
     [mode, setMode] = useState(state.mode),
     [searchBehavior, setSearchBehavior] = useState<
       DisplayPreferences["searchBehavior"]
@@ -3712,7 +3998,9 @@ function DisplaySettingsDialog({
     if (open) {
       const saved = effectivePreferences();
       setFollowApp(initialFollow());
-      setDensity(initialFollow() ? appDensity : (saved?.density ?? state.density));
+      setDensity(
+        initialFollow() ? appDensity : (saved?.density ?? state.density),
+      );
       setMode(saved?.mode ?? state.mode);
       setSearchBehavior(
         saved?.searchBehavior ??
@@ -3757,15 +4045,22 @@ function DisplaySettingsDialog({
         density={density}
         onDensityChange={setDensity}
         showFollow={!configuration}
-        densityDisabled={Boolean(configuration && !configuration.userOverrides.includes("density"))}
+        densityDisabled={Boolean(
+          configuration && !configuration.userOverrides.includes("density"),
+        )}
         hideDensity={widthTier === "narrow"}
         after={
           <div className="a-label">
-            <span aria-hidden="true">{displayIntl.message("list.display.searchBehavior")}</span>
+            <span aria-hidden="true">
+              {displayIntl.message("list.display.searchBehavior")}
+            </span>
             <SegmentedControl
               label={displayIntl.message("list.display.searchBehavior")}
               value={searchBehavior}
-              disabled={Boolean(configuration && !configuration.userOverrides.includes("searchBehavior"))}
+              disabled={Boolean(
+                configuration &&
+                !configuration.userOverrides.includes("searchBehavior"),
+              )}
               options={(["instant", "submit"] as const).map((item) => ({
                 value: item,
                 label: displayIntl.message(`list.searchBehavior.${item}`),
@@ -3775,47 +4070,63 @@ function DisplaySettingsDialog({
           </div>
         }
         footer={
-      <Drawer.Footer>
-        {dirty ? (
-          <Drawer.FooterSummary>
-            <strong>{displayIntl.message("list.footer.displayReady")}</strong>
-          </Drawer.FooterSummary>
-        ) : null}
-        <Drawer.FooterActions>
-          <Button variant="ghost" size="small" onClick={reset}>
-            Reset settings
-          </Button>
-          <Button
-            size="small"
-            disabled={!dirty}
-            onClick={() => {
-              writeDisplayPreferences(
-                descriptor.plane,
-                followApp ? { mode, searchBehavior } : { density, mode, searchBehavior },
-                preferenceNamespace,
-              );
-              onPreferencesChange?.();
-              // Following the app returns the list to the surface default, which
-              // drops ?density= and lets the page's density apply.
-              onApply({ density: followApp ? descriptor.surface.defaultState.density : density, mode });
-              onOpenChange(false);
-            }}
-          >
-            Save settings
-          </Button>
-        </Drawer.FooterActions>
-      </Drawer.Footer>
+          <Drawer.Footer>
+            {dirty ? (
+              <Drawer.FooterSummary>
+                <strong>
+                  {displayIntl.message("list.footer.displayReady")}
+                </strong>
+              </Drawer.FooterSummary>
+            ) : null}
+            <Drawer.FooterActions>
+              <Button variant="ghost" size="small" onClick={reset}>
+                Reset settings
+              </Button>
+              <Button
+                size="small"
+                disabled={!dirty}
+                onClick={() => {
+                  writeDisplayPreferences(
+                    descriptor.plane,
+                    followApp
+                      ? { mode, searchBehavior }
+                      : { density, mode, searchBehavior },
+                    preferenceNamespace,
+                  );
+                  onPreferencesChange?.();
+                  // Following the app returns the list to the surface default, which
+                  // drops ?density= and lets the page's density apply.
+                  onApply({
+                    density: followApp
+                      ? descriptor.surface.defaultState.density
+                      : density,
+                    mode,
+                  });
+                  onOpenChange(false);
+                }}
+              >
+                Save settings
+              </Button>
+            </Drawer.FooterActions>
+          </Drawer.Footer>
         }
       >
         {widthTier === "narrow" ? (
-          <p className="a-entity-list__view-note">{displayIntl.message("list.display.narrowNote")}</p>
+          <p className="a-entity-list__view-note">
+            {displayIntl.message("list.display.narrowNote")}
+          </p>
         ) : (
           <div className="a-label">
-            <span aria-hidden="true">{displayIntl.message("list.display.layout")}</span>
+            <span aria-hidden="true">
+              {displayIntl.message("list.display.layout")}
+            </span>
             <SegmentedControl
               label={displayIntl.message("list.display.layout")}
               value={mode}
-              disabled={Boolean(configuration && !configuration.userOverrides.includes("layout"))}
+              disabled={Boolean(
+                configuration &&
+                !configuration.userOverrides.includes("layout"),
+              )}
               options={[
                 ...descriptor.surface.supportedModes.map((item) => ({
                   value: item,
@@ -3827,7 +4138,9 @@ function DisplaySettingsDialog({
                   // One accessible name ("Board, unavailable"); the visible label stays short.
                   label: (
                     <>
-                      <span aria-hidden="true">{displayIntl.message(`list.mode.${item}`)}</span>
+                      <span aria-hidden="true">
+                        {displayIntl.message(`list.mode.${item}`)}
+                      </span>
                       <span className="a-visually-hidden">
                         {displayIntl.message(`list.mode.${item}`)}
                         {displayIntl.message("list.display.unavailableSuffix")}
@@ -3840,12 +4153,17 @@ function DisplaySettingsDialog({
               onValueChange={setMode}
             />
             {unavailableModes.length ? (
-              <ul id={unavailableId} className="a-entity-list__mode-unavailable">
+              <ul
+                id={unavailableId}
+                className="a-entity-list__mode-unavailable"
+              >
                 {unavailableModes.map(({ mode: item, code }) => (
                   <li key={item}>
                     {displayIntl.message("list.display.modeUnavailable", {
                       mode: displayIntl.message(`list.mode.${item}`),
-                      reason: displayIntl.message(modeUnavailableReasonKey(code)),
+                      reason: displayIntl.message(
+                        modeUnavailableReasonKey(code),
+                      ),
                     })}
                   </li>
                 ))}
@@ -3912,12 +4230,20 @@ function EntityRows({
   readonly onSelectionChange: (ids: ReadonlySet<string>) => void;
   readonly onSort: (field: string, additive: boolean) => void;
 }) {
-  const recordClick = (row: EntityListRowV1) => (event: React.MouseEvent<HTMLAnchorElement>) => {
-    if (onOpenRecord && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-      event.preventDefault();
-      onOpenRecord(row);
-    }
-  };
+  const recordClick =
+    (row: EntityListRowV1) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (
+        onOpenRecord &&
+        event.button === 0 &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        onOpenRecord(row);
+      }
+    };
   const navigate = useEntityNavigate();
   const selectionName = useId();
   const intl = useEntityI18n();
@@ -3931,12 +4257,21 @@ function EntityRows({
       else next.add(label);
       return next;
     });
-  const groupHeading = (item: { key: string; label: string; count: number }) => (
+  const groupHeading = (item: {
+    key: string;
+    label: string;
+    count: number;
+  }) => (
     <button
       type="button"
       className="a-entity-list__group-toggle"
       aria-expanded={!collapsedGroups.has(item.key)}
-      aria-label={intl.message(collapsedGroups.has(item.key) ? "list.group.expand" : "list.group.collapse", { group: item.label })}
+      aria-label={intl.message(
+        collapsedGroups.has(item.key)
+          ? "list.group.expand"
+          : "list.group.collapse",
+        { group: item.label },
+      )}
       onClick={() => toggleGroup(item.key)}
     >
       <ChevronDownIcon size={16} />
@@ -3959,7 +4294,9 @@ function EntityRows({
               ? intl.message("list.empty.query", { query: query.trim() })
               : constrained
                 ? intl.message("list.empty.matching")
-                : intl.message("list.empty.entity", { entity: descriptor.surface.title }))}
+                : intl.message("list.empty.entity", {
+                    entity: descriptor.surface.title,
+                  }))}
         </h2>
         <p>
           {constrained
@@ -4044,7 +4381,10 @@ function EntityRows({
       cards(page.rows)
     );
   const openRecord = (row: EntityListRowV1) => {
-    if (onOpenRecord) { onOpenRecord(row); return; }
+    if (onOpenRecord) {
+      onOpenRecord(row);
+      return;
+    }
     const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
     if (href) navigate(href);
   };
@@ -4081,11 +4421,16 @@ function EntityRows({
           }}
         >
           {selectionEnabled ? (
-            <td className="a-entity-list__selection-cell" data-label={intl.message("list.row.select")}>
+            <td
+              className="a-entity-list__selection-cell"
+              data-label={intl.message("list.row.select")}
+            >
               <input
                 name={singleSelection ? selectionName : undefined}
                 type={singleSelection ? "radio" : "checkbox"}
-                aria-label={intl.message("list.row.selectRecord", { record: identity })}
+                aria-label={intl.message("list.row.selectRecord", {
+                  record: identity,
+                })}
                 checked={selectedIds.has(row.id)}
                 onChange={(event) =>
                   toggle(row.id, event.currentTarget.checked)
@@ -4100,15 +4445,34 @@ function EntityRows({
               title={formatFieldValue(row.values[field.key], field, intl)}
             >
               {href && isRecordLinkField(field, descriptor) ? (
-                <EntityLink className="a-entity-list__record-link" href={href} onClick={recordClick(row)}>
-                  {renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key])}
+                <EntityLink
+                  className="a-entity-list__record-link"
+                  href={href}
+                  onClick={recordClick(row)}
+                >
+                  {renderFieldValue(
+                    row.values[field.key],
+                    field,
+                    query,
+                    intl,
+                    row.displayValues?.[field.key],
+                  )}
                 </EntityLink>
               ) : (
-                renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key])
+                renderFieldValue(
+                  row.values[field.key],
+                  field,
+                  query,
+                  intl,
+                  row.displayValues?.[field.key],
+                )
               )}
             </td>
           ))}
-          <td className="a-entity-list__bookmark-cell" data-label={intl.message("list.row.favourite")}>
+          <td
+            className="a-entity-list__bookmark-cell"
+            data-label={intl.message("list.row.favourite")}
+          >
             {!chooser ? (
               <BookmarkButton
                 identity={identity}
@@ -4119,7 +4483,9 @@ function EntityRows({
             ) : null}
           </td>
           <td className="a-entity-list__row-actions">
-            {!chooser ? <RowMenu descriptor={descriptor} row={row} intl={intl} /> : null}
+            {!chooser ? (
+              <RowMenu descriptor={descriptor} row={row} intl={intl} />
+            ) : null}
           </td>
         </tr>
       );
@@ -4136,7 +4502,9 @@ function EntityRows({
             {selectionEnabled ? (
               <th scope="col" className="a-entity-list__selection-cell">
                 {singleSelection ? (
-                  <span className="a-visually-hidden">{intl.message("list.row.selectAny")}</span>
+                  <span className="a-visually-hidden">
+                    {intl.message("list.row.selectAny")}
+                  </span>
                 ) : (
                   <Checkbox
                     disabled={singleSelection}
@@ -4217,10 +4585,14 @@ function EntityRows({
               );
             })}
             <th scope="col" className="a-entity-list__bookmark-heading">
-              <span className="a-visually-hidden">{intl.message("list.row.favourite")}</span>
+              <span className="a-visually-hidden">
+                {intl.message("list.row.favourite")}
+              </span>
             </th>
             <th scope="col" className="a-entity-list__actions-heading">
-              <span className="a-visually-hidden">{intl.message("list.row.actions")}</span>
+              <span className="a-visually-hidden">
+                {intl.message("list.row.actions")}
+              </span>
             </th>
           </tr>
         </thead>
@@ -4235,9 +4607,7 @@ function EntityRows({
                     {groupHeading(item)}
                   </th>
                 </tr>,
-                ...(collapsedGroups.has(item.key)
-                  ? []
-                  : tableRows(item.rows)),
+                ...(collapsedGroups.has(item.key) ? [] : tableRows(item.rows)),
               ])
             : tableRows(page.rows)}
         </tbody>
@@ -4581,7 +4951,9 @@ function ColumnFilter({
                     onChange={(operator) =>
                       setDraft(
                         draft.map((row) =>
-                          row.id === item.id ? { ...row, operator, value: "" } : row,
+                          row.id === item.id
+                            ? { ...row, operator, value: "" }
+                            : row,
                         ),
                       )
                     }
@@ -4750,12 +5122,18 @@ function searchHint(descriptor: EntityListDescriptorV1): string {
 /** Catalogue key for the reason a declared layout is unavailable. Unknown
  * codes use the generic "not supported" reason rather than the raw code. */
 function modeUnavailableReasonKey(code: string): string {
-  if (code === LIST_MODE_RENDERER_MISSING) return "list.mode.reason.rendererMissing";
-  if (code === "LIST_BOARD_LANE_FIELD_UNAVAILABLE") return "list.mode.reason.laneFieldUnavailable";
-  if (code === "LIST_BOARD_COUNTS_UNAVAILABLE") return "list.mode.reason.countsUnavailable";
+  if (code === LIST_MODE_RENDERER_MISSING)
+    return "list.mode.reason.rendererMissing";
+  if (code === "LIST_BOARD_LANE_FIELD_UNAVAILABLE")
+    return "list.mode.reason.laneFieldUnavailable";
+  if (code === "LIST_BOARD_COUNTS_UNAVAILABLE")
+    return "list.mode.reason.countsUnavailable";
   return "list.mode.reason.unsupported";
 }
-function listCountLabel(page: EntityListResultV1 | undefined, intl: ReturnType<typeof useEntityI18n>): string | undefined {
+function listCountLabel(
+  page: EntityListResultV1 | undefined,
+  intl: ReturnType<typeof useEntityI18n>,
+): string | undefined {
   const count = page?.pagination.total;
   return count === undefined
     ? undefined
@@ -4782,9 +5160,7 @@ function listHeaderInformation(
     <>
       {text ? <span>{text}</span> : null}
       {text && count !== undefined ? <span aria-hidden="true"> · </span> : null}
-      {count !== undefined ? (
-        <span aria-live="polite">{count}</span>
-      ) : null}
+      {count !== undefined ? <span aria-live="polite">{count}</span> : null}
     </>
   );
 }
@@ -4993,10 +5369,13 @@ function ErrorState({
   readonly entityName?: string;
 }) {
   const intl = useEntityI18n();
-  const classification = localizeEntityErrorModel(classifyAppError({
-    error,
-    applicationName: entityName,
-  }), intl);
+  const classification = localizeEntityErrorModel(
+    classifyAppError({
+      error,
+      applicationName: entityName,
+    }),
+    intl,
+  );
   const model = {
     ...classification,
     description: localizedEntityError(error, intl, classification.description),
@@ -5019,19 +5398,19 @@ function ErrorState({
         <RefreshCwIcon />
       </span>
       <div>
-        <h2>
-          {model.title}
-        </h2>
-        <p>
-          {localizedEntityError(error, intl, model.description)}
-        </p>
+        <h2>{model.title}</h2>
+        <p>{localizedEntityError(error, intl, model.description)}</p>
       </div>
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>
           {intl.message("entity.retry")}
         </Button>
       ) : null}
-      {error.requestId ? <small>{intl.message("entity.requestId", { id: error.requestId })}</small> : null}
+      {error.requestId ? (
+        <small>
+          {intl.message("entity.requestId", { id: error.requestId })}
+        </small>
+      ) : null}
     </Card>
   );
 }

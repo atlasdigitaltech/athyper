@@ -264,10 +264,43 @@ blueprint's component catalogue section. An operator-pinned capability attestati
 be backed by renderer conformance evidence; tests of the verifier do not establish that
 attestation for the actual candidates.
 
-DEV inspection found Studio running from a writable bind-mounted source checkout with a
-Next development cache. No pinned deployed component attestation was installed. Therefore
-this continuation does not enable the qualifier, approve candidates, or claim deployed
-renderer/F6/F8/F9 qualification. The package-local candidate hashes remain review inputs.
+DEV now serves a standalone Studio production build from the read-only bundle at
+`~/.athyper/instances/dev/workspace/component-deployment-20261008-v2/bundle`.
+`ATHYPER_NEXT_DIST_DIR=.next-component-qualification pnpm --filter @athyper/studio build`
+passed compilation and typechecking. Static assets/public files are included in that
+bundle. The former source-mode configuration is retained in
+`component-deployment-20261008/source.compose.before.json`; the current private
+`source.compose.json` selects the production mount for Studio and the same evidence
+mount for the publication worker. Neon/Mesh deployment modes are unchanged.
+
+The exact deployment manifest pin is
+`8d30c9da90b7fa5d86078c65508d9bd90f9d4370622c6e284fc08bc663151c78`.
+All three component declarations and 1,634 installed files passed the real host verifier.
+`http-evidence.json` records readyz=200 and a renderer JavaScript chunk served over HTTPS
+with exactly the installed SHA-256. This is deployed-byte/readiness evidence, not an
+authenticated native list/detail acceptance result.
+
+`conformance.json` and `conformance.log` bind 14 passing renderer checks to this manifest
+and hashed test sources: text escaping/Unicode/highlighting/reference labels/missing
+values, registered table/compact modes and list column behavior. The initial combined
+run also passed three existing Country detail-read checks. Its later rerun failed on
+a concurrent Calendar workstream import (`list-calendar.js`), recorded separately in
+`combined-rerun.json`/`.log`; no broader green claim is made for that rerun.
+These reuse actual framework implementations. No synthetic resource becomes approved by
+passing them. `renderFieldValue` is now explicitly exported by the list package. Its
+proposed component is string/list-only with maskedRepresentationSafe=false. The detail
+field descriptor has no field rendererKey binding; detail text support is not claimed.
+
+The control API was restarted with the optional `compose.component-review.yaml` overlay
+and the read-only verified bundle. Its livez check passes. `review-candidates.json` in the
+private deployment directory identifies three immutable unapproved sources mounted in
+the existing producer directory. After a Platform Admin session refresh, all three exact proposals were submitted
+successfully through the control API (HTTP 200, status preparing). `proposal-receipts.json`
+records list `7c2e8db4-640c-47c8-8c36-308ddcdfe459`, detail
+`884d2f0d-344b-4c4a-8ec9-40da40f95a41`, and text
+`61b7f610-a478-474e-a8ba-aee9e6d099b3`. Independent Platform Owner review was requested
+and remains pending. No catalogue rows, replacement drafts or resource/entity activation
+were created. Proposal resolution and F6/F8/F9 remain unfinished.
 
 `createComponentCatalogueInstaller` now binds the existing publication loader to the
 transactional catalogue installer. It reads exact active/reviewed source evidence through

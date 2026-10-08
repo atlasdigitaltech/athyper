@@ -1219,6 +1219,12 @@ proposal/review, compile/sign/dispatch, loading and transactional installation. 
 byte limits bound inspection. Runtime deployment must preserve the pinned installation
 between checks and consumption; this verifier is not an atomic filesystem deployment
 mechanism. No evidence is inferred from the mere presence of a Next development cache.
+The 8 October DEV checkpoint now serves a pinned standalone Studio bundle and verifies
+served renderer bytes against that bundle; the runbook records its exact evidence.
+Component candidates remain unapproved. The initial explicit text registration is
+string/list-only; the current detail field descriptor cannot express that renderer
+binding, so detail text capability remains an implementation gap rather than an assumed
+fallback. Serving this bundle does not qualify native authoring or F6/F8/F9.
 
 Forward migration `34_component_resource_review.sql` adds the kind to exact-predecessor
 review/verification functions without changing their independent-review or source guards.
