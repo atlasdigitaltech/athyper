@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013`
 - Approval: **pending**
-- Cataloged database tables: 781
+- Cataloged database tables: 782
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 62 |
+| metadata_authority | 63 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -695,6 +695,7 @@ or multiply classified runtime objects.
 | `metadata.entity_field_access` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_choice` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_identity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field_identity_adoption` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_field_reference_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_flow` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
