@@ -100,6 +100,7 @@ export function createNativeBootstrapResourceComposition(options: {
         compiler: value.preparation.compiler,
         reader: value.preparation.reader,
         identitySources: value.preparation.identitySources ?? [],
+        identityMode: value.preparation.identityMode ?? "installed",
       });
     }
     const expected = evidence(assembled);

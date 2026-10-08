@@ -3,6 +3,8 @@ import { expect, it, vi } from "vitest";
 import { nativeReleaseFixture } from "./native-release-compilation.fixtures.js";
 import {
   establishNativeBootstrapIdentities,
+  plannedNativeBootstrapIdentities,
+  persistFreshNativeBootstrapIdentities,
   resolveNativeBootstrapIdentities,
 } from "./native-bootstrap-identities.js";
 import { sha256 } from "./deterministic.js";
@@ -181,4 +183,100 @@ it("rejects changed proposal before reading installed identities", async () => {
     code: "NATIVE_IDENTITY_BINDING_UNAVAILABLE",
   });
   expect(f.query).not.toHaveBeenCalled();
+});
+
+function freshFixture() {
+  const f = fixture();
+  const identities = f.f.c.core.identities.map((i) => ({
+    ...i,
+    identityStatus: "reserved" as const,
+    introducedChangeSetId: f.input.changeSetId,
+    createdBy: f.input.actorId,
+    createdAt: "2026-10-09T00:00:00.000Z",
+    firstReleaseId: null,
+    retiredAt: null,
+    retiredBy: null,
+    retirementReleaseId: null,
+    replacementIdentityId: null,
+  }));
+  const graph = { ...f.f.graph, fieldIdentities: identities };
+  const input = { ...f.input, proposalHash: sha256(graph) };
+  return { ...f, graph, input, identities };
+}
+it("derives fresh bindings only from a complete attributed proposal", () => {
+  const f = freshFixture();
+  expect(plannedNativeBootstrapIdentities(f.input, f.graph)).toEqual(
+    f.f.c.core.identities,
+  );
+  for (const corrupt of [
+    () => {
+      f.identities[0]!.createdBy = f.input.entityId;
+    },
+    () => {
+      f.identities[0]!.introducedChangeSetId = f.input.entityId;
+    },
+    () => {
+      f.identities.pop();
+    },
+  ]) {
+    corrupt();
+    f.input.proposalHash = sha256(f.graph);
+    expect(() => plannedNativeBootstrapIdentities(f.input, f.graph)).toThrow();
+  }
+});
+it("rejects fresh identity cycles and foreign parents", () => {
+  for (const parent of ["foreign", "self", "cycle"]) {
+    const f = freshFixture();
+    f.identities[0]!.parentIdentityId =
+      parent === "foreign"
+        ? f.input.actorId
+        : parent === "self"
+          ? f.identities[0]!.id
+          : f.identities[1]!.id;
+    if (parent === "cycle")
+      f.identities[1]!.parentIdentityId = f.identities[0]!.id;
+    f.input.proposalHash = sha256(f.graph);
+    expect(() => plannedNativeBootstrapIdentities(f.input, f.graph)).toThrow();
+  }
+});
+it("persists parents before children under exact creation admission without upsert", async () => {
+  const f = freshFixture();
+  f.identities[0]!.parentIdentityId = f.identities[1]!.id;
+  f.input.proposalHash = sha256(f.graph);
+  f.query.mockImplementation(async () => ({
+    rows: [{ id: "inserted" }] as never,
+    rowCount: 1,
+  }));
+  const db = new Kysely<Record<string, never>>({
+    dialect: new PostgresDialect({
+      pool: {
+        connect: async () => ({ query: f.query, release() {} }),
+        end: async () => {},
+      } as never,
+    }),
+  });
+  Object.defineProperty(db, "isTransaction", { value: true });
+  await persistFreshNativeBootstrapIdentities(
+    db as Transaction<Record<string, never>>,
+    f.input,
+    f.graph,
+    plannedNativeBootstrapIdentities(f.input, f.graph),
+  );
+  expect(f.query.mock.calls[0]![1][0]).toBe(f.identities[1]!.id);
+  expect(f.query.mock.calls).toHaveLength(3);
+  for (const [text, values] of f.query.mock.calls) {
+    expect(text).toContain("admitted_creation");
+    expect(text).toContain("app.current_principal_id");
+    expect(text).not.toContain("ON CONFLICT");
+    expect(values).toContain(f.input.actorId);
+  }
+  f.query.mockImplementation(async () => ({ rows: [], rowCount: 0 }));
+  await expect(
+    persistFreshNativeBootstrapIdentities(
+      db as Transaction<Record<string, never>>,
+      f.input,
+      f.graph,
+      plannedNativeBootstrapIdentities(f.input, f.graph),
+    ),
+  ).rejects.toMatchObject({ code: "NATIVE_FRESH_IDENTITY_ADMISSION_REQUIRED" });
 });

@@ -10,6 +10,7 @@ import type { NormalizedAuthoringPolicy } from "@athyper/server-contract-meta-en
 import {
   createProductCommandAuthority,
   resolveNativeBootstrapIdentities,
+  plannedNativeBootstrapIdentities,
   readNativeStorageCatalogue,
   sha256,
   createProductLabelHost,
@@ -70,11 +71,14 @@ export async function createControlProductCommandRuntime(options: {
           throw Error("PRODUCT_NATIVE_DESCRIPTOR_MISMATCH");
         if (!resources.host.snapshotVersions?.includes(2))
           throw Error("PRODUCT_NATIVE_SNAPSHOT_VERSION_REQUIRED");
-        const identities = await resolveNativeBootstrapIdentities(
-          args[0],
-          args[2],
-          args[3].graph,
-        );
+        const freshIdentities = resources.preparation.identityMode === "fresh";
+        const identities = freshIdentities
+          ? plannedNativeBootstrapIdentities(args[2], args[3].graph)
+          : await resolveNativeBootstrapIdentities(
+              args[0],
+              args[2],
+              args[3].graph,
+            );
         async function catalogues() {
           const selections = args[3].graph.runtimeProfiles;
           if (selections.length !== 1)
@@ -113,11 +117,13 @@ export async function createControlProductCommandRuntime(options: {
           async qualify(tx, command) {
             if (tx !== args[0] || sha256(command) !== sha256(args[2]))
               throw Error("PRODUCT_NATIVE_IDENTITY_SCOPE_CHANGED");
-            const current = await resolveNativeBootstrapIdentities(
-              tx,
-              command,
-              args[3].graph,
-            );
+            const current = freshIdentities
+              ? plannedNativeBootstrapIdentities(command, args[3].graph)
+              : await resolveNativeBootstrapIdentities(
+                  tx,
+                  command,
+                  args[3].graph,
+                );
             if (sha256(current) !== sha256(identities))
               throw Error("PRODUCT_NATIVE_IDENTITY_BINDING_CHANGED");
             if (sha256(await catalogues()) !== sha256(installedCatalogues))

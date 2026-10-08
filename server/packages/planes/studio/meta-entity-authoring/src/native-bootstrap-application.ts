@@ -1,5 +1,7 @@
 import {
   establishNativeBootstrapIdentities,
+  persistFreshNativeBootstrapIdentities,
+  type NativeBootstrapIdentityMode,
   type NativeIdentityAdoptionSource,
 } from "./native-bootstrap-identities.js";
 import { sql, type Transaction } from "kysely";
@@ -63,6 +65,7 @@ export interface NativeBootstrapPolicy {
     branchCode: string;
     baseReleaseId: string | null;
     operations: ApprovedOperationBootstrap;
+    identityMode?: NativeBootstrapIdentityMode;
     identitySources?: readonly NativeIdentityAdoptionSource[];
     compiler: NativeReleaseCompilationContext;
     reader: {
@@ -217,6 +220,7 @@ export async function applyNativeBootstrap(
       compiler: resolved.compiler,
       reader: resolved.reader,
       identitySources: resolved.identitySources ?? [],
+      identityMode: resolved.identityMode ?? "installed",
     }),
     operations: resolved.operations,
   };
@@ -278,6 +282,18 @@ export async function applyNativeBootstrap(
       tx,
     );
   if (initialized.rows.length !== 1) fail("NATIVE_BOOTSTRAP_REVISION_CONFLICT");
+  if (prepared.identityMode === "fresh") {
+    if (prepared.identitySources.length || prepared.baseReleaseId !== null)
+      fail("NATIVE_FRESH_IDENTITY_ADOPTION_FORBIDDEN");
+    await persistFreshNativeBootstrapIdentities(
+      tx,
+      input,
+      graph,
+      prepared.compiler.core.identities,
+    );
+  } else if (prepared.identityMode !== "installed") {
+    fail("NATIVE_BOOTSTRAP_IDENTITY_MODE_INVALID");
+  }
   await establishNativeBootstrapIdentities(
     tx,
     input,

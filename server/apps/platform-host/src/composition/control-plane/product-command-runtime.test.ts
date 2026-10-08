@@ -331,150 +331,178 @@ it("rejects bootstrap resource wiring without proposal composition before databa
   }
 });
 
-it("binds compiler identities to application rows and revalidates without component composition", async () => {
-  const f = await fixture(),
-    native = nativeReleaseFixture();
-  native.graph.surfaces.find((s) => s.surfaceKind === "list")!.maxFilterDepth =
-    1;
-  const rows = native.c.core.identities.map((i) => ({
-    id: i.id,
-    entity_id: i.entityId,
-    tenant_id: i.tenantId,
-    field_key: i.fieldKey,
-    parent_identity_id: i.parentIdentityId,
-    identity_status: "reserved",
-  }));
-  const storage = native.c.core.catalogues[0]!.columns.map((column) => ({
-    path: column.path,
-    storage_type: column.storageType,
-    nullable: column.nullable,
-    base_schema: "pg_catalog",
-    base_type: column.storageType,
-    type_kind: "b",
-    object_kind: "r",
-    generated: "",
-    column_count: 3,
-    constraints: [],
-    default_expression: null,
-  }));
-  const tx = database(appRole, true, true, rows, storage);
-  Object.defineProperty(tx, "isTransaction", { value: true });
-  const installedCatalogue = await readNativeStorageCatalogue(
-    tx as never,
-    "studio",
-    {
-      plane: "studio",
-      schema: native.graph.runtimeProfiles[0]!.storageSchema!,
-      object: native.graph.runtimeProfiles[0]!.storageObject!,
-    },
-  );
-  Object.assign(native.graph.runtimeProfiles[0]!, {
-    storageCatalogueHash: installedCatalogue.hash,
-  });
-  const proposal = {
-    graph: native.graph,
-    title: "Reference",
-    branchCode: "native",
-    baseReleaseId: null,
-  };
-  const input = {
-    entityId: native.graph.authoringSource.entityId,
-    changeSetId: native.graph.ownedLabels!.changeSetId,
-    actorId: authority.tenantId,
-    tenantId: null,
-    idempotencyKey: "native-test",
-    proposalHash: sha256(native.graph),
-  };
-  const qualify = vi.fn(async () => {});
-  try {
-    const runtime = await createControlProductCommandRuntime({
-      ...f.options,
-      referenceResources: {
-        authorityTenantId: authority.tenantId,
-        descriptorPin: {
-          kind: "entity_authoring_descriptor",
-          publicationKey: "fixture.descriptor",
-          releaseId: authority.tenantId,
-          unsignedHash: "a".repeat(64),
-          artifactHash: "b".repeat(64),
-        },
-        descriptorHash: native.c.authoringSchemaHash,
-        maximumBytes: 10000,
-        maximumReleases: 20,
-        supportedLocales: ["en"],
-        verifier: { verify: async () => true },
-        authorizeReview: async () => {},
-        audit: async () => {},
+it.each([false, true])(
+  "binds compiler identities and revalidates without component composition (fresh=%s)",
+  async (fresh) => {
+    const f = await fixture(),
+      native = nativeReleaseFixture();
+    native.graph.surfaces.find(
+      (s) => s.surfaceKind === "list",
+    )!.maxFilterDepth = 1;
+    const rows = native.c.core.identities.map((i) => ({
+      id: i.id,
+      entity_id: i.entityId,
+      tenant_id: i.tenantId,
+      field_key: i.fieldKey,
+      parent_identity_id: i.parentIdentityId,
+      identity_status: "reserved",
+    }));
+    const storage = native.c.core.catalogues[0]!.columns.map((column) => ({
+      path: column.path,
+      storage_type: column.storageType,
+      nullable: column.nullable,
+      base_schema: "pg_catalog",
+      base_type: column.storageType,
+      type_kind: "b",
+      object_kind: "r",
+      generated: "",
+      column_count: 3,
+      constraints: [],
+      default_expression: null,
+    }));
+    const tx = database(appRole, true, true, rows, storage);
+    Object.defineProperty(tx, "isTransaction", { value: true });
+    const installedCatalogue = await readNativeStorageCatalogue(
+      tx as never,
+      "studio",
+      {
+        plane: "studio",
+        schema: native.graph.runtimeProfiles[0]!.storageSchema!,
+        object: native.graph.runtimeProfiles[0]!.storageObject!,
       },
-      nativeBootstrapProposals: {
-        maximumBytes: 100000,
-        readProposal: async () => proposal,
-        audit: async () => {},
-        resolveResources: async () => ({
-          schema: {} as never,
-          host: {
-            commands: {
-              authoringSchemaHash: native.c.authoringSchemaHash,
-              maxMembers: 1000,
-              maxCommands: 100,
-              maxBatchBytes: 100000,
-            },
-            snapshotVersions: [2],
-            admit: async () => {},
-          } as never,
-          qualify,
-          preparation: {
-            compiler: {
-              ...native.c,
-              core: { ...native.c.core, identities: [] },
-              authorization: {
-                ...native.c.authorization,
-                handlers: [],
-                resolvers: [],
-                permissions: [],
-              },
-            },
-            operations: {} as never,
-            reader: {} as never,
-          },
-        }),
-      },
+    );
+    Object.assign(native.graph.runtimeProfiles[0]!, {
+      storageCatalogueHash: installedCatalogue.hash,
     });
-    const resolved =
-      await runtime.referenceEnrollment!.nativeBootstrap!.resolve(
-        tx as never,
-        { principalId: input.actorId } as never,
-        input,
+    const proposal = {
+      graph: native.graph,
+      title: "Reference",
+      branchCode: "native",
+      baseReleaseId: null,
+    };
+    const input = {
+      entityId: native.graph.authoringSource.entityId,
+      changeSetId: native.graph.ownedLabels!.changeSetId,
+      actorId: authority.tenantId,
+      tenantId: null,
+      idempotencyKey: "native-test",
+      proposalHash: sha256(native.graph),
+    };
+    if (fresh) {
+      Object.assign(native.graph, {
+        fieldIdentities: native.c.core.identities.map((i) => ({
+          ...i,
+          identityStatus: "reserved",
+          introducedChangeSetId: input.changeSetId,
+          createdBy: input.actorId,
+          createdAt: "2026-10-09T00:00:00.000Z",
+          firstReleaseId: null,
+          retiredAt: null,
+          retiredBy: null,
+          retirementReleaseId: null,
+          replacementIdentityId: null,
+        })),
+      });
+      input.proposalHash = sha256(native.graph);
+      rows.splice(0); // Fresh composition must not require old database identities.
+    }
+    const qualify = vi.fn(async () => {});
+    try {
+      const runtime = await createControlProductCommandRuntime({
+        ...f.options,
+        referenceResources: {
+          authorityTenantId: authority.tenantId,
+          descriptorPin: {
+            kind: "entity_authoring_descriptor",
+            publicationKey: "fixture.descriptor",
+            releaseId: authority.tenantId,
+            unsignedHash: "a".repeat(64),
+            artifactHash: "b".repeat(64),
+          },
+          descriptorHash: native.c.authoringSchemaHash,
+          maximumBytes: 10000,
+          maximumReleases: 20,
+          supportedLocales: ["en"],
+          verifier: { verify: async () => true },
+          authorizeReview: async () => {},
+          audit: async () => {},
+        },
+        nativeBootstrapProposals: {
+          maximumBytes: 100000,
+          readProposal: async () => proposal,
+          audit: async () => {},
+          resolveResources: async () => ({
+            schema: {} as never,
+            host: {
+              commands: {
+                authoringSchemaHash: native.c.authoringSchemaHash,
+                maxMembers: 1000,
+                maxCommands: 100,
+                maxBatchBytes: 100000,
+              },
+              snapshotVersions: [2],
+              admit: async () => {},
+            } as never,
+            qualify,
+            preparation: {
+              identityMode: fresh ? "fresh" : "installed",
+              compiler: {
+                ...native.c,
+                core: { ...native.c.core, identities: [] },
+                authorization: {
+                  ...native.c.authorization,
+                  handlers: [],
+                  resolvers: [],
+                  permissions: [],
+                },
+              },
+              operations: {} as never,
+              reader: {} as never,
+            },
+          }),
+        },
+      });
+      const resolved =
+        await runtime.referenceEnrollment!.nativeBootstrap!.resolve(
+          tx as never,
+          { principalId: input.actorId } as never,
+          input,
+        );
+      const prepared = await resolved.policy.prepare(tx as never, input);
+      expect(prepared.compiler.core.identities).toEqual(
+        native.c.core.identities,
       );
-    const prepared = await resolved.policy.prepare(tx as never, input);
-    expect(prepared.compiler.core.identities).toEqual(native.c.core.identities);
-    expect(prepared.compiler.core.catalogues).toEqual([installedCatalogue]);
-    expect(prepared.compiler.listProviders).toEqual(
-      resolveNativeBootstrapListProviders(native.graph),
-    );
-    expect(prepared.compiler.listProviders).not.toEqual(native.c.listProviders);
-    expect(prepared.compiler.authorization.handlers.map((h) => h.key)).toEqual([
-      "entity.record.list.v1",
-      "entity.record.read.v1",
-    ]);
-    expect(
-      prepared.compiler.authorization.permissions.map((p) => p.state),
-    ).toEqual(["none", "none"]);
-    await resolved.policy.qualify(tx as never, input);
-    expect(qualify).toHaveBeenCalledTimes(1);
-    rows[0]!.field_key = "changed";
-    await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
-      "IDENTITY_BINDING_CHANGED",
-    );
-    expect(qualify).toHaveBeenCalledTimes(1);
-    rows[0]!.field_key = native.c.core.identities[0]!.fieldKey;
-    storage[0]!.nullable = !storage[0]!.nullable;
-    await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
-      "STORAGE_CATALOGUE_CHANGED",
-    );
-    expect(qualify).toHaveBeenCalledTimes(1);
-  } finally {
-    await tx.destroy();
-    await f.close();
-  }
-});
+      expect(prepared.compiler.core.catalogues).toEqual([installedCatalogue]);
+      expect(prepared.compiler.listProviders).toEqual(
+        resolveNativeBootstrapListProviders(native.graph),
+      );
+      expect(prepared.compiler.listProviders).not.toEqual(
+        native.c.listProviders,
+      );
+      expect(
+        prepared.compiler.authorization.handlers.map((h) => h.key),
+      ).toEqual(["entity.record.list.v1", "entity.record.read.v1"]);
+      expect(
+        prepared.compiler.authorization.permissions.map((p) => p.state),
+      ).toEqual(["none", "none"]);
+      await resolved.policy.qualify(tx as never, input);
+      expect(qualify).toHaveBeenCalledTimes(1);
+      if (!fresh) {
+        rows[0]!.field_key = "changed";
+        await expect(
+          resolved.policy.qualify(tx as never, input),
+        ).rejects.toThrow("IDENTITY_BINDING_CHANGED");
+        expect(qualify).toHaveBeenCalledTimes(1);
+        rows[0]!.field_key = native.c.core.identities[0]!.fieldKey;
+      }
+      storage[0]!.nullable = !storage[0]!.nullable;
+      await expect(resolved.policy.qualify(tx as never, input)).rejects.toThrow(
+        "STORAGE_CATALOGUE_CHANGED",
+      );
+      expect(qualify).toHaveBeenCalledTimes(1);
+    } finally {
+      await tx.destroy();
+      await f.close();
+    }
+  },
+);

@@ -13,7 +13,7 @@ import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-autho
 
 // Transaction protocol fixture. Real compiler/projection, simulated SQL transport;
 // this is not PostgreSQL RLS, deployed authoring or live-read qualification.
-function fixture() {
+function fixture(fresh = false) {
   const f = nativeReleaseFixture(),
     graph = f.graph;
   const input = {
@@ -24,6 +24,23 @@ function fixture() {
     idempotencyKey: "native-bootstrap-test-001",
     proposalHash: sha256(graph),
   };
+  if (fresh) {
+    Object.assign(graph, {
+      fieldIdentities: f.c.core.identities.map((i) => ({
+        ...i,
+        identityStatus: "reserved",
+        introducedChangeSetId: input.changeSetId,
+        createdBy: input.actorId,
+        createdAt: "2026-10-09T00:00:00.000Z",
+        firstReleaseId: null,
+        retiredAt: null,
+        retiredBy: null,
+        retirementReleaseId: null,
+        replacementIdentityId: null,
+      })),
+    });
+    input.proposalHash = sha256(graph);
+  }
   let root = false,
     revision = 0;
   let receipt: Record<string, unknown> | null = null;
@@ -72,6 +89,10 @@ function fixture() {
             introduced_change_set_id: input.changeSetId,
           })),
       };
+    if (text.startsWith("INSERT INTO metadata.entity_field_identity")) {
+      writes.push(text);
+      return { rows: root && revision === 1 ? [{ id: values[0] }] : [] };
+    }
     if (text.startsWith("SELECT c.id FROM metadata.entity_change_set c"))
       return {
         rows: root && revision === 1 ? [{ id: input.changeSetId }] : [],
@@ -159,6 +180,7 @@ function fixture() {
       title: "Synthetic",
       branchCode: "bootstrap",
       baseReleaseId: null,
+      identityMode: fresh ? "fresh" : "installed",
       operations: {
         prepare: async () => ({
           table: "entity_operation",
@@ -251,47 +273,50 @@ it("rejects changed proposal and corrupted replay history", async () => {
     code: "NATIVE_BOOTSTRAP_REPLAY_HISTORY_INVALID",
   });
 });
-it("repository rolls back the new root and all writes when readback fails, even if its caller catches", async () => {
-  const f = fixture();
-  const repository = new KyselyMetaEntityAuthoringRepository(
-    f.tx,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    f.policy,
-  );
-
-  const proto = KyselyMetaEntityAuthoringRepository.prototype as unknown as {
-    loadGraphParts: typeof f.readers.empty;
-    nativeSnapshot: typeof f.readers.native;
-  };
-  const empty = vi
-    .spyOn(proto, "loadGraphParts")
-    .mockImplementation(f.readers.empty);
-  const native = vi
-    .spyOn(proto, "nativeSnapshot")
-    .mockImplementation(async () => {
-      throw Error("READBACK_FAILED");
-    });
-  try {
-    await expect(repository.executeNativeBootstrap(f.input)).rejects.toThrow(
-      "READBACK_FAILED",
+it.each([false, true])(
+  "repository rolls back root, members and identities after readback failure (fresh=%s)",
+  async (fresh) => {
+    const f = fixture(fresh);
+    const repository = new KyselyMetaEntityAuthoringRepository(
+      f.tx,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      f.policy,
     );
-    expect(f.root()).toBe(false);
-    expect(f.histories.size).toBe(0);
-    expect(f.writes).toHaveLength(0);
-    expect(f.policy.audit).not.toHaveBeenCalled();
-  } finally {
-    empty.mockRestore();
-    native.mockRestore();
-  }
-});
+
+    const proto = KyselyMetaEntityAuthoringRepository.prototype as unknown as {
+      loadGraphParts: typeof f.readers.empty;
+      nativeSnapshot: typeof f.readers.native;
+    };
+    const empty = vi
+      .spyOn(proto, "loadGraphParts")
+      .mockImplementation(f.readers.empty);
+    const native = vi
+      .spyOn(proto, "nativeSnapshot")
+      .mockImplementation(async () => {
+        throw Error("READBACK_FAILED");
+      });
+    try {
+      await expect(repository.executeNativeBootstrap(f.input)).rejects.toThrow(
+        "READBACK_FAILED",
+      );
+      expect(f.root()).toBe(false);
+      expect(f.histories.size).toBe(0);
+      expect(f.writes).toHaveLength(0);
+      expect(f.policy.audit).not.toHaveBeenCalled();
+    } finally {
+      empty.mockRestore();
+      native.mockRestore();
+    }
+  },
+);
 it("rejects uninstalled bootstrap host before touching the database", async () => {
   const f = fixture();
   await expect(
@@ -428,4 +453,18 @@ it("uses declared local initialization through canonical persistence and replay 
   expect(inserts.every(([query]) => query.includes('"requires_mfa"'))).toBe(
     true,
   );
+});
+
+it("creates fresh identities through the canonical writer and never reallocates on replay", async () => {
+  const f = fixture(true);
+  const result = await f.run();
+  expect(result.replay).toBe(false);
+  const identityWrites = () =>
+    f.query.mock.calls.filter(([sql]) =>
+      sql.includes("INSERT INTO metadata.entity_field_identity"),
+    );
+  expect(identityWrites()).toHaveLength(f.graph.fields.length);
+  expect(sha256(f.histories.get(1)!.graph)).toEqual(sha256(f.graph));
+  expect(await f.run()).toEqual({ ...result, replay: true });
+  expect(identityWrites()).toHaveLength(f.graph.fields.length);
 });

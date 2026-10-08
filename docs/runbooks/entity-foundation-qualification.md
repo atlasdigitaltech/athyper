@@ -113,6 +113,24 @@ Actual read-only run: `~/.athyper/instances/dev/workspace/entity-native-build-69
 
 Validation: 23 authoring tests pass, including the declared initializer through canonical bootstrap/compile/replay with simulated SQL transport; no old source-reader query occurs. This is not PostgreSQL application-role proof. Thirteen cleanup/preparation Node tests pass and cover finite scope, owner boundaries, preserved dependents, cycles/composite keys, malformed keys and explicit CLI scope. Fresh-identity allocation and the concrete production resource resolver remain unfinished. No reset, new native draft or activation occurred.
 
+### Fresh identity persistence — 9 October
+
+Implemented the fresh identity branch in the canonical native bootstrap writer and compiler-resource composition. The trusted resource resolver selects `identityMode: fresh`; request graphs cannot select their own mode. Every field must have exactly one proposed identity with matching entity/draft/actor, reserved state, no prior release/retirement provenance, valid parent membership and no cycles. Parent rows insert first under the fresh-root admission and graph transaction. Collisions reject without upsert; the existing installed/adoption path is retained. The resource evidence fingerprint includes identity mode.
+
+The focused application test compiles and records the fresh roster, then replays without further allocations. Repository failure tests include the fresh branch and verify rollback of root/history/member writes using simulated SQL. A disposable PostgreSQL test uses the canonical identity table/trigger and INSERT policies with a synthetic admission function: authorized explicit coordinates pass only after the new narrow grant; missing admission, wrong actor/token, duplicate insert and UPDATE/DELETE reject; rollback leaves no row. This is database constraint/grant evidence, **not authenticated DEV bootstrap or whole-graph PostgreSQL evidence**.
+
+Executable checks:
+
+```sh
+pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-bootstrap-identities.test.ts src/native-bootstrap-application.test.ts
+ATHYPER_FRESH_IDENTITY_POSTGRES=1 pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-fresh-identity.postgres.test.ts
+pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-command-runtime.test.ts src/composition/control-plane/native-bootstrap-resources.test.ts
+```
+
+Validation for this checkpoint: the full authoring package passes 906 tests (11 environment-dependent skips); the fresh-identity PostgreSQL check passes separately; the host runtime/resource suites pass 27 tests. Authoring native-test TypeScript and changed-file formatting pass. The broader host typecheck reports `entity-views-routes.ts:317` using `group` against `SaveableListStateV1` (`groups`); whole-tree formatting reports six concurrent files outside this change. These are not reported green or included in this change. Migration layout verification passes (172 classified files, 164 retained SQL).
+
+`58_native_fresh_identity_privileges.sql` is maintained clean-build DDL, not an installed DEV migration. The production entrypoint still lacks the complete proposal/resource resolver configuration. Both real complete graphs, startup assembly and cleanup dispositions remain necessary before reset. No DEV identity inserts, replacement draft commits or new activations are reported by this checkpoint.
+
 ### L1 — complete graphs, fresh identities and approved initial values
 
 Pin the maintained source definitions and declared target scope. Assemble both graphs through shared code selected by metadata. Include root/provenance, fields/types/keys, relations, labels, navigation/sections/views/bindings, selected components, operations, exact permission semantics, storage/runtime settings, supported AI declarations and dependencies. AI can be processed last but cannot silently disappear from the accepted graph.

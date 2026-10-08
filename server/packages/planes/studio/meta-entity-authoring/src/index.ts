@@ -189,7 +189,10 @@ export { createProductReferenceResourcePolicies } from "./product-reference-reso
 
 export { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
 
-export { resolveNativeBootstrapIdentities } from "./native-bootstrap-identities.js";
+export {
+  resolveNativeBootstrapIdentities,
+  plannedNativeBootstrapIdentities,
+} from "./native-bootstrap-identities.js";
 export type { NativeIdentityAdoptionSource } from "./native-bootstrap-identities.js";
 export {
   compileUiComponentProjection,

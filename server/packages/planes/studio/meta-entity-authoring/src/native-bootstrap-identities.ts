@@ -2,6 +2,7 @@ import { sql, type Transaction } from "kysely";
 import {
   AuthoringPolicyError,
   referenceUuid,
+  validateReferenceIdentity,
   validateFoundationNode,
   type ExpandedNativeMetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
@@ -189,4 +190,118 @@ export async function resolveNativeBootstrapIdentities(
       parentIdentityId: row.parent_identity_id,
     };
   });
+}
+
+/** Trusted host selection only. A graph cannot select fresh allocation itself. */
+export type NativeBootstrapIdentityMode = "installed" | "fresh";
+
+export function plannedNativeBootstrapIdentities(
+  input: NativeBootstrapInput,
+  graph: ExpandedNativeMetaEntityGraph,
+): NativeReleaseCompilationContext["core"]["identities"] {
+  const fail = (): never => {
+    throw new AuthoringPolicyError(
+      "NATIVE_FRESH_IDENTITIES_INVALID",
+      "Fresh identities must exactly cover the scoped proposal, with no predecessor or release provenance.",
+    );
+  };
+  if (
+    input.tenantId !== null ||
+    graph.authoringSource.entityId !== input.entityId ||
+    graph.authoringSource.sourceKind !== "product" ||
+    graph.authoringSource.tenantId !== null ||
+    graph.ownedLabels?.changeSetId !== input.changeSetId ||
+    sha256(graph) !== input.proposalHash
+  )
+    fail();
+  const rows = graph.fieldIdentities;
+  if (
+    !rows?.length ||
+    rows.length > 4096 ||
+    rows.length !== graph.fields.length
+  )
+    return fail();
+  const ids = new Set(rows.map((r) => r.id));
+  if (
+    ids.size !== rows.length ||
+    new Set(
+      rows.map((r) => JSON.stringify([r.parentIdentityId ?? null, r.fieldKey])),
+    ).size !== rows.length ||
+    new Set(graph.fields.map((f) => f.fieldIdentityId)).size !== rows.length ||
+    graph.fields.some((f) => !ids.has(f.fieldIdentityId))
+  )
+    fail();
+  for (const row of rows) {
+    validateReferenceIdentity(row);
+    if (
+      row.entityId !== input.entityId ||
+      row.tenantId != null ||
+      row.introducedChangeSetId !== input.changeSetId ||
+      row.createdBy !== input.actorId ||
+      row.identityStatus !== "reserved" ||
+      row.firstReleaseId != null ||
+      row.retiredAt != null ||
+      row.retiredBy != null ||
+      row.retirementReleaseId != null ||
+      row.replacementIdentityId != null
+    )
+      fail();
+    const visited = new Set([row.id]);
+    let parent = row.parentIdentityId;
+    while (parent != null) {
+      if (!ids.has(parent) || visited.has(parent)) fail();
+      visited.add(parent);
+      parent = rows.find((r) => r.id === parent)!.parentIdentityId;
+    }
+  }
+  return graph.fields.map((field) => {
+    const row = rows.find((r) => r.id === field.fieldIdentityId)!;
+    return {
+      id: row.id,
+      entityId: row.entityId,
+      tenantId: null,
+      fieldKey: row.fieldKey,
+      parentIdentityId: row.parentIdentityId ?? null,
+    };
+  });
+}
+
+/** Inserts only after canonical root creation, inside its admitted transaction.
+ * No upsert/adoption: any collision rolls back the entire bootstrap. */
+export async function persistFreshNativeBootstrapIdentities(
+  tx: Transaction<Record<string, never>>,
+  input: NativeBootstrapInput,
+  graph: ExpandedNativeMetaEntityGraph,
+  expected: NativeReleaseCompilationContext["core"]["identities"],
+): Promise<void> {
+  const planned = plannedNativeBootstrapIdentities(input, graph);
+  if (!tx.isTransaction || sha256(planned) !== sha256(expected))
+    throw new AuthoringPolicyError(
+      "NATIVE_FRESH_IDENTITY_CONTEXT_MISMATCH",
+      "Fresh identity compilation and persistence must agree.",
+    );
+  const remaining = [...graph.fieldIdentities!];
+  const inserted = new Set<string>();
+  while (remaining.length) {
+    const index = remaining.findIndex(
+      (r) => r.parentIdentityId == null || inserted.has(r.parentIdentityId),
+    );
+    const row = remaining.splice(index, 1)[0]!;
+    const result = await sql`INSERT INTO metadata.entity_field_identity
+      (id,entity_id,tenant_id,field_key,parent_identity_id,identity_status,introduced_change_set_id,created_at,created_by)
+      SELECT ${row.id}::uuid,${input.entityId}::uuid,NULL,${row.fieldKey},${row.parentIdentityId ?? null}::uuid,
+        'reserved',${input.changeSetId}::uuid,${row.createdAt}::timestamptz,${input.actorId}::uuid
+      FROM metadata.entity_change_set c WHERE c.id=${input.changeSetId}::uuid AND c.entity_id=${input.entityId}::uuid
+        AND c.tenant_id IS NULL AND c.source_kind='product' AND c.native_core_layout_version=2
+        AND c.status='draft' AND c.lock_version=1 AND c.created_by=${input.actorId}::uuid
+        AND current_setting('app.current_principal_id',true)=${input.actorId}
+        AND entity_command_private.admitted_creation(c.id,c.entity_id)
+      RETURNING id`.execute(tx);
+    if (result.rows.length !== 1)
+      throw new AuthoringPolicyError(
+        "NATIVE_FRESH_IDENTITY_ADMISSION_REQUIRED",
+        "Fresh-root identity insert requires the active application command.",
+      );
+    inserted.add(row.id);
+  }
 }
