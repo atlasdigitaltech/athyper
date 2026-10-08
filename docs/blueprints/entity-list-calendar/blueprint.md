@@ -133,7 +133,7 @@ Until step 4, Board's build authority rests on its existing approval, and Calend
 
 - **Rule.** It is keyed on the field's declared type, not the operator:
   - `date` values are `YYYY-MM-DD` only;
-  - `datetime` values are RFC 3339 with `Z` or an explicit offset. A value with no offset is **invalid**, not merely unrecognized.
+  - `datetime` values are RFC 3339 with seconds and `Z` or an explicit `±HH:MM` offset (`YYYY-MM-DDTHH:MM:SS[.fraction](Z|±HH:MM)`), the form `Date.prototype.toISOString` emits. A value with no offset, or with minutes but no seconds, is **invalid**, not merely unrecognized.
   - The rule applies to `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `between` and `in` on date and datetime fields. `relative` is already a closed key set and is unchanged.
 - **Server.** `validateFilterValue` rejects with 400 (`INVALID_FILTER_VALUE`), as today. The server stays fail-closed.
 - **Before the check goes live: scan and correct.** The scan covers:
@@ -154,7 +154,7 @@ Until step 4, Board's build authority rests on its existing approval, and Calend
   - A filter is never dropped from a stored view on its own.
 - **URL state.** Malformed values, unknown fields and disallowed operators are still dropped field by field, as today. This differs deliberately from stored views: a URL is a transient, hand-built intent that the person can see and edit, while a stored view is a persisted promise about what it shows.
 - **Metadata defaults.** These are validated at publication, where the compiled surface is validated.
-- **Tests.** The test set covers each rejection case explicitly: no offset, a wrong offset format, a malformed date, a datetime value on a date field, and (for stored views) an unknown field and a disallowed operator.
+- **Tests.** The test set covers each rejection case explicitly: no offset, a minutes-only instant (for example `2026-10-01T00:00+08:00`), a wrong offset format, a malformed date, a datetime value on a date field, and (for stored views) an unknown field and a disallowed operator.
 
 ## 5. Contract properties
 
@@ -254,10 +254,10 @@ ListLocationStateV1.calendarAnchor?: string;   // YYYY-MM-DD; location only, nev
 
 **Wire format (hard rules).**
 
-| Field kind | Window edge value                                                                                                                                                                | Never                                 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `date`     | `YYYY-MM-DD`                                                                                                                                                                     | through a time zone, or as an instant |
-| `datetime` | RFC 3339 instant with explicit offset (sent as `Z`) for the person's local midnight at each edge, computed with `Intl` in the person's `timeZone` so DST days are 23 or 25 hours | a local time without an offset        |
+| Field kind | Window edge value                                                                                                                                                                                                       | Never                                 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `date`     | `YYYY-MM-DD`                                                                                                                                                                                                            | through a time zone, or as an instant |
+| `datetime` | RFC 3339 instant with seconds and an explicit offset (sent as `Z`, as `toISOString` emits) for the person's local midnight at each edge, computed with `Intl` in the person's `timeZone` so DST days are 23 or 25 hours | a local time without an offset        |
 
 **Filters, ANDed with the current list query.**
 
@@ -407,7 +407,7 @@ tests/foundation-browser/entity-list-calendar.spec.ts              registered in
 
 **Delivery status (8 October 2026).**
 
-- P1: the move-only commit landed as `f3cfd6783` (`docs/blueprints/entity-list-layouts/foundation.md`). Next: the independent diff check, then the owner's decision 2, then the count-mode rule as its own commit.
+- P1: the move-only commit landed as `f3cfd6783` (`docs/blueprints/entity-list-layouts/foundation.md`). **Reviewer attestation (8 October 2026):** the independent diff verification of `f3cfd6783` against Board revision 4 found no substantive change to the moved text; the only differences are table-column padding. This is a verification finding, not an approval. Next: the owner's decision 2, then the count-mode rule as its own commit.
 - P2: landed as `624522195`. That commit also fixed a step-A defect: state parsing now tolerates a descriptor without `defaultState`.
 - Calendar runtime: not started; it waits for decisions 5, 6, 8 and 9.
 

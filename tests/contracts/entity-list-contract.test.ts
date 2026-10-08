@@ -302,6 +302,7 @@ describe("entity list browser contract", () => {
     assert.equal(isListInstantValue("2026-10-08T14:30:00.125+08:00"), true);
     assert.equal(isListInstantValue("2026-10-08T14:30:00"), false, "no offset");
     assert.equal(isListInstantValue("2026-10-08T14:30Z"), false, "no seconds");
+    assert.equal(isListInstantValue("2026-10-01T00:00+08:00"), false, "minutes-only with an offset");
     assert.equal(isListInstantValue("2026-10-08T14:30:00+0800"), false, "malformed offset");
     assert.equal(isListInstantValue("2026-10-08"), false, "date on a datetime field");
     assert.equal(temporalFilterValueError("date", "between", ["2026-10-01", "2026-10-31"]), undefined);
