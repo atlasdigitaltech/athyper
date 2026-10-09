@@ -3,6 +3,7 @@ import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
 import { resolveListGantt } from "./list-gantt.js";
 import { lockedScope, resolveListTree } from "./list-tree.js";
+import { resolveListCompare } from "./list-compare.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -1577,6 +1578,16 @@ export function compileEntityListDescriptor(
     : undefined;
   const tree =
     treeResolution && "tree" in treeResolution ? treeResolution.tree : undefined;
+  // Compare is a selection action, not a mode (Compare blueprint section 5.3).
+  const compare = descriptor.listPresentation?.compare
+    ? resolveListCompare({
+        compare: descriptor.listPresentation.compare,
+        fields: ordered,
+        entityFields: descriptor.fields,
+        masked,
+        ...(descriptor.storage.statusField ? { statusField: descriptor.storage.statusField } : {}),
+      })
+    : undefined;
   const { supported: modes, unavailable: unavailableModes } = resolveModes(
     descriptor.listPresentation?.supportedModes,
     {
@@ -1657,6 +1668,7 @@ export function compileEntityListDescriptor(
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
     ...(tree ? { tree } : {}),
+    ...(compare ? { compare } : {}),
     ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
     filterPresentation,
@@ -1720,6 +1732,7 @@ export function compileEntityListDescriptor(
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
+      ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey

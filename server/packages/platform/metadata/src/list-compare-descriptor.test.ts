@@ -1,0 +1,42 @@
+import { describe, expect, it } from "vitest";
+import type { EntityFieldDescriptor } from "@athyper/server-contract-metadata";
+import { parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
+
+// Publication checks of the comparison declaration (Entity list Compare blueprint section 6).
+const field = (key: string, type: EntityFieldDescriptor["type"], extra: Partial<EntityFieldDescriptor> = {}): EntityFieldDescriptor => ({ key, storagePath: key, type, required: false, writableOn: [], ...extra });
+const byKey = new Map([field("code", "string"), field("name", "string"), field("uom", "enum"), field("cost", "money", { list: { currencyField: "cur" } }), field("cur", "string"), field("id", "uuid"), field("version", "integer"), field("plant_id", "uuid")].map((item) => [item.key, item]));
+const valid = { sections: [{ key: "basic", label: "Basic data", fields: ["uom", "cost"] }, { key: "audit", label: "Record details", fields: ["name"], collapsed: true }] };
+const check = (raw: unknown, extra: Partial<Parameters<typeof validatePublishedListCompare>[1]> = {}) =>
+  validatePublishedListCompare(parsePublishedListCompare(raw), { byKey, identityField: "code", titleField: "name", storage: { idField: "id", versionField: "version" }, ...extra });
+
+describe("published comparison declaration", () => {
+  it("parses sections in order with their collapsed default", () => {
+    expect(parsePublishedListCompare(valid)).toEqual({ sections: [{ key: "basic", label: "Basic data", fields: ["uom", "cost"] }, { key: "audit", label: "Record details", fields: ["name"], collapsed: true }] });
+    expect(() => check(valid)).not.toThrow();
+  });
+
+  it("refuses empty, duplicate, unknown, oversized and unknown-property declarations", () => {
+    expect(() => parsePublishedListCompare({ sections: [] })).toThrow(/COMPARE_SECTION_EMPTY/);
+    expect(() => parsePublishedListCompare({ sections: [{ key: "a", label: "A", fields: [] }] })).toThrow(/COMPARE_SECTION_EMPTY/);
+    expect(() => parsePublishedListCompare({ sections: [{ key: "a", label: "A", fields: ["uom"] }, { key: "b", label: "B", fields: ["uom"] }] })).toThrow(/COMPARE_FIELD_DUPLICATE/);
+    expect(() => parsePublishedListCompare({ sections: [{ key: "a", label: "A", fields: Array.from({ length: 61 }, (_, index) => `f${index}`) }] })).toThrow(/COMPARE_FIELDS_ABOVE_CAP/);
+    expect(() => parsePublishedListCompare({ sections: [{ key: "a", label: "A", fields: ["uom"], inferred: true }] })).toThrow(/not a published comparison property/);
+    expect(() => parsePublishedListCompare({ sections: [{ key: "a", label: "A", fields: ["uom"], collapsed: false }] })).toThrow(/must be true/);
+    expect(() => check({ sections: [{ key: "a", label: "A", fields: ["missing"] }] })).toThrow(/COMPARE_FIELD_UNKNOWN/);
+  });
+
+  it("refuses technical identities, and requires a readable identity to head the columns", () => {
+    for (const key of ["id", "version", "plant_id"]) expect(() => check({ sections: [{ key: "a", label: "A", fields: [key] }] })).toThrow(/COMPARE_FIELD_TECHNICAL/);
+    expect(() => check(valid, { identityField: undefined })).toThrow(/COMPARE_IDENTITY_REQUIRED/);
+    expect(() => check(valid, { identityField: "absent" })).toThrow(/COMPARE_IDENTITY_REQUIRED/);
+  });
+
+  it("counts the identity, title and currency fields against the request limit", () => {
+    const many = new Map(byKey);
+    const keys = Array.from({ length: 60 }, (_, index) => `m${index}`);
+    for (const key of keys) many.set(key, field(key, "money", { list: { currencyField: `c${key}` } }));
+    for (const key of keys) many.set(`c${key}`, field(`c${key}`, "string"));
+    const raw = { sections: [{ key: "a", label: "A", fields: keys }] };
+    expect(() => validatePublishedListCompare(parsePublishedListCompare(raw), { byKey: many, identityField: "code", titleField: "name", storage: { idField: "id" } })).toThrow(/COMPARE_FIELDS_ABOVE_CAP: a comparison request would name 122 fields/);
+  });
+});

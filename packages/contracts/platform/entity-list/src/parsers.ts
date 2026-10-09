@@ -52,6 +52,7 @@ import { isListDateAnchor } from "./date-range";
 import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
+import { parseListCompare } from "./compare";
 import {
   parseListBoard,
   parseListBoardState,
@@ -237,6 +238,11 @@ export function parseEntityListDescriptor(
       : parseListTree(surfaceRecord.tree, fieldByKey);
   if (Boolean(tree) !== supportedModes.includes("tree"))
     throw new TypeError("surface.tree is required exactly when Tree is supported");
+  // Compare is a selection action, not a mode: present or absent on its own.
+  const compare =
+    surfaceRecord.compare === undefined
+      ? undefined
+      : parseListCompare(surfaceRecord.compare, fieldByKey);
   const cardContent =
     surfaceRecord.cardContent === undefined
       ? undefined
@@ -350,6 +356,7 @@ export function parseEntityListDescriptor(
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
+      ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
         ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey")

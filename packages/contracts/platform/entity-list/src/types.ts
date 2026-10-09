@@ -327,6 +327,9 @@ export interface EntityListDescriptorV1 {
     readonly gantt?: import("./gantt").ListGanttV1;
     /** The record hierarchy this viewer can browse; present only when Tree is supported. */
     readonly tree?: import("./tree").ListTreeV1;
+    /** The comparison this viewer can open from the selection bar (Compare
+     * blueprint section 5.3); present only when the surface declares one. */
+    readonly compare?: import("./compare").ListCompareV1;
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;

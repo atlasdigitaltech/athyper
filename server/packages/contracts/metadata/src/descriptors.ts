@@ -205,6 +205,20 @@ export interface EntityListLimitsDescriptor {
   readonly countMode?: "none" | "cached" | "approximate" | "exact";
 }
 
+/** Published comparison declaration of a list surface (Entity list Compare
+ * blueprint section 5.2): authored sections of root fields. Present means
+ * Compare is offered; absent means it is not. */
+export interface EntityListCompareDescriptor {
+  readonly sections: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly localizedLabel?: import("@athyper/contract-platform-entity-list").EntityLocalizedTextV1;
+    readonly fields: readonly string[];
+    /** The section starts collapsed (revision 3, decision 12). */
+    readonly collapsed?: true;
+  }[];
+}
+
 /** Published Board projection compiled from the typed lane rows. Choices are
  * the compiled entity_field_choice projection; every choice is in exactly one
  * lane, and the lane tone is the authored tone or the members' shared tone. */
@@ -293,6 +307,8 @@ export interface EntityListPresentationDescriptor {
   readonly defaultDensity?: EntityListDensity;
   readonly supportedModes?: readonly EntityListViewMode[];
   readonly board?: EntityListBoardDescriptor;
+  /** Compare selection action (Entity list Compare blueprint). */
+  readonly compare?: EntityListCompareDescriptor;
   readonly calendar?: EntityListCalendarDescriptor;
   readonly gantt?: EntityListGanttDescriptor;
   readonly cardContent?: EntityListCardContentDescriptor;

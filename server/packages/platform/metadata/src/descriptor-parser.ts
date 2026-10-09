@@ -1,3 +1,4 @@
+import { parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
 import { parseDetailFieldRenderer } from "@athyper/contract-platform-entity-runtime";
 import {
   parsePublishedCardContent,
@@ -289,6 +290,13 @@ export function parseEntityRuntimeDescriptor(
             authorization,
           );
         })();
+  // Compare needs the record title as well as the list identity (section 6).
+  validatePublishedListCompare(listPresentation?.compare, {
+    byKey: new Map(fields.map((field) => [field.key, field])),
+    ...(listPresentation?.identityField ? { identityField: listPresentation.identityField } : {}),
+    ...(recordPresentation?.titleField ? { titleField: recordPresentation.titleField } : {}),
+    storage,
+  });
   if (recordPresentation)
     validateRecordPresentationReferences(
       recordPresentation,
@@ -963,6 +971,9 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(item["board"] === undefined
       ? {}
       : { board: parsePublishedListBoard(item["board"]) }),
+    ...(item["compare"] === undefined
+      ? {}
+      : { compare: parsePublishedListCompare(item["compare"]) }),
     ...(item["cardContent"] === undefined
       ? {}
       : { cardContent: parsePublishedCardContent(item["cardContent"]) }),
