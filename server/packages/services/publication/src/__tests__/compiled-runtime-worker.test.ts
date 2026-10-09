@@ -439,6 +439,10 @@ it.each([
         return { rows: [] };
       }
       if (text.startsWith("SELECT id,unsigned_hash")) return { rows: [saved] };
+      if (text.includes("AS complete"))
+        return {
+          rows: [{ actor_id: id(3), status: "approved", complete: false }],
+        };
       if (text.startsWith("SELECT c.*"))
         return {
           rows: [

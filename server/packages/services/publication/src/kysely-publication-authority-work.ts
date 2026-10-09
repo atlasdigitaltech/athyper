@@ -37,6 +37,7 @@ import {
 } from "@athyper/server-contract-publication";
 import { sql, type Kysely } from "kysely";
 import { KyselyPublicationAuthorityRepository } from "./kysely-authority-repository.js";
+import { reconcileSignedRelease } from "./reconcile-signed-release.js";
 import type {
   PublicationAuthorityWork,
   PublicationCoordinatePayload,
@@ -881,6 +882,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       attempt: 1,
       actorId: string(row, "created_by"),
     });
+    await reconcileSignedRelease(this.options.database, releaseId);
     return { deploymentId: deployment.deploymentId };
   }
 

@@ -8,6 +8,8 @@ import { createRequire } from "node:module";
  * signing canonicalizer, host publication adapters and dependency lock. This is
  * a source fingerprint, not a binary attestation or an authorization grant. */
 export function publicationCompilerIdentity() {
+  const emitted = fileURLToPath(import.meta.url).endsWith(".js");
+  const extension = emitted ? ".js" : ".ts";
   const packages = [
     "@athyper/server-platform-ai",
     "@athyper/server-service-publication",
@@ -39,7 +41,7 @@ export function publicationCompilerIdentity() {
       if (entry.isSymbolicLink())
         throw Error("PUBLICATION_COMPILER_BUILD_SYMLINK_DENIED");
       if (entry.isDirectory()) collect(root, label, file);
-      else if (/\.(ts|json)$/.test(entry.name))
+      else if (entry.name.endsWith(extension) || entry.name.endsWith(".json"))
         files.push({
           key: `${label}/${relative(root, file)}`,
           bytes: readFileSync(file),
@@ -75,7 +77,7 @@ export function publicationCompilerIdentity() {
       key: `${name}/package.json`,
       bytes: readFileSync(join(root, "package.json")),
     });
-    collect(join(root, "src"), name);
+    collect(join(root, emitted ? "dist" : "src"), name);
   }
   const adapters = dirname(fileURLToPath(import.meta.url));
   collect(adapters, "platform-host/publication");
@@ -92,7 +94,9 @@ export function publicationCompilerIdentity() {
   ])
     files.push({
       key: `platform-host/control-plane/${file}`,
-      bytes: readFileSync(join(nativeComposition, file)),
+      bytes: readFileSync(
+        join(nativeComposition, file.replace(/\.ts$/, extension)),
+      ),
     });
   // Source/registered-action admission is qualified in host composition. Pins
   // must cover these adapters and their registry, not only domain packages.
@@ -103,7 +107,7 @@ export function publicationCompilerIdentity() {
   files.push({
     key: "platform-host/register-services.ts",
     bytes: readFileSync(
-      join(dirname(dirname(adapters)), "register-services.ts"),
+      join(dirname(dirname(adapters)), "register-services" + extension),
     ),
   });
   let workspace = adapters;
@@ -118,7 +122,7 @@ export function publicationCompilerIdentity() {
     bytes: readFileSync(join(workspace, "pnpm-lock.yaml")),
   });
   const digest = createHash("sha256").update(
-    `athyper.dev-compiler-source-build/1\nnode:${process.versions.node}\n`,
+    `athyper.dev-compiler-${emitted ? "emitted" : "source"}-build/1\nnode:${process.versions.node}\n`,
   );
   for (const file of files.sort((a, b) => a.key.localeCompare(b.key)))
     digest.update(`${file.key}\0${file.bytes.length}\0`).update(file.bytes);
