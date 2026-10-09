@@ -226,3 +226,5 @@ export { buildNativeSuccessorGraph } from "./native-successor-graph.js";
 export { resolveNativeSuccessorSource } from "./native-successor-source.js";
 
 export { enqueueMetaEntityCompilation } from "./publication-adapter.js";
+
+export * from "./native-presentation-recovery.js";

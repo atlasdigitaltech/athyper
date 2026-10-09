@@ -6,6 +6,7 @@ import {
 import {
   buildNativeReferenceProduct,
   buildNativeSuccessorGraph,
+  buildNativePresentationRecovery,
   parseSharedReferenceProduct,
   readNativeStorageCatalogue,
   type NativeReferenceProductInput,
@@ -31,6 +32,50 @@ async function main() {
   if (bytes.length > 16 * 1024 * 1024)
     throw Error("NATIVE_BOOTSTRAP_INPUT_BUDGET");
   let candidate = JSON.parse(bytes.toString("utf8"));
+  if (candidate.schema === "entity.native-presentation-recovery-input/1") {
+    if (
+      Object.keys(candidate).sort().join() !==
+        "maximumBytes,maximumMembers,proposals,schema" ||
+      !Array.isArray(candidate.proposals) ||
+      !candidate.proposals.length ||
+      candidate.proposals.length > 256
+    )
+      throw Error("NATIVE_PRESENTATION_RECOVERY_INPUT_INVALID");
+    const proposals = candidate.proposals.map((entry: Record<string, any>) => {
+      if (
+        Object.keys(entry).sort().join() !==
+        "authorId,branchCode,changeSetId,historical,selections,source,sourceHash,sourceReleaseId,sourceRevision,title"
+      )
+        throw Error("NATIVE_PRESENTATION_RECOVERY_INPUT_INVALID");
+      const prepared = buildNativePresentationRecovery({
+        current: {
+          source: entry.source,
+          sourceHash: entry.sourceHash,
+          sourceReleaseId: entry.sourceReleaseId,
+          sourceRevision: entry.sourceRevision,
+          changeSetId: entry.changeSetId,
+          authorId: entry.authorId,
+          maximumMembers: candidate.maximumMembers,
+        },
+        historical: entry.historical,
+        selections: entry.selections,
+      });
+      return {
+        authorId: entry.authorId,
+        proposal: {
+          graph: prepared.graph,
+          baseReleaseId: prepared.baseReleaseId,
+          title: entry.title,
+          branchCode: entry.branchCode,
+        },
+      };
+    });
+    candidate = {
+      maximumBytes: candidate.maximumBytes,
+      maximumMembers: candidate.maximumMembers,
+      proposals,
+    };
+  }
   if (candidate.schema === "entity.native-successor-input/1") {
     if (
       Object.keys(candidate).sort().join() !==
