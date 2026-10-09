@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `2356e4ae5277fb483a952dd8538dc45954ccc13195e71edcd1ada9895e4b2776`
-Files scanned / authorization-bearing: 14722 / 2071
+Files scanned / authorization-bearing: 14725 / 2071
 Registered authorization objects: 470
 Aggregated object references: 1425
 Writer references: 148
@@ -963,7 +963,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 65, 102 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/entity-authorization.ts | 194, 205 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/entity-effective-security.ts | 526 |
-| `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/entity-list-service.ts | 1222, 1810 |
+| `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/entity-list-service.ts | 1223, 1812 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/list-experience.ts | 98, 111, 133 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/mutation-service.ts | 256 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/services/records/src/query-service.ts | 199, 417, 886 |
@@ -976,7 +976,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeHit` | reviewed | runtime | server/packages/platform/search/src/document-search-service.ts | 14, 64 |
 | `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 371, 470, 543, 834, 925, 1241, 1347, 1960 |
 | `authorizeListContextDiscovery` | reviewed | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 7, 96, 109, 116, 129, 146, 161 |
-| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 16, 693 |
+| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 17, 694 |
 | `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/list-context-discovery.ts | 16 |
 | `authorizeLocalPublicationActivation` | reviewed | test | server/apps/platform-host/src/composition/shared/publication/local-publication-activation.test.ts | 3, 67, 70, 75, 81, 86 |
 | `authorizeLocalPublicationActivation` | reviewed | runtime | server/apps/platform-host/src/composition/shared/publication/local-publication-activation.ts | 10 |
@@ -1008,12 +1008,12 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeRecipient` | reviewed | runtime | server/packages/platform/notifications/src/collaboration-notification-policy.ts | 98, 100 |
 | `authorizeRecipient` | reviewed | runtime | server/packages/platform/notifications/src/entity-notification-delivery.ts | 59 |
 | `authorizeRecipient` | reviewed | runtime | server/packages/platform/notifications/src/notification-planner.ts | 61, 238 |
-| `authorizeRecord` | reviewed | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts | 318, 353, 395 |
-| `authorizeRecord` | reviewed | runtime | server/apps/platform-host/src/composition/shared/entity-runtime/activity-provider.ts | 576 |
+| `authorizeRecord` | reviewed | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts | 323, 358, 400 |
+| `authorizeRecord` | reviewed | runtime | server/apps/platform-host/src/composition/shared/entity-runtime/activity-provider.ts | 577 |
 | `authorizeRecord` | reviewed | test | server/packages/services/records/src/__tests__/collection-comparison.test.ts | 59, 228, 251, 266, 308, 406 |
 | `authorizeRecord` | reviewed | runtime | server/packages/services/records/src/snapshots/collection-comparison.ts | 23, 116 |
 | `authorizeRecordListRead` | reviewed | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 2, 19, 33, 42, 52 |
-| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 89, 595, 700 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 90, 596, 701 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-reference-reader.ts | 15, 77, 131 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 45, 111, 477, 567 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 8 |
@@ -1069,7 +1069,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | security_symbol | `authorizeReview` | server/packages/services/publication/src/compilation/approved-authoring-resource-source.ts | 19, 91 |
 | security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/entity-authorization.ts | 194, 205 |
 | security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/entity-effective-security.ts | 526 |
-| security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/entity-list-service.ts | 1222, 1810 |
+| security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/entity-list-service.ts | 1223, 1812 |
 | security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/list-experience.ts | 98, 111, 133 |
 | security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/mutation-service.ts | 256 |
 | security_symbol | `authorizeEntityOperation` | server/packages/services/records/src/query-service.ts | 199, 417, 886 |
@@ -1807,7 +1807,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/records/src/entity-detail-read.test.ts | 17, 25, 78, 81 |
 | `allowed` | test | server/packages/services/records/src/entity-effective-security.test.ts | 149, 273, 737, 738 |
 | `allowed` | runtime | server/packages/services/records/src/entity-effective-security.ts | 462 |
-| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 1319, 1803, 1809, 1837, 1842, 1843, 1891, 1901, 1931, 2011 |
+| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 1320, 1805, 1811, 1839, 1844, 1845, 1893, 1903, 1933, 2013 |
 | `allowed` | test | server/packages/services/records/src/entity-reference-reader.test.ts | 47, 152, 170 |
 | `allowed` | test | server/packages/services/records/src/entity-section-component.test.ts | 18, 20 |
 | `allowed` | runtime | server/packages/services/records/src/field-validation.ts | 54 |
@@ -3054,7 +3054,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/records/src/entity-detail-read.test.ts | 13, 24, 25, 40, 42, 47, 69, 76, 78, 81 |
 | `permissionCode` | test | server/packages/services/records/src/entity-effective-security.test.ts | 146, 147, 177, 249, 276, 709, 736, 745 |
 | `permissionCode` | runtime | server/packages/services/records/src/entity-effective-security.ts | 451, 509, 528 |
-| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 360, 813, 1219, 1224, 1805, 1812, 1927, 1928 |
+| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 361, 814, 1220, 1225, 1807, 1814, 1929, 1930 |
 | `permissionCode` | test | server/packages/services/records/src/entity-reference-reader.test.ts | 27, 38, 46, 152 |
 | `permissionCode` | test | server/packages/services/records/src/entity-section-component.test.ts | 15, 20 |
 | `permissionCode` | runtime | server/packages/services/records/src/field-validation.ts | 53, 54 |
@@ -3465,7 +3465,7 @@ Capture DDLs:
 | `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 213, 220, 221, 299 |
 | `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 131, 1318, 1319, 1321, 1327 |
 | `permissions` | runtime | packages/platform/ai/agent-ui/src/index.ts | 888, 892 |
-| `permissions` | ui | packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx | 49, 50 |
+| `permissions` | ui | packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx | 50, 51 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/entity-detail-runtime.tsx | 68, 69 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/entity-form-runtime.tsx | 65, 66 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/reference-field-input.tsx | 17, 20 |
@@ -3654,7 +3654,7 @@ Capture DDLs:
 | `permissions` | generated | server/packages/contracts/meta-entity-authoring/src/foundation.generated.json | 20 |
 | `permissions` | test | server/packages/contracts/metadata/src/__tests__/entity-ai.test.ts | 16 |
 | `permissions` | runtime | server/packages/contracts/metadata/src/common-reference-permission.ts | 73, 82, 83, 84, 85 |
-| `permissions` | runtime | server/packages/contracts/metadata/src/index.ts | 31 |
+| `permissions` | runtime | server/packages/contracts/metadata/src/index.ts | 32 |
 | `permissions` | test | server/packages/contracts/publication/src/__tests__/activity-collections.test.ts | 51, 140 |
 | `permissions` | test | server/packages/contracts/publication/src/__tests__/common-capability-permissions.test.ts | 4, 47 |
 | `permissions` | test | server/packages/contracts/publication/src/__tests__/entity-capabilities.test.ts | 14, 27, 32, 34, 197 |
@@ -3837,7 +3837,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/services/records/src/entity-detail-read.test.ts | 17 |
 | `permissions` | test | server/packages/services/records/src/entity-effective-security.test.ts | 41, 725 |
 | `permissions` | runtime | server/packages/services/records/src/entity-effective-security.ts | 150, 151, 152, 208, 209, 210 |
-| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 1924, 1927, 2274, 2277 |
+| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 1926, 1929, 2276, 2279 |
 | `permissions` | test | server/packages/services/records/src/entity-reference-reader.test.ts | 167 |
 | `permissions` | test | server/packages/services/records/src/entity-section-component.test.ts | 18 |
 | `permissions` | test | server/packages/services/records/src/hierarchy-move.test.ts | 29 |
@@ -4223,7 +4223,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/services/records/src/entity-detail-read.test.ts | 17 |
 | `principalFingerprint` | test | server/packages/services/records/src/entity-effective-security.test.ts | 45 |
 | `principalFingerprint` | runtime | server/packages/services/records/src/entity-effective-security.ts | 150 |
-| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 2274 |
+| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 2276 |
 | `principalFingerprint` | test | server/packages/services/records/src/hierarchy-move.test.ts | 29 |
 | `principalFingerprint` | test | server/packages/services/records/src/list-group-aggregates.test.ts | 35 |
 | `principalFingerprint` | test | server/packages/services/records/src/masked-disclosure.test.ts | 20 |
@@ -4415,7 +4415,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/services/records/src/entity-detail-read.test.ts | 17 |
 | `profileHash` | test | server/packages/services/records/src/entity-effective-security.test.ts | 46 |
 | `profileHash` | runtime | server/packages/services/records/src/entity-effective-security.ts | 151 |
-| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 2276 |
+| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 2278 |
 | `profileHash` | test | server/packages/services/records/src/hierarchy-move.test.ts | 28, 29 |
 | `profileHash` | test | server/packages/services/records/src/list-group-aggregates.test.ts | 34, 35 |
 | `profileHash` | test | server/packages/services/records/src/masked-disclosure.test.ts | 18 |
@@ -4462,7 +4462,7 @@ Capture DDLs:
 | `requiredPermission` | runtime | governance/policy/reports/internal-bank-live-publication.dev.json | 84 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 604, 606, 607, 608 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 256 |
-| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 1854, 1866 |
+| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 1856, 1868 |
 | `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 158, 200 |
 | `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 1135 |
 | `requiredPermissions` | runtime | apps/mesh/.next-native-targets/server/chunks/ssr/packages_platform_11ld1xa._.js | 1 |

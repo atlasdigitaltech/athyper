@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14722,
+    "filesScanned": 14725,
     "authorizationFiles": 2071,
     "registeredObjects": 470,
     "objectReferences": 1425,
@@ -13836,7 +13836,7 @@
     {
       "path": "packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx",
       "artifactClass": "ui",
-      "sha256": "0aad8b21a176d347478c9a07da555d80f4cd909fa580bea7289083dd9beefe7b"
+      "sha256": "64aee85d70c92646e5b4a24e76bc1259749ff7102de019e110c894dfe27c3c89"
     },
     {
       "path": "packages/platform/entity/runtime/form-detail/src/entity-detail-runtime.tsx",
@@ -14316,7 +14316,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts",
       "artifactClass": "test",
-      "sha256": "0cc1167cd6574159a5db42ffc27568c6eb6df5be47f770390dd4467a60a44e99"
+      "sha256": "ae0b0bbf3b6c276636dbe841f53d78cdc5d938c768d755409e7cab49f0917cce"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-read-registrations.test.ts",
@@ -14351,7 +14351,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/entity-runtime/activity-provider.ts",
       "artifactClass": "runtime",
-      "sha256": "8ca9130736b9ceff289491689bcc697f7b31665cc18c3afc47d41d56976f210b"
+      "sha256": "78d8f532b1b249e48c9392e4de0c24dc33d0b60ed6486b219752f962e6f94b19"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/entity-runtime/permission-transitions.ts",
@@ -14481,12 +14481,12 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/compiled-runtime-native.test.ts",
       "artifactClass": "test",
-      "sha256": "6b79fde076576c14e6472a19fa247b8c73a77dbf145cdad6123973c37b03b727"
+      "sha256": "691b177ec01e6daf94b27798a715eb37a02f0d8ddf3427fc3239a418d58000fc"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/compiled-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "8a58fe05fce120a2a67cb0ff2d0ced54f759853eb30db3b69d25b5fe486d8368"
+      "sha256": "02806a0f06fe49fea457c5e3da87c823f69ecaf594c456bc441d25780d95fbb8"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/deployment-recovery-authority.ts",
@@ -17051,7 +17051,7 @@
     {
       "path": "server/packages/contracts/metadata/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "b45b1014cbb258f9db2dbfc7a6fa385a97b1f2680ade42cf90ea2e8d66ef99b7"
+      "sha256": "5379a1f692f8033d6c4be065d2c6ecb072f2f7929bc3ae32b7c5633af0329843"
     },
     {
       "path": "server/packages/contracts/publication/src/__tests__/activity-binding.test.ts",
@@ -19071,7 +19071,7 @@
     {
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
-      "sha256": "5ea8a5211c3ce9b9f1480b27df145ef2c9403190424c52963b97bb5c5c651447"
+      "sha256": "de777ec2b89cead5f59f64b89fc16536232dfa76f49d2e2b6834abd9810c2c74"
     },
     {
       "path": "server/packages/services/records/src/entity-list-view-read.test.ts",
@@ -25297,9 +25297,9 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/compiled-runtime-native.test.ts",
       "artifactClass": "test",
       "access": "read",
-      "line": 317,
+      "line": 325,
       "lines": [
-        317
+        325
       ]
     },
     {
@@ -41454,8 +41454,8 @@
       "artifactClass": "runtime",
       "classification": "unclassified",
       "lines": [
-        1222,
-        1810
+        1223,
+        1812
       ]
     },
     {
@@ -41596,8 +41596,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        16,
-        693
+        17,
+        694
       ]
     },
     {
@@ -41941,9 +41941,9 @@
       "artifactClass": "test",
       "classification": "reviewed",
       "lines": [
-        318,
-        353,
-        395
+        323,
+        358,
+        400
       ]
     },
     {
@@ -41952,7 +41952,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        576
+        577
       ]
     },
     {
@@ -41998,9 +41998,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        89,
-        595,
-        700
+        90,
+        596,
+        701
       ]
     },
     {
@@ -53870,16 +53870,16 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1319,
-        1803,
-        1809,
-        1837,
-        1842,
-        1843,
-        1891,
-        1901,
-        1931,
-        2011
+        1320,
+        1805,
+        1811,
+        1839,
+        1844,
+        1845,
+        1893,
+        1903,
+        1933,
+        2013
       ]
     },
     {
@@ -93872,14 +93872,14 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        360,
-        813,
-        1219,
-        1224,
-        1805,
-        1812,
-        1927,
-        1928
+        361,
+        814,
+        1220,
+        1225,
+        1807,
+        1814,
+        1929,
+        1930
       ]
     },
     {
@@ -97860,8 +97860,8 @@
       "path": "packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx",
       "artifactClass": "ui",
       "lines": [
-        49,
-        50
+        50,
+        51
       ]
     },
     {
@@ -99764,7 +99764,7 @@
       "path": "server/packages/contracts/metadata/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        31
+        32
       ]
     },
     {
@@ -101557,10 +101557,10 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1924,
-        1927,
-        2274,
-        2277
+        1926,
+        1929,
+        2276,
+        2279
       ]
     },
     {
@@ -105094,7 +105094,7 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        2274
+        2276
       ]
     },
     {
@@ -112138,7 +112138,7 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        2276
+        2278
       ]
     },
     {
@@ -112528,8 +112528,8 @@
       "path": "server/packages/services/records/src/entity-list-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1854,
-        1866
+        1856,
+        1868
       ]
     },
     {
@@ -149942,8 +149942,8 @@
         "symbol": "authorizeEntityOperation",
         "path": "server/packages/services/records/src/entity-list-service.ts",
         "lines": [
-          1222,
-          1810
+          1223,
+          1812
         ]
       },
       {
