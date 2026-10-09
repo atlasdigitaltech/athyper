@@ -185,17 +185,26 @@ function cellsEqual(kind: ComparisonValueKind, a: ComparisonCell, b: ComparisonC
   return a.state === "value" && b.state === "value" && equalComparisonValues(kind, a.value, b.value);
 }
 
-/** Section 8.3: a row is not comparable when any cell is masked or unavailable,
- * or money fails the currency rule; it differs when its cells are not all equal. */
+/** A column whose whole record is unavailable (decision 11). */
+const recordUnavailable = (cell: ComparisonCell) => cell.state === "unavailable" && cell.reason === "record_unavailable";
+
+/** Section 8.3: whole-record-unavailable columns are left out (decision 11);
+ * over the remaining columns, a row is not comparable when any cell is masked
+ * or not captured, or money fails the currency rule, and it differs when its
+ * cells are not all equal. Fewer than two available columns cannot be
+ * compared. */
 export function comparisonRowOutcome(
   kind: ComparisonValueKind,
-  cells: readonly ComparisonCell[],
+  allCells: readonly ComparisonCell[],
   money?: ComparisonCurrencyRule,
 ): ComparisonOutcome {
+  const available = allCells.flatMap((cell, index) => (recordUnavailable(cell) ? [] : [index]));
+  if (available.length < 2) return "not_comparable";
+  const cells = available.map((index) => allCells[index]!);
   if (!comparableCells(cells)) return "not_comparable";
   if (kind === "money") {
-    const currencies = money?.currencies;
-    if (!currencies || currencies.length !== cells.length || !currencies.every((cell) => cell.state === "value")) return "not_comparable";
+    const currencies = money?.currencies?.length === allCells.length ? available.map((index) => money.currencies![index]!) : undefined;
+    if (!currencies || !currencies.every((cell) => cell.state === "value")) return "not_comparable";
     const first = currencies[0]!;
     if (!currencies.every((cell) => cellsEqual("string", first, cell))) return "differs";
   }

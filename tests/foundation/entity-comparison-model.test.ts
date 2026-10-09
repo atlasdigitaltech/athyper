@@ -39,6 +39,20 @@ test("row outcomes: empty is comparable, masked and unavailable are not", () => 
   assert.equal(comparisonRowOutcome("string", [v("A"), gone]), "not_comparable");
 });
 
+test("a whole unavailable record leaves row outcomes; masked and not-captured cells still do not compare (decision 11)", () => {
+  assert.equal(comparisonRowOutcome("string", [v("A"), gone, v("A")]), "same");
+  assert.equal(comparisonRowOutcome("string", [v("A"), gone, v("B")]), "differs");
+  assert.equal(comparisonRowOutcome("string", [v("A"), gone, masked]), "not_comparable");
+  // Fewer than two available records cannot be compared.
+  assert.equal(comparisonRowOutcome("string", [v("A"), gone]), "not_comparable");
+  assert.equal(comparisonRowOutcome("money", [v("100"), gone, v("100.00")], { currencies: [v("USD"), gone, v("USD")] }), "same");
+  // Snapshot-shaped rows never hold record_unavailable: a not-captured cell
+  // keeps the row not comparable, so C1's snapshot behaviour is unchanged.
+  const notCaptured: ComparisonCell = { state: "unavailable", reason: "not_captured" };
+  assert.equal(comparisonRowOutcome("string", [notCaptured, v("Asia")]), "not_comparable");
+  assert.equal(comparisonRowOutcome("string", [v("Asia"), notCaptured]), "not_comparable");
+});
+
 test("money compares only with an equal, readable, unmasked currency in every cell", () => {
   const usd = v("USD"), myr = v("MYR");
   assert.equal(comparisonRowOutcome("money", [v("100.00"), v("100")], { currencies: [usd, usd] }), "same");
