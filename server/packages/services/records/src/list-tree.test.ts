@@ -44,6 +44,11 @@ describe("per-viewer Tree resolution", () => {
     expect(lockedScope([])).toEqual({ recordScoped: false, fields: new Set() });
   });
 
+  it("publishes movable only when the service says the hierarchy may move (B4)", () => {
+    expect(resolveListTree({ hierarchy: { parentField: "parent", maxDepth: 6 }, fields, masked: () => false, movable: true })).toEqual({ tree: { parentField: "parent", maxDepth: 6, movable: true } });
+    expect(resolveListTree({ hierarchy: { parentField: "parent", maxDepth: 6 }, fields, masked: () => false })).toEqual({ tree: { parentField: "parent", maxDepth: 6 } });
+  });
+
   it("publishes a boolean node kind with its branch value (T2)", () => {
     const result = resolveListTree({ hierarchy: { parentField: "parent", nodeKind: { kind: "boolean" as const, field: "postable", branchWhen: false }, maxDepth: 6 }, fields: [...fields, listField("postable", "boolean")], masked: () => false });
     expect(result).toEqual({ tree: { parentField: "parent", nodeKind: { kind: "boolean", field: "postable", branchWhen: false }, maxDepth: 6 } });

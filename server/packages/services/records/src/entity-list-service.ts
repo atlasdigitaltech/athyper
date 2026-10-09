@@ -1486,6 +1486,12 @@ export function compileEntityListDescriptor(
         locked: lockedScope(
           collectionScope?.status === "ready" ? collectionScope.constraints : [],
         ),
+        movable: Boolean(
+          descriptor.hierarchy.movable &&
+            descriptor.fields
+              .find((field) => field.key === descriptor.hierarchy!.parentField)
+              ?.writableOn.includes("patch"),
+        ),
       })
     : undefined;
   const tree =

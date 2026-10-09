@@ -29,6 +29,9 @@ export interface ListTreeV1 {
         readonly branchWhen: boolean;
       };
   readonly maxDepth: number;
+  /** Nodes may be moved through the record patch operation (B4); the server
+   * still decides each move. */
+  readonly movable?: true;
   /** Declared rollups; values arrive with Phase B3. */
   readonly rollups?: readonly { readonly field: string; readonly aggregate: "sum" | "count"; readonly label: string }[];
 }
@@ -48,7 +51,8 @@ export function parseListTree(
   fields: ReadonlyMap<string, { readonly valueKind: string }>,
 ): ListTreeV1 {
   const value = record(raw, "surface.tree");
-  allowKeys(value, ["parentField", "scopeField", "scopeLocked", "orderField", "nodeKind", "maxDepth", "rollups"], "surface.tree", "Tree");
+  allowKeys(value, ["parentField", "scopeField", "scopeLocked", "orderField", "nodeKind", "maxDepth", "rollups", "movable"], "surface.tree", "Tree");
+  if (value.movable !== undefined && value.movable !== true) fail("surface.tree.movable", "must be true when present");
   const parentField = text(value.parentField, "surface.tree.parentField");
   if (fields.get(parentField)?.valueKind !== "reference") fail("surface.tree.parentField", "must be a listed reference field");
   const scopeField = value.scopeField === undefined ? undefined : text(value.scopeField, "surface.tree.scopeField");
@@ -101,6 +105,7 @@ export function parseListTree(
     ...(orderField ? { orderField } : {}),
     ...(nodeKind ? { nodeKind } : {}),
     maxDepth: value.maxDepth as number,
+    ...(value.movable === true ? { movable: true as const } : {}),
     ...(rollups ? { rollups } : {}),
   });
 }

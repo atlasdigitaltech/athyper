@@ -9,8 +9,8 @@
   - Revision 3's T1 `scopeField` and T2 discriminated node kind (sections 2.2, 5.2, 5.3, 7.2, 8) and T3 record-scoped layouts ([shared list layout foundation](../entity-list-layouts/foundation.md) section 8), with their acceptance in section 12.
   - Pilot 1, Commodity Category (section 12.1), as a full Entity onboarding after the metadata cleanup, gated by the section 2.4 checklist.
 - **B2 build approved (9 October 2026):** the project owner approved building B2 (sections 5.5 and 7.3) in these words: "B2 build approved - Best class code to avoid performance issue and robust search". Built; see the delivery status.
-- **Design approved; build needs its own approval:** the B4 integrity split (section 7.5, a design direction).
-- **Not approved:** B3, B4 build, B5, A2, A3 and T4. B3 and T4 are on hold (section 14, item 18).
+- **B4 and B5 build approved (9 October 2026):** the project owner approved both in these words: "B4 and B5 - approved". Their build contracts are sections 5.6, 5.7, 7.5 and 7.6, written at the start of the build within the approved direction (section 7.5 for B4; section 5.4's shape for B5).
+- **Not approved:** B3, A2, A3 and T4. B3 and T4 are on hold (section 14, item 18).
 - **Known gap until the metadata cleanup lands:** the parent-key check (`TREE_SCOPE_FIELD_REQUIRED`, `hierarchyParentKeyFinding`) is built and tested but not yet wired into the onboarding DDL rehearsal. Until it is, a scoped hierarchy declared without `scopeField` would be accepted and browsed as one forest across owners; checklist item 1 (section 2.4), checked by hand at onboarding, is the only guard. No hierarchy is published, so nothing is affected today.
 - **Reference material, not authority:** sections 2.3 (hierarchy shapes found in the DDL) and 2.4 (the onboarding checklist, which the approved pilots must pass).
 
@@ -224,8 +224,8 @@ hierarchy?: {
 | ------------------------- | ----------------------------------------------------------------------------------------------------- |
 | B2 Search with context    | Design approved in revision 3 (sections 5.5 and 7.3); build needs approval                           |
 | B3 Rollups                | Rollup values per node (section 7.4)                                                                  |
-| B4 Reparent               | Moving a node through the existing update operation; integrity split in section 7.5 (database: cycles and owner; framework: depth and, where the database does not, the leaf rule) |
-| B5 Pickers and breadcrumb | A tree record picker for references to hierarchical Entities; an ancestor breadcrumb on record detail |
+| B4 Reparent               | Approved and built: section 5.6 contract, section 7.5 integrity split |
+| B5 Pickers and breadcrumb | Approved and built: section 5.7 contract, section 7.6 behaviour |
 | A2 Group aggregates       | Per-group totals from published `aggregations`, under exact counts                                    |
 | A3 Date grouping          | Grouping a date field by month or quarter                                                             |
 
@@ -242,6 +242,25 @@ hierarchy?: {
 | Authorization | Same as `hierarchy=nodes`: fail closed with `LIST_TREE_RECORD_AUTHORIZATION_UNSUPPORTED` when record authorization is not covered by SQL; field masking and projection as for any row |
 | Hashes | `matches` is bound into the `queryHash` like the other `hierarchy` values |
 | Absent elsewhere | `treeRole` and the two result fields appear only on `matches` responses, asserted by server tests as for B1 |
+
+### 5.6 Phase B4 contract: moving a node (approved 9 October 2026)
+
+| Aspect | Shape |
+| --- | --- |
+| Declaration | `hierarchy.movable?: true`, set only when the database guards cycles for the Entity (section 2.4, item 7). Without it, a change to the parent field of a declared hierarchy is refused with 409 `HIERARCHY_MOVE_UNAVAILABLE` on every write path, so an unguarded table can never form a cycle through the framework |
+| Write path | The existing record patch operation on the parent field, so authorization, field write authorization, optimistic version, idempotency and audit are unchanged. No new operation |
+| Framework checks (before the write, inside its transaction) | The new parent exists in the tenant and, with a `scopeField`, shares the record's scope, otherwise `HIERARCHY_PARENT_OUTSIDE_SCOPE`; its node kind may have children, otherwise `HIERARCHY_LEAF_PARENT`; the new parent's depth plus the moved subtree's height is at most `maxDepth`, otherwise `HIERARCHY_DEPTH_EXCEEDED` (all 409). Depth and height are measured over the stored hierarchy (tenant and soft-delete only), each by one bounded recursive statement, because hidden records still count towards depth; a refusal reveals nothing about them |
+| Database refusals | A foreign-key refusal while changing the parent maps to `HIERARCHY_PARENT_OUTSIDE_SCOPE`; a `check_violation` (cycle, self-parent, postable parent and every other guard) maps to `HIERARCHY_REJECTED`, without the database message text (section 7.5) |
+| Browser projection | `surface.tree.movable?: true` when the hierarchy is movable and the parent field is published writable for patch. The server still decides each move |
+
+### 5.7 Phase B5 contract: tree picker and ancestor path (approved 9 October 2026)
+
+| Aspect | Shape |
+| --- | --- |
+| Tree picker | A record lookup whose target Entity publishes a hierarchy may offer the Tree layout, with selection, in addition to Table and Cards. Foundation section 8 is amended accordingly: pickers keep Board, Calendar and Gantt off and may offer Tree |
+| Picker selection | Records loaded anywhere in the tree are selectable, not only the top level |
+| Ancestor path | The record detail read (`EntityDetailReadV1`) gains `ancestors?: readonly { id; label; parentOutsideView?: true }[]`, from the root down to the record's parent, computed by the B2 walk inside the visible set and the scope. `label` is the readable identity and title. A path stopped by a parent the viewer cannot read starts with an item marked `parentOutsideView` and never names that parent. Absent when the Entity has no hierarchy the viewer can browse or the record is a root |
+| Detail page | The record header shows the path as a navigation landmark of links to each ancestor's record, then the record itself as the current location |
 
 ## 6. Validation, availability and finding codes
 
@@ -302,7 +321,7 @@ A rollup is the declared aggregate (`sum` or `count`) of a declared field over a
 - **Count stays benign** because it counts visible records only: it reflects what the viewer can already open, not records they cannot.
 - **Minimum and maximum are excluded** (section 2.2): over a visible subset they are not the node's minimum or maximum. Financial balances that come from transactions (for example a ledger balance per account) are not rollups of an account field: they belong to a domain read model onboarded as its own Entity, and its tree reuses Part B.
 
-### 7.5 Part B, Phase B4: reparent integrity (design direction in revision 3; build needs approval)
+### 7.5 Part B, Phase B4: reparent integrity (approved and built 9 October 2026; contract in section 5.6)
 
 The database already guards the hierarchies onboarding will use (section 2.3), so B4 does not re-implement them. One authority per rule:
 
@@ -316,7 +335,12 @@ The database already guards the hierarchies onboarding will use (section 2.3), s
 - **The database is the final authority.** Framework checks run before the write to give a precise message; a database refusal always wins.
 - **Narrow error mapping.** A foreign-key refusal on the declared parent key maps to `HIERARCHY_PARENT_OUTSIDE_SCOPE`. A `check_violation` raised while changing the parent field maps to `HIERARCHY_REJECTED`, shown as "This move breaks the hierarchy's rules", without the database message text. The existing constraint and trigger messages are not changed: altering shared enforcement objects for presentation is not justified.
 - **Entities without a cycle guard** do not offer B4 (checklist item 7, section 2.4).
-- **In the browser,** dropping a node onto itself or onto one of its loaded descendants is refused before any request, as a presentation guard only.
+- **In the browser (move mode).** "Move to…" in a node's row menu starts move mode: a banner names the node and offers "Move to the top level" and "Cancel"; every loaded node that can take it shows a "Move here" button. The node itself, its loaded descendants and leaf kinds offer none, as a presentation guard only. Keyboard users reach the buttons in the row like any other control; there is no drag and drop, which would need a pointer and a second keyboard model. After a move the tree reloads.
+
+### 7.6 Part B, Phase B5: picker and ancestor path (approved and built 9 October 2026; contract in section 5.7)
+
+- **Picker.** A lookup for a reference to a hierarchical Entity offers Tree beside Table and Cards. Tree in a picker uses the same queries, scope rule and matches view as anywhere else; choosing a record works at every level.
+- **Ancestor path.** The detail read asks the list executor for the record with `hierarchy=matches` restricted to that record (a server-only restriction), so the path costs one more statement pair on the detail read, bounded by `maxDepth`. A failure to compute it never fails the detail read: the path is simply absent.
 
 ## 8. Views and interaction
 
@@ -372,7 +396,8 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | T3        | Record-scoped Tree (foundation section 8)                                 | An embedded section whose locked scope binds `scopeField` draws Tree; a caller cannot widen the scope by filters; a section whose scope does not bind the declared scope field reports Tree unavailable |
 | B2        | Search with ancestor context                                               | Section 7.3 item 7. Matches show their path; ancestors are marked as context; hidden records never appear as ancestors                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | B3        | Rollups                                                                    | On fixtures with hidden records: a sum equals the sum over visible descendants and a count the number of visible descendants, both deliberately partial and labelled "of records you can see"; never labelled as a balance; shown only under exact counts                                                                                                                                                                                                                                                                                                                |
-| B4        | Reparent                                                                   | Cycle, depth and leaf-parent guards reject with their codes; audit and idempotency as for any update                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| B4        | Reparent                                                                   | Depth, leaf-parent and scope guards reject with their codes; database refusals map to `HIERARCHY_REJECTED` or `HIERARCHY_PARENT_OUTSIDE_SCOPE`; an unmovable hierarchy refuses parent changes; audit, version and idempotency as for any update; move mode offers "Move here" only on eligible loaded nodes |
+| B5        | Picker and ancestor path                                                   | A lookup to a hierarchical Entity offers Tree and selects at any level; the detail read carries the visible ancestor path, marks a hidden parent without naming it, and never fails because of it |
 | Authoring | Section 9, 10                                                              | Behind the metadata-cleanup gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 **Verification method (as for Board, Calendar and Gantt).** Each phase is verified on synthetic fixtures shaped like a Chart of Accounts (summary and posting accounts, 5 levels) and a project breakdown, through the real shared runtime and browser specs, until real Entities are onboarded. With the owner's approval (9 October 2026), AGENTS.md carries a pointer worded like the other layouts', linking this blueprint and the foundation by their stable paths.

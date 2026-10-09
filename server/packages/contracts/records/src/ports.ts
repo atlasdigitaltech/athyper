@@ -222,7 +222,24 @@ export interface RecordRepositoryListInput {
   readonly viewRelationships?: readonly StandardViewRelationshipConstraint[];
 }
 
+/** Measures a stored hierarchy for a move (Tree blueprint B4): the depth of
+ * the new parent (1 at a root) and the height of the moved subtree (1 for a
+ * leaf), each bounded so a corrupt hierarchy cannot loop. Counts every stored
+ * record, visible or not, because hidden records still occupy depth. */
+export interface RecordHierarchyMeasureInput {
+  readonly descriptor: EntityRuntimeDescriptor;
+  readonly tenantId: string;
+  readonly parentField: string;
+  readonly parentId: string | null;
+  readonly recordId: string;
+  readonly bound: number;
+}
+
 export interface RecordRepository<Transaction = unknown> {
+  measureHierarchy?(
+    input: RecordHierarchyMeasureInput,
+    transaction?: Transaction,
+  ): Promise<{ readonly parentDepth: number; readonly subtreeHeight: number }>;
   list(
     input: RecordRepositoryListInput,
     transaction?: Transaction,

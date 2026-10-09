@@ -28,6 +28,16 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
     let rows = target.get(key); if (!rows) { rows = new Map(); target.set(key, rows); } return rows;
   };
   const repository: RecordRepository<MemoryRecordTransaction> = {
+    async measureHierarchy(input, transaction) {
+      const rows = [...table(input.descriptor, input.tenantId, transaction?.state).values()].filter((row) => visible(input.descriptor, row));
+      const id = (row: Row) => String(row[input.descriptor.storage.idField]);
+      const parent = (row: Row) => value(row, input.descriptor, input.parentField);
+      let parentDepth = 0;
+      for (let at = input.parentId ? rows.find((row) => id(row) === input.parentId) : undefined; at && parentDepth < input.bound; at = rows.find((row) => id(row) === parent(at!))) parentDepth += 1;
+      let height = 0;
+      for (let level = rows.filter((row) => id(row) === input.recordId); level.length && height < input.bound; level = rows.filter((row) => level.some((above) => parent(row) === id(above)))) height += 1;
+      return { parentDepth, subtreeHeight: Math.max(1, height) };
+    },
     async list(input, transaction) {
       const stored = [...table(input.descriptor, input.tenantId, transaction?.state).values()];
       // The visible set for hierarchy checks: record predicates and the

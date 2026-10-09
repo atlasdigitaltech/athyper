@@ -34,6 +34,40 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
     return database;
   };
   return {
+    async measureHierarchy(input, transaction) {
+      // Two bounded recursive statements over the stored hierarchy (tenant and
+      // soft delete only): hidden records still occupy depth.
+      const executor = transaction ?? databaseFor(input.descriptor);
+      const { descriptor, tenantId, bound } = input;
+      const idPath = descriptor.storage.idField;
+      const parentPath = fieldPath(descriptor, input.parentField);
+      const stored = baseConditions(descriptor, tenantId, "read");
+      let parentDepth = 0;
+      if (input.parentId) {
+        const up = await sql<{ depth: number | string | null }>`
+          WITH RECURSIVE "__tree_up" ("__up_id", "__up_parent", "__up_depth") AS (
+            SELECT ${sql.ref(idPath)}, ${sql.ref(parentPath)}, 1 FROM ${table(descriptor)} WHERE ${sql.ref(idPath)} = ${input.parentId}::uuid AND ${sql.join(stored, sql` AND `)}
+            UNION
+            SELECT ${sql.ref(idPath)}, ${sql.ref(parentPath)}, "__tree_up"."__up_depth" + 1 FROM ${table(descriptor)}
+              JOIN "__tree_up" ON ${sql.ref(idPath)} = "__tree_up"."__up_parent"
+             WHERE "__tree_up"."__up_depth" < ${bound} AND ${sql.join(stored, sql` AND `)}
+          )
+          SELECT max("__up_depth") AS depth FROM "__tree_up"
+        `.execute(executor);
+        parentDepth = Number(up.rows[0]?.depth ?? 0);
+      }
+      const down = await sql<{ height: number | string | null }>`
+        WITH RECURSIVE "__tree_down" ("__down_id", "__down_height") AS (
+          SELECT ${sql.ref(idPath)}, 1 FROM ${table(descriptor)} WHERE ${sql.ref(idPath)} = ${input.recordId}::uuid AND ${sql.join(stored, sql` AND `)}
+          UNION
+          SELECT ${sql.ref(idPath)}, "__tree_down"."__down_height" + 1 FROM ${table(descriptor)}
+            JOIN "__tree_down" ON ${sql.ref(parentPath)} = "__tree_down"."__down_id"
+           WHERE "__tree_down"."__down_height" < ${bound} AND ${sql.join(stored, sql` AND `)}
+        )
+        SELECT max("__down_height") AS height FROM "__tree_down"
+      `.execute(executor);
+      return { parentDepth, subtreeHeight: Number(down.rows[0]?.height ?? 1) };
+    },
     async list(input, transaction) {
       const executor = transaction ?? databaseFor(input.descriptor);
       const conditions = baseConditions(input.descriptor, input.tenantId, "read");

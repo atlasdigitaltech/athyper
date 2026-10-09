@@ -116,11 +116,16 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
   if (!Object.keys(command.input).length) return { kind: "FieldsNotWritable", fields: { _record: [{ code: "EMPTY_PATCH", message: "At least one field is required" }] } };
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "patch", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "patch"));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
+  const moving = Boolean(descriptor.hierarchy && Object.hasOwn(command.input, descriptor.hierarchy.parentField));
+  // A declared hierarchy's parent changes only when it is movable, that is,
+  // when the database guards cycles for it (Tree blueprint B4).
+  if (moving && !descriptor.hierarchy!.movable) throw new RecordServiceError(409, "HIERARCHY_MOVE_UNAVAILABLE", "Records in this hierarchy cannot be moved.");
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
     if (usesEntityBackendAuthorization(options.authorizer,command.context,descriptor) && !await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return {kind:"Forbidden" as const};
     if (Object.keys(await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "patch")).length) return { kind: "Forbidden" as const };
     return executeRecordCommand(options, command, transaction, "patch", async () => {
       const actorValues = await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"patch"},transaction);
+      if (moving) await guardHierarchyMove(options, command, descriptor, transaction);
       const policy=resolveRecordMutationPolicy(descriptor,options.mutationPolicies);
       if(policy || descriptor.ownerAccess || descriptor.fields.some(field => field.keyReference)){
         const current=await options.repository.get(descriptor,command.context.tenantId,command.recordId,descriptor.fields.map(f=>f.key),transaction);
@@ -141,7 +146,45 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
       await appendRecordSideEffects(options, command, transaction, "patch", command.recordId, result.record);
       return { kind: "Committed", action: "patch", entityCode: command.entityCode, recordId: command.recordId, record: result.record, version: versionOf(descriptor, result.record), replayed: false };
     }, descriptor);
+  }).catch((error: unknown) => {
+    if (moving) mapHierarchyRefusal(error);
+    throw error;
   });
+}
+
+/** Framework checks for a move (Tree blueprint section 5.6): the new parent is
+ * in the record's scope, may have children by its node kind, and leaves the
+ * moved subtree within the maximum depth. Cycles stay with the database. */
+async function guardHierarchyMove<Transaction>(options: RecordMutationServiceOptions<Transaction>, command: PatchRecordCommand, descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor, transaction: Transaction): Promise<void> {
+  const hierarchy = descriptor.hierarchy!;
+  if (!options.repository.measureHierarchy) throw new RecordServiceError(409, "HIERARCHY_MOVE_UNAVAILABLE", "Records in this hierarchy cannot be moved.");
+  const target = command.input[hierarchy.parentField];
+  if (target !== null && (typeof target !== "string" || !target)) throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
+  const keys = [hierarchy.parentField, ...(hierarchy.scopeField ? [hierarchy.scopeField] : []), ...(hierarchy.nodeKind ? [hierarchy.nodeKind.field] : [])];
+  const current = await options.repository.get(descriptor, command.context.tenantId, command.recordId, keys, transaction);
+  if (!current) return; // the patch reports NotFound
+  if (target) {
+    const parent = await options.repository.get(descriptor, command.context.tenantId, target, keys, transaction);
+    const scope = hierarchy.scopeField;
+    const nextScope = scope && Object.hasOwn(command.input, scope) ? command.input[scope] : scope ? current[scope] : undefined;
+    if (!parent || (scope && parent[scope] !== nextScope)) throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
+    const kind = hierarchy.nodeKind;
+    if (kind) {
+      const value = parent[kind.field];
+      const branch = kind.kind === "boolean" ? value === kind.branchWhen : typeof value === "string" && kind.branchValues.includes(value);
+      if (!branch) throw new RecordServiceError(409, "HIERARCHY_LEAF_PARENT", "This record cannot have records under it.");
+    }
+  }
+  const measured = await options.repository.measureHierarchy({ descriptor, tenantId: command.context.tenantId, parentField: hierarchy.parentField, parentId: target ?? null, recordId: command.recordId, bound: hierarchy.maxDepth + 1 }, transaction);
+  if (measured.parentDepth + measured.subtreeHeight > hierarchy.maxDepth) throw new RecordServiceError(409, "HIERARCHY_DEPTH_EXCEEDED", `This move would go deeper than ${hierarchy.maxDepth} levels.`);
+}
+
+/** The database is the final authority (section 7.5): its refusals of a move
+ * map to two codes, without the database's own message text. */
+function mapHierarchyRefusal(error: unknown): void {
+  const code = error && typeof error === "object" ? Reflect.get(error, "code") : undefined;
+  if (code === "23503") throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
+  if (code === "23514") throw new RecordServiceError(409, "HIERARCHY_REJECTED", "This move breaks the hierarchy's rules.");
 }
 
 async function remove<Transaction>(options: RecordMutationServiceOptions<Transaction>, command: DeleteRecordCommand): Promise<RecordMutationResult> {

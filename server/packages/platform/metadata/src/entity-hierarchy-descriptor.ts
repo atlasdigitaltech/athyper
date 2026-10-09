@@ -29,7 +29,8 @@ function code(value: unknown, path: string): string {
 export function parseEntityHierarchy(raw: unknown): EntityHierarchyDescriptor {
   const root = "hierarchy";
   const value = record(raw, root);
-  only(value, ["parentField", "scopeField", "orderField", "nodeKind", "maxDepth", "rollups"], root);
+  only(value, ["parentField", "scopeField", "orderField", "nodeKind", "maxDepth", "rollups", "movable"], root);
+  if (value.movable !== undefined && value.movable !== true) fail(`${root}.movable`, "must be true when present");
   const maxDepth = value.maxDepth;
   if (typeof maxDepth !== "number" || !Number.isInteger(maxDepth) || maxDepth < 1 || maxDepth > ENTITY_HIERARCHY_MAX_DEPTH)
     fail(`${root}.maxDepth`, `must be an integer from 1 to ${ENTITY_HIERARCHY_MAX_DEPTH} (TREE_DEPTH_OUT_OF_RANGE)`);
@@ -67,6 +68,7 @@ export function parseEntityHierarchy(raw: unknown): EntityHierarchyDescriptor {
     ...(nodeKind ? { nodeKind } : {}),
     maxDepth,
     ...(rollups ? { rollups } : {}),
+    ...(value.movable === true ? { movable: true as const } : {}),
   });
 }
 
@@ -114,6 +116,8 @@ export function validateEntityHierarchy(
         throw new Error(`hierarchy.nodeKind of kind choice must be an enum whose branch values are published choices: ${declared.field} (TREE_NODE_KIND_INELIGIBLE)`);
     }
   }
+  if (hierarchy.movable && !parent.writableOn.includes("patch"))
+    throw new Error(`hierarchy.movable needs a parent field writable on patch: ${hierarchy.parentField} (TREE_MOVABLE_INELIGIBLE)`);
   for (const rollup of hierarchy.rollups ?? []) {
     const field = byKey.get(rollup.field);
     if (!field || !NUMERIC.has(field.type) || !(field.list?.aggregations ?? []).includes(rollup.aggregate))

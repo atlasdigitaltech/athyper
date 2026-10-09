@@ -36,6 +36,8 @@ export function resolveListTree(input: {
   readonly masked: (key: string) => boolean;
   /** The list's locked record scope, when it is an embedded record section. */
   readonly locked?: { readonly recordScoped: boolean; readonly fields: ReadonlySet<string> };
+  /** The hierarchy is movable and its parent field is writable on patch (B4). */
+  readonly movable?: boolean;
 }): ListTreeResolution {
   const listed = new Map(input.fields.map((field) => [field.key, field]));
   const readable = (key: string) => {
@@ -83,6 +85,7 @@ export function resolveListTree(input: {
           }
         : {}),
       maxDepth: input.hierarchy.maxDepth,
+      ...(input.movable ? { movable: true as const } : {}),
       ...(rollups.length ? { rollups: Object.freeze(rollups) } : {}),
     }),
   };

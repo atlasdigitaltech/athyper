@@ -409,6 +409,10 @@ export interface EntityHierarchyDescriptor {
       };
   /** 1–16. Nothing deeper is requested. */
   readonly maxDepth: number;
+  /** Nodes may be moved to another parent (Tree blueprint B4). Set only when
+   * the database guards cycles for this table; without it, a change to the
+   * parent field is refused. */
+  readonly movable?: true;
   /** At most 5; sum or count over visible descendants (Phase B3). */
   readonly rollups?: readonly { readonly field: string; readonly aggregate: "sum" | "count" }[];
 }

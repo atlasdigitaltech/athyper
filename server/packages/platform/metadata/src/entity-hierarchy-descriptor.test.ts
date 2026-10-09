@@ -69,5 +69,14 @@ describe("published record hierarchy", () => {
     expect(check(scoped, ["tenant_id", "other", "parent"])).toBe("TREE_SCOPE_FIELD_INELIGIBLE");
     expect(check(flat, ["tenant_id", "other"])).toBe("TREE_PARENT_FIELD_NOT_SELF_REFERENCE");
   });
+
+  it("accepts movable only with a parent field writable on patch (B4)", () => {
+    const movable = parseEntityHierarchy({ parentField: "parent", maxDepth: 6, movable: true });
+    expect(movable.movable).toBe(true);
+    expect(() => validateEntityHierarchy("gl_account", movable, ["tree"], fields)).toThrow(/TREE_MOVABLE_INELIGIBLE/);
+    const writable = new Map(fields).set("parent", field("parent", "reference", { referenceTargetEntity: "gl_account", writableOn: ["patch"] }));
+    expect(() => validateEntityHierarchy("gl_account", movable, ["tree"], writable)).not.toThrow();
+    expect(() => parseEntityHierarchy({ parentField: "parent", maxDepth: 6, movable: false })).toThrow(/must be true/);
+  });
 });
 
