@@ -462,7 +462,7 @@ BEGIN
     "signature": "publication.local_publication_identity_status(uuid[],uuid,uuid)",
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
-    "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
+    "reason": "Tenant-scoped boolean eligibility for standing-policy developers, enrollment reviewers and distinct internal workloads; no principal-row disclosure, IAM mutation or approval fabrication."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;

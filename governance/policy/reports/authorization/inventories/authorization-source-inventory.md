@@ -3,11 +3,11 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `2356e4ae5277fb483a952dd8538dc45954ccc13195e71edcd1ada9895e4b2776`
-Files scanned / authorization-bearing: 14666 / 2067
+Files scanned / authorization-bearing: 14674 / 2069
 Registered authorization objects: 470
-Aggregated object references: 1419
+Aggregated object references: 1421
 Writer references: 148
-Contract/UI field references: 3205
+Contract/UI field references: 3206
 Permission definitions / uses: 89 / 2236
 Authorization-bearing routes: 30
 Keycloak mappers: 145
@@ -80,7 +80,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 6 | 359 | 56 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 6 | 361 | 56 |
 | identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 3 | 90 | 14 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 41 | 3 |
 | identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 4 | 187 | 27 |
@@ -885,6 +885,8 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `publication.fn_system_entity_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261003_human_reviewed_publication.sql:42 | `master.principal` |
 | function | `publication.fn_system_entity_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_local_publication_transitions.sql:182 | `master.principal` |
 | function | `publication.fn_system_entity_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_native_publication_authority.sql:91 | `master.principal` |
+| function | `publication.local_publication_identity_status` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/45_local_publication_identity_status.sql:4 | `master.principal` |
+| function | `publication.local_publication_identity_status` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_local_publication_identity_status.sql:5 | `master.principal` |
 | function | `publication.pending_local_publication_requests` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/43_local_publication_dispatch.sql:24 | `master.principal` |
 | function | `publication.pending_local_publication_requests` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/44_local_publication_release.sql:353 | `master.principal` |
 | function | `publication.pending_local_publication_requests` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_local_publication_dispatch.sql:26 | `master.principal` |
@@ -2260,6 +2262,7 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/src/composition/shared/identity/__tests__/contact-verification-registration.test.ts | 27 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts | 59 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts | 256, 273, 276, 463 |
+| `denied` | test | server/apps/platform-host/src/composition/shared/publication/local-publication-policy.test.ts | 73 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/publication/native-worker-entity-read.postgres.test.ts | 62, 63 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/verification/__tests__/routes.test.ts | 196 |
 | `denied` | test | server/apps/platform-host/src/composition/spaces/mesh/__tests__/mesh-exchange-readiness.postgres.test.ts | 33, 36 |
