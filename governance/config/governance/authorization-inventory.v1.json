@@ -38,10 +38,10 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14725,
-    "authorizationFiles": 2071,
+    "filesScanned": 14726,
+    "authorizationFiles": 2072,
     "registeredObjects": 470,
-    "objectReferences": 1425,
+    "objectReferences": 1426,
     "writerReferences": 148,
     "securitySymbolReferences": 133,
     "contractFieldReferences": 3206,
@@ -1109,7 +1109,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 6,
-      "readerCount": 363,
+      "readerCount": 364,
       "writerCount": 56,
       "executionCount": 0,
       "files": [
@@ -1146,6 +1146,7 @@
         "server/apps/platform-host/src/composition/shared/collaboration/__tests__/collaboration-section-providers.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/__tests__/compiled-runtime-publication.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
+        "server/apps/platform-host/src/composition/shared/publication/apply-identity.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/compilation-recovery-authority.ts",
         "server/apps/platform-host/src/composition/shared/publication/compiled-runtime-native.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/compiled-runtime.ts",
@@ -13876,7 +13877,7 @@
     {
       "path": "packages/platform/foundation/i18n/src/catalogs/entity-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "96512cebe92854b7205abb3e6859cc43198940a705a4f62ce020265ee3c84c1b"
+      "sha256": "6917c273fd1f703a69bf282a4d8891e6aa188e35d31acaefa8462c2b17aeb6d9"
     },
     {
       "path": "packages/platform/foundation/i18n/src/entity-errors.ts",
@@ -14261,7 +14262,7 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "6b62062b9c054a339065d9c710f22c5adc1f7ea09b703ea7322dc1ac64d7438d"
+      "sha256": "089bdf8be3607027ef7e2f5324b45098c3be8ff8fb4fb570b4ed7314e9ee709e"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
@@ -14462,6 +14463,11 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/table-entity-publication.test.ts",
       "artifactClass": "test",
       "sha256": "e8d73fca8de21d2f31cdb231ff97dde4b46d743a1369d6d41f18f238f927673e"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/shared/publication/apply-identity.test.ts",
+      "artifactClass": "test",
+      "sha256": "6fa5bf23e6b55824c40fbb7b2dc51d12c4f6f25849bd55ca3c6abec84b0ecf2d"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/capability-qualification.ts",
@@ -17031,7 +17037,7 @@
     {
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "sha256": "3a5e945329365a81735ef6103c050dbdbaf58f6f66e221310d3047e68ce32509"
+      "sha256": "b4b3bac4dc4d812d081b6eb3420eacd628df9c7fee95bf86a0007a683663ad53"
     },
     {
       "path": "server/packages/contracts/metadata/src/directory-scope.test.ts",
@@ -18396,7 +18402,7 @@
     {
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
-      "sha256": "80ec2e24a022a735f6f99fb5b0705583c68fe19926053bf0b76491a12d140666"
+      "sha256": "f51b573321b21c826bc861470d9bd957360bc4e35ef44216ff52300fd62fcabf"
     },
     {
       "path": "server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts",
@@ -25242,8 +25248,8 @@
       "line": 3465,
       "lines": [
         3465,
-        6329,
-        6592
+        6352,
+        6615
       ]
     },
     {
@@ -25278,6 +25284,17 @@
       "lines": [
         46,
         48
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/apply-identity.test.ts",
+      "artifactClass": "test",
+      "access": "read",
+      "line": 41,
+      "lines": [
+        41
       ]
     },
     {
@@ -40944,7 +40961,7 @@
       "classification": "reviewed",
       "lines": [
         6204,
-        6508
+        6531
       ]
     },
     {
@@ -41378,7 +41395,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6507
+        6530
       ]
     },
     {
@@ -42061,7 +42078,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6647
+        6670
       ]
     },
     {
@@ -91597,9 +91614,9 @@
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
       "lines": [
-        366,
-        373,
-        383
+        372,
+        379,
+        389
       ]
     },
     {
@@ -115564,9 +115581,9 @@
       "riskLevel": "low",
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "line": 447,
+      "line": 453,
       "lines": [
-        447
+        453
       ]
     },
     {
