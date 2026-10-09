@@ -5,6 +5,7 @@ import {
 } from "@athyper/server-adapter-db-core";
 import {
   buildNativeReferenceProduct,
+  buildNativeSuccessorGraph,
   parseSharedReferenceProduct,
   readNativeStorageCatalogue,
   type NativeReferenceProductInput,
@@ -30,6 +31,62 @@ async function main() {
   if (bytes.length > 16 * 1024 * 1024)
     throw Error("NATIVE_BOOTSTRAP_INPUT_BUDGET");
   let candidate = JSON.parse(bytes.toString("utf8"));
+  if (candidate.schema === "entity.native-successor-input/1") {
+    if (
+      Object.keys(candidate).sort().join() !==
+        "maximumBytes,maximumMembers,proposals,schema" ||
+      !Array.isArray(candidate.proposals) ||
+      !candidate.proposals.length ||
+      candidate.proposals.length > 256
+    )
+      throw Error("NATIVE_SUCCESSOR_INPUT_INVALID");
+    const proposals = candidate.proposals.map(
+      (entry: Record<string, unknown>) => {
+        if (
+          Object.keys(entry)
+            .filter((key) => key !== "targetEnrollment")
+            .sort()
+            .join() !==
+          "authorId,branchCode,changeSetId,source,sourceHash,sourceReleaseId,sourceRevision,title"
+        )
+          throw Error("NATIVE_SUCCESSOR_INPUT_INVALID");
+        const prepared = buildNativeSuccessorGraph({
+          source: entry.source as Parameters<
+            typeof buildNativeSuccessorGraph
+          >[0]["source"],
+          sourceHash: entry.sourceHash as string,
+          sourceReleaseId: entry.sourceReleaseId as string,
+          sourceRevision: entry.sourceRevision as number,
+          changeSetId: entry.changeSetId as string,
+          authorId: entry.authorId as string,
+          maximumMembers: candidate.maximumMembers,
+          ...(entry.targetEnrollment
+            ? {
+                targetEnrollment: entry.targetEnrollment as Parameters<
+                  typeof buildNativeSuccessorGraph
+                >[0]["targetEnrollment"],
+              }
+            : {}),
+        });
+        return {
+          authorId: entry.authorId,
+          proposal: {
+            graph: prepared.graph,
+            baseReleaseId: prepared.baseReleaseId,
+            title: entry.title,
+            branchCode: entry.branchCode,
+          },
+        };
+      },
+    );
+    // Files carry authoring proposals only. They never install the returned
+    // inheritance plan; the command resolves source correspondence independently.
+    candidate = {
+      maximumBytes: candidate.maximumBytes,
+      maximumMembers: candidate.maximumMembers,
+      proposals,
+    };
+  }
   if (candidate.schema === "entity.native-reference-input/1") {
     const {
       schema: _schema,

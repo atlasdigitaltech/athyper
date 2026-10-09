@@ -159,3 +159,28 @@ it("rejects a changed host release even when the selected component set is empty
     "COMPOSITION_CHANGED",
   );
 });
+
+it.each(["compiler", "reader"])(
+  "pins destination %s evidence across bootstrap replay qualification",
+  async (kind) => {
+    const f = fixture();
+    f.base.preparation.targetCompilers = [
+      structuredClone(f.base.preparation.compiler),
+    ];
+    f.base.preparation.targetReaders = [
+      structuredClone(f.base.preparation.reader),
+    ];
+    const result = await f.run();
+    if (kind === "compiler")
+      Object.assign(f.base.preparation.targetCompilers[0]!, {
+        graphHash: "e".repeat(64),
+      });
+    else
+      Object.assign(f.base.preparation.targetReaders[0]!, {
+        storagePlane: "mesh",
+      });
+    await expect(result.qualify(f.tx, f.input)).rejects.toThrow(
+      "COMPOSITION_CHANGED",
+    );
+  },
+);

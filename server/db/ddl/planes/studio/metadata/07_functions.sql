@@ -55,6 +55,7 @@ DECLARE
     v_base metadata.entity_release%ROWTYPE;
     v_actor uuid;
     v_substantive_change boolean := false;
+    v_native_creation boolean := false;
 BEGIN
     SELECT tenant_id
       INTO v_entity_tenant
@@ -79,6 +80,17 @@ BEGIN
     END IF;
 
     IF NEW.base_release_id IS NOT NULL THEN
+        -- Keep private command-schema resolution inside the command-role branch.
+        -- SQL expression evaluation order does not guarantee short-circuit access checks.
+        IF NEW.tenant_id IS NULL AND pg_has_role(current_user,'athyper_product_command_app','MEMBER') THEN
+            v_native_creation := entity_command_private.admitted_creation(NEW.id,NEW.entity_id);
+        END IF;
+        IF v_native_creation THEN
+            -- Resolve the exact published predecessor through the admitted reader.
+            -- Do not require cross-draft SELECT or change the trigger's owner.
+            PERFORM 1 FROM entity_command_private.read_native_successor_source(
+                NEW.id,NEW.entity_id,NEW.base_release_id,4194304);
+        ELSE
         SELECT * INTO v_base
           FROM metadata.entity_release
          WHERE id = NEW.base_release_id;
@@ -87,6 +99,7 @@ BEGIN
            OR v_base.entity_id <> NEW.entity_id THEN
             RAISE EXCEPTION 'Base release must belong to the same scoped Entity'
                 USING ERRCODE = 'foreign_key_violation';
+        END IF;
         END IF;
     END IF;
 

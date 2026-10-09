@@ -18,3 +18,4 @@
 20261001_publication_rollback_retry.sql
 20261003_partner_child_read_models.sql
 20261003_partner_identity_read_models.sql
+20261009_successor_initial_target.sql

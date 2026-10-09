@@ -74,6 +74,16 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
       !referenceResourcePolicyFile)
   )
     throw Error("CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_REQUIRED");
+  const nativeTargetDatabaseUrlFiles: Partial<Record<"neon" | "mesh", string>> =
+    {};
+  for (const plane of ["neon", "mesh"] as const) {
+    const key = `PLATFORM_CONTROL_NATIVE_${plane.toUpperCase()}_DATABASE_URL_FILE`;
+    if (environment[key] === undefined) continue;
+    const path = required(key);
+    if (!nativeBootstrapConfigurationFile || !path.startsWith("/"))
+      throw Error("CONTROL_NATIVE_TARGET_DATABASE_CONFIGURATION_INVALID");
+    nativeTargetDatabaseUrlFiles[plane] = path;
+  }
   const sourceDirectory =
       environment.PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY?.trim(),
     descriptorHash =
@@ -92,6 +102,7 @@ export function readControlPlaneConfiguration(environment: NodeJS.ProcessEnv) {
     productCommands,
     referenceResourcePolicyFile,
     nativeBootstrapConfigurationFile,
+    nativeTargetDatabaseUrlFiles,
     referenceTrustFile:
       environment.PLATFORM_CONTROL_REFERENCE_TRUST_FILE?.trim() || undefined,
     resourceProducer:

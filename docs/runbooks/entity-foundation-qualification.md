@@ -11,6 +11,325 @@ working-tree metadata draft, or onboard additional entities.
 
 Recorded 9 October 2026. This section is the single current execution plan and status location. The [blueprint local exception](../blueprints/entity-studio/blueprint.md#local-native-build-exception) is the normative scope authority. Sections below this current section retain historical execution evidence; do not interpret their old “remaining” lists as the current backlog.
 
+<a id="meta-entity-cleanup-lifecycle-plan"></a>
+
+### Meta Entity Legacy Cleanup and Build Lifecycle Improvements — execution plan for review
+
+**Recorded 9 October 2026; documentation only.** The [blueprint review plan](../blueprints/entity-studio/blueprint.md#meta-entity-legacy-cleanup-build-lifecycle) defines the proposed local authority, candidate and promotion contracts. This section is the current plan/status; older “remaining” or “no publication” statements below are historical checkpoints. No cleanup, reset, new permission, local authority installation or nonlocal deployment is claimed by this update. AGENTS.md remains unchanged by this documentation update; no fabricated approval or MFA change is introduced. Implement local-authority behavior under the owner’s explicit local-publication exception, recorded consistently in AGENTS.md and the blueprint before changing that behavior. Any specific MFA change outside that exception requires separate prior approval. Already-authorized cleanup, inspection, tests and ordinary framework work may proceed independently; this is not a blanket gate on delivery steps 2–6.
+
+**Accepted starting point:** the owner reported all Country and State Region manual tests passed on 9 October. The 14 supplied screenshots are included in this integration checkpoint at [Meta Entity Oct 9 2026](../reports/Meta%20Entity%20Oct%209%202026/). This is user-reported manual acceptance, not an agent rerun or proof of every scenario visible in screenshots. The recorded baseline has both release-2 entities active and acknowledged on Studio, Neon and Mesh. Preserve that working baseline before cleanup.
+
+| Cleanup delivery step | Implementation activity                                                                                                                                                                        | Exit                                                                                                                                 | Current status                                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 1                     | Preserve working state; identify accepted deployment source, including recovery-build snapshots; reconcile overlapping changes; checkpoint selected integration baseline; three database dumps | Recoverable, identified source baseline with concurrent work preserved; no arbitrary older-commit reset or restore-rehearsal project | Three dumps readable; source selection reconciled; all repository changes included in integration checkpoint |
+| 2                     | Standing authority, exact requests, approval basis, typed environment map; reuse promotion evaluator                                                                                           | Contracts distinguish local DEV from QA despite shared runtime mode                                                                  | Proposed; not implemented by this update                                                                     |
+| 3                     | Shared developer publish service and existing Studio progress/retry; native authority/read/write/worker integration; renewal, recovery and rollback                                            | Two edits plus recovery/rollback without renewed human approval                                                                      | Planned                                                                                                      |
+| 4                     | Coordinated code/schema cleanup using short classification; preserve machine-policy/native recovery and unrelated applications                                                                 | Clean build, typechecks and relevant publication tests pass                                                                          | Planned; no deletions claimed                                                                                |
+| 5                     | Maintained container rebuild and explicit scoped reset/bootstrap; preserve business data and verify standing-authority usability                                                               | Both entities publish and work across three planes                                                                                   | Planned; existing deployment remains baseline                                                                |
+| 6                     | Candidate manifest storage/approval binding, isolated release signing, QA/STG/PROD evaluator integration                                                                                       | Test-exercisable immutable promotion; no live environment claim                                                                      | Review/follow-on scope; not a local-cleanup blocker                                                          |
+| 7                     | Smoke tests, final commit/push, brief current-status update                                                                                                                                    | Repeatable local workflow and documented promotion boundary                                                                          | Planned                                                                                                      |
+
+These cleanup delivery step numbers are distinct from the blueprint’s foundation Phase 1 and F0/F1 terminology. A mixed backup commit preserves work but does not establish a tested baseline; HEAD alone may differ from the accepted deployed source. Coordinate overlapping publication changes with their owning work before editing, and do not branch from an older commit solely because it is clean.
+
+Keep incremental code checkpoints; final acceptance gates handover, not intermediate commits. Do not invent named assignees, target dates or command names. Reuse existing command transport, publication workers, migration ledger and test harness. Record actual maintained commands here when implemented; the operations below are contracts, not executable command examples.
+
+**Cleanup delivery step 1 — executed preservation, 9 October 2026:** private checkpoint `/home/chandravel_natarajan/.athyper/backups/entity-cleanup-20261009T093157Z` contains the Git HEAD bundle (`bc1e870b01074f1fbf70fd7a4a7510a81221ad16`), binary working-tree diff, working-source archive, source archives selected from repository paths for both mounted recovery builds, and filtered container/image/mount metadata (no environment credentials printed). The observed working tree has 77 modified and 58 untracked entries. Six application containers were inspected; API/control use recovery-build-v2 and worker uses recovery-build-v3. `source-comparison.json` records current host/package/database differences against those mounted sources. This preserves mixed work and identifies deployment sources; it is not a tested integration commit. Archives cover repository-selected files, not an assertion that ignored build outputs or external artifact storage were backed up.
+
+Studio, Neon and Mesh custom-format dumps completed successfully; each was parsed with `pg_restore --list`. Sizes: Studio 30,966,716 bytes, Neon 25,792,370 bytes, Mesh 19,299,907 bytes. No restore rehearsal, reset, schema mutation or activation ran. Dumps were taken separately while services remained running, so they are not a cross-database atomic snapshot. Before destructive reset, quiesce writers and refresh these dumps if data changed. All backups remain outside Git.
+
+**Integration-source reconciliation, 9 October:** retain the current checkout on `recovery/entity-framework-cleanup-20261003`, based on `bc1e870b0`, rather than reverting to an older recovery snapshot. Against recovery-build-v3, 4,124 compared host/package/database files matched, 11 differed and two were absent from the deployed snapshot. The differing and additional files are the already-committed Tree/records changes; the worker pool fix and native publication implementation are present locally. Against v2, the additional difference is the intended worker pool fix/test. Preserve all current repository changes and supplied screenshots as the owner-requested integration checkpoint. Regenerated server inventory and formatting changes are included. This reconciles source selection; it does not claim the combined checkout has been deployed or passed the entire workspace suite. Existing containers, compiler approvals and signed artifacts remain unchanged. Local-authority implementation has not started. The checkpoint hash and remote result are reported with the commit/push outcome, rather than embedding a self-referential commit hash.
+
+**Working cleanup method:** classify candidates `keep-shared`, `keep-native/recovery`, `generalize`, `delete` or `archive-doc` in a compact working list here as actual paths are inspected. Trace scripts/SQL/configuration/generated registration as well as TypeScript consumers. Remove obsolete implementation and its exports/tests/schema consumers together. Revalidate dependencies against current schema. Do not use prior withdrawn deletion lists as authority. Preserve applied migration hashes; new forward migrations and canonical setup changes are allowed. No exhaustive inventory/evidence report is required.
+
+**Two operations:** rebuild/start is repeatable and nondestructive; reset/bootstrap explicitly clears scoped metadata and may allocate fresh native state. Infrastructure starts first; writers are quiesced during destructive work; schema and required authority/resources precede application bootstrap. Preserve business rows, with no duplicate CSV reload. Existing control-policy and principal storage is outside the metadata reset; test survival and dependency validity rather than implementing another authority store. Do not carry obsolete source-pinned receipts forward as fresh authority.
+
+**Local enrollment decision:** prefer one-time existing governed enrollment, including applicable human/MFA controls, for reusable standing scope. The normal loop uses the real authenticated developer plus server-side workload execution. No per-edit exact-policy human approval, new MFA-free permission, client-enabled DEV mode or nonlocal authorization is assumed. Exact native SQL and IAM integration remain engineering work.
+
+**Acceptance — local delivery:**
+
+1. Clean installation, package builds, typechecks and relevant publication/framework tests pass; maintained containers start from the intended source/image set. Recheck the historically reported preferences `group`/`groups` defect against current source and resolve it, if present, in coordination with its owning work. Do not silently carry it as a permanent non-blocker. Any unresolved failure is reported explicitly; no whole-project green claim while it remains.
+2. Country and State Region list/detail, search, filters, sorting, pagination and reference labels work on Studio, Neon and Mesh.
+3. Two successive supported metadata changes publish with no renewed human approval; unchanged retries do not duplicate releases.
+4. Recovery renewal and compatible local rollback use standing authority; expired evidence is revalidated, not blindly extended.
+5. QA coordinates (`local` runtime with QA instance/domain), revoked authority and out-of-scope destinations reject.
+6. Invalid metadata rejects with an actionable diagnostic; third-entity fixture uses the same implementation without entity-name code changes.
+7. Repeated rebuild/start does not reset data or reissue approvals; reset/bootstrap remains explicitly destructive.
+
+**Acceptance — promotion foundation, separately:** candidate manifest pins source commit, lockfile/build inputs, compiler/resources, image digests, schema dependencies and per-plane artifacts; approval binds the built manifest hash in existing publication storage. Tests enforce same-plane/same-kind digest preservation, QA predecessor qualification for STG, STG qualification for PROD, and rejection of local-only authority/trust. No live QA/STG/PROD success is claimed until those environments are provisioned and exercised. Current runtime/signing configuration cannot be assumed to support this unchanged.
+
+Status updates use **implemented → tested → installed → executed**, plus the next concrete blocker where applicable. Keep logs/receipts already produced by existing tools; do not add a new evidence collection system or percentage reporting.
+
+### Latest cross-plane checkpoint — 9 October, all six release-2 targets activated
+
+Both native successors committed through the authenticated application-role bootstrap,
+then replayed successfully with unchanged revision, graph hash and compiled hash. Database
+readback confirms one receipt per draft, history revisions 0/1, all three declared targets
+and 31 predecessor-bound identity mappings (22 Country, nine State Region). Both entities now have release 2 active on Studio, Neon and Mesh, with six recorded
+destination acknowledgements. The owner subsequently reported all manual tests passed;
+see the acceptance note above. This update does not claim an automated authenticated browser rerun;
+the previously recorded anonymous-denial checks pass.
+
+| Entity       | Successor draft                        | Saved source hash                                                  | Current status        |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------ | --------------------- |
+| Country      | `6faa03bb-bf61-42af-ae2b-41ea91c9d42f` | `91622e8a86a408df4973a661fcdb349c8816252b67382e11372c910539d7f95d` | Revision 4, published |
+| State Region | `560624aa-55bc-4a19-8b00-264f149fa93e` | `839d51f05a3f6b9ad20fe8185fb264f585430b1a1bd116f56876359d9b9ec648` | Revision 4, published |
+
+Authenticated graph inspections passed native whole-graph compilation; Admin submission
+returned HTTP 200 for both. One earlier submit conflicted with the concurrent replay
+transaction and rolled back; the sequential retry succeeded. Exact independent Owner
+review subsequently succeeded for both. Component approvals are not used as Entity review evidence.
+
+Evidence directory: `~/.athyper/instances/dev/workspace/native-target-successors-20261009/`:
+`bootstrap-receipts.json`, `bootstrap-database-readback.jsonl`, `review-<draft-id>.json`,
+`submission-<draft-id>.json`. Both successful replays returned the original compiled hashes:
+Country `e283ec12734779a6d1722430e4d66f51b5bb024f52fbe6e7b068d8f6dac6c9c8`;
+State Region `f1763cfccc0e9af2d7187f09c06be3738f96b016cf2c5675968d6ba7c0a117c9`.
+
+Additional integration correction, 9 October 13:44 MYT: the successor policy previously
+required an existing head on every destination. Actual inspection confirms Studio has
+both original heads and Neon/Mesh have neither. Shared policy parsing/preparation now
+supports an explicit signed `headState=absent` destination expectation, retaining exact
+source predecessor coordinates; existing-head pins keep their historical representation.
+Pre-dispatch resolution rejects corrupt heads, and activation checks absence under the
+publication-key lock. A competing head rejects; replay does not advance the head.
+
+Implemented and tested: 239 publication-contract tests; 15 runtime-worker tests; PostgreSQL
+activation rehearsals on Studio, Neon and Mesh (four checks passed; the separate optional
+source-enrollment check skipped). Rehearsals cover malformed pins, competing heads,
+existing-head comparison, initial installation and replay, rolling back all fixture rows.
+The forward migration `20261009_successor_initial_target.sql` is installed on all three
+DEV databases, hash `faf8323c5ff9fedfa7f06e6687775f1b8a2f93ae719bda0f7b6091c48f879331`.
+Installation verifies unchanged function owner/ACL/security configuration and activation
+counts; no Entity was published or activated by this migration. Receipts are
+`initial-target-install-<plane>.json` and `prepublication-heads-<plane>.json` in the evidence
+directory above. Migration layout passes (188 classified, 180 retained SQL files).
+Host typecheck still reports the unrelated preferences `group`/`groups` mismatch at
+`entity-views-routes.ts:317`; do not describe the full workspace as green.
+
+Both exact Owner inspections and approval commands subsequently returned HTTP 200,
+advancing both drafts to revision 3 / approved with unchanged source hashes. Receipts:
+`owner-inspection-<draft-id>.json`, `approval-<draft-id>.json`, `approved-sources.json`.
+The first unsigned policy was superseded before enrollment because the compiler fingerprint
+changed. The subsequent authenticated proposal exposed a shared integration gap: policy
+admission and group activation still invoked the single-target compiler. Both now call
+`compileNativePublication`, matching Entity review and preserving the complete signed
+source envelope with independently compiled target descriptors. All 28 focused
+policy-enrollment/group-activation tests pass, including a target-set envelope regression.
+
+Admin proposal of `execution-policy-target-set.json` returned HTTP 200. Persisted policy:
+`fdf0a9f1-0e1f-4a1e-8587-d87203fd0d79`, version 1, hash
+`db1f0b78a01d180abd9b4242f9ac20909f08385890677a72e21ae22db045cc9e`,
+status `pending_approval`. It pins both approved sources, all six target deliveries,
+existing Studio heads and explicitly absent Neon/Mesh heads. Receipt:
+`execution-policy-submission.json`. Preparation is read-only; the successful authenticated
+proposal executed native source/resource admission through the installed host.
+Independent Owner activation of this exact execution policy returned HTTP 200 / active.
+The first execution rejected an outdated API component bundle; API and worker now mount
+the same approved three-plane bundle (hash `e374eb85c7a09220e1c72b3e1fc0c4fec28fdeeb6907fef60840964f8448e721`).
+The next attempt reached successor allocation but rolled back on private-schema access in
+the shared change-set trigger. Forward migration `20261009_native_base_guard_role_isolation.sql`
+(hash `750ce22abf660d6238b60787dfbf01bafbdf9f4928dd678252e4b1432cbd65c2`)
+is installed: resolve private creation admission only inside the command-role branch,
+retaining the ordinary scoped predecessor check for publication. No broad grants or MFA
+changes. Disposable PostgreSQL regression passes, including non-command-role success and
+continued private-schema denial. Installer verifies unchanged release/review/policy counts
+and 24 restricted functions. Migration layout passes (189 classified / 181 retained SQL).
+The same approved policy committed both release-2 sources. The client timed out after
+120 seconds, but database readback subsequently confirmed both drafts at revision 4 /
+published. Treat the client timeout as an uncertain result resolved by database evidence,
+not proof of rollback. No repeated source release allocation was attempted.
+
+| Entity       | Committed release 2                    | Destination artifacts / activation |
+| ------------ | -------------------------------------- | ---------------------------------- |
+| Country      | `a09b7c44-7c10-44a0-b713-e76e97fa0fde` | Three activated and acknowledged   |
+| State Region | `e33ff670-13f8-46bb-9e30-29d021b22160` | Three activated and acknowledged   |
+
+Both compile jobs reached dead letter on `COMPILED_PUBLICATION_SUCCESSOR_SOURCE_MISMATCH`:
+State Region `01a11f4f-2758-7061-8dd4-74fdedb86533`, Country
+`01a11f50-10d2-7e1a-8aa7-92856eb8ca78`. The shared worker compared the source envelope
+hash against a per-plane descriptor. It now verifies the successor against the independently
+recompiled and policy-bound whole-source descriptor, retaining separate target hashes.
+Native successor recovery uses the native group authority already verified for the source,
+rather than demanding a second legacy recovery authority. Sixteen worker-boundary tests
+pass, including successor target-set compilation with and without native recovery.
+
+`compilation-recovery.json` is a concrete proposal retaining the original release/source
+approvals and pinning the corrected compiler. The rollback-only database qualification
+passes under effective runtime/control roles (2 positive, 14 negative checks); it does not
+claim authenticated review. Admin submission returned `AUTH_TOKEN_INVALID`; refresh is
+requested. Independent Owner approval follows actual proposal enrollment. Existing Studio
+activation remains unchanged; no Neon/Mesh successor activation is claimed.
+Evidence: `execution-policy-activate.json`, `base-role-isolation-install.json`,
+`committed-releases.json`, `published-drafts.json`, `compilation-recovery.json` and
+`compilation-recovery-submission.json`.
+
+Recovery build isolation checkpoint (9 October): concurrent Tree/record-framework edits
+changed the compiler fingerprint after the first recovery candidate was prepared. The
+stale-pin proposal was rejected; no prior approval was applied to changed bytes. A source
+snapshot at `native-target-successors-20261009/recovery-build` now supplies the control API,
+API and worker through private `recovery-control.compose.json` / `recovery-runtime.compose.json`.
+Source files are independent copies; unchanged dependency files are hard-linked. Do not
+edit this snapshot or run dependency installation there while its policy is pending/active.
+All three services are healthy and their mounts are recorded in `isolated-deployment.json`.
+The shared development checkout remains available to concurrent work, whose later changes
+are not deployed into this publication build.
+
+Thirty-eight focused publication/recovery tests pass against the isolated source. The
+rollback-only recovery proof again passes (2 positive, 14 negative checks). Host typecheck
+retains the previously recorded preferences `group`/`groups` error; full-workspace green
+is not claimed. The isolated compiler hash is
+`a9e2b1b1497862129f1a6c16521e8f71d7c9007810388fdfe224ee2a98516eff`.
+Admin proposal returned HTTP 200 for policy `c6ff4ce8-d893-46aa-9e13-e92f4098c230`, version 1,
+hash `ccc3a203a419e1752bdf33965f2e1800d10670ad77e540b77b7d79456218a2f7`,
+status pending approval. Exact replacement Owner approval was received in conversation for this pin.
+The refreshed Owner session subsequently activated this exact policy (HTTP 200), and
+workload execution returned `recovery_queued` for both releases. Receipts:
+`compilation-recovery-isolated-activate.json` and
+`compilation-recovery-isolated-execute.json`. Both jobs then reached dead letter on
+`COMPILED_PUBLICATION_TARGET_SOURCE_MISMATCH`: Country
+`01a11f5c-3bda-7de6-9a89-2ae0086b7a05`, State Region
+`01a11f5c-3bd7-7ce4-97f1-c1215a07f6a8`. There are still zero destination artifacts.
+
+**Corrected target-hash checkpoint (9 October):** the worker's lowering check compared
+`target.artifact.contractHash` (the projected plane graph) to the saved complete source
+hash. It now compares `target.sourceContractHash`, retaining the independent target
+descriptor check. The regression uses genuinely different three-plane graphs and checks
+all Studio/Neon/Mesh × initial/successor × original/recovery combinations. It exercises
+lowering, artifact compilation and pre-signing/pre-dispatch semantic qualification,
+including rejection of substituted source and destination hashes. Fixture authority in
+these tests is not deployed qualification or human approval.
+
+Implemented → tested → installed: 41 focused tests pass in the independent
+`recovery-build-v2` snapshot; 12 are the expanded three-plane scenarios. The database
+recovery rehearsal passes 2 positive and 14 negative checks under effective runtime/control
+roles, rolling back its evidence and preserving source/releases. The control API, API and
+worker now mount this snapshot and report healthy; the previous approved snapshot remains
+unchanged. Compiler hash:
+`4cf554dc709742b8bb90edbff59f343ab571528949cf6a6287210b47045c924e`.
+
+Recovery execution remains pending: `compilation-recovery-target-hash.json` binds the
+latest failed jobs and unchanged original release approvals. Following an expired-session
+rejection, refreshed authenticated Admin submission returned HTTP 200 for policy
+`7ece8711-b099-4e1c-8b48-56b5a9ef373f`, version 1, hash
+`050f624af69e9dd769096fb5458b49781fc5fb8f498b09aa0163db60f87854d5`,
+status `pending_approval`. Exact independent Owner replacement approval is requested;
+the existing replacement command will retire recovery policy
+`c6ff4ce8-d893-46aa-9e13-e92f4098c230` at its previously approved hash. No new candidate
+approval is inferred from the previous compiler pin. `run-target-hash-recovery.py replace`
+and `execute` are prepared with exact pin assertions; neither has executed.
+Evidence: `compilation-recovery-target-hash-proof.json`,
+`compilation-recovery-target-hash-submission.json`, `recovery-target-hash-tests.log`,
+`recovery-control-v2.compose.json`, `recovery-runtime-v2.compose.json`.
+
+Owner approved policy `7ece8711…`, but the authenticated replacement returned HTTP 409:
+its latest failed-job pins differ from the active recovery's immutable replacement scope.
+No replacement or execution occurred. The correction retains the original still-valid
+failed jobs while using the same tested/deployed compiler; no code or release source changed.
+Read-only comparison confirms exact replacement-scope equality. Authenticated Admin submission
+succeeded for corrected policy `e5344593-e995-42e9-b2bf-cd47a9981fd0`, version 1, hash
+`d648c1acce6def87eb6e16e617a62231de849a2a873008ec40f9088519fbbbc5`.
+Exact Owner approval was received. Authenticated replacement returned HTTP 200, activated
+`e5344593…` and retired only recovery `c6ff4ce8…`; the receipt reports `replayed=false`.
+Workload execution subsequently returned HTTP 200 / `recovery_queued` for both committed
+release-2 sources. Database jobs: Country `01a11f68-4098-78aa-a1c5-c62f6828c771`, State Region
+`01a11f68-4094-7283-8e0f-ddf20bc2ab18`. Queue admission is not destination activation.
+Evidence: `compilation-recovery-target-hash-replace.json`,
+`compilation-recovery-preserved-scope.json`, `compilation-recovery-preserved-scope-submission.json`,
+`compilation-recovery-preserved-scope-replace.json`,
+`compilation-recovery-preserved-scope-execute.json`. The replacement database rehearsal
+passes 2 positive / 14 negative checks with rollback and no source/release mutation. Earlier pending proposal `7ece8711…`
+is not active and is superseded as an execution candidate, without rewriting its audit trail.
+
+Both recovery compile jobs succeeded: State Region at 06:52:52 UTC and Country at
+06:53:21 UTC. Each release has three persisted target compilations. Signing initially
+encountered connection-pool acquisition timeouts: the DEV configuration used per-queue
+worker concurrency 10 and Studio pool maximum 5 while publication requires nested reads.
+The operational override `recovery-runtime-v2-capacity.compose.json` sets worker concurrency
+2 and Studio pool maximum 12; the worker was recreated with the same approved source
+snapshot and compiler pin. This changes capacity only, not grants, sources or review policy.
+Four exhausted signing jobs were retried through the existing shared JobAdministration
+service, preserving their execution/compilation IDs and recording retry commands. Receipt:
+`signing-capacity-retry.log`; all four returned `applied=true`. No fabricated publication or
+review receipt was introduced. The other two interrupted jobs remain subject to the
+existing queue's stalled-job recovery. Destination signing/activation remains unverified.
+
+Follow-up: the capacity override alone did not fix acquisition timeouts. Worker adapters
+used a separate hardcoded maximum of two, ignoring the per-plane pool configuration.
+`registerWorkerDatabases` now honors the existing per-plane `poolMax` values while retaining
+worker URLs, roles, readiness checks and shutdown hooks. Thirteen adapter/isolation tests
+pass, including explicit 12/7/9 per-plane capacity wiring. Worker snapshot `recovery-build-v3`
+contains only this infrastructure correction plus its test relative to v2; control/API stay
+on v2. The publication compiler remains exactly `4cf554dc…`, verified before deployment.
+`recovery-runtime-v3.compose.json` retains concurrency 2 and Studio pool maximum 12.
+The four exact dead-letter signing jobs were retried again through shared administration;
+all returned `applied=true` (`signing-worker-pool-retry.log`). Two State Region artifacts had
+already signed and dispatched to Neon/Mesh, but group readiness correctly delays activation
+until the complete approved publication group is available. No readiness bypass is used.
+
+**Latest executed result — six signed artifacts:** both release-2 sources have all three
+signed target artifacts (`signed-target-artifacts.json`). No new activation or acknowledgement
+exists. Five deliveries failed `HUMAN_PUBLICATION_WORKLOAD_REVOKED`; the State Region/Neon
+delivery remains dispatched and unacknowledged after group-not-ready retries. Rejected jobs
+carried the old `seed.three-plane-provisioner` actor rather than the approved
+`dev.metadata.publisher`. The guard correctly rejects that actor; no actor/permission/MFA
+check has been weakened.
+
+`delivery-recovery.json` pins all six existing signed artifacts and attempts, the unchanged
+compiler and original source policy. Read-only application-role preflight passes: exact
+signed-artifact pins/current compiler, original human execution receipts, immutable native
+source hashes, and publisher identity/epoch plus predecessor heads on all three planes
+(`delivery-recovery-proof.json`). This is not live UI acceptance. The first Admin submission
+returned `AUTH_TOKEN_INVALID`. After session refresh, authenticated submission returned
+HTTP 200 for policy `f296c36c-7760-4799-ae53-80edbdffbb38`, version 1, hash
+`7e1757eba714d06cf98521b30ca33facff19013c6015fc14323b3d91ba2a6df1`, status
+`pending_approval`. Exact independent Owner approval is requested. The prepared
+`run-delivery-recovery.py activate` / `execute` commands assert this exact pin; neither has
+executed. Approval precedes execution under the approved publisher and verification of all
+six acknowledgements and destination heads. Evidence: `pre-delivery-recovery-status.json`,
+`delivery-recovery-submission.json`. No recompilation is requested.
+
+**Delivery executed — 9 October:** authenticated Owner activation of policy
+`f296c36c-7760-4799-ae53-80edbdffbb38` returned HTTP 200. Workload execution returned
+`deployment_recovery_queued` for six exact replacement attempts. All six subsequently
+reached `activated`, each with an acknowledgement. Independent database readback on every
+plane verifies active release 2, exact signed artifact hash and the expected source release.
+Studio heads advanced to version 2; Neon/Mesh installed initial heads at version 1. Earlier
+failed attempts remain as audit evidence, and no source/review/compiler pin was changed.
+
+| Entity       | Studio deployment                      | Neon deployment                        | Mesh deployment                        |
+| ------------ | -------------------------------------- | -------------------------------------- | -------------------------------------- |
+| Country      | `01a11fa1-484c-7f2a-a2fe-c81e5266e154` | `01a11fa1-47d9-7bac-aed8-836a9990c261` | `01a11fa1-476d-753a-9ce0-168519c22dc3` |
+| State Region | `01a11fa1-4703-7fb8-8a5a-09c2eeaa29d5` | `01a11fa1-4641-7087-95df-08e50cbe02ca` | `01a11fa1-46a8-7dba-bf52-08761028d94e` |
+
+Evidence: `delivery-recovery-activate.json`, `delivery-recovery-execute.json`,
+`delivery-recovery-progress.json`, `verified-target-heads.json`, `signed-target-artifacts.json`.
+All 24 anonymous list/record/descriptor HTTP checks return 401 across both entities and all
+three planes (`anonymous-access-checks.json`). This establishes anonymous denial, not
+positive authenticated access or cross-tenant qualification. The generic publication ledger
+still reports `approved`; the activation statement is supported by destination heads and
+acknowledgements rather than an inferred ledger status transition.
+
+**Manual routes now available for acceptance:**
+
+- Neon: `https://neon.dev.athyper.test/app/entity/country` and
+  `https://neon.dev.athyper.test/app/entity/state_region`.
+- Mesh: `https://mesh.dev.athyper.test/app/entity/country` and
+  `https://mesh.dev.athyper.test/app/entity/state_region`.
+- Studio uses the same paths on `https://studio.dev.athyper.test`.
+
+Sign in normally, select CirrusAtlantic, check list load/search/filter/sort/pagination,
+open records, inspect readable labels/navigation and State Region's Country reference.
+Verify that visible presentation never exposes technical UUIDs. Record failures against
+the exact release/plane above; activation alone is not a passed UI journey.
+
+Remaining: authenticated Neon/Mesh list/detail and browser acceptance. Fresh ordinary browser
+sessions have been requested using the existing capture helper with `--normal --session-only`.
+Legacy cleanup remains deferred until that acceptance completes. Existing saved browser sessions for all three planes
+currently return anonymous; a fresh authenticated browser session is needed for live user
+acceptance after delivery.
+Legacy cleanup remains deferred until cross-plane acceptance. Earlier incomplete-bootstrap
+entries below are historical checkpoints, superseded by this executed result.
+
 ### Approval and supersession
 
 The project owner explicitly approved, in the conversation headed “Decisions for Audit 1 comments”:
@@ -45,8 +364,11 @@ Complete fresh proposals and pinned production startup configuration are mounted
 control API. Four authenticated production requests succeeded: State Region apply/replay
 and Country apply/replay, all HTTP 200. Both fresh product drafts committed as native version 2 at
 revision 1, attributed to the real Platform Admin. Subsequent authenticated Admin
-submission and replay now put both at **revision 2, in_review**. Each has immutable
-revisions 0, 1 and 2, exactly one bootstrap command receipt and one submission receipt. Country has 22 fields/identities; State Region has nine.
+submission and independent Owner approval, each replayed through the authenticated API,
+now put both through approval at revision 3; native publication has subsequently
+committed both at **revision 4, published**, with unchanged source hashes. Immutable
+review transitions preserve the source; bootstrap, submission and approval have
+separate receipts. Country has 22 fields/identities; State Region has nine.
 The four approved operations retain `requires_mfa=false`. No old identity was adopted.
 
 | Entity       | Fresh draft ID                         | Stored graph hash                                                  | Compiled hash                                                      |
@@ -117,15 +439,15 @@ DDL hashes are recorded in `additional-installation.json`; complete reset SQL pa
 rehearsal before installation. Actual graph write/readback/replay is established; local live-read positive/negative
 acceptance and independent Entity publication/activation remain required.
 
-| ID  | Deliverable                              | Status      | Available evidence / actual gap                                                                                  | Next action                                                                   |
-| --- | ---------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| L0a | Local preparation and backup             | Executed    | All three backups restored; exact scoped cleanup manifest executed                                               | Retain recovery evidence                                                      |
-| L1  | Complete native proposals                | Executed    | Both complete proposals saved and compiled through canonical application readback                                | Retain pinned proposal and compiler evidence                                  |
-| L2  | Clean schema and startup composition     | Executed    | Final guards/grants installed; zero pending checks; actual startup used                                          | Retain installed schema/configuration pins                                    |
-| L3  | Actual native bootstrap and replay       | Complete    | Both drafts committed at revision 1 and replayed; exact hashes, audit and immutable history verified             | Proceed to L4/L5                                                              |
-| L4  | Working local live-read integration      | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                        | Implement bounded validation and actual storage/security/identity composition |
-| L5  | Human review, publication and activation | In progress | Both native sources submitted/replayed at revision 2; independent approval, native worker and activation pending | Complete worker/live resources, independently review and deliver              |
-| L6  | Local manual-test handover               | Not started | Old Entity heads cleared; no replacement Entity activation yet                                                   | Complete L3–L5 and verify standard UI                                         |
+| ID  | Deliverable                              | Status      | Available evidence / actual gap                                                                                       | Next action                                                                   |
+| --- | ---------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| L0a | Local preparation and backup             | Executed    | All three backups restored; exact scoped cleanup manifest executed                                                    | Retain recovery evidence                                                      |
+| L1  | Complete native proposals                | Executed    | Both complete proposals saved and compiled through canonical application readback                                     | Retain pinned proposal and compiler evidence                                  |
+| L2  | Clean schema and startup composition     | Executed    | Final guards/grants installed; zero pending checks; actual startup used                                               | Retain installed schema/configuration pins                                    |
+| L3  | Actual native bootstrap and replay       | Complete    | Both drafts committed at revision 1 and replayed; exact hashes, audit and immutable history verified                  | Proceed to L4/L5                                                              |
+| L4  | Working local live-read integration      | In progress | Adapter pieces exist; semantic qualifier and concrete deployed bindings remain incomplete                             | Implement bounded validation and actual storage/security/identity composition |
+| L5  | Human review, publication and activation | In progress | Both sources published at revision 4; release 1 committed/dispatched; renderer compilation and native redispatch fail | Complete worker/live resources, independently review and deliver              |
+| L6  | Local manual-test handover               | Not started | Old Entity heads cleared; no replacement Entity activation yet                                                        | Complete L3–L5 and verify standard UI                                         |
 
 Status vocabulary: **Not started / In progress / Blocked / Implemented / Tested / Installed / Executed / Complete**. Awaiting authentication is a blocked execution step. “Complete” requires the checkpoint's executed exit, not merely code or component tests. A blocker needs an exact failed command/assertion and next action. No new snapshot count, test total or release ID is invented here.
 
@@ -608,7 +930,7 @@ source-bound `submit-request-<draft-id>.json` files. These are actual authentica
 Admin actions, not synthetic Owner approval. Independent review, publication,
 activation and live-read acceptance remain pending.
 
-**Native worker admission/preparation candidate — implemented/tested, not installed (9 October):**
+**Earlier native worker admission/preparation checkpoint (superseded by installation below, 9 October):**
 
 - `publication/36_native_publication_authority.sql` and registered forward migration
   `20261009_native_publication_authority.sql` replace current human-policy admission
@@ -657,14 +979,635 @@ PRODUCT_REVIEW_POSTGRES=1 NATIVE_PUBLICATION_POSTGRES=1 \
 pnpm --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run
 ```
 
-**Remaining engineering:** production service/worker source loading and validation
-still call the legacy graph API. They must use the installed native compiler/source
-composition; coordinated worker compilation/activation must consume exact native
-source/target pins. Install the candidate only with that connected host path and
-transaction/replay evidence. Then connect installed live-read resources, review
-concrete candidates, publish, activate and verify standard list/detail access.
-Both actual DEV drafts remain `in_review` at revision 2; no Owner approval, new
-Entity release, activation or manual-test handover occurred in this checkpoint.
+**Current native worker checkpoint — 9 October:**
+
+- **Implemented/tested:** the production authoring service, policy admission,
+  coordinated worker compilation and activation re-resolve native source through
+  the installed reader and shared compiler. Current native human publication no
+  longer loads a legacy authoring graph or requires adoption receipts. Historical
+  non-native paths and immutable artifacts remain preserved.
+- **Installed:** `20261009_native_publication_authority.sql` and
+  `20261009_native_worker_source.sql` in DEV, with migration-ledger hash replay.
+  The latter permits exact enrolled-workload source/component reads; an actual
+  `athyper_runtime` request without publication context rejects
+  `SYSTEM_PUBLICATION_CONTEXT_DENIED`. Neither routine grants PUBLIC execution.
+  API/worker configuration now mounts the private native source configuration;
+  mounting configuration alone does not prove successful publication.
+- **Executed:** Owner approval and replay returned HTTP 200 for both exact
+  candidates; both are approved at revision 3. Admin submitted execution policy
+  `8c43a984-356c-4171-9737-d9b51d03e99a`, version 1, hash
+  `e97bf2cd8abc5263d499bec706320d8921d1da73c2e256c884dfc10325b9f79b`.
+  Independent Owner activation subsequently returned HTTP 200. The superseded
+  `630bef5e-30cf-48cd-a133-a90516ec488b` proposal remains inactive. Actual workload
+  execution then failed `SYSTEM_REFERENCE_SIGNED_SOURCE_MISMATCH`: native
+  preparation incorrectly compared the trigger-computed release-envelope hash
+  with the descriptor hash. The shared preparation code now compares the source
+  contract pin independently and retains descriptor-byte/signature checks.
+  Regression fixtures use distinct release-envelope and descriptor hashes and
+  reject changed source, descriptor and signature values. The failed canonical
+  transaction left both drafts approved at revision 3 and **zero new releases**.
+  This fix changes the compiler build pin to
+  `3ce8c59b7d227d6477093a0e59997ee348e6ca1c80d95119dd2135e2dbbb12cf`.
+  The concrete replacement `native-execution-policy-release-envelope.json` was
+  submitted successfully after Admin refresh: policy
+  `881ee151-7a3a-4a79-a554-8f445479482a`, version 1, hash
+  `cb823a4e2a8e1dbe4adfa1d0ba59a2f31e6550d76d569eb081d6a25d4fe572ca`.
+  Owner replacement subsequently succeeded and retired policy `8c43a984…`.
+  Execution again rolled back before release commit, exposing the other hash
+  domain: `snapshot.fn_compute_entity_contract_hash` hashes PostgreSQL JSONB text,
+  whereas compiler source pins hash canonical JSON. Actual Country snapshot hash
+  `115c654bc08a6d20ea6052fcb6362724574f522f0bbc80478fe347ccdc6153a1`
+  and canonical source hash `6562efa0fa82d571b13490f9a1533c6899f2fa2a407beeaf60556e7d77275206`
+  describe the same source. Native preparation now verifies the stored snapshot
+  digest using its existing database function, separately from canonical source,
+  descriptor and signature checks. The runtime role already has EXECUTE permission;
+  no new grant or historical-hash rewrite was needed. All 21 focused tests pass.
+  Both drafts remain approved at revision 3 with zero releases.
+
+  Admin successfully submitted the complete hash-domain correction as
+  `b7723afc-64c8-493d-bb14-75578c3759d2`, version 1, policy hash
+  `7567bf3a2c4e3491b2bc8f34a338c8f6349035bbdaa588a69fdecf3b9a9407f7`,
+  compiler build `454d329d24f936d001775320d72716f824378f27f628e0c1d7664d98fb85a8d8`.
+  Independent Owner replacement executed successfully and retired `881ee151…`.
+  Actual execution now passes hash verification and reaches publication insertion,
+  where `publication_release_coordinate_uq` rejects release 1. The prior scoped
+  reset removed Entity authoring releases but retained 14 withdrawn publication
+  coordinates (Country 1–13, State Region 1); the fresh authoring ledger correctly
+  starts at release 1. Do not weaken the unique constraint, renumber immutable
+  artifacts, or fabricate a predecessor to bypass this inconsistency.
+
+  The approved cleanup needs its remaining logical publication/runtime closure.
+  Exact inventory `withdrawn-publication-cleanup-inventory.json` records 434 old
+  rows: 14 releases, 42 artifacts, 42 compilations, 42 deployments, 252 events and
+  42 acknowledgements. Another 42 superseded runtime records remain across
+  Studio/Neon/Mesh, with descriptor, payload, activation-event and authorization
+  binding dependencies; these are not yet included in an executable cleanup
+  manifest. No additional cleanup was executed. A fresh Studio dump
+  `native-publication-cleanup-20261009.dump`, SHA256
+  `660745ce2ccc100dfd5b39087109baaebaf8349a4a63e70e1a642c5d535fe546`,
+  restored successfully to `athyper_publication_cleanup_restore_20261009`;
+  counts confirm both approved drafts and all 14 retained release coordinates.
+  Evidence: `publication-cleanup-restore-verification.json`. Next: close the exact
+  obsolete runtime dependency inventory, restore-verify required plane backups,
+  rehearse and execute the scoped cleanup, then retry the already-active policy.
+  Owner approval/authentication is no longer the immediate blocker.
+
+  **Scoped cleanup executed, 9 October:** completed the exact row/FK closure,
+  including obsolete runtime payloads, activation events and their operation/scope
+  bindings. Rehearsals committed successfully on separately restored Studio,
+  Neon and Mesh backups. Actual DEV cleanup committed **528 Studio + 94 Neon +
+  94 Mesh = 716 rows**, using exact primary keys and full archived-row equality
+  checks. Foreign keys stayed enabled; affected user-trigger states were restored
+  exactly. Checksums of preserved rows in affected tables and fresh Studio
+  authoring state matched before/after. Business data, IAM principals/grants,
+  fresh identities, approvals and unrelated publications were not reset.
+  Earlier statements that withdrawn publication/runtime rows remained live are
+  superseded by this checkpoint; their immutable bytes remain in restored archives.
+
+  Evidence under the existing review directory: each plane's
+  `*-publication-cleanup.json` and `.sql`, `*-cleanup-rehearsal.log`,
+  `*-cleanup-executed.log`, `*-cleanup-preserved-before.json`,
+  `publication-cleanup-executed.json` and `publication-cleanup-integrity.json`.
+  The inventory/generator/executor Python scripts are retained there too.
+  Additional restored backups: `native-cleanup-neon-20261009.dump` (SHA256
+  `c74e87dc3e92c0cb6f9adfb663e79bd7bf0413eb8f565e3cf5143e708270d66b`)
+  and `native-cleanup-mesh-20261009.dump` (SHA256
+  `f2f3ad8558314214c80e0acf4c40ff568dc1051400422d70a09cf185024032ac`).
+
+  Retried already-active policy `b7723afc…` through the authenticated workload
+  endpoint. Release-coordinate insertion now succeeds, but commit rolls back:
+  PostgreSQL reports `query returned no rows` in
+  `metadata.native_core_final_guard()` at its strict root lookup. The deferred
+  guard runs after returning from the privileged publication routine; investigate
+  its effective role/RLS visibility and complete validation within the exact
+  admitted command, as native review already does. Do not disable validation or
+  add blanket graph read grants. Evidence: `native-publication-after-cleanup.json`,
+  request `b2fb91fb-bac5-4ffe-976e-72ca53e4f313` and database commit error.
+  Both drafts remain approved at revision 3 and zero Entity publications committed.
+
+  **Deferred-validation correction executed, 9 October:** canonical
+  `publication/38_native_publication_validation.sql` and forward migration
+  `20261009_native_publication_validation.sql` install a publication-link trigger
+  that rechecks exact native product/workload/release authority and runs the five
+  unchanged aggregate constraint triggers IMMEDIATE within its bounded definer
+  context. No validator, RLS policy, application graph grant or MFA setting was
+  weakened. PUBLIC has no function execution grant. Applied migration SHA256:
+  `dabd1ae0f9360c0f71a98210f978b51ac47cc3e6e09fb1e93430e980f077bb61`.
+  The installer replay verifies that immutable hash. The disposable PostgreSQL
+  regression reproduces the invoker-context failure, then proves successful
+  commit, invalid-graph rollback, unauthorized-actor rejection and continued
+  inability of the runtime role to read the product root. CI explicitly runs it
+  with `NATIVE_PUBLICATION_POSTGRES=1`. Migration-layout and definer checks pass.
+
+  Retrying active policy `b7723afc…` returned HTTP 200 `dispatched`; both source
+  drafts are now **published at revision 4**. Canonical release rows committed:
+
+  | Entity       | Release ID                             | Release number | Publication ledger state |
+  | ------------ | -------------------------------------- | -------------- | ------------------------ |
+  | Country      | `77f0f6e1-f44c-4275-bcef-f20cbee4868e` | 1              | approved                 |
+  | State Region | `c445fb03-08f5-4c37-a664-25dee570ab8d` | 1              | approved                 |
+
+  These are committed authoring releases and dispatched publication work, not
+  activated runtime releases. The compiler pin is unchanged. Actual worker
+  compilation rejects `COMPILED_ENTITY_REGISTRATION_MISSING` / `Missing rendererKey:
+text`. An explicit replay also exposed the remaining legacy signed-release
+  reader: `getSignedRelease` calls `compileGraph`, yielding
+  `NORMALIZED_REFERENCE_PUBLICATION_NOT_QUALIFIED` for native redispatch. No
+  duplicate releases were created. Next work is native immutable redispatch
+  loading and actual registered renderer resolution, then compilation/activation
+  and live list/detail acceptance. No manual handover or deployed F6/F8/F9 claim.
+
+  Evidence: `native-validation-installation-replay.json`,
+  `native-publication-after-validation-fix.json` (HTTP 200) and
+  `native-publication-validation-replay.json` (failed native redispatch), under
+  the existing private review-evidence directory.
+
+  **Renderer/redispatch fixes implemented and tested, 9 October:** the production
+  worker's closed renderer registry now includes the existing shared `text`
+  implementation. This does not enroll arbitrary renderer keys or bypass the
+  independent native component/deployment qualifier. Native `getSignedRelease`
+  now loads the immutable compiled target descriptor and original signature from
+  the release/snapshot link, verifies canonical source/descriptor pins, exact
+  typed targets and native compliance metadata, and rejects missing/duplicate or
+  changed artifacts. Native redispatch no longer invokes legacy `compileGraph`.
+  Historical non-native readers remain separate. No current-resource recompilation
+  or re-signing is performed while reconstructing the signed artifact.
+
+  Eight new reader tests pass, including the actual repository entrypoint and
+  negative source/descriptor/target/signature cases. Full authoring suite: **941
+  passed, 11 skipped**; authoring typecheck passes. Nine selected production worker
+  and activation tests pass. Read-only reconstruction of both real DEV stored
+  releases preserves their original contract hashes, descriptor hashes and
+  signatures (`native-immutable-redispatch-rows.json`). This administrative readback
+  is not an authenticated redispatch receipt or cryptographic signature attestation.
+
+  **Native recovery integration implemented, tested and installed, 9 October:**
+  `athyper.dev-native-compilation-recovery/1` explicitly covers the whole original
+  human-reviewed publication group. It pins the original active policy ID/version/hash,
+  coordination hash and compiler; each committed release ID/hash/change set and failed
+  compilation job; the replacement compiler; and an expiry of at most 24 hours.
+  It does not invent successor predecessors, change source approvals, recreate releases
+  or rewrite signed bytes. Existing legacy recovery remains a separate schema.
+
+  The existing Admin proposal / independent Owner activation transport now admits this
+  contract. A restricted read-only database function checks current original human
+  enrollment, source and release hashes, published state, signatures, failed jobs,
+  exact group coverage and absence of newer releases. Enrollment requires no existing
+  compilations/artifacts. Subsequent execution supports partial-progress replay using
+  stable per-release queue keys, with current authority and IAM checks and committed
+  audit before enqueue. Workers re-resolve native resources and recompile source/target
+  pins; activation rechecks recovery authority and every original group member. A missing,
+  ambiguous, expired or revoked enrollment fails closed; it is not replaced by an allow.
+
+  Forward migration `20261009_native_compilation_recovery.sql`, SHA256
+  `7dc4eb92ef0a0aab2f4d8273e5fe2de343370ed45ab92ec174f0d170378669a1`,
+  is installed and hash-ledger replay passed without publication-state changes.
+  Rollback-only rehearsal against both actual releases passed two positive and 14
+  negative checks. The recorded login was `postgres`, with explicit effective roles
+  `athyper_runtime` and `athyper_control_api`; this is restricted-role database proof,
+  **not** an authenticated application-command receipt. Evidence:
+  `native-recovery-install.json` and `native-recovery-database-proof.json` in the existing
+  private review directory. The six focused test files pass **32 tests**, covering
+  policy/source drift, worker admission and revocation, activation group checks, audit
+  rollback and replay-stable queueing. The complete shared-publication suite now passes
+  **296 tests, 8 environment-dependent skips** after registering the new domain-neutral
+  imports in its explicit architecture-boundary tests. Host typecheck still reports the existing
+  `entity-views-routes.ts:317` `group`/`groups` mismatch; no full-workspace green claim.
+
+  **Recovery enrollment executed; audit-context correction prepared:** Admin submitted
+  `6dd7d382-716c-468f-af6a-81235752f60e`, version 1, hash
+  `11fd0fdc4a2e223a4ad336f1aeb62d31522bec074abaf4e8ddc3780a9777e590`,
+  and independent Owner activation returned HTTP 200. Actual execution rolled back
+  before queueing: the transaction omitted `app.current_actor_type=service_account`,
+  causing the audit contract to reject its default user classification. The actor-type
+  stamp is now explicit, tested at the execution boundary and checked against the actual
+  DEV audit contract in a rollback-only transaction. No audit rule was weakened.
+
+  The correction changes the compiler fingerprint. Native recovery now supports exact
+  independent replacement through the existing `/replace` endpoint and immutable
+  replacement receipt. Source policy, release/job pins and workload scope must stay
+  identical; old recovery policies retire atomically, while the original Entity policy
+  remains active. A restricted-control-role PostgreSQL test proves denial of self-review,
+  stale pins, unqualified activation, audit-failure rollback and successful replay without
+  changing actual DEV policy state. It uses synthetic contexts only for rolled-back
+  boundary qualification, not as human approval evidence.
+
+  `native-compilation-recovery-corrected.json` pins compiler
+  `4e70f4af5ab0d99eed2a04eb0545c7125f1ebdf14600002ff67da9ba18852e73`.
+  After Admin refresh, submission returned HTTP 200: policy
+  `c8952e33-724b-4fae-ba8f-d9d35b8a2628`, version 1, hash
+  `8c84cd84e9ae50b4c57293ccb8a9f0c3a0c7f6dea9667021a899f16e24bcd272`,
+  pending independent Owner approval to replace `6dd7d382…`.
+  The earlier recovery approval does not authorize this new build. No retry job, successful
+  worker compilation, activation or live-read handover is claimed yet. Exact request/
+  response files and database/audit/replacement proof logs remain in the existing private
+  review-evidence directory.
+
+  **Corrected recovery executed; compilation/signing/dispatch complete:** Owner
+  replacement of `c8952e33…` returned HTTP 200 and retired `6dd7d382…`. Actual workload
+  execution returned HTTP 200 with stable jobs for both existing release IDs. Both
+  compilation jobs succeeded. The immutable compiled artifacts were signed and dispatched:
+
+  | Entity       | Signed artifact                        | Artifact hash                                                      | First Studio deployment                |
+  | ------------ | -------------------------------------- | ------------------------------------------------------------------ | -------------------------------------- |
+  | Country      | `d3a99471-39ec-467f-a7ef-caf6efd6ada9` | `4db0fd0e12df922be2a6cd5bce665d63a03560dfe8668c218ef37af2f982ab42` | `01a11dde-b21a-7932-90d3-cec4d760608c` |
+  | State Region | `743927a0-5e0a-46fc-b253-941b73a35ffd` | `36e65b469603708270f05fe946413fa42427183664358bf647ca4a7669d3803d` | `01a11dde-a163-7081-aacb-3fac7e297449` |
+
+  Both first activation attempts failed at the exact relation-target identity query:
+  `SELECT id FROM metadata.entity WHERE id=… AND entity_code=… AND tenant_id IS NULL
+AND ownership_model='system'`. PostgreSQL logs show `permission denied for table
+entity` under the activation worker, which lacks the runtime role's metadata grants.
+  The fix is four SELECT columns (`id`, `entity_code`, `tenant_id`, `ownership_model`)
+  plus a worker-only RLS predicate derived from current native human-reviewed source
+  graphs. It does not grant mutation, additional columns or unrelated entity visibility.
+  Its source scan excludes legacy publication envelopes; a first rehearsal exposed that
+  distinction, and the installed first migration was corrected through a separate forward
+  migration without changing applied bytes.
+
+  Installed migrations: `20261009_native_worker_entity_read.sql`, SHA256
+  `0c0bc60a470a16aab89cb75c026620b2e4aad746833bbb56beda049184fc830b`, and
+  `20261009_native_worker_entity_source_scope.sql`, SHA256
+  `1bc0142fcc3a966ba0026b250c587ef850dc9cd9bf0bb09d940b903480c60898`.
+  The actual-DEV `native-worker-entity-read.postgres.test.ts` passes: expected native
+  entity IDs visible, unknown actor/other tenant denied, additional-column reads denied,
+  insert/update privileges absent. Login is administrative with explicit effective
+  `athyper_worker`; this is database qualification, not runtime/UI acceptance.
+
+  Failed deployment records remain immutable. The existing coordinated delivery-recovery
+  protocol creates second attempts over these exact signed artifact hashes. Admin submitted
+  policy `c0d07783-510d-4f7b-a010-78eb943ec633`, version 1, hash
+  `931087d5ae6d944d6a4c454c037b6b8d014d4815b1cc8384436e7547094afde9`;
+  independent Owner approval and activation have now executed (HTTP 200), followed by
+  workload execution (HTTP 200, `deployment_recovery_queued`). The compiler remains
+  `4e70f4af5ab0d99eed2a04eb0545c7125f1ebdf14600002ff67da9ba18852e73`.
+  Both apply jobs succeeded. Actual database readback joins each activation head to its
+  active applied release, deployment and acknowledgement, with matching artifact hashes:
+
+  | Entity       | Release                                    | Second deployment                      | Target               | Result                  |
+  | ------------ | ------------------------------------------ | -------------------------------------- | -------------------- | ----------------------- |
+  | Country      | `77f0f6e1-f44c-4275-bcef-f20cbee4868e` (1) | `01a11de8-877e-72ef-a73c-3a93c7216892` | Studio / local / dev | Active and acknowledged |
+  | State Region | `c445fb03-08f5-4c37-a664-25dee570ab8d` (1) | `01a11de8-871d-7bc6-ba82-10f8cbe77a9f` | Studio / local / dev | Active and acknowledged |
+
+  Activation occurred at 2026-10-08 23:45:46 UTC (9 October local time). The exact
+  signed artifact IDs/hashes above are unchanged. This proves executed Studio activation;
+  authorized/denied live list/detail requests and manual UI handover are still separate
+  acceptance work. No Neon or Mesh activation is inferred. Evidence:
+  `native-compilation-recovery-corrected-replace.json`, `-execute.json`,
+  `native-worker-entity-read-proof.log`, and `native-delivery-recovery*.json` in the
+  existing private review directory.
+
+  **Owner-reported Studio manual check and next target scope (9 October).** The owner
+  reports working Studio pages and supplied screenshots of Country list (247 records),
+  Country detail and State Region detail with a readable Country reference. This is
+  user-reported UI evidence; it does not attest denied-user tests or Neon/Mesh behavior.
+  Read-only inspection confirms both current native `entity_target` declarations are
+  Studio-only. Neon and Mesh each contain `shared.country` and `shared.state_region`,
+  but neither has an activation head for these two publication keys.
+
+  The requested next delivery is Studio-owned publication to Neon and Mesh. The
+  current `nativePublicationTargets` deliberately accepts exactly one declared target
+  and one matching storage profile. Extend the shared compilation/composition boundary
+  to resolve and qualify each declared target against its own installed storage,
+  authorization, identity and component evidence before preparing successor candidates.
+  Keep the current Studio releases active. Do not edit sealed target declarations or
+  copy Studio artifact bytes while substituting the destination. Independent review
+  applies to the concrete successors and their expanded target scope. Acceptance is
+  four new acknowledged target activations (two entities across Neon and Mesh),
+  authorized/denied list/detail checks and unchanged working Studio behavior.
+  No Neon/Mesh publication or destructive cleanup was performed in this inspection.
+
+  **Cross-plane implementation checkpoint (9 October).** Shared native authorization
+  composition now selects the explicit target's profile, exact permissions and scopes;
+  multiple profiles require an explicit selection, and another plane cannot supply a
+  missing binding. `compileNativeReleaseTargets` now validates complete context coverage,
+  compiles separate derived target graphs from the unchanged source, binds each actual
+  catalogue coordinate/hash, and preserves separate source/target hashes. Tests pass all
+  three outputs through the shared runtime reader and reject missing/duplicate contexts,
+  source drift, wrong-plane catalogues and missing field access. This is implemented and
+  component-tested; it is not installed multi-target review/publication composition.
+
+  Checks: 32 compiler/publication/immutable-reader tests and 29 host authorization,
+  compilation/startup tests pass; authoring package typecheck passes. Host typecheck still
+  reports the pre-existing `preferences/entity-views-routes.ts:317` `group`/`groups` error.
+  No whole-workspace-green claim is made.
+
+  **Target-envelope integration checkpoint.** The review port now accepts optional
+  independently resolved target compiler contexts. Product review, publication service,
+  release preparation and worker compilation use the same versioned source-envelope
+  compiler. `nativePublicationTargets` validates the complete plane set and each derived
+  target's hashes; immutable signed-release readback reconstructs the original source
+  envelope from stored compliance evidence. Existing single-plane signed bytes remain
+  unchanged. Tests cover all three review pins, real Ed25519 signing, readback and
+  tamper/missing/duplicate rejection: 45 focused authoring tests and 14 worker/startup
+  tests pass. The full authoring suite passes 955 tests, with 11 environment-dependent
+  tests skipped. Authoring typecheck passes; the previously recorded unrelated host
+  preferences type error remains. This is tested integration code, not installed
+  cross-plane resolution.
+
+  Remaining: installed per-plane storage/component resolution, native successor command
+  composition and canonical PostgreSQL successor/replay qualification. The repository's
+  `forkDraft` still uses legacy `loadGraph`/`cloneGraphIds`/`replaceGraph`; it cannot be
+  used to create these native successors. Read-only DEV inspection reports all 31 field
+  identities still `reserved`; retain their stable IDs using verified predecessor
+  correspondence through the canonical installed-identity path. Do not allocate a new
+  identity roster or manually change lifecycle status to bypass it. Submit concrete
+  expanded-target candidates for independent review only after those integrations pass.
+  Read-only installed component inventory also confirms every active component row
+  declares `supported_planes={studio}`. Expanded component declarations require actual
+  destination renderer evidence and concrete independent review before target enrollment.
+  Current Studio releases are preserved; no successor, new review, Neon/Mesh deployment,
+  or legacy deletion is claimed by this checkpoint.
+
+  **Installed destination connections and successor inheritance checkpoint (9 October).**
+  Production review/worker composition now resolves every declared plane using its own
+  storage catalogue, authorization selection, component scope and explicit host pin.
+  The control API supports private-file Neon/Mesh connections; registered host/worker
+  composition passes its existing target databases. No Studio database fallback is used.
+  Component deployment manifest/probe version 2 supports separate destination file
+  inventories and HTTPS served-byte verification; version 1 remains Studio-only.
+
+  - Implemented/tested: six host suites pass 29 tests covering destination transactions,
+    missing connection/host/component rejection, unsafe roles and component inventories.
+    Existing single-plane behavior remains covered. These are composition tests, not
+    approved destination resources or end-user request evidence.
+  - Installed/executed: DEV control API was recreated with private read-only mounts for
+    explicit Neon/Mesh `athyper_runtime` connection files. Startup reached
+    `control_api.started` after non-superuser/non-BYPASSRLS checks. Read-only SQL under
+    that actual login reports Country's 28 columns and State Region's 15 columns in
+    both destinations. `athyper_control_api` itself still has no destination CONNECT
+    grant. No role grants were widened. Destination host hashes and expanded component
+    approvals are not installed; multi-target compilation remains closed without them.
+  - Successor persistence prerequisite: `inherit_native_identity` checks the target's
+    exact base release, published native predecessor, immutable released/saved graph,
+    field membership and stable identity availability. It inserts immutable correspondence
+    using the existing identity-command owner and grants no new direct table access.
+    Legacy unpublished adoption retains its original rules. The typed bootstrap identity
+    writer selects this routine only with explicit trusted `sourceReleaseId` evidence.
+    Thirteen focused tests, including the disposable PostgreSQL rehearsal, pass; negatives
+    include incorrect release/hash and missing target save, with rollback, replay and
+    unchanged source/identity checks. This rehearsal uses fixture admission, not DEV IAM.
+    The checksummed forward migration `20261009_native_identity_inheritance.sql` is
+    registered but **not applied to DEV**. Migration layout verifies successfully.
+
+  Still required: native successor graph/command composition, installed inherited-identity
+  review resolution, actual component destination qualification and independent approval,
+  destination host pins, application-role successor/replay execution, then review,
+  publication, activation and authorized/denied list/detail tests. Existing Studio
+  releases remain active. This checkpoint creates no successor or Neon/Mesh activation
+  and performs no legacy cleanup.
+
+  Reproduce the identity boundary proof:
+
+  ```sh
+  ATHYPER_IDENTITY_ADOPTION_POSTGRES=1 pnpm --fail-if-no-match --filter @athyper/server-plane-studio-meta-entity-authoring exec vitest run src/native-bootstrap-identities.test.ts src/native-identity-adoption.postgres.test.ts
+  ```
+
+  **Successor proposals and destination renderer deployment (9 October continuation).**
+  The shared `buildNativeSuccessorGraph` and existing proposal-bundle CLI now accept
+  exact native predecessor inputs. Canonical descriptors enumerate owned members;
+  draft/member IDs are fresh, stable identity provenance is unchanged, and labels or
+  literal values equal to UUID text are preserved. Explicit destination enrollment
+  carries the complete author-selected plane rows. Scope-binding keys must remain
+  distinct per operation; the preparation rejected the initial duplicate keys and the
+  corrected proposals declare separate keys for each plane.
+
+  Actual read-only source inspection used the two published revision-4 snapshots and
+  produced complete structural three-plane proposal bundles at
+  `~/.athyper/instances/dev/workspace/native-target-successors-20261009/target-proposals/`.
+  Proposed Country draft ID: `6faa03bb-bf61-42af-ae2b-41ea91c9d42f`;
+  proposed State Region draft ID: `560624aa-55bc-4a19-8b00-264f149fa93e`.
+  **Neither ID exists as a newly committed draft from this checkpoint.** The files retain
+  current component pins; replace those through the proposal after approved destination
+  component installation. Predecessor rows, 31 identities and Entity activations are
+  unchanged. Five graph tests cover exact source validation, member collisions, identity
+  preservation, explicit enrollment and compilation with a synthetic registered context.
+
+  All three production web builds succeeded using `.next-native-targets`. Mesh now
+  supports the same isolated build-directory environment setting as Neon/Studio.
+  Immutable bundles were staged read-only and deployed to the three existing web services;
+  `/readyz` returned 200 on all three. Thirteen list/detail renderer conformance tests pass.
+  The version-2 deployment probe verified exact HTTPS-served JavaScript bytes on each
+  plane and rehashed 4,975 new bundle files. The combined verifier inventory retains the
+  four previous Studio component sources and their immutable bundle evidence, plus the
+  four new candidates (6,609 files total); historical evidence is retained, not claimed
+  as a newly served historical build. Control API and worker evidence mounts were updated
+  and both services restarted healthy. Existing Entity release activations were not changed.
+
+  Evidence: `~/.athyper/instances/dev/workspace/native-target-components-20261009/`, including
+  `verified-combined-deployment.json`, `readiness.json`, `conformance.log`,
+  `target-host-bindings.proposed.json`, `candidates.json` and pre-change compose backups.
+  Host hashes are proposed deployment bindings; native startup pins have not been changed.
+
+  | Version-4 component candidate | Release ID                           | State                          |
+  | ----------------------------- | ------------------------------------ | ------------------------------ |
+  | shared.entity.list            | 880e26a5-1f90-47d5-8af8-af2ad94761b3 | Approved; published and active |
+  | shared.entity.detail          | 39edd91f-b5de-4e9f-bcb1-8e4c8cd0aa63 | Approved; published and active |
+  | shared.entity.text            | 31b23253-97b5-4ca1-ad1b-a0a3336144ca | Approved; published and active |
+  | shared.entity.detail-text     | 4b0a6c93-1f4c-41c1-b893-11c3cfeb590e | Approved; published and active |
+
+  All four Admin submissions and independent Owner approvals returned HTTP 200.
+  Owner approvals executed at 04:52 UTC on 9 October using the refreshed Owner identity;
+  `submission-results.json` and `approval-results.json` preserve the responses.
+  The existing `publish-dev-reviewed-resources` worker then compiled, signed, dispatched
+  and activated all four resources in Studio. `delivery.log` records the exact compilation,
+  deployment and applied-release IDs; catalogue readback confirms component version 4 and
+  `supported_planes={studio,neon,mesh}` for all four. These are component-resource
+  activations, not Country/State Region successor activations. A second worker execution
+  returned the same four compilation/deployment/applied-release IDs;
+  `delivery-replay-evidence.json` records the equality check. Database readback confirms
+  zero rows for the two proposed successor draft IDs at this checkpoint.
+  The owner explicitly approved exact predecessor
+  protected-state preservation during this continuation. The old source-free initializer
+  remains pinned to its original scope; successors use the separate locked predecessor
+  source path, rejecting new operations, changed operation declarations and proposal-supplied
+  protected values.
+
+  Startup now selects installed identity resolution and the exact predecessor-preservation
+  writer for a non-null base release. The source reader is gated by transaction-bound
+  creation admission, same entity/product scope, published native source and immutable
+  released/saved graph equality. Its source operations stay locked through the command.
+  Twelve authoring/source tests including disposable PostgreSQL passed, with wrong release,
+  wrong entity/actor, missing correspondence, changed declarations and direct table-read
+  denial cases. Twelve host review/startup/reader tests passed; inherited reservations
+  require the database-computed availability result, never a proposal flag.
+
+  Three registered forward migrations were installed in DEV:
+  `20261009_native_identity_inheritance.sql`, `20261009_native_successor_source.sql` and
+  `20261009_native_inherited_identity_reads.sql`. Installation receipts are in
+  `native-target-successors-20261009/`; all report unchanged release, human-review receipt
+  and execution-policy counts. Existing command-function ownership is retained; no direct
+  source table grants or identity lifecycle changes were added. The control API was
+  restarted with the successor composition. Migration layout passes (184 classified,
+  176 retained SQL files). Authoring typecheck passes; host typecheck still reports the
+  previously recorded unrelated preferences `group`/`groups` mismatch at line 317.
+
+  The next bootstrap implementation now carries complete target compiler/reader bindings
+  from production startup through resource requalification to exact SQL-readback validation.
+  Each destination uses its own restricted read-only catalogue transaction, host/component
+  evidence, authorization rows and runtime parser; absent/duplicate readers, wrong storage,
+  entity mismatch and presentation fallbacks reject before snapshot/receipt commit. Replay
+  qualification pins all destination compiler and reader evidence. Single-plane receipt
+  hashing remains unchanged. Focused tests: 14 existing bootstrap tests, 21 target/compiler
+  tests, and 14 host startup/resource tests pass. Authoring typecheck passes; host typecheck
+  remains blocked only by the recorded preferences `group`/`groups` error. These changes
+  are implemented/tested, not yet installed or executed as DEV successor commands.
+
+  The approved component pins and destination host hashes are now installed in control
+  startup. Successor bundle `installed-component-proposals/manifest.json` has hash
+  `942c124f3ea1d7035cd444ac1a843c426320040ce3dcd06044e2f08c8f098dc4`.
+  Country proposal hash: `3ccf5d4367596987428df0caee2e78ab2098dda75b74cdbc174209a341ecded3`;
+  State Region: `26c329625105dbd7739d0527eb2cd68327d95c691308f4097f60d703d2245357`.
+  Draft IDs remain those recorded above. Application-role schema inspection returned no
+  blockers; its current fingerprint is
+  `a614711670dfaca2e5f8b06a852d0cca6b295b64c91965e21f0190169cb66108`.
+  The recorded delta contains the already-installed native worker reference-read policy,
+  review snapshot trigger and publication target-read policy/grant. Startup's old schema
+  pin was updated to this inspected fingerprint; no additional grants were added.
+  `startup.before-targets.json`, `startup.installed.json`, `schema-changes.json` and
+  `installed-schema.json` preserve the configuration/evidence in the successor workspace.
+  The control API restarted successfully. The actual bootstrap request returned
+  `401 AUTH_TOKEN_INVALID` for Admin; authentication refresh is pending. No successor
+  draft write is inferred from startup success or component activation.
+
+  Authenticated successor execution continued after Admin refresh. The first failures
+  exposed omitted explicit Studio selection in startup and the command wrapper when
+  three authorization profiles are present; both calls now specify their source plane.
+  The actual source graphs also contain nonempty AI declarations. Destination AI
+  composition now preserves them using each plane's registered tool manifest and authored
+  field exposure, and the target compiler requires matching plane/entity AI contexts.
+  Tests cover destination manifests and masked-field rejection; the AI declaration is
+  not removed to permit publication. The next attempt passed resource assembly and
+  exposed a direct `entity_release` read in bootstrap. That check now uses the installed
+  admitted successor-source reader, with no direct table grant added. These fixes are
+  installed in control startup. Focused checks: 29 authorization/startup tests, 8 AI
+  tests, 20 command-runtime tests, 35 target/application tests and 20 application/source
+  tests pass (counts overlap; do not add them as a unique suite total). Host typecheck
+  still has the recorded unrelated preferences `group`/`groups` mismatch.
+
+  The next authenticated retry reached the change-set INSERT and exposed the same
+  predecessor visibility problem inside `trg_guard_entity_change_set`. Forward migration
+  `20261009_native_successor_base_guard.sql` was rehearsed transactionally, then installed
+  after the disposable PostgreSQL test passed. It routes only admitted product creation
+  through the exact predecessor reader; other scopes retain the existing base checks.
+  It does not change trigger ownership, grant direct source-table access or rewrite
+  historical migrations. PostgreSQL negatives include wrong predecessor, wrong actor and
+  denied direct release-table reads. The installer reports unchanged publication counts.
+  Receipt: `base-guard-installation.json`; migration hash
+  `65455c80d27538f068224a2ae9dbde3cb8ac13ba3239b72e85087f8bd0c399a7`.
+  Current inspected schema fingerprint (no blockers):
+  `45ece43b569c1f6c499fce259c7f5a92a05ba32704d060352d8e249446637364`.
+  Startup was repinned/restarted. The subsequent actual request returned Admin
+  `AUTH_TOKEN_INVALID`; refresh is pending. Neither proposed successor exists as a
+  committed draft. Migration layout passes (185 classified / 177 retained SQL files).
+
+  The subsequent authenticated retry passed ancestry checks and reached operation
+  insertion. The installed database initializer still recognized only original bootstrap
+  paths, raising `NATIVE_OPERATION_INITIALIZER_SOURCE_CHANGED`. The owner's existing
+  exact-predecessor preservation approval now also has database enforcement through
+  `20261009_native_successor_operation_guard.sql`. Its trigger resolves the target's exact
+  published native base under creation admission and compares the stored predecessor's
+  read-operation key and protected value. New keys and changed values reject; no default
+  or source-free initializer scope is added. Trigger ownership and direct-table privileges
+  are retained. The disposable PostgreSQL rehearsal passes true/false preservation and
+  changed-value/new-key rejection with the real successor reader and fixture admission.
+  Installation evidence is `operation-guard-installation.json`; the current inspected
+  schema fingerprint is `8ff975c2785615c2880fe89dfee18aab9e2ce3cce8a93b90af32fe4220aa0cb9`
+  with no blockers. Startup is repinned and restarted. Migration inventory verifies
+  186 classified files / 178 retained SQL files. Actual successor commit remains pending.
+
+  After the operation guard installation, the next actual request reached COMMIT,
+  including whole-graph readback and compilation, but the deferred identity check raised
+  `IDENTITY_ADOPTION_TARGET_MISMATCH` and rolled back. The old guard required proposal
+  bytes to hash identically to SQL-readback bytes despite allowed member-order normalization.
+  Bootstrap receipts now record both proposalHash and graphHash. Forward migration
+  `20261009_native_identity_receipt_binding.sql` permits the differing hashes only when
+  the same target's immutable revision-1 creation receipt binds them, with matching author,
+  scope, expected revision and saved snapshot. Exact-hash historical evidence stays valid.
+  Fifteen application/PostgreSQL tests pass, including missing/wrong-actor receipt rejection.
+  The migration is installed; no blockers in the application-role schema check. Current
+  fingerprint: `42855a2156be6256df75f811c4e728b2bed9ea2e34b28bfdadb068c0ee3b8dd7`.
+  Evidence: `identity-receipt-installation.json`, `installed-schema-identity-receipt.json`.
+  Migration layout: 187 classified / 179 retained SQL files. Another actual retry is
+  required before recording a committed successor or publishing it.
+
+  The following retry passed the identity-receipt check but failed at deferred COMMIT
+  with `query returned no rows`. Its admission expired at 05:20:57 UTC before completion;
+  product-root visibility depends on that 60-second admission. This points to expiry
+  during repeated serial bundle verification, rather than permission to bypass the guard.
+  Component verification now runs at most four file reads concurrently, awaits every
+  started read on error, and retains all per-call path/hash/size checks without caching.
+  Nine verifier tests pass, including corruption in a later batch on replay. Actual
+  requalification checked eight component sources, 6,609 files and three served assets
+  (`parallel-verification.json`). The change is installed in control startup. No admission
+  lifetime was extended. The new request returned expired Admin `AUTH_TOKEN_INVALID`;
+  refresh is pending. No successor commit, review or Entity activation is claimed.
+
+  Remaining engineering/execution: canonical multi-target transaction qualification,
+  actual draft/replay commands using the installed bindings.
+  Then independently review/publish/activate successors and verify destination list/detail
+  access. No cross-plane Entity activation or legacy cleanup is claimed. Forty-two focused
+  host/bundle/component tests pass in addition to the five graph tests and thirteen renderer
+  tests. These are local results, not CI or authenticated end-user acceptance.
+
+  Executable preparation and database-rehearsal commands (from repository root):
+
+  ```sh
+  pnpm --fail-if-no-match --filter @athyper/server-platform-host exec tsx scripts/qualification/prepare-native-compilation-recovery.ts --original-policy=b7723afc-64c8-493d-bb14-75578c3759d2 --failed-job=01a11dc0-e504-7203-9193-a55876a420e3 --failed-job=01a11dc0-ff92-768e-a7f0-827de876de72
+  pnpm --fail-if-no-match --filter @athyper/server-platform-host exec tsx scripts/qualification/qualify-native-compilation-recovery.ts --candidate=/absolute/path/to/private/native-compilation-recovery.json
+  node server/db/scripts/operations/publication/apply-dev-human-publication.mjs --apply=DEV-NATIVE-COMPILATION-RECOVERY
+  ```
+
+  Preparation prints a proposal only. Save it privately and submit the exact JSON to
+  `POST /api/studio/publication-policies` as Admin. Owner activates the returned exact
+  ID/hash through `POST /:id/activate`, or atomically replaces an existing native recovery
+  using `POST /:id/replace` with its exact predecessor pins; the workload then executes `POST /:id/execute`
+  with its existing dual credentials and `{expectedHash,version}`. No endpoint accepts
+  a caller-supplied graph, approval receipt or replacement release ID. Record those
+  actual responses before advancing each checkpoint from installed to executed.
+  The optional actual-DEV replacement rehearsal is:
+
+  ```sh
+  NATIVE_COMPILATION_RECOVERY_POSTGRES=1 NATIVE_RECOVERY_CANDIDATE=/absolute/path/to/private/native-compilation-recovery-corrected.json pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run src/composition/shared/publication/native-compilation-recovery.postgres.test.ts
+  ```
+
+  This command requires the current DEV database and an existing exact active recovery
+  predecessor. Every policy/audit mutation in the rehearsal is rolled back.
+
+  Evidence: `native-execution-policy-hash-domains.json` and
+  `native-execution-policy-hash-domains-attempt.json`; the failed execution and
+  successful previous replacement remain in their original evidence files.
+  API and worker startup succeeded with the mounted native configuration.
+  Scoped formatting checks pass; three unrelated untracked operations documents
+  still fail the aggregate changed-file formatting check.
+
+- **Test evidence:** 931 authoring tests pass (11 opt-in tests skipped); selected
+  host publication/startup suites pass 285 tests (6 skipped). The explicit native
+  PostgreSQL admission rehearsal passes. Migration layout and security-definer
+  checks pass. Host typecheck still reports the existing preferences
+  `entity-views-routes.ts` `group`/`groups` mismatch; no full-workspace green claim.
+- **Outstanding:** execute the approved workload, verify canonical release
+  allocation/replay, complete installed live-read composition, publish/activate
+  the exact artifacts and prove authorized/denied standard list/detail access.
+  No new Entity release or activation, deployed F6/F8/F9 qualification, or manual
+  handover is claimed by this checkpoint.
+
+Private evidence under `native-reset-20261009/review-evidence/` includes
+`actual-owner-approval.json`, `approved-native-sources.json`,
+`native-worker-installation.json`, `native-worker-denial.txt`,
+`native-execution-policy.json`, `native-execution-policy-proposed.json`,
+`native-execution-policy-activation.json`, `native-publication-execution.json` and
+`native-execution-policy-release-envelope-attempt.json`.
+The pre-install `pre-native-worker-20261009.dump` has SHA256
+`055fc02a9c0ea69845d4245121d67f24e3fb01b4cf621743291af217e18ffc15`;
+its archive catalogue was checked, not fully restore-tested in this checkpoint.
+The earlier reset's three restore verifications remain separate evidence.
+
+Maintained migration commands executed and replayed:
+
+```sh
+node server/db/scripts/operations/publication/apply-dev-human-publication.mjs --apply=DEV-NATIVE-PUBLICATION
+node server/db/scripts/operations/publication/apply-dev-human-publication.mjs --apply=DEV-NATIVE-WORKER-SOURCE
+```
 
 L5 uses existing authenticated human Admin proposal and independent Owner approval for concrete candidates, then the shared publication workers. A refreshed Owner session alone is not candidate approval. Verify signed artifacts as required by the existing protocol, explicit declared targets, deployment acknowledgements and activation. No automatic assumption that `dev:publish` machine credentials attest human review. Request logins only for ready commands/candidates.
 

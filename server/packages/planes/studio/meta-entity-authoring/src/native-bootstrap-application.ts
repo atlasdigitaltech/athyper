@@ -30,18 +30,10 @@ import {
   type NativeAuthoringPolicy,
   type NativeDraftRoot,
 } from "./native-core-layout-persistence.js";
-import {
-  loadNativeCompilationOperations,
-  verifyNativeCompiledOperationControls,
-} from "./native-operation-compilation.js";
-import {
-  compileNativeRelease,
-  type NativeReleaseCompilationContext,
-} from "./native-release-compilation.js";
-import {
-  compileNativeRuntimeProjection,
-  type NativeProjectionRegistration,
-} from "@athyper/server-platform-metadata";
+import { loadNativeCompilationOperations } from "./native-operation-compilation.js";
+import { type NativeReleaseCompilationContext } from "./native-release-compilation.js";
+import { type NativeProjectionRegistration } from "@athyper/server-platform-metadata";
+import { qualifyNativeBootstrapCompilation } from "./native-bootstrap-compilation-proof.js";
 import type { ApprovedOperationBootstrap } from "./native-operation-bootstrap.js";
 import type { NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
 type Tx = Transaction<Record<string, never>>;
@@ -69,17 +61,20 @@ export interface NativeBootstrapPolicy {
     identityMode?: NativeBootstrapIdentityMode;
     identitySources?: readonly NativeIdentityAdoptionSource[];
     compiler: NativeReleaseCompilationContext;
-    reader: {
-      registration: NativeProjectionRegistration;
-      storagePlane: "studio" | "neon" | "mesh";
-      permissions: readonly { code: string; scopeKinds: readonly string[] }[];
-    };
+    targetCompilers?: readonly NativeReleaseCompilationContext[];
+    targetReaders?: readonly NativeBootstrapReader[];
+    reader: NativeBootstrapReader;
   }>;
   audit(
     tx: Tx,
     input: NativeBootstrapInput,
     result: NativeBootstrapResult,
   ): Promise<void>;
+}
+export interface NativeBootstrapReader {
+  registration: NativeProjectionRegistration;
+  storagePlane: "studio" | "neon" | "mesh";
+  permissions: readonly { code: string; scopeKinds: readonly string[] }[];
 }
 export interface NativeBootstrapResult {
   readonly changeSetId: string;
@@ -220,6 +215,12 @@ export async function applyNativeBootstrap(
       baseReleaseId: resolved.baseReleaseId,
       compiler: resolved.compiler,
       reader: resolved.reader,
+      ...(resolved.targetCompilers
+        ? { targetCompilers: resolved.targetCompilers }
+        : {}),
+      ...(resolved.targetReaders
+        ? { targetReaders: resolved.targetReaders }
+        : {}),
       identitySources: resolved.identitySources ?? [],
       identityMode: resolved.identityMode ?? "installed",
     }),
@@ -247,8 +248,8 @@ export async function applyNativeBootstrap(
       "/bootstrap/baseReleaseId",
     );
     const base =
-      await sql`SELECT id FROM metadata.entity_release WHERE id=${prepared.baseReleaseId}::uuid
-      AND entity_id=${input.entityId}::uuid AND tenant_id IS NULL FOR SHARE`.execute(
+      await sql`SELECT source_change_set_id FROM entity_command_private.read_native_successor_source(
+        ${input.changeSetId}::uuid,${input.entityId}::uuid,${prepared.baseReleaseId}::uuid,${policy.maximumBytes})`.execute(
         tx,
       );
     if (base.rows.length !== 1) fail("NATIVE_BOOTSTRAP_BASE_RELEASE_MISMATCH");
@@ -346,37 +347,23 @@ export async function applyNativeBootstrap(
     stored,
     policy.host.commands.maxMembers,
   );
-  const compiled = compileNativeRelease(
-    stored,
-    { ...prepared.compiler, graphHash: sha256(stored) },
+  const compiled = qualifyNativeBootstrapCompilation({
+    graph: stored,
+    compiler: { ...prepared.compiler, graphHash: sha256(stored) },
+    reader: prepared.reader,
+    ...(prepared.targetCompilers
+      ? {
+          targetCompilers: prepared.targetCompilers.map((compiler) => {
+            if (compiler.graphHash !== sha256(graph))
+              fail("NATIVE_AUTHORING_COMPILER_SOURCE_MISMATCH");
+            return { ...compiler, graphHash: sha256(stored) };
+          }),
+        }
+      : {}),
+    ...(prepared.targetReaders
+      ? { targetReaders: prepared.targetReaders }
+      : {}),
     controls,
-  );
-  verifyNativeCompiledOperationControls(controls, compiled.descriptor);
-  const runtime = stored.runtimeProfiles[0];
-  const identity = stored.fields.find((f) => f.id === runtime?.idFieldId);
-  const key = prepared.compiler.core.identities.find(
-    (i) =>
-      i.id === identity?.fieldIdentityId &&
-      i.entityId === input.entityId &&
-      i.tenantId === input.tenantId,
-  );
-  if (
-    !runtime ||
-    !key ||
-    key.fieldKey !== prepared.reader.registration.storage.idField ||
-    prepared.reader.registration.plane !==
-      prepared.compiler.authorization.plane ||
-    runtime.storagePlane !== prepared.reader.storagePlane ||
-    runtime.storageSchema !== prepared.reader.registration.storage.schema ||
-    runtime.storageObject !== prepared.reader.registration.storage.object ||
-    prepared.reader.registration.presentationDefaults !== undefined ||
-    prepared.reader.registration.fieldPresentationDefaults !== undefined
-  )
-    fail("NATIVE_BOOTSTRAP_READER_MISMATCH");
-  compileNativeRuntimeProjection({
-    native: compiled.descriptor,
-    registration: prepared.reader.registration,
-    permissions: prepared.reader.permissions,
   });
   await snapshot(tx, input, 1, stored, "saved");
   const result: NativeBootstrapResult = {
@@ -387,7 +374,7 @@ export async function applyNativeBootstrap(
     replay: false,
   };
   await sql`INSERT INTO metadata.entity_authoring_command_receipt(change_set_id,tenant_id,actor_id,idempotency_key,request_hash,expected_revision,revision,changed,identities)
-    VALUES(${input.changeSetId}::uuid,NULL,${input.actorId}::uuid,${input.idempotencyKey},${requestHash},0,1,true,${JSON.stringify({ graphHash: result.graphHash, compiledHash: result.compiledHash })}::jsonb)`.execute(
+    VALUES(${input.changeSetId}::uuid,NULL,${input.actorId}::uuid,${input.idempotencyKey},${requestHash},0,1,true,${JSON.stringify({ proposalHash: input.proposalHash, graphHash: result.graphHash, compiledHash: result.compiledHash })}::jsonb)`.execute(
     tx,
   );
   await policy.audit(tx, input, result);

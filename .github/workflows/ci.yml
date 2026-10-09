@@ -271,7 +271,7 @@ jobs:
         env:
           PRODUCT_REVIEW_POSTGRES: "1"
           NATIVE_PUBLICATION_POSTGRES: "1"
-        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-review.postgres.test.ts src/composition/shared/publication/native-publication-authority.postgres.test.ts
+        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-review.postgres.test.ts src/composition/shared/publication/native-publication-authority.postgres.test.ts src/composition/shared/publication/native-publication-validation.postgres.test.ts
 
       - name: Rehearse restricted component installation on PostgreSQL
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

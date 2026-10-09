@@ -1,3 +1,4 @@
+import { createNativePublicationStartup } from "./shared/publication/native-publication-startup.js";
 import { createLocalEntityLiveReadEvidence } from "./shared/publication/entity-live-read-evidence.js";
 import { createDeployedComponentQualification } from "./shared/publication/component-qualification.js";
 import { parseEntityAuthoringResource } from "@athyper/server-contract-publication";
@@ -1135,7 +1136,34 @@ export function registerServices(
           const authority = metadataDatabases.studio;
           if (!authority)
             throw Error("PUBLICATION_AUTHORITY_DATABASE_UNAVAILABLE");
+          const componentQualifier = createDeployedComponentQualification(
+            process.env,
+            { canonicalBytes, sha256 },
+          );
+          const native = createNativePublicationStartup({
+            environment: process.env,
+            targetDatabases: metadataDatabases,
+            run: (work) =>
+              container.adapters.athyperDatabase!.withTenantTransaction((tx) =>
+                work(tx as unknown as Kysely<Record<string, never>>),
+              ),
+            loader: {
+              store: container.adapters.publicationArtifactStore!,
+              verifier: container.adapters.publicationVerifier!,
+              canonicalizer: { canonicalBytes, sha256 },
+              runtimeVersion: config.publication.runtimeVersion,
+              ...(componentQualifier
+                ? {
+                    uiComponents: {
+                      qualify: async (envelope) =>
+                        componentQualifier(envelope.payload),
+                    },
+                  }
+                : {}),
+            },
+          });
           return createCompiledRuntimePublication({
+            nativeSource: native.readNativeSource,
             authority,
             configuration,
             targets() {
@@ -2924,11 +2952,17 @@ export function registerServices(
           recordHistory: recordHistory
             ? {
                 prepare: recordHistory.prepare,
-                qualify: async (target) =>
-                  qualifyActivityRecordingGraph(
+                qualify: async (target) => {
+                  if (
+                    target.graph.contractSchema ===
+                    "athyper.meta-entity-contract/2.5"
+                  )
+                    throw Error("NATIVE_ACTIVITY_RECORDING_UNQUALIFIED");
+                  return qualifyActivityRecordingGraph(
                     target.graph,
                     activityRegistrations,
-                  ),
+                  );
+                },
               }
             : undefined,
           activity: activityProvider
@@ -5744,7 +5778,34 @@ function registerStudioAuthoring(
       runtime.qualify(profile, bindings);
     },
   });
+  const nativeComponentQualifier = createDeployedComponentQualification(
+    process.env,
+    { canonicalBytes, sha256 },
+  );
+  const nativePublication = createNativePublicationStartup({
+    environment: process.env,
+    targetDatabases: publicationTargets.databases,
+    run: (work) =>
+      container.adapters.athyperDatabase!.withTenantTransaction((tx) =>
+        work(tx as unknown as Kysely<Record<string, never>>),
+      ),
+    loader: {
+      store: container.adapters.publicationArtifactStore!,
+      verifier: container.adapters.publicationVerifier!,
+      canonicalizer: { canonicalBytes, sha256 },
+      runtimeVersion: config.publication.runtimeVersion,
+      ...(nativeComponentQualifier
+        ? {
+            uiComponents: {
+              qualify: async (envelope) =>
+                nativeComponentQualifier(envelope.payload),
+            },
+          }
+        : {}),
+    },
+  });
   const service = new MetaEntityAuthoringService({
+    ...nativePublication,
     ...(preview ? { preview } : {}),
     repository,
     learning,
@@ -5931,7 +5992,29 @@ function registerPublication(
     sha256,
   });
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
+  const nativeApply = createNativePublicationStartup({
+    environment: process.env,
+    targetDatabases: databases,
+    run: (work) =>
+      container.adapters.athyperDatabase!.withTenantTransaction((tx) =>
+        work(tx as unknown as Kysely<Record<string, never>>),
+      ),
+    loader: {
+      store: container.adapters.publicationArtifactStore!,
+      verifier: container.adapters.publicationVerifier!,
+      canonicalizer: { canonicalBytes, sha256 },
+      runtimeVersion: config.publication.runtimeVersion,
+      ...(componentQualifier
+        ? {
+            uiComponents: {
+              qualify: async (envelope) => componentQualifier(envelope.payload),
+            },
+          }
+        : {}),
+    },
+  });
   const { projections, orchestrators, loaders } = createPublicationTargets({
+    nativeSource: nativeApply.readNativeSource,
     authorityDatabase,
     coordinatedWorkload,
     databases,

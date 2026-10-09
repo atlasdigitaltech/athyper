@@ -379,6 +379,18 @@ BEGIN
     "owner": "athyper_definer_live_read",
     "rowSecurityOff": false,
     "reason": "Dedicated non-login locked evidence reader; no activation authority or application UPDATE grant."
+  },
+  {
+    "signature": "publication.fn_native_compilation_recovery_source(jsonb, boolean)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Bounded read-only native recovery evidence; existing original-policy human review and exact release/job/source group required."
+  },
+  {
+    "signature": "publication.native_worker_entity_visible(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Worker reference identity visibility derives from exact currently enrolled native human publication sources."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -576,6 +588,7 @@ BEGIN
   "publication.fn_human_reviewed_entity_policy(jsonb, uuid, text)",
   "publication.fn_initial_baseline_compilation_source(uuid)",
   "publication.fn_link_system_entity_release(uuid)",
+  "publication.fn_native_compilation_recovery_source(jsonb, boolean)",
   "publication.fn_prepare_authorization_successor(uuid, jsonb)",
   "publication.fn_prepare_collection_configuration_release(uuid, jsonb)",
   "publication.fn_prepare_document_collection_release(uuid, jsonb)",
@@ -592,10 +605,12 @@ BEGIN
   "publication.fn_transition_deployment(uuid, publication.deployment_status_d, jsonb)",
   "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
   "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
+  "publication.native_worker_entity_visible(uuid)",
   "runtime_meta.fn_activate_release(uuid, jsonb)",
   "runtime_meta.fn_active_business_partner_definition(text)",
   "runtime_meta.fn_active_entity_descriptor(text, text)",
   "runtime_meta.fn_active_release(text)",
+  "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)",
   "runtime_meta.fn_rollback_release(text, uuid, jsonb)",
   "runtime_meta.fn_stage_applied_release_payload(uuid, jsonb)",
   "runtime_meta.fn_stage_entity_projection(uuid, jsonb)",
@@ -609,8 +624,7 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)",
-  "runtime_meta.fn_locked_live_read_resources(text[], uuid, text, integer)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;

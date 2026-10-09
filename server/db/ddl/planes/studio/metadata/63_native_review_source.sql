@@ -17,7 +17,7 @@ BEGIN
  SELECT * INTO STRICT saved FROM snapshot.entity_draft_save s WHERE s.change_set_id=c.id AND s.tenant_id IS NULL AND s.lock_version=c.lock_version;
  SELECT coalesce(jsonb_agg(to_jsonb(o)||jsonb_build_object('export_max_records',o.export_max_records::text) ORDER BY o.id),'[]') INTO ops
  FROM metadata.entity_operation o WHERE o.change_set_id=c.id AND o.entity_id=c.entity_id AND o.tenant_id IS NULL;
- SELECT coalesce(jsonb_agg(to_jsonb(i) ORDER BY i.id),'[]') INTO ids FROM metadata.entity_field_identity i
+ SELECT coalesce(jsonb_agg(to_jsonb(i)||jsonb_build_object('native_available',metadata.native_identity_available(c.id,i.id)) ORDER BY i.id),'[]') INTO ids FROM metadata.entity_field_identity i
  WHERE i.entity_id=c.entity_id AND i.tenant_id IS NULL AND EXISTS(SELECT 1 FROM metadata.entity_field f WHERE f.change_set_id=c.id AND f.field_identity_id=i.id);
  IF octet_length(saved.graph::text)+octet_length(ops::text)+octet_length(ids::text)>p_maximum_bytes
  THEN RAISE EXCEPTION 'NATIVE_REVIEW_SOURCE_TOO_LARGE'; END IF;

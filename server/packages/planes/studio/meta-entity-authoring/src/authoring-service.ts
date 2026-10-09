@@ -1,3 +1,6 @@
+import type { ProductReviewPorts } from "./product-review.js";
+import { compileNativePublication } from "./native-publication-compilation.js";
+import { nativePublicationTargets } from "./publication/native-publication-targets.js";
 import type {
   ArtifactSigner,
   BreakGlassEvidence,
@@ -19,6 +22,8 @@ import type { MetaEntityGraphPreview } from "./graph-preview.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
 export interface AuthoringServiceOptions {
+  /** Trusted installed source resolver; never accepts request-supplied compiler context. */
+  nativePublicationSource?: ProductReviewPorts["nativeSource"];
   preview?: MetaEntityGraphPreview;
   learning?: {
     assertPublishable(
@@ -54,19 +59,29 @@ export class MetaEntityAuthoringService {
     return this.options.repository.createDraft(input);
   }
   async listDraftSaves(id: string) {
-    if (!this.options.repository.listDraftSaves) throw new AuthoringPolicyError("HISTORY_UNAVAILABLE", "Saved history is unavailable");
+    if (!this.options.repository.listDraftSaves)
+      throw new AuthoringPolicyError(
+        "HISTORY_UNAVAILABLE",
+        "Saved history is unavailable",
+      );
     return this.options.repository.listDraftSaves(id);
   }
   async readDraftSave(id: string, revision: number) {
-    if (!this.options.repository.readDraftSave) throw new AuthoringPolicyError("HISTORY_UNAVAILABLE", "Saved history is unavailable");
+    if (!this.options.repository.readDraftSave)
+      throw new AuthoringPolicyError(
+        "HISTORY_UNAVAILABLE",
+        "Saved history is unavailable",
+      );
     return this.options.repository.readDraftSave(id, revision);
   }
   async listInspectionReleases(tenantId: string) {
-    if (!this.options.repository.listInspectionReleases) throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
+    if (!this.options.repository.listInspectionReleases)
+      throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
     return this.options.repository.listInspectionReleases(tenantId);
   }
   async readInspectionRelease(tenantId: string, releaseId: string) {
-    if (!this.options.repository.readInspectionRelease) throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
+    if (!this.options.repository.readInspectionRelease)
+      throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
     return this.options.repository.readInspectionRelease(tenantId, releaseId);
   }
   async list(tenantId: string) {
@@ -207,6 +222,89 @@ export class MetaEntityAuthoringService {
     return this.reviewTransition(input, "rejected");
   }
 
+  async readNativePublicationSource(changeSetId: string) {
+    const resolve = this.options.nativePublicationSource;
+    if (!resolve)
+      throw new AuthoringPolicyError(
+        "NATIVE_PUBLICATION_HOST_NOT_CONFIGURED",
+        "Installed native publication source required",
+      );
+    const changeSet = await this.required(changeSetId);
+    const source = await resolve(changeSetId);
+    if (
+      changeSet.tenantId !== null ||
+      source.graph.authoringSource.entityId !== changeSet.entityId ||
+      source.graph.ownedLabels?.changeSetId !== changeSetId ||
+      source.graph.entity.entityCode !== changeSet.entityCode
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_PUBLICATION_SOURCE_MISMATCH",
+        "Exact native product source required",
+      );
+    const artifact = compileNativePublication(source);
+    nativePublicationTargets(source.graph, artifact);
+    const current = await this.required(changeSetId);
+    if (
+      current.revision !== changeSet.revision ||
+      current.status !== changeSet.status
+    )
+      throw new AuthoringConflictError(
+        "Native source changed during publication inspection",
+      );
+    return { changeSet, graph: source.graph, artifact };
+  }
+  /** Native publication preserves the same signer, canonical release transaction
+   * and dispatch port. It never converts the source back into a legacy graph. */
+  async publishNative(
+    input: Parameters<MetaEntityAuthoringService["publish"]>[0],
+  ) {
+    const {
+      changeSet,
+      graph,
+      artifact: compiled,
+    } = await this.readNativePublicationSource(input.changeSetId);
+    if (changeSet.status !== "approved")
+      throw new AuthoringPolicyError(
+        "APPROVAL_REQUIRED",
+        "Only approved change sets may publish",
+      );
+    if (changeSet.revision !== input.expectedRevision)
+      throw new AuthoringConflictError("Native publication revision is stale");
+    if (input.expectedContractHash !== compiled.contractHash)
+      throw new AuthoringPolicyError(
+        "PUBLICATION_REVIEWED_SOURCE_CHANGED",
+        "Exact reviewed native source pin required",
+      );
+    const targets = nativePublicationTargets(graph, compiled)
+      .map((t) => t.targetPlane)
+      .sort();
+    if ([...input.targetPlanes].sort().join() !== targets.join())
+      throw new AuthoringPolicyError(
+        "NATIVE_PUBLICATION_TARGET_MISMATCH",
+        "Every declared native target must match",
+      );
+    await this.options.repository.recordValidation(
+      input.changeSetId,
+      changeSet.revision,
+      { contractHash: compiled.contractHash, issues: [], deterministic: true },
+      input.actorId,
+      graph,
+    );
+    const signature = await this.options.signer.sign(compiled);
+    const artifact: SignedMetaEntityArtifact = { ...compiled, ...signature };
+    const release = await this.options.repository.createRelease({
+      ...input,
+      artifact,
+      releaseKind: "publish",
+    });
+    await this.options.publication.publish({
+      releaseId: release.id,
+      artifact,
+      targetPlanes: input.targetPlanes,
+    });
+    return { release, artifact };
+  }
+
   async publish(input: {
     expectedSourceReleaseId?: string | null;
     expectedContractHash?: string;
@@ -240,13 +338,23 @@ export class MetaEntityAuthoringService {
       input.actorId,
     );
     const compiled = compileGraph(graph);
-    if (input.expectedContractHash !== undefined && compiled.contractHash !== input.expectedContractHash)
-      throw new AuthoringPolicyError("PUBLICATION_REVIEWED_SOURCE_CHANGED", "The persisted graph no longer matches the reviewed snapshot");
+    if (
+      input.expectedContractHash !== undefined &&
+      compiled.contractHash !== input.expectedContractHash
+    )
+      throw new AuthoringPolicyError(
+        "PUBLICATION_REVIEWED_SOURCE_CHANGED",
+        "The persisted graph no longer matches the reviewed snapshot",
+      );
     const signature = await this.options.signer.sign(compiled);
     const artifact: SignedMetaEntityArtifact = { ...compiled, ...signature };
     const release = await this.options.repository.createRelease({
-      ...(input.expectedSourceReleaseId !== undefined ? { expectedSourceReleaseId: input.expectedSourceReleaseId } : {}),
-      ...(input.expectedContractHash !== undefined ? { expectedContractHash: input.expectedContractHash } : {}),
+      ...(input.expectedSourceReleaseId !== undefined
+        ? { expectedSourceReleaseId: input.expectedSourceReleaseId }
+        : {}),
+      ...(input.expectedContractHash !== undefined
+        ? { expectedContractHash: input.expectedContractHash }
+        : {}),
       changeSetId: input.changeSetId,
       expectedRevision: input.expectedRevision,
       actorId: input.actorId,

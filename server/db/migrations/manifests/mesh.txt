@@ -13,3 +13,4 @@
 20261001_principal_family_editing.sql
 20261001_publication_rollback_retry.sql
 20261003_mesh_publication_worker_identity.sql
+20261009_successor_initial_target.sql

@@ -28,7 +28,7 @@ export function resolveNativeBootstrapAi(
     ai.profile.length !== 1 ||
     authorization.entityCode !== graph.entity.entityCode ||
     authorization.changeSetId !== graph.ownedLabels?.changeSetId ||
-    authorization.plane !== "studio"
+    !["studio", "neon", "mesh"].includes(authorization.plane)
   )
     fail();
   const fields = graph.fields.map((field) => {

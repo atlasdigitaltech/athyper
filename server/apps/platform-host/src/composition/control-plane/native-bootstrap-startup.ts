@@ -1,7 +1,9 @@
 import { createNativeReviewSource } from "./native-review-source.js";
-import { sql } from "kysely";
+import { sql, type Kysely } from "kysely";
 import {
   createDeclaredOperationBootstrap,
+  resolveNativeSuccessorSource,
+  resolveNativeBootstrapIdentities,
   readNativeStorageCatalogue,
   sha256,
   type NativeBootstrapPolicy,
@@ -22,6 +24,7 @@ export interface NativeBootstrapStartupConfiguration {
   database: InstalledNativeSchemaEvidence;
   commands: NativeBootstrapPolicy["host"]["commands"];
   hostReleaseHash: string;
+  targetHostReleaseHashes?: Partial<Record<"neon" | "mesh", string>>;
   componentPins: Parameters<typeof createNativeBootstrapComponents>[0]["pins"];
   initialization: Parameters<typeof createDeclaredOperationBootstrap>[0];
   targets: Compilation["targets"];
@@ -35,6 +38,9 @@ export interface NativeBootstrapStartupConfiguration {
 export function createNativeBootstrapStartup(options: {
   configuration: NativeBootstrapStartupConfiguration;
   authorityTenantId: string;
+  targetDatabases?: Partial<
+    Record<"neon" | "mesh", Kysely<Record<string, never>>>
+  >;
   loader: ComponentLoaderOptions;
   audit: NativeBootstrapPolicy["audit"];
 }): Pick<
@@ -48,7 +54,10 @@ export function createNativeBootstrapStartup(options: {
   if (
     !c ||
     c.schema !== "entity.local-native-startup/1" ||
-    Object.keys(c).sort().join() !==
+    Object.keys(c)
+      .filter((key) => key !== "targetHostReleaseHashes")
+      .sort()
+      .join() !==
       "commands,componentPins,database,domains,hostReleaseHash,identityResource,initialization,proposals,referenceContract,schema,targets" ||
     !/^[a-f0-9]{64}$/.test(c.hostReleaseHash) ||
     !Array.isArray(c.targets) ||
@@ -108,6 +117,7 @@ export function createNativeBootstrapStartup(options: {
   return {
     nativeSource: createNativeReviewSource({
       configuration: c,
+      targetDatabases: options.targetDatabases,
       loader: options.loader,
     }),
     nativeBootstrapProposals: {
@@ -116,6 +126,19 @@ export function createNativeBootstrapStartup(options: {
       audit: options.audit,
       async resolveResources(tx, _context, command, proposal) {
         const graph = proposal.graph;
+        const successor =
+          proposal.baseReleaseId === null
+            ? undefined
+            : await resolveNativeSuccessorSource(
+                tx,
+                command,
+                proposal.baseReleaseId,
+                graph,
+                c.proposals.maximumBytes,
+              );
+        const installedIdentities = successor
+          ? await resolveNativeBootstrapIdentities(tx, command, graph)
+          : undefined;
         if (
           graph.authoringSource.authoringSchemaHash !==
             c.commands.authoringSchemaHash ||
@@ -167,6 +190,8 @@ export function createNativeBootstrapStartup(options: {
             await sql`SELECT ${value}::${sql.ref(domain.code)}`.execute(tx);
         }
         const compiler = assembleNativeBootstrapCompilation({
+          targetPlane: "studio",
+          ...(installedIdentities ? { installedIdentities } : {}),
           command,
           graph,
           catalogue,
@@ -182,13 +207,108 @@ export function createNativeBootstrapStartup(options: {
           identityResource: c.identityResource,
           maximumMembers: c.commands.maxMembers,
         });
-        const ids = compiler.core.identities;
-        const idField = ids.find(
-          (i) =>
-            graph.fields.find((f) => f.id === runtime.idFieldId)
-              ?.fieldIdentityId === i.id,
+        const readerFor = (
+          context: typeof compiler,
+          storage: typeof catalogue,
+        ) => {
+          const identity = context.core.identities.find(
+            (i) =>
+              graph.fields.find((f) => f.id === runtime.idFieldId)
+                ?.fieldIdentityId === i.id,
+          );
+          if (!identity)
+            throw Error("CONTROL_NATIVE_BOOTSTRAP_IDENTITY_REQUIRED");
+          return {
+            storagePlane: context.authorization.plane,
+            registration: {
+              entityCode: graph.entity.entityCode,
+              plane: context.authorization.plane,
+              storage: {
+                schema: runtime.storageSchema!,
+                object: runtime.storageObject!,
+                idField: identity.fieldKey,
+              },
+              columns: storage.columns.map((column) => column.path),
+            },
+            permissions: [
+              ...new Set(
+                context.authorization.permissions.flatMap((p) =>
+                  p.permissionCode ? [p.permissionCode] : [],
+                ),
+              ),
+            ].map((code) => ({ code, scopeKinds: ["tenant"] })),
+          };
+        };
+        const declared = graph.referenceMembers?.members.target.map(
+          (t) => t.targetPlane,
         );
-        if (!idField) fail();
+        if (
+          !declared?.includes("studio") ||
+          new Set(declared).size !== declared.length
+        )
+          fail();
+        const targetCompilers = [compiler];
+        const targetReaders = [readerFor(compiler, catalogue)];
+        for (const plane of declared!) {
+          if (plane === "studio") continue;
+          const database = options.targetDatabases?.[plane];
+          const hostReleaseHash = c.targetHostReleaseHashes?.[plane];
+          if (!database || !hostReleaseHash)
+            throw Error("CONTROL_NATIVE_BOOTSTRAP_TARGET_BINDING_REQUIRED");
+          const target = await database
+            .transaction()
+            .setIsolationLevel("repeatable read")
+            .execute(async (targetTx) => {
+              await sql`SET TRANSACTION READ ONLY`.execute(targetTx);
+              const role = await sql<{
+                safe: boolean;
+              }>`SELECT NOT rolsuper AND NOT rolbypassrls AS safe FROM pg_roles WHERE rolname=current_user`.execute(
+                targetTx,
+              );
+              if (role.rows.length !== 1 || role.rows[0]?.safe !== true)
+                throw Error("CONTROL_NATIVE_BOOTSTRAP_TARGET_ROLE_INVALID");
+              const storage = await readNativeStorageCatalogue(
+                targetTx,
+                plane,
+                {
+                  plane,
+                  schema: runtime.storageSchema!,
+                  object: runtime.storageObject!,
+                },
+              );
+              for (const domain of c.domains)
+                for (const value of domain.values)
+                  await sql`SELECT ${value}::${sql.ref(domain.code)}`.execute(
+                    targetTx,
+                  );
+              const installed = await componentReader(tx, graph, {
+                tenantId: null,
+                plane,
+                hostReleaseHash,
+              });
+              const context = assembleNativeBootstrapCompilation({
+                installedIdentities: compiler.core.identities,
+                targetPlane: plane,
+                command,
+                graph,
+                catalogue: storage,
+                components: {
+                  core: installed.coreComponents,
+                  layout: installed.layoutComponents,
+                  components: installed.runtimeComponents,
+                  componentResourceEvidence: installed.evidence,
+                },
+                targets: c.targets,
+                domains: c.domains,
+                referenceContract: c.referenceContract,
+                identityResource: c.identityResource,
+                maximumMembers: c.commands.maxMembers,
+              });
+              return { context, reader: readerFor(context, storage) };
+            });
+          targetCompilers.push(target.context);
+          targetReaders.push(target.reader);
+        }
         return {
           schema: c.database,
           host: {
@@ -210,30 +330,14 @@ export function createNativeBootstrapStartup(options: {
             );
           },
           preparation: {
-            identityMode: "fresh",
-            identitySources: [],
-            operations,
+            identityMode: successor ? "installed" : "fresh",
+            identitySources: successor?.identitySources ?? [],
+            operations: successor?.operations ?? operations,
             compiler,
-            reader: {
-              storagePlane: "studio",
-              registration: {
-                entityCode: graph.entity.entityCode,
-                plane: "studio",
-                storage: {
-                  schema: runtime.storageSchema!,
-                  object: runtime.storageObject!,
-                  idField: idField!.fieldKey,
-                },
-                columns: catalogue.columns.map((column) => column.path),
-              },
-              permissions: [
-                ...new Set(
-                  compiler.authorization.permissions.flatMap((p) =>
-                    p.permissionCode ? [p.permissionCode] : [],
-                  ),
-                ),
-              ].map((code) => ({ code, scopeKinds: ["tenant"] })),
-            },
+            reader: targetReaders[0]!,
+            ...(targetCompilers.length > 1
+              ? { targetCompilers, targetReaders }
+              : {}),
           },
         };
       },

@@ -14,7 +14,10 @@ const c = JSON.parse(await readFile(configPath, "utf8"));
 if (
   !c ||
   Object.keys(c).sort().join() !== "assets,hash,manifest,root,schema" ||
-  c.schema !== "entity.component-deployment-probe/1" ||
+  ![
+    "entity.component-deployment-probe/1",
+    "entity.component-deployment-probe/2",
+  ].includes(c.schema) ||
   !Array.isArray(c.assets) ||
   !c.assets.length ||
   c.assets.length > 20
@@ -36,13 +39,29 @@ const manifest = JSON.parse(
   await readFile(resolve(c.root, c.manifest), "utf8"),
 );
 for (const component of manifest.components) await qualify(component);
+const multi = manifest.schema === "entity.component-deployment/2";
+if (multi !== (c.schema === "entity.component-deployment-probe/2"))
+  throw Error("COMPONENT_PROBE_VERSION_MISMATCH");
+const inventories = multi
+  ? manifest.deployments
+  : [{ plane: manifest.plane, files: manifest.files }];
 const assets = [];
 for (const asset of c.assets) {
-  if (!asset || Object.keys(asset).sort().join() !== "path,url")
+  if (
+    !asset ||
+    Object.keys(asset).sort().join() !== (multi ? "path,plane,url" : "path,url")
+  )
     throw Error("COMPONENT_PROBE_ASSET_INVALID");
+  const plane = multi ? asset.plane : manifest.plane;
+  const inventory = inventories.find(
+    (entry: { plane: string }) => entry.plane === plane,
+  );
+  if (!inventory || (multi && !["studio", "neon", "mesh"].includes(plane)))
+    throw Error("COMPONENT_PROBE_PLANE_REQUIRED");
   const url = new URL(asset.url);
   if (
     url.protocol !== "https:" ||
+    (multi && url.hostname !== `${plane}.dev.athyper.test`) ||
     !url.hostname.endsWith(".dev.athyper.test") ||
     url.username ||
     url.password ||
@@ -56,7 +75,7 @@ for (const asset of c.assets) {
     path === ".." ||
     path.startsWith(".." + sep) ||
     isAbsolute(path) ||
-    !manifest.files.some((f: { path: string }) => f.path === asset.path)
+    !inventory.files.some((f: { path: string }) => f.path === asset.path)
   )
     throw Error("COMPONENT_PROBE_INVENTORIED_ASSET_REQUIRED");
   const response = await fetch(url, {
@@ -75,25 +94,38 @@ for (const asset of c.assets) {
     digest.update(chunk);
   }
   const actual = digest.digest("hex");
-  const expected = manifest.files.find(
+  const expected = inventory.files.find(
     (f: { path: string }) => f.path === asset.path,
   ).sha256;
   if (actual !== expected) throw Error("COMPONENT_PROBE_HTTP_BYTES_CHANGED");
   assets.push({
+    plane,
     url: url.href,
     path: asset.path,
     sha256: actual,
     status: response.status,
   });
 }
+if (
+  inventories.some(
+    (entry: { plane: string }) =>
+      !assets.some((asset) => asset.plane === entry.plane),
+  )
+)
+  throw Error("COMPONENT_PROBE_PLANE_COVERAGE_REQUIRED");
 const evidence = {
-  schema: "entity.component-deployment-probe-result/1",
+  schema: multi
+    ? "entity.component-deployment-probe-result/2"
+    : "entity.component-deployment-probe-result/1",
   recordedAt: new Date().toISOString(),
   manifestHash: c.hash,
   components: manifest.components.map(
     (x: { declaration: { id: string; componentKey: string } }) => x.declaration,
   ),
-  fileCount: manifest.files.length,
+  fileCount: inventories.reduce(
+    (count: number, entry: { files: unknown[] }) => count + entry.files.length,
+    0,
+  ),
   assets,
   approval: "not-established",
   entityActivation: "not-established",

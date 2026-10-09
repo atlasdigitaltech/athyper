@@ -100,3 +100,33 @@ it("does not silently discard nonempty AI without a profile", () => {
   f.graph.ai = { profile: [], field: [], binding: [], reference: [], term: [] };
   expect(resolveNativeBootstrapAi(f.graph, f.context)).toBeNull();
 });
+
+it.each(["neon", "mesh"] as const)(
+  "resolves AI manifests and exposure for destination %s",
+  (plane) => {
+    const f = fixture("country");
+    f.context.plane = plane;
+    f.graph.referenceMembers!.members.fieldAccess.forEach((row) => {
+      row.targetPlane = plane;
+    });
+    const resolved = resolveNativeBootstrapAi(f.graph, f.context)!;
+    expect(resolved.reference.planeKey).toBe(plane);
+    for (const resource of resolved.resources.filter(
+      (r) => r.kind === "insight_provider",
+    ))
+      expect(resource.hash).toBe(
+        resolveAtlasEntityToolManifest(
+          resource.key,
+          String(resource.version),
+          plane,
+        ).manifestHash,
+      );
+    const field = f.graph.ai.field[0]!.entityFieldId;
+    f.graph.referenceMembers!.members.fieldAccess.find(
+      (row) => row.entityFieldId === field,
+    )!.representation = "masked";
+    expect(() => resolveNativeBootstrapAi(f.graph, f.context)).toThrow(
+      "FIELD_DENIED",
+    );
+  },
+);

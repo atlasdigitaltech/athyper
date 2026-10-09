@@ -128,7 +128,9 @@ export function registerWorkerDatabases(
         AND NOT r.rolsuper AND NOT r.rolbypassrls
         AND has_function_privilege(current_user,
           'publication.fn_recoverable_deployment_coordinates(timestamptz,uuid,integer)', 'EXECUTE') AS authorized
-        FROM pg_roles r WHERE r.rolname=current_user`.execute(recovery.database);
+        FROM pg_roles r WHERE r.rolname=current_user`.execute(
+        recovery.database,
+      );
       if (result.rows[0]?.authorized !== true)
         throw new Error("PUBLICATION_RECOVERY_ROLE_REQUIRED");
     });
@@ -137,7 +139,7 @@ export function registerWorkerDatabases(
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.neon) {
     const database = dependencies.createNeonDatabase({
       connectionString: config.jobs.workerDatabaseUrls.neon,
-      max: 2,
+      max: config.database.poolMax,
       observer: poolObserver("neon", container),
     });
     container.adapters.jobNeonDatabase = database;
@@ -149,7 +151,7 @@ export function registerWorkerDatabases(
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.studio) {
     const database = dependencies.createAthyperDatabase({
       connectionString: config.jobs.workerDatabaseUrls.studio,
-      max: 2,
+      max: config.studioDatabase.poolMax,
       observer: poolObserver("studio", container),
     });
     container.adapters.jobAthyperDatabase = database;
@@ -161,7 +163,7 @@ export function registerWorkerDatabases(
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.mesh) {
     const database = dependencies.createMeshDatabase({
       connectionString: config.jobs.workerDatabaseUrls.mesh,
-      max: 2,
+      max: config.meshDatabase.poolMax,
       observer: poolObserver("mesh", container),
     });
     container.adapters.jobMeshDatabase = database;

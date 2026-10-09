@@ -38,7 +38,9 @@ export async function prepareSystemReferenceRelease(
     targetPlanes: readonly string[];
   },
 ): Promise<boolean> {
-  const native = input.artifact.compiler?.version === "native-reference/1";
+  const native = ["native-reference/1", "native-reference/2"].includes(
+    input.artifact.compiler?.version,
+  );
   const surfaces = input.artifact.descriptor.surfaces;
   if (
     !native &&
@@ -88,12 +90,19 @@ export async function prepareSystemReferenceRelease(
   if (rows.length !== 1)
     throw Error("SYSTEM_REFERENCE_APPROVED_SOURCE_REQUIRED");
   const source = rows[0]!;
-  if (
-    native &&
-    (source.contract_hash !== input.artifact.contractHash ||
-      source.release_hash !== input.artifact.descriptorHash)
-  )
-    throw Error("SYSTEM_REFERENCE_SIGNED_SOURCE_MISMATCH");
+  // Database ledger hashes use PostgreSQL JSONB text; compiler pins use canonical
+  // JSON. The release hash additionally covers the release envelope. Validate
+  // each with its own codec; never equate these three different hash domains.
+  if (native) {
+    const storedHash = (
+      await sql<{
+        hash: string;
+      }>`SELECT snapshot.fn_compute_entity_contract_hash(
+        ${JSON.stringify(source.contract_json)}::jsonb) hash`.execute(db)
+    ).rows[0]?.hash;
+    if (!storedHash || source.contract_hash !== storedHash)
+      throw Error("SYSTEM_REFERENCE_SIGNED_SOURCE_MISMATCH");
+  }
   const nativeGraph =
     source.contract_json as unknown as ExpandedNativeMetaEntityGraph;
   const nativeTargets = native
@@ -198,6 +207,17 @@ export async function prepareSystemReferenceRelease(
         : table
           ? "athyper.table-entity-compilation-source/1"
           : "athyper.system-reference-compilation-source/1",
+      ...(input.artifact.compiler?.version === "native-reference/2"
+        ? {
+            sourceArtifact: {
+              schema: input.artifact.schema,
+              compiler: input.artifact.compiler,
+              contractHash: input.artifact.contractHash,
+              descriptorHash: input.artifact.descriptorHash,
+              descriptor: input.artifact.descriptor,
+            },
+          }
+        : {}),
       productHash: marker.productHash,
       sourceContractHash: compiled.contractHash,
       sourceDescriptorHash: compiled.descriptorHash,
@@ -220,6 +240,17 @@ export async function prepareSystemReferenceRelease(
         sourceTenantId: null,
         sourceContractHash: compiled.contractHash,
         sourceDescriptorHash: compiled.descriptorHash,
+        ...(input.artifact.compiler?.version === "native-reference/2"
+          ? {
+              sourceArtifact: {
+                schema: input.artifact.schema,
+                compiler: input.artifact.compiler,
+                contractHash: input.artifact.contractHash,
+                descriptorHash: input.artifact.descriptorHash,
+                descriptor: input.artifact.descriptor,
+              },
+            }
+          : {}),
         productHash: marker.productHash,
         ...(successorPolicy ? { successorPolicy } : {}),
         ...humanExecution,

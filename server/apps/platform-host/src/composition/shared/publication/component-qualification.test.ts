@@ -183,3 +183,52 @@ it("production artifact composition unwraps the envelope and retains deployment 
     ),
   ).toThrow("CONFIGURATION_REQUIRED");
 });
+
+it("requires each advertised plane's pinned bundle and rechecks destination bytes", async () => {
+  const f = await fixture();
+  f.source.declaration.supportedPlanes = ["studio", "neon", "mesh"];
+  const deployments = [];
+  for (const plane of ["studio", "neon", "mesh"]) {
+    const content = Buffer.from(`test bundle for ${plane}`),
+      path = `${plane}.js`;
+    await writeFile(join(f.root, path), content);
+    deployments.push({ plane, files: [{ path, sha256: sha256(content) }] });
+  }
+  const manifest = {
+    schema: "entity.component-deployment/2",
+    components: [f.source],
+    deployments,
+  };
+  const save = async () => {
+    await writeFile(join(f.root, "manifest.json"), JSON.stringify(manifest));
+    f.env.PUBLICATION_COMPONENT_DEPLOYMENT_HASH = sha256(
+      canonicalBytes(manifest),
+    );
+  };
+  await save();
+  await f.qualify()(f.source);
+  const removed = deployments.pop()!;
+  await save();
+  await expect(f.qualify()(f.source)).rejects.toThrow("PLANE_UNQUALIFIED");
+  deployments.push(removed);
+  await save();
+  await writeFile(join(f.root, "mesh.js"), "changed mesh bytes");
+  await expect(f.qualify()(f.source)).rejects.toThrow("FILE_CHANGED");
+});
+
+it("checks every file across bounded batches and detects later corruption on replay", async () => {
+  const f = await fixture();
+  for (let i = 0; i < 11; i++) {
+    const path = `part-${i}.js`,
+      content = Buffer.from(`part ${i}`);
+    await writeFile(join(f.root, path), content);
+    f.document.files.push({ path, sha256: sha256(content) });
+  }
+  await f.save();
+  const qualify = f.qualify();
+  await qualify(f.source);
+  await writeFile(join(f.root, "part-10.js"), "changed");
+  await expect(qualify(f.source)).rejects.toThrow(
+    "COMPONENT_DEPLOYMENT_FILE_CHANGED",
+  );
+});

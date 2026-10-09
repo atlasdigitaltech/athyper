@@ -135,6 +135,8 @@ export * from "./native-conversion-history.js";
 export * from "./native-operation-compilation.js";
 
 export * from "./native-release-compilation.js";
+export * from "./native-target-compilation.js";
+export * from "./native-publication-compilation.js";
 export * from "./native-conversion-composition.js";
 
 export * from "./native-field-reference-compilation.js";
@@ -219,3 +221,9 @@ export {
 } from "./authoring/native-product.js";
 
 export { compileNativeLiveReadResources } from "./native-live-read-compilation.js";
+
+export * from "./publication/native-publication-targets.js";
+
+export { buildNativeSuccessorGraph } from "./native-successor-graph.js";
+
+export { resolveNativeSuccessorSource } from "./native-successor-source.js";

@@ -1,4 +1,8 @@
-import { qualifyPublishedRelationships, qualifyCoordinatedProductRelationships } from "./relationship-qualification.js";
+import { nativePublicationTargets } from "@athyper/server-plane-studio-meta-entity-authoring";
+import {
+  qualifyPublishedRelationships,
+  qualifyCoordinatedProductRelationships,
+} from "./relationship-qualification.js";
 import { sql, type Kysely } from "kysely";
 import { assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import type { ReferenceFirstPublicationPorts } from "@athyper/server-plane-studio-meta-entity-authoring";
@@ -55,7 +59,9 @@ export async function qualifyReferencePublicationTarget(
     mutationPolicies?: ReadonlySet<string>;
     databases: Readonly<Partial<Record<Target["targetPlane"], Database>>>;
     runtime: { qualify(profile: unknown, bindings: unknown): void };
-    qualifyCapabilities: ReferenceFirstPublicationPorts["qualify"];
+    qualifyCapabilities: ReturnType<
+      typeof import("./capability-qualification.js").createCapabilityQualification
+    >;
   },
   coordinatedTargets?: readonly Target[],
 ): Promise<void> {
@@ -184,11 +190,21 @@ export async function qualifyReferencePublicationTarget(
         }
       }
       if (coordinatedTargets) {
-        if (!coordinatedTargets.length || coordinatedTargets.some(t => t.targetPlane !== targetPlane)
-          || coordinatedTargets.filter(t => t.graph.entity.entityCode === graph.entity.entityCode
-            && t.artifact.contractHash === artifact.contractHash && t.artifact.descriptorHash === artifact.descriptorHash).length !== 1)
+        if (
+          !coordinatedTargets.length ||
+          coordinatedTargets.some((t) => t.targetPlane !== targetPlane) ||
+          coordinatedTargets.filter(
+            (t) =>
+              t.graph.entity.entityCode === graph.entity.entityCode &&
+              t.artifact.contractHash === artifact.contractHash &&
+              t.artifact.descriptorHash === artifact.descriptorHash,
+          ).length !== 1
+        )
           throw Error("PUBLICATION_COORDINATED_TARGET_MISMATCH");
-        await qualifyCoordinatedProductRelationships(coordinatedTargets.map(t => t.graph), tx);
+        await qualifyCoordinatedProductRelationships(
+          coordinatedTargets.map((t) => t.graph),
+          tx,
+        );
       } else await qualifyPublishedRelationships(graph, tx);
       // Compile the actual read against target credentials; catalog visibility alone
       // cannot establish SELECT privilege. No business rows are fetched.
@@ -228,4 +244,151 @@ export async function qualifyReferencePublicationTarget(
   // Mandatory for every target, including empty capabilities (the provider owns
   // its completeness decision). No fabricated success from an empty registry.
   await dependencies.qualifyCapabilities(target);
+}
+
+/** Native reference qualification consumes canonical source and compiled
+ * relationship semantics directly; it does not synthesize legacy layout markers. */
+export async function qualifyNativeReferencePublicationTarget(
+  target: Parameters<
+    import("@athyper/server-plane-studio-meta-entity-authoring").HumanReviewedPublicationPorts["qualify"]
+  >[0][number],
+  dependencies: Omit<
+    Parameters<typeof qualifyReferencePublicationTarget>[1],
+    "qualifyCapabilities"
+  > & {
+    qualifyCapabilities: ReturnType<
+      typeof import("./capability-qualification.js").createCapabilityQualification
+    >;
+  },
+  coordinatedTargets: readonly (typeof target)[],
+): Promise<void> {
+  const { readNativeStorageCatalogue } =
+    await import("@athyper/server-plane-studio-meta-entity-authoring");
+  const source = nativeRelationshipQualificationSource;
+  const graph = target.graph,
+    descriptor = target.artifact.descriptor;
+  source(target);
+  const profile = graph.runtimeProfiles[0];
+  if (
+    graph.entity.ownershipModel !== "system" ||
+    graph.entity.entityClass !== "reference" ||
+    graph.runtimeProfiles.length !== 1 ||
+    !profile ||
+    profile.storagePlane !== target.targetPlane ||
+    profile.storageSchema !== "shared" ||
+    !profile.storageObject ||
+    !/^[a-z][a-z0-9_]*$/.test(profile.storageObject) ||
+    profile.writeMode !== "none" ||
+    !graph.fields.length ||
+    graph.fields.some(
+      (f) =>
+        f.writeMode !== "read_only" ||
+        f.storageKind !== "column" ||
+        !f.storagePath ||
+        !/^[a-z][a-z0-9_]*$/.test(f.storagePath),
+    ) ||
+    graph.operations.some(
+      (o) =>
+        o.operationKind !== "read" ||
+        !["list", "read"].includes(o.operationKey),
+    ) ||
+    descriptor.ownerAccess !== undefined ||
+    descriptor.mutationPolicy !== undefined
+  )
+    throw Error("NATIVE_PUBLICATION_REFERENCE_PROFILE_REQUIRED");
+  if (
+    !coordinatedTargets.length ||
+    coordinatedTargets.some((t) => t.targetPlane !== target.targetPlane) ||
+    coordinatedTargets.filter(
+      (t) =>
+        t.graph.authoringSource.entityId === graph.authoringSource.entityId &&
+        t.artifact.contractHash === target.artifact.contractHash &&
+        t.artifact.descriptorHash === target.artifact.descriptorHash,
+    ).length !== 1
+  )
+    throw Error("PUBLICATION_COORDINATED_TARGET_MISMATCH");
+  const db = dependencies.databases[target.targetPlane];
+  if (!db) throw Error("PUBLICATION_TARGET_DATABASE_UNAVAILABLE");
+  await db
+    .transaction()
+    .setIsolationLevel("repeatable read")
+    .execute(async (tx) => {
+      await sql`SET TRANSACTION READ ONLY`.execute(tx);
+      await sql`SET LOCAL statement_timeout='3000ms'`.execute(tx);
+      const catalogue = await readNativeStorageCatalogue(
+        tx,
+        target.targetPlane,
+        {
+          plane: target.targetPlane,
+          schema: profile.storageSchema!,
+          object: profile.storageObject!,
+        },
+      );
+      if (catalogue.hash !== profile.storageCatalogueHash)
+        throw Error("NATIVE_PUBLICATION_STORAGE_CATALOGUE_CHANGED");
+      await qualifyCoordinatedProductRelationships(
+        coordinatedTargets.map(source),
+        tx,
+      );
+      await sql`SELECT ${sql.join(graph.fields.map((f) => sql.ref(f.storagePath!)))} FROM ${sql.table(`${profile.storageSchema}.${profile.storageObject}`)} LIMIT 0`.execute(
+        tx,
+      );
+      for (const permission of (graph.operationPermissions ?? []).filter(
+        (p) => p.status !== "deprecated",
+      )) {
+        const rows = (
+          await sql<{
+            scope_kind: string;
+          }>`SELECT s.scope_kind::text AS scope_kind FROM authz.permission p
+        JOIN authz.permission_scope_kind s ON s.permission_id=p.id
+        WHERE p.canonical_code=${permission.permissionCode} AND p.permission_kind=${permission.permissionKind}
+        AND p.status='published' AND s.status='active'`.execute(tx)
+        ).rows;
+        const scopes = (graph.operationScopeBindings ?? []).filter(
+          (s) =>
+            s.status !== "deprecated" &&
+            s.entityOperationId === permission.entityOperationId &&
+            s.targetPlane === target.targetPlane,
+        );
+        if (
+          !rows.length ||
+          !scopes.length ||
+          scopes.some((s) => !rows.some((r) => r.scope_kind === s.scopeKind))
+        )
+          throw Error("PUBLICATION_PERMISSION_SCOPE_UNAVAILABLE");
+      }
+    });
+  dependencies.runtime.qualify(
+    descriptor.authorization,
+    descriptor.authorizationRuntime,
+  );
+  await dependencies.qualifyCapabilities(target);
+}
+
+export function nativeRelationshipQualificationSource(
+  candidate: Parameters<
+    import("@athyper/server-plane-studio-meta-entity-authoring").HumanReviewedPublicationPorts["qualify"]
+  >[0][number],
+): import("./relationship-qualification.js").RelationshipQualificationSource {
+  nativePublicationTargets(candidate.graph, candidate.artifact);
+  const d = candidate.artifact.descriptor;
+  if (
+    !Array.isArray(d.fields) ||
+    !Array.isArray(d.runtimeProfiles) ||
+    !Array.isArray(d.operations) ||
+    !d.recordPresentation ||
+    typeof d.recordPresentation !== "object"
+  )
+    throw Error("NATIVE_PUBLICATION_COMPILED_STORAGE_REQUIRED");
+  // These are the existing compiler's derived storage/key/reference contracts.
+  return {
+    entity: candidate.graph.entity,
+    fields:
+      d.fields as import("@athyper/server-contract-meta-entity-authoring").MetaEntityGraph["fields"],
+    runtimeProfiles:
+      d.runtimeProfiles as import("@athyper/server-contract-meta-entity-authoring").MetaEntityGraph["runtimeProfiles"],
+    operations:
+      d.operations as import("@athyper/server-contract-meta-entity-authoring").MetaEntityGraph["operations"],
+    recordPresentation: d.recordPresentation,
+  };
 }

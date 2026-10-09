@@ -44,7 +44,7 @@ export function createNativeComponentEvidenceReader(options: {
       !hash.test(input.publicationReleaseHash) ||
       !hash.test(input.scope.hostReleaseHash) ||
       input.scope.tenantId !== null ||
-      input.scope.plane !== "studio"
+      !["studio", "neon", "mesh"].includes(input.scope.plane)
     )
       throw Error("NATIVE_COMPONENT_READER_SCOPE_INVALID");
     const rows = (

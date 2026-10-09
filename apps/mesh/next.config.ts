@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
+  ...(process.env["ATHYPER_NEXT_DIST_DIR"]
+    ? { distDir: process.env["ATHYPER_NEXT_DIST_DIR"] }
+    : {}),
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,

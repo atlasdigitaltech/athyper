@@ -72,6 +72,20 @@ export function createNativeBootstrapResourceComposition(options: {
         preparation: {
           ...resolved.preparation,
           reader: structuredClone(resolved.preparation.reader),
+          ...(resolved.preparation.targetCompilers
+            ? {
+                targetCompilers: structuredClone(
+                  resolved.preparation.targetCompilers,
+                ),
+              }
+            : {}),
+          ...(resolved.preparation.targetReaders
+            ? {
+                targetReaders: structuredClone(
+                  resolved.preparation.targetReaders,
+                ),
+              }
+            : {}),
           identitySources: structuredClone(
             resolved.preparation.identitySources,
           ),
@@ -99,6 +113,8 @@ export function createNativeBootstrapResourceComposition(options: {
         snapshotVersions: value.host.snapshotVersions,
         compiler: value.preparation.compiler,
         reader: value.preparation.reader,
+        targetCompilers: value.preparation.targetCompilers ?? null,
+        targetReaders: value.preparation.targetReaders ?? null,
         identitySources: value.preparation.identitySources ?? [],
         identityMode: value.preparation.identityMode ?? "installed",
       });

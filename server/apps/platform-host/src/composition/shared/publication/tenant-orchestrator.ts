@@ -27,6 +27,9 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
     private readonly componentInstaller?: ConstructorParameters<
       typeof KyselyLocalProjectionRepository
     >[2],
+    private readonly nativeSource?: Parameters<
+      typeof deployHumanPublicationGroup
+    >[0]["nativeSource"],
   ) {
     super(
       new KyselyPublicationAuthorityRepository(authorityDatabase),
@@ -60,6 +63,7 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
               loader: this.artifactLoader,
               workload: this.coordinatedWorkload,
               activationGuard: this.activationGuard,
+              nativeSource: this.nativeSource,
             });
             if (coordinated) return coordinated;
             return new PublicationOrchestrator(

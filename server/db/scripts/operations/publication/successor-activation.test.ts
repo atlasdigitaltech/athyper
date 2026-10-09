@@ -3,21 +3,64 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync(new URL("../../../ddl/common/runtime_meta/07_functions.sql", import.meta.url), "utf8");
-const ddl = source.slice(source.indexOf("CREATE OR REPLACE FUNCTION runtime_meta.fn_activate_release("), source.indexOf("CREATE OR REPLACE FUNCTION runtime_meta.fn_rollback_release("));
+const source = readFileSync(
+  new URL("../../../ddl/common/runtime_meta/07_functions.sql", import.meta.url),
+  "utf8",
+);
+const ddl = source.slice(
+  source.indexOf(
+    "CREATE OR REPLACE FUNCTION runtime_meta.fn_activate_release(",
+  ),
+  source.indexOf(
+    "CREATE OR REPLACE FUNCTION runtime_meta.fn_rollback_release(",
+  ),
+);
 test("activation takes predecessor coordinates from the stored manifest under the head lock", () => {
-  assert.ok(ddl.indexOf("FOR UPDATE;\n    -- Successor") < ddl.indexOf("RELEASE_PREDECESSOR_REQUIRED"));
-  assert.match(ddl, /v_candidate.manifest#>>'\{evidence,expectedPredecessor\}'/);
+  assert.ok(
+    ddl.indexOf("FOR UPDATE;\n    -- Successor") <
+      ddl.indexOf("RELEASE_PREDECESSOR_REQUIRED"),
+  );
+  assert.match(
+    ddl,
+    /v_candidate.manifest#>>'\{evidence,expectedPredecessor\}'/,
+  );
   assert.doesNotMatch(ddl, /p_evidence\s*(->|#>)/);
-  assert.ok(ddl.indexOf("RELEASE_PREDECESSOR_CHANGED") < ddl.indexOf("fn_retire_entity_operation_projection"));
+  assert.ok(
+    ddl.indexOf("RELEASE_PREDECESSOR_CHANGED") <
+      ddl.indexOf("fn_retire_entity_operation_projection"),
+  );
 });
-for (const plane of ["studio", "neon", "mesh"]) test(`DEV ${plane}: exact successor head, stale pins, missing evidence and replay; rollback all fixtures`, {
-  skip: process.env.ENTITY_SUCCESSOR_POSTGRES_TEST !== "1",
-}, () => {
-  const container = JSON.parse(execFileSync("docker", ["inspect", "athyper-dev-db-1"], { encoding: "utf8" }))[0];
-  assert.equal(container.Config.Labels["com.docker.compose.project"], "athyper-dev"); assert.equal(container.State.Running, true);
-  const output = execFileSync("docker", ["exec", "-i", "athyper-dev-db-1", "sh", "-c",
-    `exec psql -X -qAt -U "$POSTGRES_USER" -d athyper_${plane} -v ON_ERROR_STOP=1`], { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], input: `BEGIN;
+for (const plane of ["studio", "neon", "mesh"])
+  test(
+    `DEV ${plane}: exact successor head, stale pins, missing evidence and replay; rollback all fixtures`,
+    {
+      skip: process.env.ENTITY_SUCCESSOR_POSTGRES_TEST !== "1",
+    },
+    () => {
+      const container = JSON.parse(
+        execFileSync("docker", ["inspect", "athyper-dev-db-1"], {
+          encoding: "utf8",
+        }),
+      )[0];
+      assert.equal(
+        container.Config.Labels["com.docker.compose.project"],
+        "athyper-dev",
+      );
+      assert.equal(container.State.Running, true);
+      const output = execFileSync(
+        "docker",
+        [
+          "exec",
+          "-i",
+          "athyper-dev-db-1",
+          "sh",
+          "-c",
+          `exec psql -X -qAt -U "$POSTGRES_USER" -d athyper_${plane} -v ON_ERROR_STOP=1`,
+        ],
+        {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
+          input: `BEGIN;
     ${ddl}
     DO $$ DECLARE old_id uuid:=gen_random_uuid(); new_id uuid:=gen_random_uuid(); old_source uuid:=gen_random_uuid();
       key text:='test.successor.'||replace(gen_random_uuid()::text,'-',''); pin jsonb; bad jsonb; field text; head runtime_meta.release_activation_head;
@@ -47,21 +90,98 @@ for (const plane of ["studio", "neon", "mesh"]) test(`DEV ${plane}: exact succes
       head:=runtime_meta.fn_activate_release(new_id);
       IF head.row_version<>2 THEN RAISE EXCEPTION 'replay advanced head'; END IF;
     END $$;
-    ROLLBACK; SELECT 'rollback verified';` });
-  assert.equal(output.trim(), "rollback verified");
-});
+    DO $$ DECLARE candidate uuid:=gen_random_uuid(); competing uuid:=gen_random_uuid(); source uuid:=gen_random_uuid();
+      key text:='test.initial-target.'||replace(gen_random_uuid()::text,'-',''); pin jsonb; bad jsonb; field text; head runtime_meta.release_activation_head;
+    BEGIN
+      pin:=jsonb_build_object('plane','${plane}','environment','local','instance','dev','publicationKey',key,
+        'sourceReleaseId',source,'sourceReleaseNo',1,'headState','absent');
+      INSERT INTO runtime_meta.applied_release(id,publication_key,source_release_id,source_release_no,deployment_id,artifact_hash,manifest,status)
+        VALUES(candidate,key,gen_random_uuid(),2,gen_random_uuid(),repeat('c',64),jsonb_build_object('artifactKind','compiled_entity_runtime',
+          'targetPlane','${plane}','evidence',jsonb_build_object('expectedPredecessor',pin::text)),'verified');
+      FOREACH field IN ARRAY ARRAY['sourceReleaseId','sourceReleaseNo','publicationKey','plane','environment','instance','headState'] LOOP
+        bad:=jsonb_set(pin,ARRAY[field],to_jsonb('changed'::text));
+        UPDATE runtime_meta.applied_release SET manifest=jsonb_build_object('artifactKind','compiled_entity_runtime','targetPlane','${plane}',
+          'evidence',jsonb_build_object('expectedPredecessor',bad::text)) WHERE id=candidate;
+        BEGIN PERFORM runtime_meta.fn_activate_release(candidate); RAISE EXCEPTION 'bad absent pin accepted: %',field;
+        EXCEPTION WHEN object_not_in_prerequisite_state THEN IF SQLERRM<>'RELEASE_PREDECESSOR_CHANGED' THEN RAISE; END IF; END;
+      END LOOP;
+      UPDATE runtime_meta.applied_release SET manifest=jsonb_build_object('artifactKind','compiled_entity_runtime','targetPlane','${plane}',
+        'evidence',jsonb_build_object('expectedPredecessor',pin::text)) WHERE id=candidate;
+      BEGIN
+        INSERT INTO runtime_meta.applied_release(id,publication_key,source_release_id,source_release_no,deployment_id,artifact_hash,manifest,status)
+          VALUES(competing,key,source,1,gen_random_uuid(),repeat('d',64),'{}','active');
+        INSERT INTO runtime_meta.release_activation_head(publication_key,applied_release_id,source_release_no,artifact_hash,activated_at)
+          VALUES(key,competing,1,repeat('d',64),clock_timestamp());
+        PERFORM runtime_meta.fn_activate_release(candidate); RAISE EXCEPTION 'competing head accepted';
+      EXCEPTION WHEN object_not_in_prerequisite_state THEN IF SQLERRM<>'RELEASE_PREDECESSOR_CHANGED' THEN RAISE; END IF; END;
+      head:=runtime_meta.fn_activate_release(candidate);
+      IF head.applied_release_id<>candidate OR head.row_version<>1 THEN RAISE EXCEPTION 'initial target not installed'; END IF;
+      head:=runtime_meta.fn_activate_release(candidate);
+      IF head.row_version<>1 THEN RAISE EXCEPTION 'initial replay advanced head'; END IF;
+    END $$;
+    ROLLBACK; SELECT 'rollback verified';`,
+        },
+      );
+      assert.equal(output.trim(), "rollback verified");
+    },
+  );
 
-test("DEV Studio: successor SQL installs transactionally and denies release allocation without enrollment", {
-  skip: process.env.ENTITY_SUCCESSOR_POSTGRES_TEST !== "1" || !process.env.ENTITY_SUCCESSOR_DRAFT_RECEIPT,
-}, () => {
-  const receipt = JSON.parse(readFileSync(process.env.ENTITY_SUCCESSOR_DRAFT_RECEIPT!, "utf8"));
-  for (const value of [receipt.changeSet?.id, receipt.predecessor?.authoringReleaseId, receipt.authorityTenantId, receipt.actorId])
-    assert.match(value, /^[a-f0-9-]{36}$/);
-  const container = JSON.parse(execFileSync("docker", ["inspect", "athyper-dev-db-1"], { encoding: "utf8" }))[0];
-  assert.equal(container.Config.Labels["com.docker.compose.project"], "athyper-dev"); assert.equal(container.State.Running, true);
-  const commands = ["15_system_entity_commands.sql", "17_system_entity_successor.sql"].map(file => readFileSync(new URL(`../../../ddl/planes/studio/publication/${file}`, import.meta.url), "utf8")).join("\n");
-  const output = execFileSync("docker", ["exec", "-i", "athyper-dev-db-1", "sh", "-c",
-    'exec psql -X -qAt -U "$POSTGRES_USER" -d athyper_studio -v ON_ERROR_STOP=1'], { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], input: `BEGIN;
+test(
+  "DEV Studio: successor SQL installs transactionally and denies release allocation without enrollment",
+  {
+    skip:
+      process.env.ENTITY_SUCCESSOR_POSTGRES_TEST !== "1" ||
+      !process.env.ENTITY_SUCCESSOR_DRAFT_RECEIPT,
+  },
+  () => {
+    const receipt = JSON.parse(
+      readFileSync(process.env.ENTITY_SUCCESSOR_DRAFT_RECEIPT!, "utf8"),
+    );
+    for (const value of [
+      receipt.changeSet?.id,
+      receipt.predecessor?.authoringReleaseId,
+      receipt.authorityTenantId,
+      receipt.actorId,
+    ])
+      assert.match(value, /^[a-f0-9-]{36}$/);
+    const container = JSON.parse(
+      execFileSync("docker", ["inspect", "athyper-dev-db-1"], {
+        encoding: "utf8",
+      }),
+    )[0];
+    assert.equal(
+      container.Config.Labels["com.docker.compose.project"],
+      "athyper-dev",
+    );
+    assert.equal(container.State.Running, true);
+    const commands = [
+      "15_system_entity_commands.sql",
+      "17_system_entity_successor.sql",
+    ]
+      .map((file) =>
+        readFileSync(
+          new URL(
+            `../../../ddl/planes/studio/publication/${file}`,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      )
+      .join("\n");
+    const output = execFileSync(
+      "docker",
+      [
+        "exec",
+        "-i",
+        "athyper-dev-db-1",
+        "sh",
+        "-c",
+        'exec psql -X -qAt -U "$POSTGRES_USER" -d athyper_studio -v ON_ERROR_STOP=1',
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+        input: `BEGIN;
     ${commands}
     SET LOCAL ROLE athyper_runtime;
     DO $$ BEGIN
@@ -72,6 +192,9 @@ test("DEV Studio: successor SQL installs transactionally and denies release allo
         RAISE EXCEPTION 'unenrolled allocation accepted';
       EXCEPTION WHEN insufficient_privilege THEN IF SQLERRM<>'SYSTEM_PUBLICATION_ENROLLMENT_REQUIRED' THEN RAISE; END IF; END;
     END $$;
-    ROLLBACK; SELECT 'unenrolled denied; rollback verified';` });
-  assert.equal(output.trim(), "unenrolled denied; rollback verified");
-});
+    ROLLBACK; SELECT 'unenrolled denied; rollback verified';`,
+      },
+    );
+    assert.equal(output.trim(), "unenrolled denied; rollback verified");
+  },
+);

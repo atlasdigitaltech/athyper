@@ -13,6 +13,7 @@ import { nativeReleaseFixture } from "./native-release-compilation.fixtures.js";
 function fixture() {
   const native = nativeReleaseFixture();
   const graph = native.graph;
+  graph.entity.ownershipModel = "system";
   let cs = {
     id: graph.ownedLabels!.changeSetId,
     tenantId: null,

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
 import {
   readNativeStorageCatalogue,
@@ -331,11 +332,32 @@ it("rejects bootstrap resource wiring without proposal composition before databa
   }
 });
 
-it.each([false, true])(
-  "binds compiler identities and revalidates without component composition (fresh=%s)",
-  async (fresh) => {
+it.each([
+  [false, false],
+  [true, false],
+  [false, true],
+  [true, true],
+])(
+  "binds compiler identities and revalidates without component composition (fresh=%s, multi=%s)",
+  async (fresh, multi) => {
     const f = await fixture(),
       native = nativeReleaseFixture();
+    if (multi) {
+      const members = native.graph.referenceMembers!.members;
+      for (const plane of ["neon", "mesh"] as const) {
+        members.authorizationProfile.push({
+          ...members.authorizationProfile[0]!,
+          id: randomUUID(),
+          targetPlane: plane,
+        });
+        members.target.push({
+          ...members.target[0]!,
+          id: randomUUID(),
+          targetPlane: plane,
+          position: members.target.length + 1,
+        });
+      }
+    }
     native.graph.surfaces.find(
       (s) => s.surfaceKind === "list",
     )!.maxFilterDepth = 1;

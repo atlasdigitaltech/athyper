@@ -10,11 +10,18 @@ import { parseCompiledEntityArtifact } from "@athyper/server-contract-publicatio
 import { parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 
+export type RelationshipQualificationSource = Pick<
+  MetaEntityGraph,
+  "entity" | "runtimeProfiles" | "fields" | "operations" | "surfaces"
+> & {
+  readonly recordPresentation?: { entityRelationships?: unknown };
+};
+
 /** Compare candidate contracts with activated dependencies in the target database.
  * Also check reverse dependencies so a child successor cannot silently break a
  * separately released parent. Repeated by the existing publication phase gates. */
 export async function qualifyPublishedRelationships(
-  graph: MetaEntityGraph,
+  graph: RelationshipQualificationSource,
   tx: Transaction<Record<string, never>>,
 ): Promise<void> {
   return qualifyRelationshipGraph(graph, tx, []);
@@ -24,48 +31,83 @@ export async function qualifyPublishedRelationships(
  * Activation must use a verified, independently authorized group and commit all
  * heads in the same target transaction. The single-release gate stays strict. */
 export async function qualifyCoordinatedProductRelationships(
-  graphs: readonly MetaEntityGraph[],
+  graphs: readonly RelationshipQualificationSource[],
   tx: Transaction<Record<string, never>>,
 ): Promise<void> {
-  if (!graphs.length || new Set(graphs.map(g => g.entity.entityCode)).size !== graphs.length
-    || graphs.some(g => g.entity.ownershipModel !== "system" || g.runtimeProfiles?.length !== 1)
-    || new Set(graphs.map(g => g.runtimeProfiles![0]!.storagePlane)).size !== 1
-    || !["studio", "neon", "mesh"].includes(graphs[0]!.runtimeProfiles![0]!.storagePlane ?? ""))
+  if (
+    !graphs.length ||
+    new Set(graphs.map((g) => g.entity.entityCode)).size !== graphs.length ||
+    graphs.some(
+      (g) =>
+        g.entity.ownershipModel !== "system" || g.runtimeProfiles?.length !== 1,
+    ) ||
+    new Set(graphs.map((g) => g.runtimeProfiles![0]!.storagePlane)).size !==
+      1 ||
+    !["studio", "neon", "mesh"].includes(
+      graphs[0]!.runtimeProfiles![0]!.storagePlane ?? "",
+    )
+  )
     throw Error("PUBLICATION_RELATIONSHIP_GROUP_INVALID");
   const peers = graphs.map(relationshipDescriptor);
   for (const graph of graphs) await qualifyRelationshipGraph(graph, tx, peers);
 }
 
-function relationshipDescriptor(graph: MetaEntityGraph) {
+function relationshipDescriptor(graph: RelationshipQualificationSource) {
   const profile = graph.runtimeProfiles![0]!;
-  const presentation = graph.surfaces?.find(s => s.layoutConfig?.recordPresentation)?.layoutConfig?.recordPresentation as
-    { entityRelationships?: unknown } | undefined;
+  const presentation =
+    graph.recordPresentation ??
+    (graph.surfaces?.find((s) => s.layoutConfig?.recordPresentation)
+      ?.layoutConfig?.recordPresentation as
+      { entityRelationships?: unknown } | undefined);
   return {
-    entityCode: graph.entity.entityCode, planeKey: profile.storagePlane!,
-    storage: { schema: profile.storageSchema!, object: profile.storageObject!, tenantField: profile.tenantFieldKey },
-    fields: graph.fields.map(field => ({ key: field.fieldKey, storagePath: field.storagePath!, type: field.dataType,
+    entityCode: graph.entity.entityCode,
+    planeKey: profile.storagePlane!,
+    storage: {
+      schema: profile.storageSchema!,
+      object: profile.storageObject!,
+      tenantField: profile.tenantFieldKey,
+    },
+    fields: graph.fields.map((field) => ({
+      key: field.fieldKey,
+      storagePath: field.storagePath!,
+      type: field.dataType,
       writableOn: field.writeMode === "read_only" ? [] : ["patch"],
-      keyReference: field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey) })),
-    operations: Object.fromEntries(graph.operations.map(operation => [operation.operationKey, true])),
-    recordPresentation: { entityRelationships: parseEntityRelationships(presentation?.entityRelationships ?? []) },
+      keyReference:
+        field.typeConfig?.keyReference === undefined
+          ? undefined
+          : parseEntityKeyReference(
+              field.typeConfig.keyReference,
+              field.fieldKey,
+            ),
+    })),
+    operations: Object.fromEntries(
+      graph.operations.map((operation) => [operation.operationKey, true]),
+    ),
+    recordPresentation: {
+      entityRelationships: parseEntityRelationships(
+        presentation?.entityRelationships ?? [],
+      ),
+    },
   };
 }
 
 async function qualifyRelationshipGraph(
-  graph: MetaEntityGraph,
+  graph: RelationshipQualificationSource,
   tx: Transaction<Record<string, never>>,
   peers: readonly ReturnType<typeof relationshipDescriptor>[],
 ): Promise<void> {
   const profile = graph.runtimeProfiles![0]!;
-  const raw = graph.surfaces?.find((s) => s.layoutConfig?.recordPresentation)
-    ?.layoutConfig?.recordPresentation as
-    { entityRelationships?: unknown } | undefined;
+  const raw =
+    graph.recordPresentation ??
+    (graph.surfaces?.find((s) => s.layoutConfig?.recordPresentation)
+      ?.layoutConfig?.recordPresentation as
+      { entityRelationships?: unknown } | undefined);
   const relations = parseEntityRelationships(raw?.entityRelationships ?? []);
   const prospective = [
-    ...peers.filter(peer => peer.entityCode !== graph.entity.entityCode),
+    ...peers.filter((peer) => peer.entityCode !== graph.entity.entityCode),
     relationshipDescriptor(graph),
   ];
-  const replacedCodes = new Set(prospective.map(peer => peer.entityCode));
+  const replacedCodes = new Set(prospective.map((peer) => peer.entityCode));
   const published = (
     await sql<{
       entity_code: string;
@@ -84,18 +126,18 @@ async function qualifyRelationshipGraph(
       tx,
     )
   ).rows
-  // A successor may replace a retired descriptor format. Its prospective graph
-  // is already compiled by the publication gate; parsing the replaced artifact
-  // first would prevent that replacement. Unchanged dependencies remain strict.
-  .filter(row => !replacedCodes.has(row.entity_code))
-  .map((row) =>
-    parseCompiledRuntimeContract(
-      parseCompiledEntityArtifact(
-        (row.artifact as { content: unknown }).content,
+    // A successor may replace a retired descriptor format. Its prospective graph
+    // is already compiled by the publication gate; parsing the replaced artifact
+    // first would prevent that replacement. Unchanged dependencies remain strict.
+    .filter((row) => !replacedCodes.has(row.entity_code))
+    .map((row) =>
+      parseCompiledRuntimeContract(
+        parseCompiledEntityArtifact(
+          (row.artifact as { content: unknown }).content,
+        ),
+        { releaseId: row.release_id, releaseNo: row.release_no },
       ),
-      { releaseId: row.release_id, releaseNo: row.release_no },
-    ),
-  );
+    );
   const active = [...published, ...prospective];
   const candidate: EntityRelationshipContract = {
     entityCode: graph.entity.entityCode,
@@ -108,7 +150,8 @@ async function qualifyRelationshipGraph(
     uniqueKeys: [],
   };
   async function stored(
-    descriptor: EntityRuntimeDescriptor | ReturnType<typeof relationshipDescriptor>,
+    descriptor:
+      EntityRuntimeDescriptor | ReturnType<typeof relationshipDescriptor>,
   ): Promise<EntityRelationshipContract> {
     const keys = await uniqueKeys(
       descriptor.storage.schema,
@@ -143,23 +186,77 @@ async function qualifyRelationshipGraph(
   };
   // Key references point from a stored FK to an independently authorized target.
   const candidateReference = relationshipDescriptor(graph);
-  const referenceContracts = [...active.filter(item => item.entityCode !== candidateReference.entityCode), candidateReference];
-  for (const owner of referenceContracts) for (const field of owner.fields) {
-    const relation = field.keyReference;
-    if (!relation || (owner.entityCode !== candidateReference.entityCode && relation.targetEntity !== candidateReference.entityCode)) continue;
-    const target = referenceContracts.find(item => item.entityCode === relation.targetEntity);
-    if (!target || target.planeKey !== owner.planeKey || !target.operations.read || !target.operations.list) throw Error("PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED");
-    const mappings = relation.fields.map(mapping => {
-      const from = owner.fields.find(item => item.key === mapping.source), to = target.fields.find(item => item.key === mapping.target);
-      if (!from || !to || from.type !== to.type || to.writableOn.length) throw Error("PUBLICATION_KEY_REFERENCE_FIELD_MISMATCH");
-      return {source: from.storagePath, target: to.storagePath};
-    });
-    if (!target.fields.some(item => item.key === relation.labelField)) throw Error("PUBLICATION_KEY_REFERENCE_LABEL_REQUIRED");
-    if (target.storage.tenantField && (!owner.storage.tenantField || !mappings.some(mapping => mapping.source === owner.storage.tenantField && mapping.target === target.storage.tenantField))) throw Error("PUBLICATION_KEY_REFERENCE_TENANT_MAPPING_REQUIRED");
-    const unique = await uniqueKeys(target.storage.schema, target.storage.object, tx);
-    if (!unique.some(key => key.length === mappings.length && key.every(column => mappings.some(mapping => mapping.target === column)))) throw Error("PUBLICATION_KEY_REFERENCE_UNIQUE_KEY_REQUIRED");
-    await requireForeignKey(target.storage.schema, target.storage.object, owner.storage.schema, owner.storage.object, mappings.map(mapping => ({source: mapping.target, target: mapping.source})), tx);
-  }
+  const referenceContracts = [
+    ...active.filter(
+      (item) => item.entityCode !== candidateReference.entityCode,
+    ),
+    candidateReference,
+  ];
+  for (const owner of referenceContracts)
+    for (const field of owner.fields) {
+      const relation = field.keyReference;
+      if (
+        !relation ||
+        (owner.entityCode !== candidateReference.entityCode &&
+          relation.targetEntity !== candidateReference.entityCode)
+      )
+        continue;
+      const target = referenceContracts.find(
+        (item) => item.entityCode === relation.targetEntity,
+      );
+      if (
+        !target ||
+        target.planeKey !== owner.planeKey ||
+        !target.operations.read ||
+        !target.operations.list
+      )
+        throw Error("PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED");
+      const mappings = relation.fields.map((mapping) => {
+        const from = owner.fields.find((item) => item.key === mapping.source),
+          to = target.fields.find((item) => item.key === mapping.target);
+        if (!from || !to || from.type !== to.type || to.writableOn.length)
+          throw Error("PUBLICATION_KEY_REFERENCE_FIELD_MISMATCH");
+        return { source: from.storagePath, target: to.storagePath };
+      });
+      if (!target.fields.some((item) => item.key === relation.labelField))
+        throw Error("PUBLICATION_KEY_REFERENCE_LABEL_REQUIRED");
+      if (
+        target.storage.tenantField &&
+        (!owner.storage.tenantField ||
+          !mappings.some(
+            (mapping) =>
+              mapping.source === owner.storage.tenantField &&
+              mapping.target === target.storage.tenantField,
+          ))
+      )
+        throw Error("PUBLICATION_KEY_REFERENCE_TENANT_MAPPING_REQUIRED");
+      const unique = await uniqueKeys(
+        target.storage.schema,
+        target.storage.object,
+        tx,
+      );
+      if (
+        !unique.some(
+          (key) =>
+            key.length === mappings.length &&
+            key.every((column) =>
+              mappings.some((mapping) => mapping.target === column),
+            ),
+        )
+      )
+        throw Error("PUBLICATION_KEY_REFERENCE_UNIQUE_KEY_REQUIRED");
+      await requireForeignKey(
+        target.storage.schema,
+        target.storage.object,
+        owner.storage.schema,
+        owner.storage.object,
+        mappings.map((mapping) => ({
+          source: mapping.target,
+          target: mapping.source,
+        })),
+        tx,
+      );
+    }
   for (const relationship of relations) {
     const targets = active.filter(
       (d) => d.entityCode === relationship.targetEntity,

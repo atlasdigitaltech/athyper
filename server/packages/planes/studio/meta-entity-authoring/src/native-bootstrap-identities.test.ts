@@ -280,3 +280,21 @@ it("persists parents before children under exact creation admission without upse
     ),
   ).rejects.toMatchObject({ code: "NATIVE_FRESH_IDENTITY_ADMISSION_REQUIRED" });
 });
+
+it("routes release-bound reserved identities through native inheritance without legacy adoption", async () => {
+  const f = fixture();
+  const release = "00000000-0000-4000-8000-000000000888";
+  const sources = f.sources.map((s) => ({ ...s, sourceReleaseId: release }));
+  await f.run(sources);
+  const writes = f.query.mock.calls.filter(([text]) =>
+    text.includes("inherit_native_identity"),
+  );
+  expect(writes).toHaveLength(3);
+  expect(writes[0]![1]).toContain(release);
+  expect(
+    f.query.mock.calls.some(([text]) => text.includes("adopt_native_identity")),
+  ).toBe(false);
+  await expect(
+    f.run(sources.map((s) => ({ ...s, sourceReleaseId: "invalid" }))),
+  ).rejects.toThrow();
+});

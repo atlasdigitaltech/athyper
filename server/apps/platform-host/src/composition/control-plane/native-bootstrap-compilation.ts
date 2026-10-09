@@ -1,4 +1,5 @@
 import type {
+  AuthoringPlane,
   ExpandedNativeMetaEntityGraph,
   NormalizedCoreContext,
 } from "@athyper/server-contract-meta-entity-authoring";
@@ -17,6 +18,8 @@ import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider
  * not authorize SQL access, publication or activation. */
 export function assembleNativeBootstrapCompilation(input: {
   command: NativeBootstrapInput;
+  targetPlane?: AuthoringPlane;
+  installedIdentities?: NormalizedCoreContext["identities"];
   graph: ExpandedNativeMetaEntityGraph;
   catalogue: NormalizedCoreContext["catalogues"][number];
   components: Pick<
@@ -40,11 +43,25 @@ export function assembleNativeBootstrapCompilation(input: {
   maximumMembers: number;
 }): NativeReleaseCompilationContext {
   const { graph: g, command } = input;
-  const identities = plannedNativeBootstrapIdentities(command, g);
+  const identities =
+    input.installedIdentities ?? plannedNativeBootstrapIdentities(command, g);
+  if (
+    identities.length !== g.fields.length ||
+    new Set(identities.map((identity) => identity.id)).size !==
+      identities.length ||
+    identities.some(
+      (identity) =>
+        identity.entityId !== command.entityId ||
+        identity.tenantId !== command.tenantId ||
+        !g.fields.some((field) => field.fieldIdentityId === identity.id),
+    )
+  )
+    throw Error("NATIVE_BOOTSTRAP_IDENTITY_CONTEXT_INVALID");
   const authorization = resolveNativeBootstrapAuthorization(
     g,
     identities,
     input.maximumMembers,
+    input.targetPlane,
   );
   const relationLabels = (g.relations ?? []).map((r) => {
     const targets = (g.relationTargets ?? []).filter(

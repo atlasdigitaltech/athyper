@@ -136,3 +136,107 @@ it("rejects undeclared, duplicate or cross-plane scope and foreign permission ro
     resolveNativeBootstrapAuthorization(graph, c.core.identities, 1000),
   ).toThrow();
 });
+
+function multiPlaneFixture() {
+  const fixture = nativeReleaseFixture();
+  const members = fixture.graph.referenceMembers!.members;
+  const profiles = structuredClone(members.authorizationProfile);
+  const fields = structuredClone(members.fieldAccess);
+  const scopes = structuredClone(fixture.graph.operationScopeBindings!);
+  let sequence = 800;
+  const nextId = () =>
+    `00000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}`;
+  members.authorizationProfile = ["studio", "neon", "mesh"].flatMap(
+    (targetPlane) =>
+      profiles.map((row) => ({
+        ...row,
+        id: nextId(),
+        targetPlane: targetPlane as "studio" | "neon" | "mesh",
+      })),
+  );
+  members.fieldAccess = ["studio", "neon", "mesh"].flatMap((targetPlane) =>
+    fields.map((row) => ({
+      ...row,
+      id: nextId(),
+      targetPlane: targetPlane as "studio" | "neon" | "mesh",
+    })),
+  );
+  fixture.graph.operationScopeBindings = ["studio", "neon", "mesh"].flatMap(
+    (targetPlane) =>
+      scopes.map((row) => ({
+        ...row,
+        targetPlane: targetPlane as "studio" | "neon" | "mesh",
+      })),
+  );
+  fixture.graph.operationPermissions = fixture.graph.operations.map(
+    (operation) => ({
+      entityOperationId: operation.id,
+      targetPlane: "mesh",
+      permissionCode: "shared.reference.inspect",
+      permissionKind: "entity_operation",
+    }),
+  );
+  return fixture;
+}
+
+it.each(["studio", "neon", "mesh"] as const)(
+  "isolates authored permissions and scopes for %s",
+  (plane) => {
+    const { graph, c } = multiPlaneFixture();
+    const before = structuredClone(graph);
+    const context = resolveNativeBootstrapAuthorization(
+      graph,
+      c.core.identities,
+      1000,
+      plane,
+    );
+    expect(context.plane).toBe(plane);
+    expect(context.scopes.every((scope) => scope.plane === plane)).toBe(true);
+    expect(
+      context.permissions.every(
+        (permission) =>
+          permission.plane === plane &&
+          permission.state === (plane === "mesh" ? "defined" : "none") &&
+          permission.permissionCode ===
+            (plane === "mesh" ? "shared.reference.inspect" : null),
+      ),
+    ).toBe(true);
+    expect(graph).toEqual(before);
+  },
+);
+
+it("requires explicit selection for multiple authored targets", () => {
+  const { graph, c } = multiPlaneFixture();
+  expect(() =>
+    resolveNativeBootstrapAuthorization(graph, c.core.identities, 1000),
+  ).toThrow("BINDING_UNSUPPORTED");
+});
+
+it.each(["profile", "scope", "field"])(
+  "does not borrow another plane's missing %s",
+  (kind) => {
+    const { graph, c } = multiPlaneFixture();
+    if (kind === "profile")
+      graph.referenceMembers!.members.authorizationProfile =
+        graph.referenceMembers!.members.authorizationProfile.filter(
+          (row) => row.targetPlane !== "mesh",
+        );
+    if (kind === "scope")
+      graph.operationScopeBindings = graph.operationScopeBindings!.filter(
+        (row) => row.targetPlane !== "mesh",
+      );
+    if (kind === "field")
+      graph.referenceMembers!.members.fieldAccess =
+        graph.referenceMembers!.members.fieldAccess.filter(
+          (row) => row.targetPlane !== "mesh",
+        );
+    expect(() =>
+      resolveNativeBootstrapAuthorization(
+        graph,
+        c.core.identities,
+        1000,
+        "mesh",
+      ),
+    ).toThrow();
+  },
+);

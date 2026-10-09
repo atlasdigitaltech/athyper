@@ -16,6 +16,8 @@ export interface NativeIdentityAdoptionSource {
   readonly sourceFieldId: string;
   readonly sourceRevision: number;
   readonly sourceHash: string;
+  /** Exact native predecessor. Omitted only for legacy unpublished adoption. */
+  readonly sourceReleaseId?: string;
 }
 /** Resolve exact existing identities; never allocate replacements or change
  * introduction provenance. Source coordinates come from trusted preparation,
@@ -45,7 +47,9 @@ export async function establishNativeBootstrapIdentities(
   for (const s of captured) {
     if (
       Object.keys(s).sort().join() !==
-        "identityId,sourceChangeSetId,sourceFieldId,sourceHash,sourceRevision,targetFieldId" ||
+        (s.sourceReleaseId === undefined
+          ? "identityId,sourceChangeSetId,sourceFieldId,sourceHash,sourceRevision,targetFieldId"
+          : "identityId,sourceChangeSetId,sourceFieldId,sourceHash,sourceReleaseId,sourceRevision,targetFieldId") ||
       !Number.isSafeInteger(s.sourceRevision) ||
       s.sourceRevision < 0 ||
       !/^[a-f0-9]{64}$/.test(s.sourceHash)
@@ -56,6 +60,7 @@ export async function establishNativeBootstrapIdentities(
       s.targetFieldId,
       s.sourceChangeSetId,
       s.sourceFieldId,
+      ...(s.sourceReleaseId === undefined ? [] : [s.sourceReleaseId]),
     ])
       validateFoundationNode(referenceUuid, id, "/identityAdoption");
   }
@@ -105,12 +110,18 @@ export async function establishNativeBootstrapIdentities(
     if (
       !source ||
       source.targetFieldId !== field.id ||
-      source.sourceChangeSetId !== identity!.introduced_change_set_id
+      (source.sourceReleaseId === undefined &&
+        source.sourceChangeSetId !== identity!.introduced_change_set_id)
     )
       fail("NATIVE_IDENTITY_ADOPTION_REQUIRED");
-    await sql`SELECT entity_command_private.adopt_native_identity(${input.changeSetId}::uuid,${field.fieldIdentityId}::uuid,${field.id}::uuid,${source!.sourceChangeSetId}::uuid,${source!.sourceFieldId}::uuid,${source!.sourceRevision}::bigint,${source!.sourceHash},${input.proposalHash})`.execute(
-      tx,
-    );
+    if (source!.sourceReleaseId !== undefined) {
+      await sql`SELECT entity_command_private.inherit_native_identity(${input.changeSetId}::uuid,${field.fieldIdentityId}::uuid,${field.id}::uuid,${source!.sourceReleaseId}::uuid,${source!.sourceChangeSetId}::uuid,${source!.sourceFieldId}::uuid,${source!.sourceRevision}::bigint,${source!.sourceHash},${input.proposalHash})`.execute(
+        tx,
+      );
+    } else
+      await sql`SELECT entity_command_private.adopt_native_identity(${input.changeSetId}::uuid,${field.fieldIdentityId}::uuid,${field.id}::uuid,${source!.sourceChangeSetId}::uuid,${source!.sourceFieldId}::uuid,${source!.sourceRevision}::bigint,${source!.sourceHash},${input.proposalHash})`.execute(
+        tx,
+      );
     consumed.add(source!.identityId);
   }
   if (consumed.size !== captured.length)

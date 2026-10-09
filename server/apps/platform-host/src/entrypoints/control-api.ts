@@ -191,10 +191,29 @@ export async function startControlApi() {
       commandConnections.push(connection);
       return connection;
     };
+    const nativeTargetDatabases: Partial<
+      Record<"neon" | "mesh", Kysely<Record<string, never>>>
+    > = {};
+    for (const plane of ["neon", "mesh"] as const) {
+      const file = config.nativeTargetDatabaseUrlFiles[plane];
+      if (!file) continue;
+      const target = await commandConnection(file);
+      const safe = (
+        await sql<{
+          safe: boolean;
+        }>`SELECT NOT rolsuper AND NOT rolbypassrls AS safe FROM pg_roles WHERE rolname=current_user`.execute(
+          target,
+        )
+      ).rows;
+      if (safe.length !== 1 || !safe[0]!.safe)
+        throw Error("CONTROL_NATIVE_TARGET_ROLE_UNSAFE");
+      nativeTargetDatabases[plane] = target;
+    }
     const nativeBootstrap: Partial<
       ReturnType<typeof createNativeBootstrapStartup>
     > = config.nativeBootstrapConfigurationFile
       ? createNativeBootstrapStartup({
+          targetDatabases: nativeTargetDatabases,
           configuration: JSON.parse(
             (
               await readPrivateFile(config.nativeBootstrapConfigurationFile)

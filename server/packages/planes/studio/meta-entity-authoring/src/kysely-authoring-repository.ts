@@ -1,3 +1,4 @@
+import { readNativeSignedRelease } from "./publication/read-native-signed-release.js";
 import {
   applyNativeBootstrap,
   type NativeBootstrapInput,
@@ -1350,9 +1351,23 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     revision: number,
     report: ValidationReport,
     actorId: string,
+    nativeSource?: import("@athyper/server-contract-meta-entity-authoring").ExpandedNativeMetaEntityGraph,
   ) {
-    const graph = await this.loadGraph(id),
+    const graph = nativeSource ?? (await this.loadGraph(id)),
       current = required(await this.get(id));
+    if (
+      nativeSource &&
+      (current.tenantId !== null ||
+        nativeSource.contractSchema !== "athyper.meta-entity-contract/2.5" ||
+        nativeSource.authoringSource.sourceKind !== "product" ||
+        nativeSource.authoringSource.tenantId !== null ||
+        nativeSource.authoringSource.entityId !== current.entityId ||
+        nativeSource.ownedLabels?.changeSetId !== id)
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_PUBLICATION_SOURCE_MISMATCH",
+        "Exact native product source required",
+      );
     if (current.revision !== revision)
       throw new AuthoringConflictError("Validation revision is stale");
     if (sha256(graph) !== report.contractHash)
@@ -1580,12 +1595,21 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     // not pair its signature with a target-specific descriptor or SQL ledger hash.
     const native = (
       await sql<{
-        contract_json: MetaEntityGraph;
+        contract_json: MetaEntityGraph | ExpandedNativeMetaEntityGraph;
         contract_signature: string;
         signature_algorithm: string;
         signing_key_id: string;
+        source_contract_hash: string;
+        source_descriptor_hash: string;
+        target_planes: string[];
+        artifacts: Parameters<typeof readNativeSignedRelease>[0]["artifacts"];
       }>`SELECT s.contract_json,r.contract_signature,
-      r.signature_algorithm,r.signing_key_id FROM metadata.entity_release r
+      r.signature_algorithm,r.signing_key_id,r.target_planes,
+      p.metadata->>'sourceContractHash' source_contract_hash,
+      p.metadata->>'sourceDescriptorHash' source_descriptor_hash,
+      (SELECT jsonb_agg(jsonb_build_object('plane',a.plane_key,'descriptor',a.compiled_json,'compliance',a.compliance_report) ORDER BY a.plane_key)
+        FROM snapshot.entity_release_artifact a WHERE a.source_release_id=r.id AND a.source_revision_id=r.revision_id AND a.entity_id=r.entity_id AND a.tenant_id IS NULL) artifacts
+      FROM metadata.entity_release r
       JOIN snapshot.entity_contract_revision s ON s.id=r.revision_id AND s.entity_id=r.entity_id AND s.tenant_id IS NULL
       JOIN publication.entity_release_link l ON l.entity_release_id=r.id
       JOIN publication.release p ON p.id=l.publication_release_id
@@ -1594,9 +1618,15 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         this.database,
       )
     ).rows[0];
+    if (
+      native &&
+      Reflect.get(native.contract_json, "contractSchema") ===
+        "athyper.meta-entity-contract/2.5"
+    )
+      return readNativeSignedRelease(native);
     if (native)
       return {
-        ...compileGraph(native.contract_json),
+        ...compileGraph(native.contract_json as MetaEntityGraph),
         signature: native.contract_signature,
         signatureAlgorithm: native.signature_algorithm,
         signingKeyId: native.signing_key_id,

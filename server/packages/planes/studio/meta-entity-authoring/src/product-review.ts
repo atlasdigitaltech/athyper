@@ -1,3 +1,5 @@
+import { compileNativePublication } from "./native-publication-compilation.js";
+import { nativePublicationTargets } from "./publication/native-publication-targets.js";
 import type {
   ExpandedNativeMetaEntityGraph,
   MetaEntityAuthoringRepository,
@@ -6,10 +8,7 @@ import {
   AuthoringConflictError,
   AuthoringPolicyError,
 } from "@athyper/server-contract-meta-entity-authoring";
-import {
-  compileNativeRelease,
-  type NativeReleaseCompilationContext,
-} from "./native-release-compilation.js";
+import { type NativeReleaseCompilationContext } from "./native-release-compilation.js";
 import type { NativeCompiledOperation } from "./native-operation-compilation.js";
 
 export type ProductReviewAction = "submit" | "approve";
@@ -35,6 +34,7 @@ export interface ProductReviewPorts {
   nativeSource(id: string): Promise<{
     graph: ExpandedNativeMetaEntityGraph;
     compiler: NativeReleaseCompilationContext;
+    targetCompilers?: readonly NativeReleaseCompilationContext[];
     controls: readonly NativeCompiledOperation[];
   }>;
   submitted(
@@ -70,22 +70,8 @@ export function createProductReviewService(ports: ProductReviewPorts) {
         "NATIVE_REVIEW_SOURCE_INVALID",
         "Exact native product source required",
       );
-    const artifact = compileNativeRelease(
-      graph,
-      source.compiler,
-      source.controls,
-    );
-    const declarations = graph.referenceMembers!.members.target;
-    // The installed bounded compiler supplies exactly one target context. Do not
-    // manufacture another plane by rewriting its name or silently omit a target.
-    if (
-      declarations.length !== 1 ||
-      declarations[0]!.targetPlane !== source.compiler.authorization.plane
-    )
-      throw new AuthoringPolicyError(
-        "NATIVE_REVIEW_TARGET_UNAVAILABLE",
-        "Every declared target needs its own compiler context",
-      );
+    const artifact = compileNativePublication(source);
+    const targets = nativePublicationTargets(graph, artifact);
     const current = await ports.repository.get(id);
     if (
       !current ||
@@ -105,13 +91,11 @@ export function createProductReviewService(ports: ProductReviewPorts) {
         contractHash: artifact.contractHash,
         results: [{ key: "native-whole-graph-compilation", passed: true }],
       },
-      targets: [
-        {
-          plane: declarations[0]!.targetPlane,
-          contractHash: artifact.contractHash,
-          descriptorHash: artifact.descriptorHash,
-        },
-      ],
+      targets: targets.map((target) => ({
+        plane: target.targetPlane,
+        contractHash: target.artifact.contractHash,
+        descriptorHash: target.artifact.descriptorHash,
+      })),
     };
   }
   return {

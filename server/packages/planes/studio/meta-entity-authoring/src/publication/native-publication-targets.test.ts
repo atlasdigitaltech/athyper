@@ -61,8 +61,8 @@ function preparation() {
     entity_code: f.graph.entity.entityCode,
     change_set_id: f.graph.ownedLabels!.changeSetId,
     release_no: 1,
-    release_hash: artifact.descriptorHash,
-    contract_hash: artifact.contractHash,
+    release_hash: sha256({ releaseEnvelope: "database-trigger" }),
+    contract_hash: sha256({ jsonbText: "database-contract-hash" }),
     target_planes: ["studio"],
     contract_signature: artifact.signature,
     signature_algorithm: "Ed25519",
@@ -72,13 +72,15 @@ function preparation() {
     authority_tenant_id: "authority",
   };
   const query = vi.fn(async (text: string, _parameters?: unknown[]) => ({
-    rows: text.includes("to_regprocedure")
-      ? [{ available: true }]
-      : text.includes("fn_human_publication_preparation_source")
-        ? [{ source }]
-        : text.includes("fn_system_entity_execution_metadata")
-          ? [{ metadata: { humanExecutionPolicy: { fixture: true } } }]
-          : [],
+    rows: text.includes("snapshot.fn_compute_entity_contract_hash")
+      ? [{ hash: sha256({ jsonbText: "database-contract-hash" }) }]
+      : text.includes("to_regprocedure")
+        ? [{ available: true }]
+        : text.includes("fn_human_publication_preparation_source")
+          ? [{ source }]
+          : text.includes("fn_system_entity_execution_metadata")
+            ? [{ metadata: { humanExecutionPolicy: { fixture: true } } }]
+            : [],
   }));
   const db = new Kysely<Record<string, never>>({
     dialect: new PostgresDialect({
@@ -124,22 +126,31 @@ it("prepares native immutable target bytes and links review inside the release t
     await f.db.destroy();
   }
 });
-it("rolls back changed signed source pins before writing native targets", async () => {
-  const f = preparation();
-  f.source.release_hash = "0".repeat(64);
-  try {
-    await expect(
-      f.db
-        .transaction()
-        .execute((tx) => prepareSystemReferenceRelease(tx, f.input)),
-    ).rejects.toThrow("SIGNED_SOURCE_MISMATCH");
-    expect(
-      f.query.mock.calls.some(([text]) =>
-        text.includes("fn_store_system_entity_artifact"),
-      ),
-    ).toBe(false);
-    expect(f.query.mock.calls.at(-1)?.[0]).toBe("rollback");
-  } finally {
-    await f.db.destroy();
-  }
-});
+it.each(["source", "descriptor", "signature"])(
+  "rolls back changed %s before writing native targets",
+  async (kind) => {
+    const f = preparation();
+    if (kind === "source") f.source.contract_hash = "0".repeat(64);
+    if (kind === "descriptor") f.input.artifact.descriptorHash = "0".repeat(64);
+    if (kind === "signature") f.source.contract_signature = "changed";
+    try {
+      await expect(
+        f.db
+          .transaction()
+          .execute((tx) => prepareSystemReferenceRelease(tx, f.input)),
+      ).rejects.toThrow(
+        kind === "descriptor"
+          ? "NATIVE_PUBLICATION_SOURCE_MISMATCH"
+          : "SIGNED_SOURCE_MISMATCH",
+      );
+      expect(
+        f.query.mock.calls.some(([text]) =>
+          text.includes("fn_store_system_entity_artifact"),
+        ),
+      ).toBe(false);
+      expect(f.query.mock.calls.at(-1)?.[0]).toBe("rollback");
+    } finally {
+      await f.db.destroy();
+    }
+  },
+);

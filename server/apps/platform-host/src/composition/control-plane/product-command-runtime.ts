@@ -111,6 +111,7 @@ export async function createControlProductCommandRuntime(options: {
           args[3].graph,
           identities,
           resources.host.commands.maxMembers,
+          "studio",
         );
         return {
           ...resources,

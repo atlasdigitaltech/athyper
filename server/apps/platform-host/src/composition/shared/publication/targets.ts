@@ -10,6 +10,9 @@ import { TenantPublicationOrchestrator } from "./tenant-orchestrator.js";
 
 type Database = Kysely<Record<string, never>>;
 export interface PublicationTargetOptions {
+  readonly nativeSource?: ConstructorParameters<
+    typeof TenantPublicationOrchestrator
+  >[6];
   readonly authorityDatabase: Database;
   readonly databases: Readonly<Partial<Record<PublicationPlane, Database>>>;
   readonly targetPlanes: readonly PublicationPlane[];
@@ -59,6 +62,7 @@ export function createPublicationTargets(options: PublicationTargetOptions) {
       options.activationGuard,
       options.coordinatedWorkload,
       componentInstaller,
+      options.nativeSource,
     );
   }
   return { projections, orchestrators, loaders };

@@ -3,6 +3,30 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261009_native_publication_validation.sql",
+      "path": "migrations/20261009_native_publication_validation.sql",
+      "sha256": "dabd1ae0f9360c0f71a98210f978b51ac47cc3e6e09fb1e93430e980f077bb61",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Execute unchanged native deferred aggregate guards at exact independently enrolled publication link boundary, without broad application graph grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/38_native_publication_validation.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_worker_source.sql",
+      "path": "migrations/20261009_native_worker_source.sql",
+      "sha256": "014c8f79ab83742ad4c9a309f48a2777aaccecf42666fd7a038aa4b47c61a22c",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restricted native source and signed component readers require current independently enrolled human-reviewed publication workload authority; no graph mutation or human impersonation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/37_native_worker_source.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261009_native_publication_authority.sql",
       "path": "migrations/20261009_native_publication_authority.sql",
       "sha256": "3eceb9c3f3b0d8c5f0d4b62af944153cf0e344dc869381d6ce1e04f45b85337c",
@@ -2314,6 +2338,143 @@
       "reason": "Read installed identities under exact fresh-root creation admission before compiler preparation; preserves mutation and tenant fences.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/57_native_bootstrap_identity_read.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_compilation_recovery.sql",
+      "path": "migrations/20261009_native_compilation_recovery.sql",
+      "sha256": "7dc4eb92ef0a0aab2f4d8273e5fe2de343370ed45ab92ec174f0d170378669a1",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Read-only exact human-reviewed native publication group evidence for independently enrolled pre-artifact compiler recovery. Preserves original releases, snapshots and approvals.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/39_native_compilation_recovery.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_worker_entity_read.sql",
+      "path": "migrations/20261009_native_worker_entity_read.sql",
+      "sha256": "0c0bc60a470a16aab89cb75c026620b2e4aad746833bbb56beda049184fc830b",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restrict activation-worker Entity reference identity reads to current approved native sources; four read columns only, no mutation authority.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/40_native_worker_entity_read.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_worker_entity_source_scope.sql",
+      "path": "migrations/20261009_native_worker_entity_source_scope.sql",
+      "sha256": "1bc0142fcc3a966ba0026b250c587ef850dc9cd9bf0bb09d940b903480c60898",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restrict native activation evidence scan to native entity publications; unrelated legacy publications cannot participate in native relation visibility.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/40_native_worker_entity_read.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_identity_inheritance.sql",
+      "path": "migrations/20261009_native_identity_inheritance.sql",
+      "sha256": "0803946fad60e3db9aa01fce20619f70046b5da7b424701370877eb85fcd0fc4",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Exact base-release-bound inheritance of reserved native field identities through the admitted bootstrap transaction; retains identity provenance and immutable source snapshots.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/65_native_identity_inheritance.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_successor_source.sql",
+      "path": "migrations/20261009_native_successor_source.sql",
+      "sha256": "cb4475b7903a4d2f2a1819200cad5af953d1e32de183e1976d194406104e8db5",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Read exact published native predecessor under transaction-bound creation admission for approved protected-state preservation and identity inheritance; no broad source table grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/66_native_successor_source.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_inherited_identity_reads.sql",
+      "path": "migrations/20261009_native_inherited_identity_reads.sql",
+      "sha256": "52ee72e14203ff0b9d6b931caaf5fbc98fd89ef21a8b8a9542e16e242b98126d",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Expose database-verified inherited native identity availability through the existing authenticated and worker source readers; preserve admission and ownership.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/63_native_review_source.sql",
+        "ddl/planes/studio/publication/37_native_worker_source.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_successor_base_guard.sql",
+      "path": "migrations/20261009_native_successor_base_guard.sql",
+      "sha256": "65455c80d27538f068224a2ae9dbde3cb8ac13ba3239b72e85087f8bd0c399a7",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Use the exact admitted native predecessor reader within the existing change-set base guard; retain legacy scope validation, trigger ownership and application-role table restrictions.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/07_functions.sql",
+        "ddl/planes/studio/metadata/21_entity_learning_ancestry.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_successor_operation_guard.sql",
+      "path": "migrations/20261009_native_successor_operation_guard.sql",
+      "sha256": "791402ff054c84eb8068048523766f1ac64309aa49dcd5df0af79626c3f09e38",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Enforce owner-approved exact published predecessor protected-state preservation for admitted native successor operation inserts; no new controls or defaults.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_native_successor_operation_guard.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_native_identity_receipt_binding.sql",
+      "path": "migrations/20261009_native_identity_receipt_binding.sql",
+      "sha256": "5cba9587e9ee91657955518d22630fa861f99470294c60a7f365a9a9716b0d44",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Bind differing proposal and verified SQL-readback hashes through the same immutable bootstrap receipt in deferred identity validation; retain exact legacy snapshot-hash support.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/51_native_identity_adoption.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_successor_initial_target.sql",
+      "path": "migrations/20261009_successor_initial_target.sql",
+      "sha256": "faf8323c5ff9fedfa7f06e6687775f1b8a2f93ae719bda0f7b6091c48f879331",
+      "planes": ["studio", "neon", "mesh"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "server/db/migrations/manifests/neon.txt",
+        "server/db/migrations/manifests/mesh.txt"
+      ],
+      "reason": "Require explicit signed absent-head target pins under the publication-key lock for first installation of successor sources; preserve existing-head compare-and-swap.",
+      "canonicalPaths": ["ddl/common/runtime_meta/07_functions.sql"]
+    },
+    {
+      "originalPath": "migrations/20261009_native_base_guard_role_isolation.sql",
+      "path": "migrations/20261009_native_base_guard_role_isolation.sql",
+      "sha256": "750ce22abf660d6238b60787dfbf01bafbdf9f4928dd678252e4b1432cbd65c2",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Isolate private creation-admission resolution to the command role; preserve publication predecessor checks without broad schema grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/07_functions.sql",
+        "ddl/planes/studio/metadata/21_entity_learning_ancestry.sql"
       ]
     }
   ]

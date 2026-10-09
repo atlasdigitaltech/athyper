@@ -144,3 +144,29 @@ it("rejects duplicate pins and over-budget configuration", () => {
     createNativeBootstrapComponents({ ...f.options, maximumComponents: 1 }),
   ).toThrow("NATIVE_BOOTSTRAP_COMPONENT_CONFIGURATION_INVALID");
 });
+
+it.each(["neon", "mesh"] as const)(
+  "resolves %s only from its declared scope and matching evidence",
+  async (plane) => {
+    const f = fixture();
+    const targetScope = { ...scope, plane, hostReleaseHash: "f".repeat(64) };
+    f.graph.referenceMembers!.members.target = [
+      { ...f.graph.referenceMembers!.members.target[0]!, targetPlane: plane },
+    ];
+    for (const item of f.evidence) {
+      Object.assign(item, {
+        plane,
+        hostReleaseHash: targetScope.hostReleaseHash,
+      });
+      item.contract = { ...item.contract, supportedPlanes: [plane] };
+    }
+    expect(
+      (await f.resolve(tx, f.graph, targetScope)).runtimeComponents,
+    ).toHaveLength(2);
+    f.evidence[0]!.contract = {
+      ...f.evidence[0]!.contract,
+      supportedPlanes: ["studio"],
+    };
+    await expect(f.resolve(tx, f.graph, targetScope)).rejects.toThrow();
+  },
+);

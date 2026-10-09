@@ -1,4 +1,5 @@
 import type {
+  AuthoringPlane,
   ExpandedNativeMetaEntityGraph,
   NormalizedCoreContext,
 } from "@athyper/server-contract-meta-entity-authoring";
@@ -17,16 +18,26 @@ export function resolveNativeBootstrapAuthorization(
   graph: ExpandedNativeMetaEntityGraph,
   identities: NormalizedCoreContext["identities"],
   maximumMembers: number,
+  targetPlane?: AuthoringPlane,
 ): NativeAuthorizationContext {
   const fail = (): never => {
     throw Error("PRODUCT_NATIVE_AUTHORIZATION_BINDING_UNSUPPORTED");
   };
   const registration = ENTITY_RECORD_READ_REGISTRATION;
-  const profiles = graph.referenceMembers?.members.authorizationProfile;
+  const allProfiles = graph.referenceMembers?.members.authorizationProfile;
+  // A single authored profile is unambiguous. Multi-plane composition must
+  // explicitly select its destination; never use the first profile as a default.
+  const plane =
+    targetPlane ??
+    (allProfiles?.length === 1 ? allProfiles[0]!.targetPlane : undefined);
+  const profiles = allProfiles?.filter(
+    (profile) => profile.targetPlane === plane,
+  );
   if (
     !profiles ||
     profiles.length !== 1 ||
-    profiles[0]!.targetPlane !== "studio" ||
+    !plane ||
+    !["studio", "neon", "mesh"].includes(plane) ||
     profiles[0]!.ownershipResolverKey !== registration.resolver.key ||
     profiles[0]!.ownershipResolverVersion !== registration.resolver.version ||
     !graph.ownedLabels ||
@@ -66,7 +77,16 @@ export function resolveNativeBootstrapAuthorization(
       ?.operationKey !== "read"
   )
     fail();
-  const bindings = graph.operationScopeBindings ?? [];
+  const declaredPlanes = new Set(
+    allProfiles!.map((profile) => profile.targetPlane),
+  );
+  if (declaredPlanes.size !== allProfiles!.length) fail();
+  const allBindings = graph.operationScopeBindings ?? [];
+  if (allBindings.some((binding) => !declaredPlanes.has(binding.targetPlane)))
+    fail();
+  const bindings = allBindings.filter(
+    (binding) => binding.targetPlane === plane,
+  );
   if (bindings.length !== operations.length) fail();
   const scopes = operations.map((operation) => {
     const matches = bindings.filter(
@@ -75,7 +95,7 @@ export function resolveNativeBootstrapAuthorization(
     if (matches.length !== 1) fail();
     const binding = matches[0]!;
     if (
-      binding.targetPlane !== "studio" ||
+      binding.targetPlane !== plane ||
       binding.scopeKind !== "tenant" ||
       binding.coordinateSource !== "tenant_context" ||
       binding.coordinateKey !== undefined ||
@@ -91,16 +111,25 @@ export function resolveNativeBootstrapAuthorization(
       fail();
     return {
       operationId: operation.id,
-      plane: "studio" as const,
+      plane: plane!,
       resolverKey: registration.resolver.key,
       resolverVersion: registration.resolver.version,
     };
   });
-  const declarations = graph.operationPermissions ?? [];
+  const allDeclarations = graph.operationPermissions ?? [];
+  if (
+    allDeclarations.some(
+      (declaration) => !declaredPlanes.has(declaration.targetPlane),
+    )
+  )
+    fail();
+  const declarations = allDeclarations.filter(
+    (declaration) => declaration.targetPlane === plane,
+  );
   if (
     declarations.some(
       (p) =>
-        p.targetPlane !== "studio" ||
+        p.targetPlane !== plane ||
         !operations.some((o) => o.id === p.entityOperationId) ||
         (p.status !== undefined && p.status !== "active") ||
         !p.permissionCode ||
@@ -115,7 +144,7 @@ export function resolveNativeBootstrapAuthorization(
     if (matches.length > 1) fail();
     return {
       operationId: operation.id,
-      plane: "studio" as const,
+      plane: plane!,
       state: matches.length ? ("defined" as const) : ("none" as const),
       permissionCode: matches[0]?.permissionCode ?? null,
     };
@@ -139,7 +168,7 @@ export function resolveNativeBootstrapAuthorization(
   const context: NativeAuthorizationContext = {
     entityCode: graph.entity.entityCode,
     changeSetId: graph.ownedLabels!.changeSetId,
-    plane: "studio",
+    plane: plane!,
     maximumMembers,
     fields,
     permissions,

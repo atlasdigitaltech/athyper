@@ -53,7 +53,10 @@ export function createNativeBootstrapComponents(options: {
       !uuid.test(changeSetId) ||
       graph.authoringSource.tenantId !== null ||
       scope.tenantId !== null ||
-      scope.plane !== "studio"
+      !["studio", "neon", "mesh"].includes(scope.plane) ||
+      graph.referenceMembers?.members.target.filter(
+        (target) => target.targetPlane === scope.plane,
+      ).length !== 1
     )
       throw Error("NATIVE_BOOTSTRAP_COMPONENT_SCOPE_INVALID");
     await options.admit(tx, { changeSetId, scope });
