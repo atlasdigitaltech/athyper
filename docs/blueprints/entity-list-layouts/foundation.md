@@ -104,7 +104,7 @@ Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now a
 
 `ownCounts` is where the section 5 title rule lives in code (`7314e12cd`, `9eb1ae1b6`). Layout-specific code that is not policy stays per layout: each layout's own page-query inputs and the choice of its component.
 
-`tree` was registered with all four traits on 9 October 2026 (Tree blueprint B1, `c3cbd5d9f`); the column above records it.
+`tree` was registered with all four traits on 9 October 2026 (Tree blueprint B1, `c3cbd5d9f`); the column above records it. `matrix` was registered with all four traits on 10 October 2026 (Matrix blueprint M1, `6cbadd8c5`): one row at a time when narrow, rows and columns paged by the layout, the pivot as its grouping, and no count in the list title.
 
 **Secondary query paging (implementation note, 9 October 2026).** Every query a layout pages beside the list's own page query (a Board lane, Calendar and Gantt continuation, open-ended, window-start point and Unscheduled streams, a grouped-tree group's records) goes through one hook, `useListPages` (`list-view/src/list-pages.ts`). It replaces `useDateRangePages` and the Board lane's own copy. A query's identity is the request it builds, so any change to that request starts again with nothing shown and nothing loading; loaded pages are stored with that identity, so the reset needs no write during render. A disabled stream (a collapsed lane) keeps its pages and never repeats one. A failed request is reported with its localized reason (`StreamFailure`, the same safe categories as the list's own error state) and a retry when the failure is retryable, so a layout never hides records silently. Pinned by `tests/foundation/entity-list-pages.test.tsx`, also under StrictMode. This adds no contract property.
 
@@ -117,5 +117,18 @@ Board, Calendar, Gantt and Tree are switched off only in record pickers. The hos
 1. **Record-section hosts may offer a layout; record pickers keep Board, Calendar and Gantt off.** A picker may offer Tree when the target Entity publishes a hierarchy (Tree blueprint B5, approved 9 October 2026: "B4 and B5 - approved"). An embedded list shown as a section of a record (a record-scoped collection) may offer Board, Calendar, Gantt and Tree when its descriptor supports them. A list embedded to choose records keeps Table and Cards, plus Tree for a hierarchical target.
 2. **The scope comes only from the section's locked record scope,** resolved and enforced on the server exactly as embedded lists already are. A layout never takes its scope from a filter the browser supplies, so a caller cannot widen it.
 3. **Fail closed.** A layout that needs a scope (Tree with a `scopeField`) is unavailable in a section whose locked scope does not bind that field, with its reason code, never drawn over the wider set.
-4. **Each layout adopts the rule in its own build step.** Tree adopted it as T3 on 9 October 2026: the server publishes `scopeLocked` when the parent scope fixes the scope field and otherwise reports `LIST_TREE_SCOPE_UNBOUND` (Tree blueprint section 12); Board, Calendar and Gantt adopt it when each needs an embedded variant, with no further decision on the rule itself.
+4. **Each layout adopts the rule in its own build step.** Tree adopted it as T3 on 9 October 2026: the server publishes `scopeLocked` when the parent scope fixes the scope field and otherwise reports `LIST_TREE_SCOPE_UNBOUND` (Tree blueprint section 12); Board, Calendar and Gantt adopt it when each needs an embedded variant, with no further decision on the rule itself. Matrix adopted it at M1 on 10 October 2026: a picker keeps it off, and a section whose locked scope does not fix the Matrix's parent field reports `LIST_MATRIX_SCOPE_UNBOUND` (Matrix blueprint section 6).
+
+## 9. Policy gates before a layout lands (working practice, recorded 10 October 2026)
+
+**Standing.** This is a working practice recorded after review, not an owner decision. It adds no contract property and changes no rule above.
+
+**Why.** On 2 October 2026 four ratcheted static policies captured their baselines. Then the Board, Calendar, Gantt, Tree, Compare and Matrix work landed without anyone running them. The gates were `policy:design-system`, `policy:ui-system`, `policy:style-tokens:strict` and `policy:temporal-discipline`. Each one then reported this work's accumulated drift as new findings, and so did the package-ownership check `policy:deployment-profiles`. CI runs all of them in its static-policy step (`pnpm policy:static`, the `ci` profile). That step lists every policy's result, but while it fails, no later CI step runs. The drift was repaired in `6bf70fa9c` and `3502f5933` without refreshing any ratchet.
+
+**Practice.** Every layout or comparison change does the following before it is committed:
+1. Run the four ratcheted gates and `policy:deployment-profiles`. Fix every finding in the change's own files.
+2. Never run `--update-ratchet` to absorb the change's own findings.
+3. Put a style whose value comes from record data (a position, a share, a count) in the design-system gate's named allowlist, one exact style per entry with its reason.
+4. A new package gets its row in `docs/architecture/package-ownership-matrix.json`.
+5. For a local run of the whole profile, set `ATHYPER_ARTIFACT_ROOT` to a writable directory. Otherwise the runner writes under `~/.athyper/instances/dev/artifacts`.
 
