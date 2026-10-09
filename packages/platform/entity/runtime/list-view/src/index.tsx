@@ -89,6 +89,9 @@ import {
   LIST_MODE_RENDERER_MISSING,
   listModeTraits,
   listRendererKind,
+  hostLayouts,
+  listHost,
+  type ListHost,
   withRenderableModes,
 } from "./mode-renderers";
 import { boardSummaryState } from "./board/board-model";
@@ -345,6 +348,9 @@ export function EntityApplicationSection({
   return <div role="status">This section is unavailable.</div>;
 }
 
+/** A record lookup (picker): the list chooses records for a field or action.
+ * It offers Table and Cards only (foundation section 8); a record section
+ * passes `section` instead. */
 export interface EntityDirectoryEmbedding {
   readonly selectionAllowed?: boolean;
   readonly preferenceNamespace?: string;
@@ -761,6 +767,12 @@ function EntityCollectionRuntime({
   const entityIntl = useEntityI18n();
   const [panelRef, widthTier, panelElement] = useListWidthTier();
   useQuickReturnToolbar(panelElement, widthTier === "narrow" && !embedding);
+  // Which layouts this list may offer follows its declared host (foundation
+  // section 8): a record lookup is a picker; record sections and pages are not.
+  const host: ListHost = listHost({
+    lookup: Boolean(embedding),
+    section: Boolean(section),
+  });
   // Result-set key captured when the reader changes the list; see revealListStart.
   const pendingResultsReveal = useRef<string | undefined>(undefined);
   const descriptor = useMemo(
@@ -1009,12 +1021,7 @@ function EntityCollectionRuntime({
         )
           setActionNotice(listNotice("list.notice.savedViewRetired"));
         if (controller.signal.aborted) return;
-        next = withRenderableModes(next, {
-          board: !embedding,
-          calendar: !embedding,
-          gantt: !embedding,
-          tree: !embedding,
-        });
+        next = withRenderableModes(next, hostLayouts(host));
         if (embedding?.options.recordAccess === "readOnly")
           next = { ...next, actions: [], dataOperations: undefined };
         const effectiveSearch = entityLocationSearch(
@@ -1832,7 +1839,7 @@ function EntityCollectionRuntime({
             ) : page &&
               state.mode === "calendar" &&
               descriptor.surface.calendar &&
-              !embedding ? (
+              hostLayouts(host).calendar ? (
               <EntityCalendar
                 key={authorityKey}
                 client={client}
@@ -1862,7 +1869,7 @@ function EntityCollectionRuntime({
             ) : page &&
               state.mode === "gantt" &&
               descriptor.surface.gantt &&
-              !embedding ? (
+              hostLayouts(host).gantt ? (
               <EntityGantt
                 key={authorityKey}
                 client={client}
@@ -1892,7 +1899,7 @@ function EntityCollectionRuntime({
             ) : page &&
               state.mode === "board" &&
               descriptor.surface.board &&
-              !embedding ? (
+              hostLayouts(host).board ? (
               <EntityBoard
                 key={authorityKey}
                 client={client}
@@ -4599,6 +4606,17 @@ function EntityRows({
   if (empty) {
     const constrained = Boolean(query?.trim()) || filtered;
     return (
+      <>
+      {hierarchy?.matching ? (
+        // Matches notices (for example, matches deeper than the tree shows)
+        // still explain an empty result.
+        <HierarchyTreeChrome
+          hierarchy={hierarchy}
+          descriptor={descriptor}
+          filtered
+          intl={intl}
+        />
+      ) : null}
       <Card className="a-entity-list__state a-entity-list__state--empty">
         <span className="a-entity-list__state-icon" aria-hidden="true">
           <SearchIcon size={22} />
@@ -4606,7 +4624,11 @@ function EntityRows({
         <h2>
           {hierarchy
             ? intl.message(
-                constrained ? "list.tree.noRootsFiltered" : "list.tree.noRoots",
+                hierarchy.matching
+                  ? "list.empty.matching"
+                  : constrained
+                    ? "list.tree.noRootsFiltered"
+                    : "list.tree.noRoots",
               )
             : (constrained
             ? emptyContent?.noMatchesTitle
@@ -4630,6 +4652,7 @@ function EntityRows({
         </p>
         {emptyAction}
       </Card>
+      </>
     );
   }
   const toggle = (id: string, checked: boolean) => {

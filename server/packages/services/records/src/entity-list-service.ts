@@ -1058,7 +1058,9 @@ export function createEntityListService(options: {
           // Tree rows (blueprint section 5.3): hasChildren on every row of a
           // hierarchy response, parentOutsideView on every orphan row.
           ...(result.hasChildren ? { hasChildren: result.hasChildren[index] === true } : {}),
-          ...(query.hierarchy === "orphans" ? { parentOutsideView: true as const } : {}),
+          ...(query.hierarchy === "orphans" || result.parentOutsideView?.[index] ? { parentOutsideView: true as const } : {}),
+          // Matches (section 5.5): each row is a match or context for one.
+          ...(result.treeRoles ? { treeRole: result.treeRoles[index] ?? "context" } : {}),
         });
       });
       return Object.freeze({
@@ -1082,6 +1084,8 @@ export function createEntityListService(options: {
           countMode: query.countMode ?? "none",
         }),
         rows: Object.freeze(rows),
+        ...(result.matchesTruncated ? { matchesTruncated: true as const } : {}),
+        ...(result.matchesBeyondDepth ? { matchesBeyondDepth: result.matchesBeyondDepth } : {}),
         pagination: Object.freeze({
           pageSize: result.pagination.pageSize,
           hasNext: result.pagination.hasMore,

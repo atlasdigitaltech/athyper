@@ -379,8 +379,13 @@ export interface EntityListRowV1 {
   /** Only on rows of a `hierarchy` response: the row has at least one child
    * the viewer can read (Tree blueprint section 5.3). */
   readonly hasChildren?: boolean;
-  /** Only on rows of a `hierarchy=orphans` response; says nothing about the parent. */
+  /** On rows of a `hierarchy=orphans` response, and on the top row of a
+   * `hierarchy=matches` path whose next ancestor the viewer cannot read; says
+   * nothing about the parent. */
   readonly parentOutsideView?: true;
+  /** Only on rows of a `hierarchy=matches` response (Tree blueprint section
+   * 5.5): a match, or an ancestor shown for context. */
+  readonly treeRole?: "match" | "context";
 }
 
 export interface EntityListResultV1 {
@@ -389,7 +394,13 @@ export interface EntityListResultV1 {
   readonly scopeFingerprint: string;
   readonly queryHash: string;
   readonly rows: readonly EntityListRowV1[];
+  /** Only on a `hierarchy=matches` response: more records match than are returned. */
+  readonly matchesTruncated?: true;
+  /** Only on a `hierarchy=matches` response: matches whose path is deeper than
+   * the tree shows (not returned). */
+  readonly matchesBeyondDepth?: number;
   readonly pagination: {
+    /** Rows on the page; on a `hierarchy=matches` response, the matches. */
     readonly pageSize: number;
     readonly hasNext: boolean;
     readonly nextCursor?: string;

@@ -104,7 +104,7 @@ it("computes child existence and orphans inside the visible set with aliased cor
         init: async () => undefined, destroy: async () => undefined, releaseConnection: async () => undefined,
         beginTransaction: async () => undefined, commitTransaction: async () => undefined, rollbackTransaction: async () => undefined,
         acquireConnection: async () => ({
-          executeQuery: async (query: { sql: string }) => { statements.push(query.sql); return { rows: [{ id: "a", code: "1000", __tree_has_children: true }] as never[] }; },
+          executeQuery: async (query: { sql: string }) => { statements.push(query.sql); return { rows: [{ id: "a", code: "1000", __tree_has_children: true, __tree_parent: "00000000-0000-4000-8000-000000000001" }] as never[] }; },
           streamQuery: () => { throw new Error("unused"); },
         }),
       }),
@@ -147,6 +147,22 @@ it("computes child existence and orphans inside the visible set with aliased cor
   statements.length = 0;
   await repository.list({ ...input, descriptor: scopedTree, filters: [], hierarchy: { mode: "orphans", parentField: "parent", scopeField: "chart" } });
   expect(statements[0]).toContain('"__tree_parent"."chart_id" = "__tree_row"."chart_id"');
+  // Matches (B2): the list's conditions for the matches, then a bounded walk up
+  // by primary key inside the visible set and the scope filter only.
+  statements.length = 0;
+  await repository.list({ ...input, descriptor: scopedTree, search: "cash", filters: [{ field: "chart", operator: "eq" as const, value: "c-1" }, { field: "status", operator: "eq" as const, value: "active" }], hierarchy: { mode: "matches", parentField: "parent", scopeField: "chart", maxDepth: 4 } });
+  const [matchSql, walkSql] = statements;
+  expect(matchSql).toContain('AS "__tree_parent"');
+  expect(matchSql).toContain('"status" =');
+  expect(matchSql).toContain("FALSE"); // the search (no searchable field here)
+  expect(walkSql).toContain('WITH RECURSIVE "__tree_walk"');
+  expect(walkSql).toContain('"__tree_walk"."__walk_depth" < $');
+  // The walk itself carries the visible set and the scope, never the search or
+  // the other filters (child existence in the final select still applies them).
+  const walkCte = walkSql!.slice(0, walkSql!.indexOf('SELECT "code"'));
+  expect(walkCte).toContain('"chart_id" =');
+  expect(walkCte).not.toContain("FALSE");
+  expect(walkCte).not.toContain('"status" =');
   // An ordinary request computes no child existence and returns no child flags.
   statements.length = 0;
   const flat = await repository.list(input);

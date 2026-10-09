@@ -80,7 +80,7 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
   readonly group?: string;
   /** Groups only, no rows; valid only with `group` and exact counts. */
   readonly groupsOnly?: boolean;
-  readonly hierarchy?: "nodes" | "orphans";
+  readonly hierarchy?: "nodes" | "orphans" | "matches";
   /** Restricts the request to these records (at most 100), for example the
    * Tree layout resolving a deep link's ancestors. */
   readonly recordIds?: readonly string[];

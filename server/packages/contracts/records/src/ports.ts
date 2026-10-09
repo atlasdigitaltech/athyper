@@ -203,7 +203,13 @@ export interface RecordRepositoryListInput {
   /** Skip the row query and return only the group buckets. */
   readonly groupsOnly?: boolean;
   /** Record hierarchy: child existence per row, or orphans only. */
-  readonly hierarchy?: { readonly mode: "nodes" | "orphans"; readonly parentField: string; readonly scopeField?: string };
+  readonly hierarchy?: {
+    readonly mode: "nodes" | "orphans" | "matches";
+    readonly parentField: string;
+    readonly scopeField?: string;
+    /** Bounds the `matches` ancestor walk (maxDepth − 1 steps). */
+    readonly maxDepth?: number;
+  };
   readonly search?: string;
   readonly countMode: ListRecordsQuery["countMode"];
   readonly projection: readonly string[];

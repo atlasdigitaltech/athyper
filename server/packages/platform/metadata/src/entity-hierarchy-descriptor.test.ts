@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EntityFieldDescriptor } from "@athyper/server-contract-metadata";
-import { parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
+import { hierarchyParentKeyFinding, parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
 
 const field = (key: string, type: EntityFieldDescriptor["type"], extra: Partial<EntityFieldDescriptor> = {}): EntityFieldDescriptor => ({ key, storagePath: key, type, required: false, writableOn: [], ...extra });
 const fields = new Map([
@@ -55,4 +55,19 @@ describe("published record hierarchy", () => {
     expect(() => parseEntityHierarchy({ parentField: "parent", nodeKind: { kind: "boolean", field: "postable", branchValues: [false] }, maxDepth: 6 })).toThrow(/not a published hierarchy property/);
     expect(() => parseEntityHierarchy({ parentField: "parent", nodeKind: { kind: "boolean", field: "postable", branchWhen: "no" }, maxDepth: 6 })).toThrow(/true or false/);
   });
+
+  it("checks the declaration against the parent foreign key from the DDL (checklist item 1)", () => {
+    const flat = parseEntityHierarchy({ parentField: "parent", maxDepth: 6 });
+    const scoped = parseEntityHierarchy({ parentField: "parent", scopeField: "chart", maxDepth: 6 });
+    const check = (hierarchy: typeof flat, parentKeyColumns: string[]) => hierarchyParentKeyFinding({ hierarchy, byKey: fields, parentKeyColumns, tenantColumn: "tenant_id" });
+    // (tenant_id, parent_id): no owner, no scope field.
+    expect(check(flat, ["tenant_id", "parent"])).toBeUndefined();
+    expect(check(scoped, ["tenant_id", "parent"])).toBe("TREE_SCOPE_FIELD_INELIGIBLE");
+    // (tenant_id, chart, parent): the owner must be declared as the scope field.
+    expect(check(flat, ["tenant_id", "chart", "parent"])).toBe("TREE_SCOPE_FIELD_REQUIRED");
+    expect(check(scoped, ["tenant_id", "chart", "parent"])).toBeUndefined();
+    expect(check(scoped, ["tenant_id", "other", "parent"])).toBe("TREE_SCOPE_FIELD_INELIGIBLE");
+    expect(check(flat, ["tenant_id", "other"])).toBe("TREE_PARENT_FIELD_NOT_SELF_REFERENCE");
+  });
 });
+

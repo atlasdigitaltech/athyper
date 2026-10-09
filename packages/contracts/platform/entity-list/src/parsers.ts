@@ -698,6 +698,7 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
           : row.parentOutsideView === true
             ? { parentOutsideView: true as const }
             : (() => { throw new TypeError(`rows[${index}].parentOutsideView must be true when present`); })()),
+        ...(row.treeRole === undefined ? {} : { treeRole: oneOf(row.treeRole, ["match", "context"] as const, `rows[${index}].treeRole`) }),
       });
     }),
   );
@@ -733,6 +734,14 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     scopeFingerprint: digest(record.scopeFingerprint, "scopeFingerprint"),
     queryHash: digest(record.queryHash, "queryHash"),
     rows,
+    ...(record.matchesTruncated === undefined
+      ? {}
+      : record.matchesTruncated === true
+        ? { matchesTruncated: true as const }
+        : (() => { throw new TypeError("matchesTruncated must be true when present"); })()),
+    ...(record.matchesBeyondDepth === undefined
+      ? {}
+      : { matchesBeyondDepth: integer(record.matchesBeyondDepth, "matchesBeyondDepth", 1, Number.MAX_SAFE_INTEGER) }),
     pagination: Object.freeze({
       pageSize: integer(
         paginationRecord.pageSize,

@@ -120,3 +120,26 @@ export function validateEntityHierarchy(
       throw new Error(`hierarchy.rollups must use a numeric field that publishes the aggregate: ${rollup.field} ${rollup.aggregate} (TREE_ROLLUP_INELIGIBLE)`);
   }
 }
+
+/** The DDL side of the hierarchy declaration (blueprint section 2.4, item 1):
+ * the parent's foreign key decides whether a scope field is required. Given
+ * the storage columns of the parent foreign key, returns the finding, or
+ * undefined when the declaration matches it. The published descriptor does not
+ * carry foreign keys, so this runs where the DDL is known: the onboarding DDL
+ * rehearsal now, and Studio validation once authoring storage lands. */
+export function hierarchyParentKeyFinding(input: {
+  readonly hierarchy: EntityHierarchyDescriptor;
+  readonly byKey: ReadonlyMap<string, EntityFieldDescriptor>;
+  /** Storage columns of the parent foreign key, in any order. */
+  readonly parentKeyColumns: readonly string[];
+  readonly tenantColumn?: string;
+}): "TREE_PARENT_FIELD_NOT_SELF_REFERENCE" | "TREE_SCOPE_FIELD_REQUIRED" | "TREE_SCOPE_FIELD_INELIGIBLE" | undefined {
+  const parent = input.byKey.get(input.hierarchy.parentField)?.storagePath;
+  if (!parent || !input.parentKeyColumns.includes(parent)) return "TREE_PARENT_FIELD_NOT_SELF_REFERENCE";
+  const owners = input.parentKeyColumns.filter((column) => column !== parent && column !== input.tenantColumn);
+  const scope = input.hierarchy.scopeField ? input.byKey.get(input.hierarchy.scopeField)?.storagePath : undefined;
+  if (!owners.length) return input.hierarchy.scopeField ? "TREE_SCOPE_FIELD_INELIGIBLE" : undefined;
+  if (owners.length > 1) return "TREE_SCOPE_FIELD_INELIGIBLE";
+  if (!input.hierarchy.scopeField) return "TREE_SCOPE_FIELD_REQUIRED";
+  return scope === owners[0] ? undefined : "TREE_SCOPE_FIELD_INELIGIBLE";
+}

@@ -52,8 +52,9 @@ export interface ListRecordsQuery {
   readonly groupsOnly?: boolean;
   /** A record-hierarchy request (Tree blueprint section 5.3): `nodes` adds
    * hasChildren to every row; `orphans` selects visible records whose parent
-   * the viewer cannot read. */
-  readonly hierarchy?: "nodes" | "orphans";
+   * the viewer cannot read; `matches` returns the records that match the
+   * search and filters with the ancestors that place them (section 5.5). */
+  readonly hierarchy?: "nodes" | "orphans" | "matches";
   readonly search?: string;
   readonly countMode?: RecordCountMode;
   readonly hydrateReferences?: boolean;
@@ -75,6 +76,14 @@ export interface RecordListResult {
   readonly data: readonly Readonly<Record<string, unknown>>[];
   /** Per row of a hierarchy request: has at least one child the viewer can read. */
   readonly hasChildren?: readonly boolean[];
+  /** Per row of a `matches` request: a match, or an ancestor shown for context. */
+  readonly treeRoles?: readonly ("match" | "context")[];
+  /** Per row of a `matches` request: the top of a path whose next ancestor the viewer cannot read. */
+  readonly parentOutsideView?: readonly boolean[];
+  /** A `matches` request found more matches than it returns. */
+  readonly matchesTruncated?: boolean;
+  /** Matches whose path does not reach a root within the maximum depth (not returned). */
+  readonly matchesBeyondDepth?: number;
   readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
   readonly pagination: {
     readonly pageSize: number;

@@ -117,6 +117,30 @@ export function listRendererKind(
     : registered;
 }
 
+/** Where a list is placed (foundation section 8). A record picker chooses
+ * records and keeps Table and Cards; a list page and an embedded record
+ * section may offer every layout. The host is declared by the caller's intent,
+ * never inferred from which component mounts the list. */
+export type ListHost = "page" | "section" | "picker";
+
+/** The host of one list: a record lookup (`EntityDirectoryEmbedding`, which
+ * carries the lookup's options) is a picker; a list with record-section
+ * options is a section; anything else is a page. */
+export function listHost(input: { readonly lookup: boolean; readonly section: boolean }): ListHost {
+  return input.lookup ? "picker" : input.section ? "section" : "page";
+}
+
+/** The layouts a host may offer, for {@link withRenderableModes}. */
+export function hostLayouts(host: ListHost): {
+  readonly board: boolean;
+  readonly calendar: boolean;
+  readonly gantt: boolean;
+  readonly tree: boolean;
+} {
+  const allowed = host !== "picker";
+  return { board: allowed, calendar: allowed, gantt: allowed, tree: allowed };
+}
+
 /** Moves supported modes that this runtime cannot render into
  * `unavailableModes`, so every consumer (layout control, URL and saved-view
  * state, list body) sees only modes it can draw. */

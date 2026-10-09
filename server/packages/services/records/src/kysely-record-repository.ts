@@ -5,7 +5,8 @@ import { validateFilterValue } from "./filter-value-validation.js";
 import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
-import type { RecordFilter, RecordRepository, RecordRepositoryListInput } from "@athyper/server-contract-records";
+import type { RecordFilter, RecordListResult, RecordRepository, RecordRepositoryListInput } from "@athyper/server-contract-records";
+import { assembleTreeMatches } from "./tree-matches.js";
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 import { decodeRecordCursor, encodeRecordCursor, type DecodedRecordCursor } from "./record-cursor.js";
 
@@ -47,6 +48,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));
       const tree = input.hierarchy ? hierarchySql(input, scopeCompilers) : undefined;
       if (tree?.orphanCondition) conditions.push(tree.orphanCondition);
+      if (input.hierarchy?.mode === "matches" && tree) return listTreeMatches(input, conditions, tree, executor, scopeCompilers);
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
         const buckets = await groupBuckets(input, conditions, executor);
@@ -152,6 +154,71 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
 }
 const TREE_ROW = "__tree_row";
 const HAS_CHILDREN = "__tree_has_children";
+const TREE_PARENT = "__tree_parent";
+
+/** Search with ancestor context (Tree blueprint sections 5.5 and 7.3).
+ * 1. Matches: the list's own conditions, its order, one more than the limit.
+ * 2. Ancestors: a depth-bounded recursive walk up from the matches' parents by
+ *    primary key. Every step re-applies the visible set (tenant, record
+ *    predicates, collection scope) and the scope filter, never the search or
+ *    the other filters: ancestors are context, and a path cannot pass through
+ *    a hidden record or another owner's node.
+ * Child existence is computed for both sets as for `nodes`. */
+async function listTreeMatches(
+  input: RecordRepositoryListInput,
+  conditions: readonly RawBuilder<unknown>[],
+  tree: ReturnType<typeof hierarchySql>,
+  executor: RecordDatabase | RecordTransaction,
+  compilers: ReadonlyMap<string, RecordCollectionScopeSqlCompiler>,
+): Promise<RecordListResult> {
+  const { descriptor, tenantId } = input;
+  const hierarchy = input.hierarchy!;
+  const idPath = descriptor.storage.idField;
+  const parentPath = fieldPath(descriptor, hierarchy.parentField);
+  const select = sql`${projection(descriptor, input.projection)}, ${tree.hasChildren} AS ${sql.ref(HAS_CHILDREN)}, ${sql.ref(`${TREE_ROW}.${parentPath}`)} AS ${sql.ref(TREE_PARENT)}`;
+  const found = await sql<Record<string, unknown>>`
+    SELECT ${select} FROM ${table(descriptor)} AS ${sql.ref(TREE_ROW)}
+     WHERE ${sql.join(conditions, sql` AND `)}
+     ${orderBy(input)} LIMIT ${input.limit + 1}
+  `.execute(executor);
+  const toItem = (row: Record<string, unknown>) => {
+    const { [HAS_CHILDREN]: hasChildren, [TREE_PARENT]: parent, ...rest } = row;
+    return { row: rest, id: String(rest[idPath]), parent: parent === null || parent === undefined ? null : String(parent), hasChildren: hasChildren === true };
+  };
+  const matches = found.rows.slice(0, input.limit).map(toItem);
+  const steps = (hierarchy.maxDepth ?? 1) - 1;
+  const starts = [...new Set(matches.flatMap((item) => (item.parent ? [item.parent] : [])))];
+  let ancestors: ReturnType<typeof toItem>[] = [];
+  if (steps > 0 && starts.length) {
+    const scopeFilters = hierarchy.scopeField ? (input.filters ?? []).filter((filter) => filter.field === hierarchy.scopeField) : [];
+    const visible = [
+      ...baseConditions(descriptor, tenantId, "read"),
+      ...input.collectionScope.map((constraint) => compileRecordCollectionScopeCondition(descriptor, tenantId, constraint, compilers)),
+      ...scopeFilters.map((filter) => filterCondition(descriptor, filter)),
+    ];
+    const walk = await sql<Record<string, unknown>>`
+      WITH RECURSIVE "__tree_walk" ("__walk_id", "__walk_parent", "__walk_depth") AS (
+        SELECT ${sql.ref(idPath)}, ${sql.ref(parentPath)}, 1 FROM ${table(descriptor)}
+         WHERE ${sql.ref(idPath)} IN (${sql.join(starts.map((id) => sql`${id}::uuid`))}) AND ${sql.join(visible, sql` AND `)}
+        UNION
+        SELECT ${sql.ref(idPath)}, ${sql.ref(parentPath)}, "__tree_walk"."__walk_depth" + 1 FROM ${table(descriptor)}
+          JOIN "__tree_walk" ON ${sql.ref(idPath)} = "__tree_walk"."__walk_parent"
+         WHERE "__tree_walk"."__walk_depth" < ${steps} AND ${sql.join(visible, sql` AND `)}
+      )
+      SELECT ${select} FROM ${table(descriptor)} AS ${sql.ref(TREE_ROW)}
+       WHERE ${sql.ref(`${TREE_ROW}.${idPath}`)} IN (SELECT "__walk_id" FROM "__tree_walk") AND ${sql.join(visible, sql` AND `)}
+    `.execute(executor);
+    ancestors = walk.rows.map(toItem);
+  }
+  const assembled = assembleTreeMatches({ matches, ancestors, maxDepth: hierarchy.maxDepth ?? 1, truncated: found.rows.length > input.limit });
+  let total: number | undefined;
+  if (input.countMode === "exact") {
+    const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${table(descriptor)} AS ${sql.ref(TREE_ROW)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
+    total = Number(count.rows[0]?.count ?? 0);
+  }
+  // pageSize counts matches; context rows ride along with them.
+  return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(total !== undefined ? { total } : {}), countMode: input.countMode === "exact" ? "exact" : "none" } };
+}
 
 /** Record-hierarchy SQL (Entity list Tree blueprint sections 5.3 and 7.2).
  * The outer row is aliased; each correlated subquery reads its own alias of

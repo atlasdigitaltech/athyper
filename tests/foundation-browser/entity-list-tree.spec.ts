@@ -70,11 +70,31 @@ const script = buildSync({
         else if(f.operator==='in')list=list.filter(r=>f.value.includes(v(r)));
       }return list};
       matched=apply(matched,filters);
+      if(q.search){const n=String(q.search).toLowerCase();matched=matched.filter(r=>[r.values.code,r.values.name].some(v=>String(v??'').toLowerCase().includes(n)));}
       // hasChildren: a visible child that matches the list's filters other than the parent filter.
       if(q.hierarchy){const others=filters.filter(f=>f.field!=='parent');
         matched=matched.map(r=>({...r,hasChildren:apply(visible.filter(c=>c.values.parent===r.id),others).length>0,...(q.hierarchy==='orphans'?{parentOutsideView:true}:{})}));}
       const sortField=(q.sort??[])[0]?.split(':')[0];
       if(sortField)matched=[...matched].sort((a,b)=>cmp(a.values[sortField],b.values[sortField])||a.id.localeCompare(b.id));
+      if(q.hierarchy==='matches'){
+        // Matches with the visible ancestors that place them (B2), as the server does.
+        const maxDepth=cfg.maxDepth??5,scopeFs=filters.filter(f=>f.field==='chart'),others=filters.filter(f=>f.field!=='parent');
+        const ancestorsOk=apply(visible,scopeFs),byId=new Map(ancestorsOk.map(r=>[r.id,r]));
+        const searched=list=>q.search?list.filter(r=>[r.values.code,r.values.name].some(v=>String(v??'').toLowerCase().includes(String(q.search).toLowerCase()))):list;
+        const kids=r=>searched(apply(visible.filter(c=>c.values.parent===r.id),others)).length>0;
+        const out=[],seen=new Set(),top=new Set();let beyond=0;
+        const found=matched.slice(0,500),matchIds=new Set(found.map(r=>r.id));
+        for(const m of found){const path=[m];let t=m,placed;
+          while(!placed){if(!t.values.parent)placed=path.length>maxDepth?'beyond':'root';else if(path.length>=maxDepth)placed='beyond';else{const n=byId.get(t.values.parent);if(!n)placed='outside';else{path.push(n);t=n;}}}
+          if(placed==='beyond'){beyond++;continue}
+          if(placed==='outside')top.add(t.id);
+          for(const p of path)if(!seen.has(p.id)){seen.add(p.id);out.push(p)}}
+        const ordered=[...out.filter(r=>matchIds.has(r.id)),...out.filter(r=>!matchIds.has(r.id))];
+        return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),
+          rows:ordered.map(r=>({...r,hasChildren:kids(r),treeRole:matchIds.has(r.id)?'match':'context',...(top.has(r.id)?{parentOutsideView:true}:{})})),
+          ...(matched.length>500?{matchesTruncated:true}:{}),...(beyond?{matchesBeyondDepth:beyond}:{}),
+          pagination:{pageSize:found.length,hasNext:false,hasPrevious:false,countMode:'none'}};
+      }
       const exact=q.countMode==='exact';
       const groups=q.group&&exact?Object.entries(matched.reduce((acc,r)=>{const k=JSON.stringify(r.values[q.group]??null);acc[k]=(acc[k]??0)+1;return acc},{})).map(([k,count])=>({value:JSON.parse(k),label:String(JSON.parse(k)),count})).sort((a,b)=>cmp(a.value,b.value)):undefined;
       if(q.groupsOnly==='true')return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:[],groups,pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:matched.length,countMode:'exact'}};
@@ -82,7 +102,7 @@ const script = buildSync({
       return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:page,...(groups?{groups}:{}),
         pagination:{pageSize:page.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,...(exact?{total:matched.length}:{}),countMode:exact?'exact':'none'}};
     }};
-    createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode="gl_account"/>);
+    createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode="gl_account" {...(cfg.section?{section:{}}:{})}/>);
   ` },
   bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
   loader: { ".css": "empty" },
@@ -90,7 +110,7 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean };
+type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean };
 type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -389,5 +409,57 @@ test.describe("T1–T3 scoped hierarchy and node kind", () => {
     await expect(node(page, "3000").locator(".a-entity-tree__kind")).toHaveText("Postable: Yes");
     await expect(node(page, "1000").locator(".a-entity-tree__kind")).toHaveAttribute("data-tone", "neutral");
   });
+});
+
+test.describe("B2 search with ancestor context", () => {
+  const titles = (page: Page, level: number) => page.locator(`[role=row][aria-level="${level}"][aria-posinset] .a-entity-tree__title`);
+
+  test("a search shows each match with its path, in one request, with context marked", async ({ page }) => {
+    await mount(page, 1440, { tree: true }, "?view=tree&q=cash");
+    await expect(page.getByText("Records that match are shown with the records above them, for context.")).toBeVisible();
+    await expect(titles(page, 1)).toHaveText(["Assets"]);
+    await expect(titles(page, 2)).toHaveText(["Current assets"]);
+    await expect(titles(page, 3)).toHaveText(["Cash and bank"]);
+    await expect(node(page, "1000")).toHaveAttribute("data-tree-role", "context");
+    await expect(node(page, "1000").locator(".a-entity-tree__marker--context")).toHaveText("Shown for context");
+    await expect(node(page, "1110")).toHaveAttribute("data-tree-role", "match");
+    const tree = (await requests(page)).filter(q => q.hierarchy);
+    expect(tree.map(q => q.hierarchy)).toEqual(["matches"]);
+    // Child existence follows the search, as for every level: Cash and bank has
+    // no matching children, so it does not expand here; clearing the search browses.
+    await expect(node(page, "1110").locator("[data-tree-toggle]")).toHaveCount(0);
+    expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+    await page.screenshot({ path: "tooling/config/test-results/entity-list-tree-matches.png", fullPage: true });
+  });
+
+  test("a path stopped by a hidden ancestor moves to the outside-your-view group and never shows it", async ({ page }) => {
+    await mount(page, 1440, { tree: true, hidden: ["1100"] }, "?view=tree&q=operating");
+    const heading = page.locator(".a-entity-tree__group-row", { hasText: "Records whose parent is outside your view" });
+    await expect(heading).toBeVisible();
+    await expect(node(page, "1110").locator(".a-entity-tree__marker").first()).toHaveText("Parent outside your view");
+    await expect(node(page, "1111")).toHaveAttribute("data-tree-role", "match");
+    await expect(page.locator(".a-entity-list")).not.toContainText("Current assets");
+  });
+
+  test("matches deeper than the tree shows are counted in a notice, not drawn", async ({ page }) => {
+    await mount(page, 1440, { tree: true, maxDepth: 3 }, "?view=tree&q=usd");
+    await expect(page.getByRole("status").filter({ hasText: "1 match sits deeper than the 3 levels this tree shows" })).toBeVisible();
+    await expect(node(page, "1113")).toHaveCount(0);
+  });
+
+  test("in a scoped hierarchy, matches and their paths stay inside the chosen scope", async ({ page }) => {
+    const filter = encodeURIComponent(JSON.stringify({ operator: "eq", value: "chart-b" }));
+    await mount(page, 1440, { tree: true, scoped: true }, `?view=tree&filter.chart=${filter}&q=current`);
+    await expect(titles(page, 1)).toHaveText(["Group assets"]);
+    await expect(titles(page, 2)).toHaveText(["Group current assets"]);
+    const matches = (await requests(page)).filter(q => q.hierarchy === "matches");
+    expect(matches).toHaveLength(1);
+    expect((matches[0]!.filter ?? []).map(f => JSON.parse(f))).toContainEqual({ field: "chart", operator: "eq", value: "chart-b" });
+  });
+});
+
+test("a record section host offers Tree; only record pickers keep Table and Cards (foundation section 8)", async ({ page }) => {
+  await mount(page, 1440, { tree: true, section: true }, "?view=tree");
+  await expect(page.getByRole("treegrid")).toBeVisible();
 });
 

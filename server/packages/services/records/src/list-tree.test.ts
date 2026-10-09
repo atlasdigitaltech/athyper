@@ -56,6 +56,9 @@ describe("hierarchy requests", () => {
     expect(parseRecordListParameters({ hierarchy: "orphans" })).toMatchObject({ hierarchy: "orphans" });
     expect(() => parseRecordListParameters({ hierarchy: "all" })).toThrow();
     expect(() => parseRecordListParameters({ hierarchy: "nodes", group: "kind" })).toThrow(/cannot be combined with group/);
+    expect(parseRecordListParameters({ hierarchy: "matches", search: "cash" })).toMatchObject({ hierarchy: "matches" });
+    expect(() => parseRecordListParameters({ hierarchy: "matches", cursor: "abc" })).toThrow(/cursor or recordIds/);
+    expect(() => parseRecordListParameters({ hierarchy: "matches", recordIds: "7f3c2e1d-4b5a-4c6d-8e9f-000000000001" })).toThrow(/cursor or recordIds/);
   });
 
   const descriptor = {
@@ -122,6 +125,23 @@ describe("hierarchy requests", () => {
     expect(roots.hasChildren).toEqual([true]);
     const orphans = await persistence.repository.list({ ...scopedBase, filters: [{ field: "chart", operator: "eq", value: "chart-b" }], hierarchy: { mode: "orphans", parentField: "parent", scopeField: "chart" } });
     expect(orphans.data.map((row) => row["code"])).toEqual(["1100"]);
+  });
+
+  it("returns matches with the visible ancestors that place them (B2)", async () => {
+    const tree = { mode: "matches" as const, parentField: "parent", maxDepth: 6 };
+    const placed = await seed().list({ ...base, filters: [{ field: "code", operator: "eq", value: "1100" }], hierarchy: tree });
+    expect(placed.data.map((row) => row["code"])).toEqual(["1100", "1000"]);
+    expect(placed.treeRoles).toEqual(["match", "context"]);
+    expect(placed.parentOutsideView).toEqual([false, false]);
+    expect(placed.hasChildren).toEqual([false, true]);
+    // 2110's parent is not visible: the path stops and its top row is marked.
+    const hidden = await seed().list({ ...base, filters: [{ field: "code", operator: "eq", value: "2110" }], hierarchy: tree });
+    expect(hidden.data.map((row) => row["code"])).toEqual(["2110"]);
+    expect(hidden.parentOutsideView).toEqual([true]);
+    // A path longer than maxDepth is not returned, only counted.
+    const deep = await seed().list({ ...base, filters: [{ field: "code", operator: "eq", value: "1100" }], hierarchy: { ...tree, maxDepth: 1 } });
+    expect(deep.data).toEqual([]);
+    expect(deep.matchesBeyondDepth).toBe(1);
   });
 
   it("returns no child flags on ordinary requests", async () => {

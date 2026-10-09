@@ -18,6 +18,8 @@ import {
   TREE_ROOTS,
   admitPage,
   branchByKind,
+  levelsFromMatches,
+  treeConstrained,
   ceilingState,
   childLevel,
   childrenQuery,
@@ -57,6 +59,10 @@ export interface HierarchyTree {
   readonly entries: readonly TreeEntry[];
   /** The roots page has arrived. */
   readonly ready: boolean;
+  /** A search or filter is active: the tree shows matches with their paths (B2). */
+  readonly matching: boolean;
+  readonly matchesTruncated?: true;
+  readonly matchesBeyondDepth?: number;
   /** Nothing at the top level and no orphans, once both have loaded. */
   readonly empty: boolean;
   readonly reached: boolean;
@@ -207,9 +213,19 @@ export function useHierarchyTree(input: {
   }, []);
 
   // The roots arrive with the list's own page; the orphans load beside them.
+  // With a search or filter the page is the matches response (B2): every
+  // level it needs comes with it, so no orphans request is sent.
   const rootsCurrent = enabled && rootsPage ? rootsPage : undefined;
+  const matching = Boolean(tree && source && treeConstrained(source.query, descriptor, tree));
   useEffect(() => {
     if (!rootsCurrent || levelsRef.current.has(TREE_ROOTS)) return;
+    const declared = latest.current.descriptor.surface.tree;
+    if (matching && declared) {
+      const { levels: placed, expanded: open } = levelsFromMatches(rootsCurrent.rows, declared);
+      commit(() => placed);
+      setExpanded(open);
+      return;
+    }
     commit((levels) =>
       admitPage(
         levels,
@@ -225,7 +241,7 @@ export function useHierarchyTree(input: {
     );
     const orphans = queryFor(TREE_ORPHANS);
     if (orphans) void loadLevel(TREE_ORPHANS, orphans, false);
-  }, [rootsCurrent, resetKey, commit, loadLevel, queryFor]);
+  }, [rootsCurrent, resetKey, matching, commit, loadLevel, queryFor]);
 
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
@@ -257,6 +273,14 @@ export function useHierarchyTree(input: {
       if (at !== epoch.current) return;
       if (result) setNotice(result);
     };
+    // Matches view: the response already holds every path it shows.
+    if (matching) {
+      if (nodePlaces(levelsRef.current).has(revealId)) {
+        setSelected(revealId);
+        setFocusRequest((previous) => ({ id: revealId, seq: (previous?.seq ?? 0) + 1 }));
+      } else finish("revealMissing");
+      return;
+    }
     void (async () => {
       const state = source.query;
       const path: EntityListRowV1[] = [];
@@ -304,7 +328,7 @@ export function useHierarchyTree(input: {
         finish("revealMissing");
       }
     })();
-  }, [rootsCurrent, tree, source, descriptor, fetchPage, loadLevel, queryFor]);
+  }, [rootsCurrent, matching, tree, source, descriptor, fetchPage, loadLevel, queryFor]);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -321,7 +345,9 @@ export function useHierarchyTree(input: {
   const places = useMemo(() => nodePlaces(levels), [levels]);
   const loadedRows = useMemo(() => [...places.values()].map((place) => place.row), [places]);
   if (!enabled || !tree) return undefined;
-  const { reached, capped } = ceilingState(levels, LIST_TREE_NODE_CEILING);
+  const { reached, capped: browseCapped } = ceilingState(levels, LIST_TREE_NODE_CEILING);
+  // Matches are capped by the server at 500 matches and say so themselves.
+  const capped = browseCapped && !matching;
   const entries = treeEntries(levels, expanded, orphansOpen, tree, reached);
   const roots = levels.get(TREE_ROOTS);
   const orphans = levels.get(TREE_ORPHANS);
@@ -330,6 +356,9 @@ export function useHierarchyTree(input: {
     levels,
     entries,
     ready: Boolean(roots),
+    matching,
+    ...(matching && rootsCurrent?.matchesTruncated ? { matchesTruncated: true } : {}),
+    ...(matching && rootsCurrent?.matchesBeyondDepth ? { matchesBeyondDepth: rootsCurrent.matchesBeyondDepth } : {}),
     empty: Boolean(roots && !roots.rows.length && orphans && orphans.status !== "loading" && !orphans.rows.length),
     reached,
     capped,
@@ -390,7 +419,17 @@ export function HierarchyTreeChrome({ hierarchy, descriptor, filtered, selecting
         path={path.map((row) => ({ key: row.id, label: treeNodeLabel(row, descriptor).text }))}
         onSelect={hierarchy.focusNode}
       />
-      {filtered ? <p className="a-entity-tree__caption">{intl.message("list.tree.filtered")}</p> : null}
+      {hierarchy.matching ? (
+        <p className="a-entity-tree__caption">{intl.message("list.tree.matchesCaption")}</p>
+      ) : filtered ? (
+        <p className="a-entity-tree__caption">{intl.message("list.tree.filtered")}</p>
+      ) : null}
+      {hierarchy.matchesTruncated ? (
+        <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.matchesTruncated", { count: 500 })}</p>
+      ) : null}
+      {hierarchy.matchesBeyondDepth ? (
+        <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.matchesBeyondDepth", { count: hierarchy.matchesBeyondDepth, depth: hierarchy.tree.maxDepth })}</p>
+      ) : null}
       {selecting ? <p className="a-entity-tree__caption">{intl.message("list.tree.selectionLoaded")}</p> : null}
       {hierarchy.capped ? (
         <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.ceiling", { count: LIST_TREE_NODE_CEILING })}</p>
@@ -427,7 +466,7 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
     branch === undefined || !nodeKind
       ? undefined
       : nodeKind.kind === "boolean"
-        ? `${kindField?.label ?? ""}: ${intl.message(kindValue === true ? "entity.value.yes" : "entity.value.no")}`
+        ? `${kindField?.label ?? ""}: ${formatFieldValue(kindValue as boolean, kindField, intl)}`
         : String(row.displayValues?.[nodeKind.field] ?? formatFieldValue(kindValue as string, kindField, intl));
   const tone = nodeKind?.kind === "choice" && typeof kindValue === "string" ? (nodeKind.tones?.[kindValue] ?? "neutral") : "neutral";
   const children = hierarchy.levels.get(childLevel(row.id));
@@ -460,6 +499,9 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
       {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
       {entry.orphan && entry.depth === 1 ? (
         <span className="a-entity-tree__marker" title={intl.message("list.tree.parentOutsideHint")}>{intl.message("list.tree.parentOutside")}</span>
+      ) : null}
+      {row.treeRole === "context" ? (
+        <span className="a-entity-tree__marker a-entity-tree__marker--context">{intl.message("list.tree.context")}</span>
       ) : null}
       {entry.state === "limit" ? (
         <span className="a-entity-tree__marker a-entity-tree__marker--limit" title={intl.message("list.tree.depthLimitHint", { depth: tree.maxDepth })}>
@@ -574,6 +616,7 @@ export function treeNodeAttributes(entry: NodeEntry, focusable: boolean) {
     "aria-level": entry.level,
     "aria-posinset": entry.posinset,
     "aria-setsize": entry.setsize,
+    ...(entry.row.treeRole ? { "data-tree-role": entry.row.treeRole } : {}),
     ...(entry.state === "expandable" ? { "aria-expanded": entry.expanded } : {}),
     tabIndex: focusable ? 0 : -1,
   } as const;

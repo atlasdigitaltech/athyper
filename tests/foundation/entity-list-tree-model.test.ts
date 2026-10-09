@@ -20,6 +20,9 @@ import {
   treeOrdered,
   treePageState,
   treeScopeSatisfied,
+  treeConstrained,
+  matchesQuery,
+  levelsFromMatches,
   type TreeLevels,
 } from "../../packages/platform/entity/runtime/list-view/src/tree/tree-model";
 
@@ -149,7 +152,7 @@ describe("scoped hierarchy and node kind (T1, T2)", () => {
   it("without one scope value the page query stays the ordinary list query; the scope field is always requested", () => {
     const unscoped = treePageState({ ...state, filters: [] }, scopedDescriptor);
     assert.equal("hierarchy" in unscoped, false);
-    const one = treePageState({ ...state, filters: [eq("a")] }, scopedDescriptor) as { hierarchy?: string; filters: unknown[] };
+    const one = treePageState({ ...state, query: undefined, filters: [eq("a")] }, scopedDescriptor) as { hierarchy?: string; filters: unknown[] };
     assert.equal(one.hierarchy, "nodes");
     assert.ok(one.filters.some((filter) => JSON.stringify(filter) === JSON.stringify(eq("a"))));
     assert.ok(treeColumns(state, scopedDescriptor, scoped).includes("chart"));
@@ -164,6 +167,34 @@ describe("scoped hierarchy and node kind (T1, T2)", () => {
     assert.equal(branchByKind(withKind({ postable: false }), boolean), true);
     assert.equal(branchByKind(withKind({ postable: true }), boolean), false);
     assert.equal(branchByKind(withKind({}), boolean), undefined);
+  });
+});
+
+describe("search with ancestor context (B2)", () => {
+  const withSearch = { ...descriptor, surface: { tree, search: { minimumQueryLength: 2 } } } as unknown as EntityListDescriptorV1;
+  it("shows matches when there is a search or a filter other than the parent and scope filters", () => {
+    assert.equal(treeConstrained({ filters: [], query: "c" }, withSearch, tree), false);
+    assert.equal(treeConstrained({ filters: [], query: "ca" }, withSearch, tree), true);
+    assert.equal(treeConstrained({ filters: [{ field: "parent", operator: "is_null" }], query: "" }, withSearch, tree), false);
+    assert.equal(treeConstrained({ filters: [{ field: "status", operator: "eq", value: "x" }] }, withSearch, tree), true);
+    assert.equal((treePageState({ ...state, mode: "tree" } as ListLocationStateV1, withSearch) as { hierarchy?: string }).hierarchy, "matches");
+  });
+
+  it("asks for matches by readable identity, without a parent filter", () => {
+    const query = matchesQuery({ ...state, filters: [...state.filters, { field: "parent", operator: "is_null" }] }, withSearch, tree);
+    assert.equal(query.hierarchy, "matches");
+    assert.deepEqual(query.sort, [{ field: "code", direction: "asc" }]);
+    assert.ok(!query.filters.some((filter) => filter.field === "parent"));
+  });
+
+  it("places each returned row under its returned parent, the outside group, or the top, expanding every path", () => {
+    const at = (id: string, parent: string | undefined, extra: Record<string, unknown> = {}) => ({ id, values: { code: id, ...(parent ? { parent } : {}) }, ...extra }) as unknown as EntityListRowV1;
+    const { levels, expanded } = levelsFromMatches([at("m", "b", { treeRole: "match" }), at("b", "a", { treeRole: "context" }), at("a", undefined, { treeRole: "context" }), at("x", "hidden", { treeRole: "match", parentOutsideView: true })], tree);
+    assert.deepEqual(levels.get(TREE_ROOTS)!.rows.map((item) => item.id), ["a"]);
+    assert.deepEqual(levels.get(childLevel("a"))!.rows.map((item) => item.id), ["b"]);
+    assert.deepEqual(levels.get(childLevel("b"))!.rows.map((item) => item.id), ["m"]);
+    assert.deepEqual(levels.get(TREE_ORPHANS)!.rows.map((item) => item.id), ["x"]);
+    assert.deepEqual([...expanded].sort(), ["a", "b"]);
   });
 });
 

@@ -746,6 +746,21 @@ describe("safe entity list service", () => {
     expect(roots.rows.map((row) => [row.values["code"], row.hasChildren, "parentOutsideView" in row])).toEqual([["1000", true, false]]);
     const orphans = await lists.list({ ...request, hierarchy: "orphans" });
     expect(orphans.rows.map((row) => [row.values["code"], row.hasChildren, row.parentOutsideView])).toEqual([["1200", false, true]]);
+ 
+    for (const row of [...flat.rows, ...roots.rows, ...orphans.rows]) expect(row).not.toHaveProperty("treeRole");
+    for (const page of [flat, roots, orphans]) {
+      expect(page).not.toHaveProperty("matchesTruncated");
+      expect(page).not.toHaveProperty("matchesBeyondDepth");
+    }
+    // Matches (B2): a search or filter of their own is required.
+    await expect(lists.list({ ...request, hierarchy: "matches" })).rejects.toMatchObject({ code: "LIST_TREE_MATCHES_UNCONSTRAINED" });
+    await expect(lists.list({ ...request, filters: [{ field: "parent", operator: "is_null" }], hierarchy: "matches" })).rejects.toMatchObject({ code: "LIST_TREE_MATCHES_UNCONSTRAINED" });
+    const matches = parseEntityListResult(await lists.list({ ...request, filters: [{ field: "code", operator: "eq", value: "1100" }], hierarchy: "matches" }));
+    expect(matches.rows.map((row) => [row.values["code"], row.treeRole, row.hasChildren])).toEqual([["1100", "match", false], ["1000", "context", true]]);
+    expect(matches.pagination.hasNext).toBe(false);
+    expect(matches.pagination.pageSize).toBe(1);
+    const outside = await lists.list({ ...request, filters: [{ field: "code", operator: "eq", value: "1200" }], hierarchy: "matches" });
+    expect(outside.rows.map((row) => [row.values["code"], row.parentOutsideView])).toEqual([["1200", true]]);
   });
 
   it("browses a scoped hierarchy one owner at a time (Tree blueprint T1)", async () => {

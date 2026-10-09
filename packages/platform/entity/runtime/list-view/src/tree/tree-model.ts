@@ -112,7 +112,65 @@ export function treeScopeSatisfied(state: Pick<ListLocationStateV1, "filters">, 
  * and no tree request is sent. */
 export function treePageState(state: ListLocationStateV1, descriptor: EntityListDescriptorV1): ListLocationStateV1 | TreeQueryState {
   const tree = descriptor.surface.tree;
-  return state.mode === "tree" && tree && treeScopeSatisfied(state, tree) ? rootsQuery(state, descriptor, tree) : state;
+  if (state.mode !== "tree" || !tree || !treeScopeSatisfied(state, tree)) return state;
+  return treeConstrained(state, descriptor, tree) ? matchesQuery(state, descriptor, tree) : rootsQuery(state, descriptor, tree);
+}
+
+/** Whether the list has a search or a filter of its own (not the parent or
+ * scope filter): then Tree shows matches with their paths (B2, section 7.3),
+ * the same rule the server applies (`LIST_TREE_MATCHES_UNCONSTRAINED`). */
+export function treeConstrained(state: Pick<ListLocationStateV1, "filters" | "query">, descriptor: EntityListDescriptorV1, tree: ListTreeV1): boolean {
+  const query = state.query?.trim() ?? "";
+  return (
+    (query.length > 0 && query.length >= descriptor.surface.search.minimumQueryLength) ||
+    state.filters.some((filter) => filter.field !== tree.parentField && filter.field !== tree.scopeField)
+  );
+}
+
+/** One request for the matches and the ancestors that place them, sorted by
+ * readable identity; the server caps it at 500 matches. */
+export function matchesQuery(state: ListLocationStateV1, descriptor: EntityListDescriptorV1, tree: ListTreeV1): TreeQueryState {
+  const identity = descriptor.fields.find((field) => field.key === descriptor.entity.identityField);
+  return {
+    ...state,
+    filters: state.filters.filter((filter) => filter.field !== tree.parentField),
+    sort: identity?.sortable ? [{ field: identity.key, direction: "asc" }] : [],
+    columns: treeColumns(state, descriptor, tree),
+    groups: undefined,
+    cursor: undefined,
+    pageIndex: undefined,
+    hierarchy: "matches",
+  };
+}
+
+/** The levels a matches response draws: each row under its returned parent;
+ * paths that reach a root at the top; paths stopped by an unreadable parent in
+ * the outside-your-view group. Every row with returned children starts
+ * expanded, so each match is seen in context. */
+export function levelsFromMatches(rows: readonly EntityListRowV1[], tree: ListTreeV1): { readonly levels: TreeLevels; readonly expanded: ReadonlySet<string> } {
+  const ids = new Set(rows.map((row) => row.id));
+  // A row with returned children expands to them, whatever its filtered child
+  // existence says: a context ancestor rarely matches the search itself.
+  const parents = new Set(rows.flatMap((row) => {
+    const parent = parentIdOf(row, tree);
+    return parent && ids.has(parent) ? [parent] : [];
+  }));
+  rows = rows.map((row) => (parents.has(row.id) && row.hasChildren !== true ? { ...row, hasChildren: true } : row));
+  const roots: EntityListRowV1[] = [];
+  const orphans: EntityListRowV1[] = [];
+  const children = new Map<string, EntityListRowV1[]>();
+  for (const row of rows) {
+    const parent = parentIdOf(row, tree);
+    if (parent && ids.has(parent)) children.set(parent, [...(children.get(parent) ?? []), row]);
+    else if (row.parentOutsideView) orphans.push(row);
+    else roots.push(row);
+  }
+  const levels = new Map<string, TreeLevel>([
+    [TREE_ROOTS, { rows: roots, status: "ready" }],
+    [TREE_ORPHANS, { rows: orphans, status: "ready" }],
+  ]);
+  for (const [parent, list] of children) levels.set(childLevel(parent), { rows: list, status: "ready" });
+  return { levels, expanded: new Set(children.keys()) };
 }
 
 /** Whether a row may have children by its declared node kind (T2). */

@@ -1,4 +1,5 @@
 import { lockedScope } from "./list-tree.js";
+import { LIST_TREE_MATCHES_LIMIT } from "./tree-matches.js";
 import {
   withEntityEffectiveRead,
   type EntityLiveReadEvidencePort,
@@ -153,6 +154,14 @@ export function createRecordListExecutor<Transaction = unknown>(
           if (!locked.fields.has(scopeField) && (scopeFilters.length !== 1 || scopeFilters[0]!.operator !== "eq" || !readableKeys.has(scopeField)))
             throw new RecordServiceError(400, "LIST_TREE_SCOPE_REQUIRED", "Choose exactly one value of the hierarchy's scope field");
         }
+        // Matches need a search or a filter of their own; otherwise the
+        // request would read the whole Entity with its paths (section 5.5).
+        if (
+          query.hierarchy === "matches" &&
+          !query.search &&
+          !(query.filters ?? []).some((filter) => filter.field !== descriptor.hierarchy!.parentField && filter.field !== scopeField)
+        )
+          throw new RecordServiceError(400, "LIST_TREE_MATCHES_UNCONSTRAINED", "Search or filter the tree to see matches");
       }
       const responseFields = responseProjection(
         descriptor,
@@ -343,7 +352,8 @@ export function createRecordListExecutor<Transaction = unknown>(
                   ),
                 },
                 tenantId: query.context.tenantId,
-                limit,
+                // Matches return up to the fixed match limit, whatever the page size.
+                limit: query.hierarchy === "matches" ? LIST_TREE_MATCHES_LIMIT : limit,
                 filters: query.filters ?? [],
                 sort: query.sort ?? [],
                 countMode: query.countMode ?? "none",
@@ -364,14 +374,18 @@ export function createRecordListExecutor<Transaction = unknown>(
                         mode: query.hierarchy,
                         parentField: descriptor.hierarchy.parentField,
                         ...(descriptor.hierarchy.scopeField ? { scopeField: descriptor.hierarchy.scopeField } : {}),
+                        maxDepth: descriptor.hierarchy.maxDepth,
                       },
                     }
                   : {}),
                 ...(query.cursor ? { cursor: query.cursor } : {}),
                 ...(query.search ? { search: query.search } : {}),
               };
+              // A matches request is one bounded response; its authorization is
+              // already proven covered by SQL (Tree requests fail closed otherwise).
               if (
                 enforced &&
+                query.hierarchy !== "matches" &&
                 (query.group || (query.countMode && query.countMode !== "none"))
               )
                 return executeAuthorizedAggregate({

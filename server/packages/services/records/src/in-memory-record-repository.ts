@@ -1,3 +1,4 @@
+import { assembleTreeMatches } from "./tree-matches.js";
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
 import { randomUUID } from "node:crypto";
@@ -51,6 +52,34 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
         (!input.search || input.descriptor.fields.filter((field) => field.searchable).some((field) => String(row[field.storagePath] ?? "").toLowerCase().includes(input.search!.toLowerCase())));
       rows.sort((a, b) => compareRows(a, b, input.descriptor, input.sort ?? []));
       const total = rows.length;
+      if (hierarchy?.mode === "matches") {
+        // Search with ancestor context, as the SQL does: matches first, then a
+        // depth-bounded walk up through the visible set and the scope filter.
+        const scopeFilters = hierarchy.scopeField ? (input.filters ?? []).filter((filter) => filter.field === hierarchy.scopeField) : [];
+        const ancestorSet = visibleSet.filter((row) => scopeFilters.every((filter) => matches(row, input.descriptor, filter)));
+        const item = (row: Row) => ({
+          row: project(input.descriptor, row, input.projection),
+          id: String(idOf(row)),
+          parent: parentOf(row) === null || parentOf(row) === undefined ? null : String(parentOf(row)),
+          hasChildren: visibleSet.some((child) => parentOf(child) === idOf(row) && scopeOf(child) === scopeOf(row) && childMatches(child)),
+        });
+        const found = rows.slice(0, input.limit);
+        const ancestors = new Map<string, Row>();
+        let frontier = found.map(parentOf).filter((parent) => parent !== null && parent !== undefined);
+        for (let step = 0; step < (hierarchy.maxDepth ?? 1) - 1 && frontier.length; step += 1) {
+          const next: unknown[] = [];
+          for (const parent of frontier) {
+            const row = ancestorSet.find((candidate) => idOf(candidate) === parent);
+            if (row && !ancestors.has(String(idOf(row)))) {
+              ancestors.set(String(idOf(row)), row);
+              next.push(parentOf(row));
+            }
+          }
+          frontier = next.filter((parent) => parent !== null && parent !== undefined);
+        }
+        const assembled = assembleTreeMatches({ matches: found.map(item), ancestors: [...ancestors.values()].map(item), maxDepth: hierarchy.maxDepth ?? 1, truncated: rows.length > input.limit });
+        return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(input.countMode === "exact" ? { total } : {}), countMode: input.countMode === "exact" ? "exact" as const : "none" as const } };
+      }
       // Group counts only under exact counts (layout foundation section 5).
       const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group) : undefined;
       if (input.groupsOnly && groups)
