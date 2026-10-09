@@ -115,27 +115,39 @@ async function assertV4Available() {
 await database.connect();
 try {
   const before = await readerState();
-  assert.equal(
-    before.v4,
-    false,
-    "v4 is already installed; use the apply path only to verify ledger reuse",
-  );
-  assert.equal(
-    before.v1 && before.v2 && before.v3,
-    true,
-    "Expected the complete legacy source-reader chain",
-  );
-
-  await database.query("BEGIN");
-  await database.query(
-    "SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '15000ms'",
-  );
-  await database.query(migration);
-  const rehearsed = await readerState();
-  assert.deepEqual(rehearsed, { v1: false, v2: false, v3: false, v4: true });
-  await assertV4Available();
-  await database.query("ROLLBACK");
-  report.rollbackAndSourceReaderPassed = true;
+  const prior = (
+    await database.query(
+      "SELECT sha256, status FROM public.athyper_schema_migration_v1 WHERE migration_name = $1",
+      [migrationName],
+    )
+  ).rows[0];
+  if (before.v4) {
+    assert.deepEqual(before, { v1: false, v2: false, v3: false, v4: true });
+    assert.ok(prior, "Installed v4 requires its migration-ledger row");
+    assert.equal(prior.sha256, hash);
+    assert.equal(prior.status, "applied");
+    await database.query("BEGIN");
+    await assertV4Available();
+    await database.query("ROLLBACK");
+    report.alreadyInstalled = true;
+    report.sourceReaderPassed = true;
+  } else {
+    assert.equal(
+      before.v1 && before.v2 && before.v3,
+      true,
+      "Expected the complete legacy source-reader chain",
+    );
+    await database.query("BEGIN");
+    await database.query(
+      "SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '15000ms'",
+    );
+    await database.query(migration);
+    const rehearsed = await readerState();
+    assert.deepEqual(rehearsed, { v1: false, v2: false, v3: false, v4: true });
+    await assertV4Available();
+    await database.query("ROLLBACK");
+    report.rollbackAndSourceReaderPassed = true;
+  }
 
   if (apply) {
     await database.query("BEGIN");
@@ -146,12 +158,6 @@ try {
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       [migrationName],
     );
-    const prior = (
-      await database.query(
-        "SELECT sha256, status FROM public.athyper_schema_migration_v1 WHERE migration_name = $1",
-        [migrationName],
-      )
-    ).rows[0];
     if (prior) {
       assert.equal(prior.sha256, hash);
       assert.equal(prior.status, "applied");

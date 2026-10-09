@@ -478,6 +478,33 @@ The subsequent request authorizes recording this detailed plan. These are owner 
 
 **Retained:** complete typed graphs, canonical commands/rows, shared compiler and UI, no entity hardcoding, exact permissions, tenant/record isolation, current authorization on replay, application-role persistence, transaction integrity, required component semantics, existing supported AI declarations, independent human publication review and artifact verification.
 
+### Compiled Entity source-reader consolidation — executed 10 October 2026
+
+The remaining live native publication dependency was the three-stage approved-source
+reader (`fn_compiled_entity_compilation_source`, `v2`, `v3`). It was not safe to delete
+as an apparent legacy cluster because the native worker and host still used it. The
+cleanup replaces it with one direct `v4` reader, preserving its tenant, approval,
+independent reviewer, signature, artifact-hash and declared-target checks. Host/runtime
+and publication-authority callers use `v4`; the obsolete canonical v2 DDL file and the
+v3 wrapper are removed while historical migration bytes remain immutable.
+
+DEV applied forward migration
+`20261010_compiled_entity_source_v4_cleanup.sql`
+(`10facb8d21949287628e9dd2f08a69e159514d17d8a00123b1ab6908c1363c46`) through the
+schema ledger. The installer first rehearsed the change inside a transaction, verified
+approved-source reads under `athyper_publication_service`, and rolled back. It then
+applied the same bytes under an advisory lock, recorded the ledger row and verified
+replay. The API, worker and scheduler were quiesced before the old readers were removed,
+then restarted from local application image set `candidate-b3a57418744c` (source commit
+`b3a57418744cd949f65528e94a6b266b672716d8`). All four services, including control API,
+are healthy. The PostgreSQL operation-projection test passed against the installed
+reader for all three planes; its writes roll back. No Entity draft, release, artifact,
+policy, deployment or activation was created or changed by this cleanup.
+
+This closes only the live reader-chain prerequisite. The broader cleanup still requires
+separate classification of any remaining schema or code family before removal; no table
+or data reset is implied by this result.
+
 ### Current status — installed local reset, 9 October 2026
 
 The owner approved execution and refreshed separate Admin/Owner sessions. Four expanded
