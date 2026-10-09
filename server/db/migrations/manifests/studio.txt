@@ -81,3 +81,5 @@
 20261009_local_publication_request.sql
 20261009_local_publication_enrollment.sql
 20261009_local_publication_entity_reads.sql
+20261009_local_publication_transitions.sql
+20261009_local_publication_admission_replay.sql

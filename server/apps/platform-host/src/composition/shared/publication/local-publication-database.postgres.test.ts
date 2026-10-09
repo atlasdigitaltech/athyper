@@ -155,7 +155,7 @@ CREATE TABLE master.principal(id uuid, tenant_id uuid, principal_type text, stat
 CREATE TABLE control.policy_definition(id uuid PRIMARY KEY,tenant_id uuid,entity_type text,status text,definition_hash text,version_no int,created_by uuid,updated_by uuid,effective_from date,effective_until date,name text);
 CREATE TABLE control.policy_rule(policy_definition_id uuid,action_code text,condition_expr jsonb,action_config jsonb);
 CREATE TABLE metadata.entity(id uuid,tenant_id uuid,ownership_model text);
-CREATE TABLE metadata.entity_change_set(id uuid PRIMARY KEY,entity_id uuid,tenant_id uuid,source_kind text,native_core_layout_version int,created_by uuid,lock_version bigint,status text);
+CREATE TABLE metadata.entity_change_set(id uuid PRIMARY KEY,entity_id uuid,tenant_id uuid,source_kind text,native_core_layout_version int,created_by uuid,lock_version bigint,status text,submitted_by uuid,approved_by uuid,base_release_id uuid,status_changed_by uuid);
 CREATE TABLE snapshot.entity_draft_save(change_set_id uuid,tenant_id uuid,lock_version bigint,graph jsonb,graph_hash text);
 CREATE TABLE metadata.entity_operation(id uuid,change_set_id uuid,entity_id uuid,tenant_id uuid,export_max_records bigint);
 CREATE TABLE metadata.entity_field_identity(id uuid,entity_id uuid,tenant_id uuid);
@@ -172,7 +172,7 @@ INSERT INTO master.principal VALUES('${developer}','${tenant}','user','active'),
 INSERT INTO control.policy_definition VALUES('${authorityId}','${tenant}','metadata.publication','active','${authority.hash}',1,'${developer}','${owner}',CURRENT_DATE-1,NULL,'local-test');
 INSERT INTO control.policy_rule VALUES('${authorityId}','allow',${literal(condition)},${literal({ schema: "athyper.machine-publication-enrollment/1", environment: "dev", tenantId: tenant, policy })});
 INSERT INTO metadata.entity VALUES('${entity}',NULL,'system');
-INSERT INTO metadata.entity_change_set VALUES('${draft}','${entity}',NULL,'product',2,'${developer}',1,'draft');
+INSERT INTO metadata.entity_change_set(id,entity_id,tenant_id,source_kind,native_core_layout_version,created_by,lock_version,status) VALUES('${draft}','${entity}',NULL,'product',2,'${developer}',1,'draft');
 INSERT INTO snapshot.entity_draft_save VALUES('${draft}',NULL,1,${literal(graph)},'${sourceHash}');`);
       q(
         readFileSync(
@@ -272,6 +272,140 @@ INSERT INTO snapshot.entity_draft_save VALUES('${draft}',NULL,1,${literal(graph)
       expect(
         q("SELECT count(*) FROM publication.local_publication_request;").trim(),
       ).toBe("1");
+      // Exercise the real authority/validation/transition routines with a minimal
+      // lifecycle fixture. This is not a full-schema deployed publication proof.
+      const ddl = (file: string) =>
+        readFileSync(
+          new URL(
+            `../../../../../../db/ddl/planes/studio/${file}`,
+            import.meta.url,
+          ),
+          "utf8",
+        );
+      q(`CREATE DOMAIN metadata.contract_validation_status_d AS text;
+CREATE DOMAIN metadata.entity_change_set_status_d AS text;
+CREATE TABLE snapshot.entity_contract_revision(id uuid DEFAULT gen_random_uuid(),tenant_id uuid,entity_id uuid,change_set_id uuid,revision_no bigint,parent_revision_id uuid,parent_revision_hash text,base_release_id uuid,contract_schema_code text,contract_schema_version text,contract_json jsonb,contract_hash text,revision_hash text,payload_size_bytes bigint,validation_status text,validation_diagnostics jsonb,captured_by uuid);
+ALTER TABLE snapshot.entity_draft_save ADD COLUMN captured_by uuid, ADD COLUMN capture_kind text;
+GRANT SELECT,INSERT ON snapshot.entity_contract_revision,snapshot.entity_draft_save TO athyper_definer_product_publication;
+CREATE FUNCTION metadata.fixture_status_revision() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+ NEW.lock_version:=OLD.lock_version+1;
+ IF NEW.status='in_review' THEN NEW.submitted_by:=NEW.status_changed_by; END IF;
+ IF NEW.status='approved' THEN NEW.approved_by:=NEW.status_changed_by; END IF;
+ RETURN NEW; END $$;
+CREATE TRIGGER fixture_status_revision BEFORE UPDATE OF status ON metadata.entity_change_set FOR EACH ROW EXECUTE FUNCTION metadata.fixture_status_revision();`);
+      const capture = ddl("metadata/63_native_review_source.sql");
+      q(
+        capture.slice(
+          capture.indexOf(
+            "CREATE FUNCTION metadata.capture_native_review_revision",
+          ),
+          capture.indexOf("-- Exact installed component evidence"),
+        ),
+      );
+      const native = ddl("publication/36_native_publication_authority.sql");
+      q(
+        native.slice(
+          native.indexOf(
+            "CREATE OR REPLACE FUNCTION publication.fn_system_entity_authority(",
+          ),
+          native.indexOf(
+            "CREATE OR REPLACE FUNCTION publication.fn_create_system_entity_release(",
+          ),
+        ),
+      );
+      const commands = ddl("publication/15_system_entity_commands.sql");
+      q(
+        commands.slice(
+          commands.indexOf(
+            "CREATE OR REPLACE FUNCTION publication.fn_transition_system_entity_change_set(",
+          ),
+          commands.indexOf(
+            "CREATE OR REPLACE FUNCTION publication.fn_create_system_entity_release(",
+          ),
+        ),
+      );
+      q(ddl("publication/42_local_publication_transitions.sql"));
+      q(`ALTER FUNCTION publication.fn_system_entity_authority(uuid,text) OWNER TO athyper_definer_product_publication;
+ALTER FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid) OWNER TO athyper_definer_product_publication;
+ALTER FUNCTION publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) OWNER TO athyper_definer_product_publication;
+GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid),publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) TO athyper_definer_product_publication;`);
+      const report = { contractHash: sourceHash, issues: [] };
+      const transition = (phase: string, validation = report) =>
+        `SELECT publication.transition_local_publication_request('${request.hash}','${phase}',${literal(validation)});`;
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} ${transition("submit")} ROLLBACK;`,
+        ),
+      ).toThrow(/PHASE_DENIED/);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", author)} ${transition("review")} ROLLBACK;`,
+        ),
+      ).toThrow(/PHASE_DENIED/);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", author)} ${transition("submit", { contractHash: "f".repeat(64), issues: [] })} ROLLBACK;`,
+        ),
+      ).toThrow(/VALIDATION_REQUIRED/);
+      q(
+        `BEGIN; ${context("athyper_worker", author)} ${transition("submit")} ROLLBACK;`,
+      );
+      expect(
+        q(
+          `SELECT status||':'||lock_version FROM metadata.entity_change_set WHERE id='${draft}';`,
+        ).trim(),
+      ).toBe("draft:1");
+      expect(
+        q("SELECT count(*) FROM snapshot.entity_contract_revision;").trim(),
+      ).toBe("0");
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", author)} ${transition("submit")} ${transition("submit")} COMMIT;`,
+        ),
+      ).toContain('"replayed": true');
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} ${transition("review")} ${transition("review")} COMMIT;`,
+        ),
+      ).toContain('"replayed": true');
+      expect(
+        q(
+          `SELECT status||':'||lock_version FROM metadata.entity_change_set WHERE id='${draft}';`,
+        ).trim(),
+      ).toBe("approved:3");
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", author)} ${transition("submit")} ROLLBACK;`,
+        ),
+      ).toContain('"replayed": true');
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} ${admit} ROLLBACK;`,
+        ),
+      ).toContain(request.hash);
+      expect(
+        q(
+          `SELECT count(*),count(DISTINCT graph::text) FROM snapshot.entity_draft_save WHERE change_set_id='${draft}';`,
+        ).trim(),
+      ).toBe("3|1");
+      expect(
+        q(`BEGIN; ${context("athyper_worker", publisher)} ${read} ROLLBACK;`),
+      ).toContain(sourceHash);
+      expect(() =>
+        q(
+          `BEGIN; UPDATE control.policy_definition SET status='revoked' WHERE id='${authorityId}'; ${context("athyper_worker", publisher)} ${transition("review")} ROLLBACK;`,
+        ),
+      ).toThrow();
+      expect(() =>
+        q(
+          `BEGIN; UPDATE metadata.entity_change_set SET lock_version=4 WHERE id='${draft}'; ${context("athyper_worker", publisher)} ${read} ROLLBACK;`,
+        ),
+      ).toThrow(/SOURCE_CHANGED/);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true); SELECT publication.fn_system_entity_authority('${draft}','release'); ROLLBACK;`,
+        ),
+      ).toThrow(/permission denied|NOT_CONFIGURED/);
     } finally {
       try {
         docker("rm", "-f", name);

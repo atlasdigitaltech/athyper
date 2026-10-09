@@ -14,6 +14,10 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-ADMISSION-REPLAY":
+    "20261009_local_publication_admission_replay.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-TRANSITIONS":
+    "20261009_local_publication_transitions.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ENTITY-READS":
     "20261009_local_publication_entity_reads.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ENROLLMENT":
@@ -120,6 +124,7 @@ try {
   if (
     [
       "20261009_local_publication_enrollment.sql",
+      "20261009_local_publication_transitions.sql",
       "20261009_local_publication_entity_reads.sql",
     ].includes(name)
   ) {
@@ -145,6 +150,7 @@ try {
       "20261009_native_publication_validation.sql",
       "20261009_local_publication_request.sql",
       "20261009_local_publication_enrollment.sql",
+      "20261009_local_publication_transitions.sql",
     ].includes(name)
   ) {
     const dependency = JSON.parse(
@@ -161,6 +167,20 @@ try {
     assert.equal(installed.status, "applied");
   }
 
+  if (name === "20261009_local_publication_admission_replay.sql") {
+    const dependencyName = "20261009_local_publication_transitions.sql";
+    const dependency = JSON.parse(
+      readFileSync(new URL("migrations/inventory.json", root), "utf8"),
+    ).entries.find((e) => e.path === "migrations/" + dependencyName);
+    const installed = (
+      await db.query(
+        "SELECT sha256,status FROM public.athyper_schema_migration_v1 WHERE migration_name=$1",
+        [dependencyName],
+      )
+    ).rows[0];
+    assert.equal(installed?.status, "applied");
+    assert.equal(installed?.sha256, dependency.sha256);
+  }
   const prior = (
     await db.query(
       "SELECT sha256,status FROM public.athyper_schema_migration_v1 WHERE migration_name=$1",

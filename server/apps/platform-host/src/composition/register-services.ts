@@ -1,3 +1,7 @@
+import {
+  createLocalPublicationPreparationHandler,
+  PREPARE_LOCAL_PUBLICATION_JOB,
+} from "./shared/publication/local-publication-job.js";
 import { createNativePublicationStartup } from "./shared/publication/native-publication-startup.js";
 import { createLocalEntityLiveReadEvidence } from "./shared/publication/entity-live-read-evidence.js";
 import { createDeployedComponentQualification } from "./shared/publication/component-qualification.js";
@@ -1143,6 +1147,7 @@ export function registerServices(
           const native = createNativePublicationStartup({
             environment: process.env,
             localConfiguration: configuration,
+            audit: container.platform.audit,
             targetDatabases: metadataDatabases,
             run: (work) =>
               container.adapters.athyperDatabase!.withTenantTransaction((tx) =>
@@ -1163,6 +1168,11 @@ export function registerServices(
                 : {}),
             },
           });
+          if (native.transitionLocalNativeSource)
+            localPublicationPreparations.set(container, {
+              configuration,
+              transition: native.transitionLocalNativeSource,
+            });
           return createCompiledRuntimePublication({
             nativeSource: native.readNativeSource,
             authority,
@@ -5482,6 +5492,10 @@ const localGraphRuntimeQualifiers = new WeakMap<
   Container,
   { qualify(profile: unknown, bindings: unknown): void }
 >();
+const localPublicationPreparations = new WeakMap<
+  Container,
+  Parameters<typeof createLocalPublicationPreparationHandler>[0]
+>();
 const publicationTargetQualifications = new WeakMap<
   Container,
   Parameters<
@@ -6419,6 +6433,25 @@ function registerPublication(
         coordinatedWorkload?.instance ?? process.env["ATHYPER_INSTANCE"],
       targetPlanes: config.publication.targetPlanes,
     });
+    const localPreparation = localPublicationPreparations.get(container);
+    if (localPreparation) {
+      container.runtimes.jobs.register(
+        PUBLICATION_AUTHORITY_QUEUE,
+        PREPARE_LOCAL_PUBLICATION_JOB,
+        createLocalPublicationPreparationHandler(localPreparation),
+      );
+      container.runtimes.jobDefinitions.push({
+        code: PREPARE_LOCAL_PUBLICATION_JOB,
+        owner: "@athyper/server-platform-host",
+        queue: PUBLICATION_AUTHORITY_QUEUE,
+        name: PREPARE_LOCAL_PUBLICATION_JOB,
+        scope: "plane",
+        payloadSchema: { name: PREPARE_LOCAL_PUBLICATION_JOB, version: 1 },
+        timeoutMs: 120_000,
+        maxAttempts: 5,
+        executionRetentionDays: 90,
+      });
+    }
     const handlers = createPublicationAuthorityHandlers(
       work,
       container.runtimes.jobs,

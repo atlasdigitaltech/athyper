@@ -89,6 +89,9 @@ DECLARE cs metadata.entity_change_set%ROWTYPE; d control.policy_definition%ROWTY
   config jsonb; policy jsonb; enrolled_policy jsonb; human_review boolean; saved jsonb; actor uuid:=master.current_principal_id_soft();
   tenant uuid:=shared.current_tenant_id_soft(); author uuid; publisher uuid; n integer; predecessor jsonb; marker jsonb;
 BEGIN
+  IF NULLIF(current_setting('app.local_publication_request_hash',true),'') IS NOT NULL THEN
+    RETURN publication.local_publication_phase_authority(p_change_set,p_phase);
+  END IF;
   IF actor IS NULL OR tenant IS NULL OR p_phase IS NULL OR p_phase NOT IN ('validate','submit','review','release','prepare') THEN
     RAISE EXCEPTION 'SYSTEM_PUBLICATION_CONTEXT_DENIED' USING ERRCODE='42501';
   END IF;

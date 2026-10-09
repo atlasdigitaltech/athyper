@@ -2513,6 +2513,32 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/40_native_worker_entity_read.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_transitions.sql",
+      "path": "migrations/20261009_local_publication_transitions.sql",
+      "sha256": "529bfd0fe5d100cc3e3ef02d67c3106b0a43cca44e485627ff8b68ff35bab559",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Local request-scoped native submission and workload review with immutable graph, phase attribution and replay checks; release execution remains rejected.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/41_local_publication_request.sql",
+        "ddl/planes/studio/publication/42_local_publication_transitions.sql",
+        "ddl/planes/studio/publication/36_native_publication_authority.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_admission_replay.sql",
+      "path": "migrations/20261009_local_publication_admission_replay.sql",
+      "sha256": "f31f20e0cf57667e2277b43e1ec68e01771c90adbb7027ebfa4b97c8e7ca23c0",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Exact authenticated developer admission replay may use recorded unchanged-source lifecycle progression; unrelated revisions still reject.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/41_local_publication_request.sql"
+      ]
     }
   ]
 }

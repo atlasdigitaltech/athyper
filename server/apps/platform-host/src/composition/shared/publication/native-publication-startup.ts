@@ -1,3 +1,9 @@
+import { randomUUID } from "node:crypto";
+import type { AuditRecorder } from "@athyper/server-contract-audit";
+import {
+  createKyselyPermissionResolver,
+  createPermissionAuthorizer,
+} from "@athyper/server-platform-iam";
 import { assertLocalPublicationEnvironment } from "@athyper/server-contract-publication";
 import { withLocalPublicationRequest } from "./local-publication-database.js";
 import { readFileSync, statSync } from "node:fs";
@@ -20,6 +26,7 @@ import type { AuthoringServiceOptions } from "@athyper/server-plane-studio-meta-
  * reader requires the current enrolled workload for each locked source read. */
 export function createNativePublicationStartup(options: {
   environment: NodeJS.ProcessEnv;
+  audit?: AuditRecorder<Kysely<Record<string, never>>>;
   loader: ComponentLoaderOptions;
   targetDatabases?: Partial<
     Record<"neon" | "mesh", Kysely<Record<string, never>>>
@@ -39,6 +46,16 @@ export function createNativePublicationStartup(options: {
   run<T>(work: (tx: Kysely<Record<string, never>>) => Promise<T>): Promise<T>;
 }): Pick<AuthoringServiceOptions, "nativePublicationSource"> & {
   readNativeSource?: ReturnType<typeof createNativeReviewSource>;
+  transitionLocalNativeSource?: (
+    requestHash: string,
+    phase: "submit" | "review",
+  ) => Promise<{
+    basis: "local_development_authority";
+    requestHash: string;
+    revision: number;
+    status: "in_review" | "approved";
+    replayed: boolean;
+  }>;
   readLocalNativeSource?: (
     requestHash: string,
   ) => ReturnType<ReturnType<typeof createNativeReviewSource>>;
@@ -158,7 +175,10 @@ export function createNativePublicationStartup(options: {
             authority,
             inputs: {
               changeSetId: request.inputs.changeSetId,
-              revision: Number(current.rows[0]!.lock_version),
+              // SQL has checked any lifecycle advance against this exact receipt
+              // and identical saved graph. The immutable input pins the save,
+              // not the later submission/approval revision.
+              revision: request.inputs.revision,
               sourceHash: compiled.contractHash,
               compilerHash: publicationCompilerIdentity().buildHash,
               resourceHashes: [
@@ -175,6 +195,158 @@ export function createNativePublicationStartup(options: {
       }
     : options.localRequests;
   return {
+    ...(local?.localAuthority && localRequests
+      ? {
+          transitionLocalNativeSource: (
+            requestHash: string,
+            phase: "submit" | "review",
+          ) =>
+            localRequests.run((tx) =>
+              withLocalPublicationRequest({
+                transaction: tx,
+                host: localRequests.host,
+                requestHash,
+                resolveCurrent: localRequests.resolveCurrent,
+                execute: async (request, transaction) => {
+                  if (!options.audit)
+                    throw Error("LOCAL_PUBLICATION_AUDIT_REQUIRED");
+                  // Full production resource resolution/compilation already ran above.
+                  // Never accept a caller's "valid" report or actor in this command.
+                  const actor =
+                    phase === "submit" ? local.author : local.publisher;
+                  const active =
+                    await sql`SELECT id FROM master.principal WHERE tenant_id=${local.tenantId}::uuid
+              AND id=${actor.principalId}::uuid AND code=${actor.code} AND principal_type='service_account'
+              AND status='active' AND auth_epoch=${actor.authEpoch}`.execute(
+                      transaction,
+                    );
+                  if (active.rows.length !== 1)
+                    throw Error("LOCAL_PUBLICATION_WORKLOAD_REVOKED");
+                  await sql`SELECT set_config('app.current_principal_id',${actor.principalId},true)`.execute(
+                    transaction,
+                  );
+                  const identity = {
+                    planeKey: "studio" as const,
+                    realmKey: local.realmKey,
+                    tenantId: local.tenantId,
+                    principalId: actor.principalId,
+                    authEpoch: actor.authEpoch,
+                  };
+                  const permissions = await createKyselyPermissionResolver({
+                    run: (_identity, work) => work(transaction),
+                  }).resolve(identity);
+                  // Existing workflow permissions and assurance rules remain intact.
+                  // The scoped standing authority supplies the policy decision only.
+                  const permissionCode =
+                    phase === "submit"
+                      ? "studio.metadata.contract.submit"
+                      : "studio.metadata.contract.review";
+                  const decision = await createPermissionAuthorizer({
+                    policyGate: {
+                      async evaluate(input) {
+                        const allowed =
+                          input.permissionCode === permissionCode &&
+                          input.context.principalId === actor.principalId &&
+                          input.context.tenantId === local.tenantId &&
+                          input.context.planeKey === "studio" &&
+                          input.resource?.changeSetId ===
+                            request.inputs.changeSetId;
+                        return {
+                          allowed,
+                          sodSatisfied: allowed,
+                          reason: allowed
+                            ? undefined
+                            : "local_publication_scope_denied",
+                        };
+                      },
+                    },
+                  }).authorize({
+                    context: {
+                      ...identity,
+                      permissions,
+                      profileHash: permissions.profileHash,
+                      requestId: request.hash,
+                      correlationId: request.hash,
+                    },
+                    permissionCode,
+                    resource: {
+                      tenantId: local.tenantId,
+                      resourceCode: "metadata.entity_change_set",
+                      recordId: request.inputs.changeSetId,
+                      changeSetId: request.inputs.changeSetId,
+                    },
+                  });
+                  if (!decision.allowed)
+                    throw Error("LOCAL_PUBLICATION_IAM_DENIED");
+                  const result = await sql<{
+                    receipt: {
+                      basis: "local_development_authority";
+                      requestHash: string;
+                      revision: number;
+                      status: "in_review" | "approved";
+                      replayed: boolean;
+                    };
+                  }>`SELECT publication.transition_local_publication_request(
+              ${request.hash},${phase},${JSON.stringify({ contractHash: request.inputs.sourceHash, issues: [] })}::jsonb) AS receipt`.execute(
+                    transaction,
+                  );
+                  const receipt = result.rows[0]?.receipt;
+                  if (
+                    result.rows.length !== 1 ||
+                    !receipt ||
+                    receipt.requestHash !== request.hash ||
+                    receipt.basis !== "local_development_authority" ||
+                    !Number.isSafeInteger(receipt.revision) ||
+                    receipt.revision <= request.inputs.revision ||
+                    !["in_review", "approved"].includes(receipt.status) ||
+                    (phase === "review" && receipt.status !== "approved") ||
+                    typeof receipt.replayed !== "boolean"
+                  )
+                    throw Error("LOCAL_PUBLICATION_TRANSITION_RECEIPT_INVALID");
+                  if (!receipt.replayed) {
+                    const auditId = randomUUID();
+                    const recorded = await options.audit.record(
+                      {
+                        eventCode: "metadata.entity.product.publication",
+                        action: "local_publication_" + phase,
+                        actor: {
+                          kind: "service",
+                          principalId: actor.principalId,
+                        },
+                        tenantId: local.tenantId,
+                        outcome: "success",
+                        severity: "critical",
+                        requestId: auditId,
+                        correlationId: auditId,
+                        entityType: "metadata.entity_change_set",
+                        entityId: request.inputs.changeSetId,
+                        metadata: {
+                          ...receipt,
+                          developerPrincipalId:
+                            request.admission.developerPrincipalId,
+                          authority: request.authority,
+                          sourceHash: request.inputs.sourceHash,
+                          sourceRevision: request.inputs.revision,
+                        },
+                      },
+                      transaction,
+                    );
+                    if (
+                      !recorded.id ||
+                      recorded.actor.principalId !== actor.principalId ||
+                      recorded.tenantId !== local.tenantId
+                    )
+                      throw Error("LOCAL_PUBLICATION_AUDIT_NOT_RECORDED");
+                  }
+                  await sql`SELECT set_config('app.current_principal_id',${local.publisher.principalId},true)`.execute(
+                    transaction,
+                  );
+                  return receipt;
+                },
+              }),
+            ),
+        }
+      : {}),
     ...(localRequests
       ? {
           readLocalNativeSource: (requestHash: string) =>

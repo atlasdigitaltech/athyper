@@ -409,6 +409,18 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Exact local request admission/read under current enrolled authority; no public source graph or release writes."
+  },
+  {
+    "signature": "publication.local_publication_phase_authority(uuid, text)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local DEV request lifecycle; active standing scope, distinct workloads, unchanged native graph, recorded revision progression and idempotent phase replay."
+  },
+  {
+    "signature": "publication.transition_local_publication_request(text, text, jsonb)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local DEV request lifecycle; active standing scope, distinct workloads, unchanged native graph, recorded revision progression and idempotent phase replay."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -625,8 +637,10 @@ BEGIN
   "publication.fn_transition_deployment(uuid, publication.deployment_status_d, jsonb)",
   "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
   "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
+  "publication.local_publication_phase_authority(uuid, text)",
   "publication.native_worker_entity_visible(uuid)",
   "publication.read_local_publication_request(text)",
+  "publication.transition_local_publication_request(text, text, jsonb)",
   "runtime_meta.fn_activate_release(uuid, jsonb)",
   "runtime_meta.fn_active_business_partner_definition(text)",
   "runtime_meta.fn_active_entity_descriptor(text, text)",

@@ -1,27 +1,6 @@
--- Exact request admission and native compiler reads under installed local authority.
--- This is a command receipt, not a release ledger. No installer rows or grants
--- on source graphs are created. Existing human publication is unchanged.
-CREATE TABLE publication.local_publication_host (
- singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
- identity jsonb NOT NULL CHECK (jsonb_typeof(identity)='object')
-);
-REVOKE ALL ON publication.local_publication_host FROM PUBLIC;
-CREATE TABLE publication.local_publication_request (
- request_hash text PRIMARY KEY CHECK (request_hash ~ '^[a-f0-9]{64}$'),
- tenant_id uuid NOT NULL,
- authority_id uuid NOT NULL REFERENCES control.policy_definition(id),
- change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id),
- developer_id uuid NOT NULL,
- publisher_id uuid NOT NULL,
- request_json jsonb NOT NULL,
- admitted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
- execution_revision bigint,
- execution_status text CHECK (execution_status IN ('draft','in_review','approved'))
-);
-ALTER TABLE publication.local_publication_request ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON publication.local_publication_request FROM PUBLIC;
-
-CREATE FUNCTION publication.fn_local_publication_request_authority(p_request jsonb,p_admit boolean)
+-- Preserve exact developer admission replay after checked lifecycle progression.
+BEGIN;
+CREATE OR REPLACE FUNCTION publication.fn_local_publication_request_authority(p_request jsonb,p_admit boolean)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE tenant uuid:=shared.current_tenant_id_soft(); actor uuid:=master.current_principal_id_soft();
  d control.policy_definition%ROWTYPE; config jsonb; policy jsonb; expected_condition jsonb; a jsonb; host jsonb; admission jsonb:=p_request->'admission';
@@ -127,37 +106,5 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_local_publication_request_authority(jsonb,boolean) FROM PUBLIC;
 
-CREATE FUNCTION publication.admit_local_publication_request(p_request jsonb) RETURNS text
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE checked jsonb;
-BEGIN
- checked:=publication.fn_local_publication_request_authority(p_request,true);
- INSERT INTO publication.local_publication_request(request_hash,tenant_id,authority_id,change_set_id,developer_id,publisher_id,request_json)
- VALUES(p_request->>'hash',(checked->>'tenantId')::uuid,(checked->>'authorityId')::uuid,(checked#>>'{changeSet,id}')::uuid,
-   (checked->>'developerId')::uuid,(checked->>'publisherId')::uuid,p_request)
- ON CONFLICT(request_hash) DO NOTHING;
- IF NOT EXISTS(SELECT 1 FROM publication.local_publication_request WHERE request_hash=p_request->>'hash' AND request_json=p_request
- AND tenant_id=(checked->>'tenantId')::uuid) THEN RAISE EXCEPTION 'LOCAL_PUBLICATION_REPLAY_CONFLICT' USING ERRCODE='42501'; END IF;
- RETURN p_request->>'hash';
-END $$;
-REVOKE ALL ON FUNCTION publication.admit_local_publication_request(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.admit_local_publication_request(jsonb) TO athyper_control_api;
 
-CREATE FUNCTION publication.read_local_publication_request(p_hash text) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE r publication.local_publication_request%ROWTYPE;
-BEGIN
- SELECT * INTO STRICT r FROM publication.local_publication_request WHERE request_hash=p_hash
- AND tenant_id=shared.current_tenant_id_soft() AND publisher_id=master.current_principal_id_soft() FOR SHARE;
- RETURN publication.fn_local_publication_request_authority(r.request_json,false);
-END $$;
-REVOKE ALL ON FUNCTION publication.read_local_publication_request(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.read_local_publication_request(text) TO athyper_worker;
--- No data is installed by this DDL; admission rejects until a real host and
--- independently activated standing policy exist. No graph writes are granted.
-
-ALTER TABLE publication.local_publication_host OWNER TO athyper_definer_product_publication;
-ALTER TABLE publication.local_publication_request OWNER TO athyper_definer_product_publication;
-ALTER FUNCTION publication.fn_local_publication_request_authority(jsonb,boolean) OWNER TO athyper_definer_product_publication;
-ALTER FUNCTION publication.admit_local_publication_request(jsonb) OWNER TO athyper_definer_product_publication;
-ALTER FUNCTION publication.read_local_publication_request(text) OWNER TO athyper_definer_product_publication;
+COMMIT;
