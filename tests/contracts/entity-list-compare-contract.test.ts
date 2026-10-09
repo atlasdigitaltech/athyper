@@ -75,6 +75,9 @@ test("URL state: records in column order, baseline in the set, and invalid state
   assert.deepEqual(read("compare=a,a,b"), { records: ["a", "b"] });
   for (const search of ["compare=a", "compare=a,b,c,d,e", "compare=a,b&compareBaseline=c", "compare=a,b&compareAll=yes", "compareBaseline=a", "compare=a,b%20c"])
     assert.equal(read(search), "invalid", search);
+  // C4 pinned master rows travel with the comparison.
+  assert.deepEqual(read("compare=a,b&compareItems=d1,d2,d1"), { records: ["a", "b"], items: ["d1", "d2"] });
+  assert.equal(read(`compare=a,b&compareItems=${Array.from({ length: 101 }, (_, index) => `d${index}`).join(",")}`), "invalid");
   const params = new URLSearchParams("view=x&compareAll=true");
   writeCompareLocation(params, { records: ["a", "b"], baseline: "b" });
   assert.equal(params.toString(), "view=x&compare=a%2Cb&compareBaseline=b");

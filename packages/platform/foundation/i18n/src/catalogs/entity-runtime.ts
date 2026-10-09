@@ -2061,4 +2061,139 @@ export const entityRuntimeMessages = {
     "{label}: {records} · {value} (seri)",
     "{label}: {records} · {value} (تعادل)",
   ],
+  "list.compare.bestNote": [
+    "Best is among the records you chose; a bid tabulation ranks every visible participant.",
+    "Terbaik ialah antara rekod yang anda pilih; jadual bida menyusun setiap peserta yang kelihatan.",
+    "الأفضل من بين السجلات التي اخترتها؛ جدول العطاءات يرتّب كل مشارك ظاهر.",
+  ],
+  "list.compare.lines.accessNote": [
+    "Access to these lines is controlled separately, so a missing line shows a dash instead of being called missing.",
+    "Akses kepada baris ini dikawal berasingan, jadi baris yang tiada ditunjukkan dengan sengkang.",
+    "الوصول إلى هذه البنود يُدار بشكل منفصل، لذلك يظهر البند الغائب بشرطة.",
+  ],
+  "list.compare.lines.coverage": [
+    "Lines for {count} of {total} items",
+    "Baris untuk {count} daripada {total} item",
+    "بنود لـ {count} من {total} عنصرًا",
+  ],
+  "list.compare.lines.differAmong": [
+    "{count} items differ among items {from}–{to}",
+    "{count} item berbeza antara item {from}–{to}",
+    "{count} عناصر مختلفة بين العناصر {from}–{to}",
+  ],
+  "list.compare.lines.differOf": [
+    "{count} of {total} lines differ",
+    "{count} daripada {total} baris berbeza",
+    "{count} من {total} بنود مختلفة",
+  ],
+  "list.compare.lines.duplicate": [
+    "Lines can't be aligned: {item} repeats in {record}.",
+    "Baris tidak dapat diselaraskan: {item} berulang dalam {record}.",
+    "تعذّرت محاذاة البنود: {item} مكرر في {record}.",
+  ],
+  "list.compare.lines.failed": [
+    "The line items could not be loaded.",
+    "Item baris tidak dapat dimuatkan.",
+    "تعذّر تحميل البنود.",
+  ],
+  "list.compare.lines.filterAll": [
+    "{label}: all",
+    "{label}: semua",
+    "{label}: الكل",
+  ],
+  "list.compare.lines.incomplete": [
+    "This page couldn't be read completely.",
+    "Halaman ini tidak dapat dibaca sepenuhnya.",
+    "تعذّرت قراءة هذه الصفحة بالكامل.",
+  ],
+  "list.compare.lines.loading": [
+    "Reading line items…",
+    "Membaca item baris…",
+    "جارٍ قراءة البنود…",
+  ],
+  "list.compare.lines.next": [
+    "Next items",
+    "Item seterusnya",
+    "العناصر التالية",
+  ],
+  "list.compare.lines.noDifferences": [
+    "No differences among these items.",
+    "Tiada perbezaan antara item ini.",
+    "لا اختلافات بين هذه العناصر.",
+  ],
+  "list.compare.lines.none": [
+    "No items match.",
+    "Tiada item sepadan.",
+    "لا توجد عناصر مطابقة.",
+  ],
+  "list.compare.lines.notInBaseline": [
+    "Not in baseline",
+    "Tiada dalam garis dasar",
+    "غير موجود في الأساس",
+  ],
+  "list.compare.lines.notInRecord": [
+    "Not in this record",
+    "Tiada dalam rekod ini",
+    "غير موجود في هذا السجل",
+  ],
+  "list.compare.lines.notShown": [
+    "Not shown: line access is controlled separately",
+    "Tidak ditunjukkan: akses baris dikawal berasingan",
+    "غير معروض: الوصول إلى البند يُدار بشكل منفصل",
+  ],
+  "list.compare.lines.pin": [
+    "Pin",
+    "Sematkan",
+    "تثبيت",
+  ],
+  "list.compare.lines.pinned": [
+    "Pinned",
+    "Disematkan",
+    "مثبّت",
+  ],
+  "list.compare.lines.pinnedOnly": [
+    "Pinned items only ({count})",
+    "Item disematkan sahaja ({count})",
+    "العناصر المثبّتة فقط ({count})",
+  ],
+  "list.compare.lines.previous": [
+    "Previous items",
+    "Item sebelumnya",
+    "العناصر السابقة",
+  ],
+  "list.compare.lines.range": [
+    "Items {from}–{to}",
+    "Item {from}–{to}",
+    "العناصر {from}–{to}",
+  ],
+  "list.compare.lines.scope": [
+    "Line items compare within one parent record. Choose records that share it.",
+    "Item baris dibandingkan dalam satu rekod induk. Pilih rekod yang berkongsi induk.",
+    "تُقارن البنود ضمن سجل أصل واحد. اختر سجلات تشترك فيه.",
+  ],
+  "list.compare.lines.search": [
+    "Search items",
+    "Cari item",
+    "ابحث في العناصر",
+  ],
+  "list.compare.lines.tooMany": [
+    "Too many lines to compare: {record} has more than {max}.",
+    "Terlalu banyak baris untuk dibandingkan: {record} mempunyai lebih daripada {max}.",
+    "بنود كثيرة جدًا للمقارنة: {record} يحوي أكثر من {max}.",
+  ],
+  "list.compare.lines.unitsDiffer": [
+    "Units differ",
+    "Unit berbeza",
+    "الوحدات مختلفة",
+  ],
+  "list.compare.lines.unavailableAccess": [
+    "Line items aren't available with your access.",
+    "Item baris tidak tersedia dengan akses anda.",
+    "البنود غير متاحة بصلاحياتك.",
+  ],
+  "list.compare.lines.unavailableList": [
+    "Line items aren't available for this list.",
+    "Item baris tidak tersedia untuk senarai ini.",
+    "البنود غير متاحة لهذه القائمة.",
+  ],
 } as const;

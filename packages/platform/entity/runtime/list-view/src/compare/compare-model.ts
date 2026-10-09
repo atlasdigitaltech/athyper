@@ -40,6 +40,8 @@ export function compareRequestFields(descriptor: EntityListDescriptorV1, compare
       fields.add(field.key);
       if (field.currencyField) fields.add(field.currencyField);
     }
+  // C4: the compared records' reference to the master list's common parent.
+  for (const collection of compare.collections ?? []) if (collection.master && !collection.unavailable) fields.add(collection.master.recordParentField);
   return Object.freeze([...fields]);
 }
 

@@ -46,6 +46,8 @@ export interface ComparisonTableRow {
   readonly badge?: string;
   /** A further note under the badge, for example "Mixed currencies". */
   readonly note?: string;
+  /** A row action in the row header, for example "Pin". */
+  readonly action?: ReactNode;
   readonly cells: readonly ComparisonTableCell[];
 }
 
@@ -141,6 +143,7 @@ function Row({ row }: { readonly row: ComparisonTableRow }) {
         <span className="a-comparison__label">{row.label}</span>
         {row.badge ? <span className="a-comparison__badge" data-outcome={row.outcome}>{row.badge}</span> : null}
         {row.note ? <span className="a-comparison__row-note">{row.note}</span> : null}
+        {row.action ? <span className="a-comparison__row-action">{row.action}</span> : null}
       </th>
       {row.cells.map((cell, index) => (
         <td key={index} className="a-comparison__cell" data-state={cell.state} data-baseline={cell.baseline ? "" : undefined} data-best={cell.best ? "" : undefined}>

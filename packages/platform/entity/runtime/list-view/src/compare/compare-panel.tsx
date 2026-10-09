@@ -26,6 +26,7 @@ import {
 } from "@athyper/platform-entity-comparison";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { formatFieldValue } from "../field-format";
+import { CompareCollection } from "./compare-collection";
 import {
   buildCompareModel,
   compareQueryState,
@@ -120,12 +121,13 @@ export function ComparePanel(props: ComparePanelProps) {
     const column = model?.columns[index];
     return column?.code ?? column?.title ?? intl.message("list.compare.unavailableRecord");
   };
-  const change = (next: { readonly records?: readonly string[]; readonly baseline?: string | undefined; readonly all?: boolean }) => {
+  const change = (next: { readonly records?: readonly string[]; readonly baseline?: string | undefined; readonly all?: boolean; readonly items?: readonly string[] }) => {
     const merged = { ...location, ...next };
     props.onChange(Object.freeze({
       records: merged.records,
       ...(merged.baseline && merged.records.includes(merged.baseline) ? { baseline: merged.baseline } : {}),
       ...(merged.all ? { all: true as const } : {}),
+      ...(merged.items?.length ? { items: merged.items.slice(0, 100) } : {}),
     }));
   };
   const announce = (message: string) => setLive(message);
@@ -297,7 +299,8 @@ export function ComparePanel(props: ComparePanelProps) {
     ...(model.notCompared ? [intl.message("list.compare.summaryNotCompared", { count: model.notCompared })] : []),
     ...(model.available < location.records.length ? [intl.message("list.compare.summaryAvailable", { count: model.available })] : []),
   ].join(" · ");
-  const everythingMatches = !location.all && model.differs === 0 && model.notCompared === 0;
+  // Line items are counted in their own sections, so "everything matches" speaks only for a comparison without them.
+  const everythingMatches = !location.all && model.differs === 0 && model.notCompared === 0 && !compare.collections?.length;
 
   return frame(
     <>
@@ -330,6 +333,9 @@ export function ComparePanel(props: ComparePanelProps) {
         </div>
       ) : null}
       {compare.fieldsRestricted ? <p className="a-entity-compare__note" role="note">{intl.message("list.compare.restricted")}</p> : null}
+      {compare.sections.some((section) => section.fields.some((field) => field.better)) || compare.collections?.some((collection) => collection.fields.some((field) => field.better)) ? (
+        <p className="a-entity-compare__note">{intl.message("list.compare.bestNote")}</p>
+      ) : null}
       {model.summaries.length ? (
         <ul className="a-entity-compare__summaries" aria-label={intl.message("list.compare.summaries")}>
           {model.summaries.map((summary) => (
@@ -378,6 +384,22 @@ export function ComparePanel(props: ComparePanelProps) {
           }}
         />
       </div>
+      {compare.collections?.map((collection) => (
+        <CompareCollection
+          key={collection.key}
+          client={props.client}
+          descriptor={descriptor}
+          collection={collection}
+          records={location.records}
+          headerRows={new Map(load.rows.map((row) => [row.id, row]))}
+          names={model.columns.map((_, index) => [recordName(index), model.columns[index]!.title].filter(Boolean).join(" · "))}
+          shown={shown}
+          baseline={baseline}
+          all={location.all === true}
+          pinned={location.items ?? []}
+          onPinnedChange={(items) => change({ items })}
+        />
+      ))}
       {everythingMatches ? (
         <div className="a-entity-compare__state" role="status">
           <p>{intl.message("list.compare.noDifferences")}</p>

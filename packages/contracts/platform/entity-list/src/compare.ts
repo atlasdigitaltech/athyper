@@ -176,6 +176,11 @@ function parseCollection(raw: unknown, at: string): ListCompareCollectionV1 {
     return [String(item.key), { valueKind: String(item.valueKind) }];
   }));
   for (const item of matchKey) lineFields.set(item.key, { valueKind: item.valueKind });
+  // Currency and unit fields are read from the line Entity alongside the compared fields.
+  for (const entry of list(value.fields, `${at}.fields`)) {
+    const item = entry as Record<string, unknown>;
+    for (const companion of [item.currencyField, item.unitField]) if (typeof companion === "string" && !lineFields.has(companion)) lineFields.set(companion, { valueKind: "string" });
+  }
   const fields = list(value.fields, `${at}.fields`).map((entry, index) => parseField(entry, `${at}.fields[${index}]`, lineFields, seen));
   if (!unavailable && !fields.length) fail(`${at}.fields`, "must hold at least one field");
   let master: ListCompareCollectionV1["master"];
@@ -278,16 +283,22 @@ export interface ListCompareLocationV1 {
   readonly baseline?: string;
   /** Show every row instead of differences only. */
   readonly all?: true;
+  /** C4: pinned master rows (routing identities, never displayed), at most 100. */
+  readonly items?: readonly string[];
 }
 
 const ROUTING_ID = /^[A-Za-z0-9_-]{1,128}$/;
-export const COMPARE_URL_KEYS = ["compare", "compareBaseline", "compareAll"] as const;
+export const COMPARE_URL_KEYS = ["compare", "compareBaseline", "compareAll", "compareItems"] as const;
+/** Pinned master rows a comparison URL may carry (the in-filter limit). */
+export const COMPARE_MAX_PINNED_ITEMS = 100;
 
 /** A well-formed comparison location (used when location state is parsed). */
 export function isListCompareLocation(value: unknown): value is ListCompareLocationV1 {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
-  if (Object.keys(item).some((key) => !["records", "baseline", "all"].includes(key))) return false;
+  if (Object.keys(item).some((key) => !["records", "baseline", "all", "items"].includes(key))) return false;
+  const items = item.items;
+  if (items !== undefined && (!Array.isArray(items) || items.length < 1 || items.length > COMPARE_MAX_PINNED_ITEMS || new Set(items).size !== items.length || !items.every((id) => typeof id === "string" && ROUTING_ID.test(id)))) return false;
   const records = item.records;
   return (
     Array.isArray(records) &&
@@ -310,7 +321,10 @@ export function readCompareLocation(params: URLSearchParams): ListCompareLocatio
   const baseline = params.get("compareBaseline");
   const all = params.get("compareAll");
   if ((baseline !== null && !records.includes(baseline)) || (all !== null && all !== "true")) return "invalid";
-  return Object.freeze({ records: Object.freeze(records), ...(baseline ? { baseline } : {}), ...(all ? { all: true as const } : {}) });
+  const rawItems = params.get("compareItems");
+  const items = rawItems === null ? undefined : [...new Set(rawItems.split(","))];
+  if (items && (items.length > COMPARE_MAX_PINNED_ITEMS || !items.every((id) => ROUTING_ID.test(id)))) return "invalid";
+  return Object.freeze({ records: Object.freeze(records), ...(baseline ? { baseline } : {}), ...(all ? { all: true as const } : {}), ...(items?.length ? { items: Object.freeze(items) } : {}) });
 }
 
 /** Writes (or, with undefined, removes) the comparison keys. */
@@ -320,4 +334,5 @@ export function writeCompareLocation(params: URLSearchParams, state: ListCompare
   params.set("compare", state.records.join(","));
   if (state.baseline) params.set("compareBaseline", state.baseline);
   if (state.all) params.set("compareAll", "true");
+  if (state.items?.length) params.set("compareItems", state.items.join(","));
 }
