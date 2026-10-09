@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/platform-entity-comparison": "workspace:*",
     "@athyper/platform-entity-descriptor-client": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",

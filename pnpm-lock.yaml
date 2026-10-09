@@ -1031,6 +1031,25 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/platform/entity/runtime/comparison:
+    dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../contracts/platform/entity-list
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../contracts/platform/entity-runtime
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../../foundation/i18n
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../../../../tooling/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/platform/entity/runtime/content-ui:
     devDependencies:
       '@athyper/config':
@@ -1076,6 +1095,9 @@ importers:
       '@athyper/platform-communications-collaboration-ui':
         specifier: workspace:*
         version: link:../../../communications/collaboration-ui
+      '@athyper/platform-entity-comparison':
+        specifier: workspace:*
+        version: link:../comparison
       '@athyper/platform-entity-descriptor-client':
         specifier: workspace:*
         version: link:../descriptor-client
