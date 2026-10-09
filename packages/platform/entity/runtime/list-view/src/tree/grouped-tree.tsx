@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, type Rea
 import { entityListOperation, entityListQuery, type HttpClient } from "@athyper/platform-api-client";
 import type {
   EntityListDescriptorV1,
+  EntityListResultV1,
   EntityListRowV1,
   EntityListScopeCoordinateV1,
   JsonValue,
@@ -62,7 +63,7 @@ function useGroupBuckets(input: {
   readonly filters: readonly ListFilterV1[];
 }) {
   const { ctx, group, filters } = input;
-  const [state, setState] = useState<{ readonly buckets?: readonly { readonly value: JsonValue; readonly count?: number; readonly aggregates?: GroupHeading["aggregates"] }[]; readonly failed?: boolean }>({});
+  const [state, setState] = useState<{ readonly buckets?: NonNullable<EntityListResultV1["groups"]>; readonly truncated?: boolean; readonly failed?: boolean }>({});
   const key = group ? JSON.stringify([ctx.descriptor.revision.descriptorHash, group, filters, ctx.source.query.query ?? null, ctx.source.query.standardViewKey ?? null, ctx.source.query.filters, ctx.source.refreshKey]) : undefined;
   const latest = useRef(input);
   latest.current = input;
@@ -92,7 +93,7 @@ function useGroupBuckets(input: {
       .then((page) => {
         if (controller.signal.aborted) return;
         if (page.descriptorHash !== ctx.descriptor.revision.descriptorHash) throw new TypeError("Group response authority no longer matches its descriptor");
-        setState({ buckets: page.groups ?? [] });
+        setState({ buckets: page.groups ?? [], ...(page.groupsTruncated ? { truncated: true } : {}) });
       })
       .catch(() => {
         if (!controller.signal.aborted) setState({ failed: true });
@@ -116,19 +117,25 @@ function headingLabel(heading: GroupHeading, intl: EntityIntl, unit?: GroupLevel
   return heading.label ?? "";
 }
 
-/** A heading's aggregates (A2), labelled by field and aggregate and formatted
- * like the field. */
+/** A heading's aggregates (A2), labelled by field and aggregate. Values are
+ * formatted like the field and without a floating-point round trip: decimal
+ * text stays text. A money total shows its currency, or says the group spans
+ * currencies instead of showing a meaningless sum. */
 function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDescriptorV1[], intl: EntityIntl): ReactNode {
   const entries = Object.entries(heading.aggregates ?? {});
   if (!entries.length) return null;
   return entries.map(([key, value]) => {
     const [fieldKey, aggregate] = key.split(":");
     const field = fields.find((item) => item.key === fieldKey);
-    if (!field || value === null) return null;
+    const mixed = heading.mixedCurrencies?.includes(key);
+    if (!field || (value === null && !mixed)) return null;
+    const currency = heading.aggregateCurrencies?.[key];
     return (
       <span key={key} className="a-entity-tree__aggregate">
         <span className="a-entity-tree__aggregate-label">{intl.message(`list.group.aggregate.${aggregate}`, { field: field.label })}</span>{" "}
-        <span className="a-entity-tree__aggregate-value">{formatFieldValue(typeof value === "string" ? Number(value) : value, field, intl)}</span>
+        <span className="a-entity-tree__aggregate-value">
+          {mixed ? intl.message("list.group.mixedCurrencies") : `${formatFieldValue(value, field, intl)}${currency ? ` ${currency}` : ""}`}
+        </span>
       </span>
     );
   });
@@ -141,11 +148,13 @@ function choicesFor(field: ListFieldDescriptorV1, intl: EntityIntl) {
 /** Records grouped under headings for up to three grouping fields, each group
  * loading its own content (Tree blueprint section 7.1). Table renders rows
  * inside the list's table body; Cards renders nested sections. */
-export function GroupedTree({ descriptor, groups, levelOne, source, variant, columnCount, intl, command, renderRecords, onGroupRows }: {
+export function GroupedTree({ descriptor, groups, levelOne, levelOneTruncated, source, variant, columnCount, intl, command, renderRecords, onGroupRows }: {
   readonly descriptor: EntityListDescriptorV1;
   readonly groups: readonly string[];
   /** Level-1 buckets from the list's own groups-only page, under exact counts. */
-  readonly levelOne?: readonly { readonly value: JsonValue; readonly count?: number }[];
+  readonly levelOne?: NonNullable<EntityListResultV1["groups"]>;
+  /** The server returned the first 50 level-1 groups of more. */
+  readonly levelOneTruncated?: boolean;
   readonly source: GroupedTreeSource;
   readonly variant: "table" | "cards";
   readonly columnCount: number;
@@ -167,7 +176,7 @@ export function GroupedTree({ descriptor, groups, levelOne, source, variant, col
       {headings.map((heading, index) => (
         <GroupNode key={heading.key} heading={heading} fieldIndex={0} level={1} path="" filters={[]} defaultExpanded={index === 0} first={index === 0} />
       ))}
-      {all.length > headings.length ? <Message level={1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
+      {levelOneTruncated || all.length > headings.length ? <Message level={1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
     </Context.Provider>
   );
 }
@@ -244,7 +253,7 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
         ? (
           <>
             {subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} visible={shown} />)}
-            {shown && allSubheadings!.length > subheadings.length ? <Message level={level + 1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
+            {shown && (buckets.truncated || allSubheadings!.length > subheadings.length) ? <Message level={level + 1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
           </>
         )
         : !shown

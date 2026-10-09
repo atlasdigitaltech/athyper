@@ -138,6 +138,13 @@ export function parseEntityRuntimeDescriptor(
     listPresentation?.supportedModes,
     new Map(fields.map((field) => [field.key, field])),
   );
+  for (const field of fields) {
+    const currency = field.list?.currencyField;
+    if (currency === undefined) continue;
+    const target = fields.find((candidate) => candidate.key === currency);
+    if (!target || !["string", "enum"].includes(target.type))
+      throw new Error(`field.list.currencyField must name a string or enum field: ${field.key}.${currency}`);
+  }
   const operationsValue = object(value["operations"], "operations");
   const operations = Object.fromEntries(
     Object.entries(operationsValue).map(([key, operation]) => {
@@ -1284,6 +1291,9 @@ function parseField(raw: unknown): EntityFieldDescriptor {
                 filterOperator(value, "field.list.filterOperators item"),
               ),
             }),
+        ...(listValue["currencyField"] === undefined
+          ? {}
+          : { currencyField: code(listValue["currencyField"], "field.list.currencyField") }),
         ...(listValue["aggregations"] === undefined
           ? {}
           : {
@@ -1312,6 +1322,8 @@ function parseField(raw: unknown): EntityFieldDescriptor {
           `Filter operator ${operator} is not valid for field type ${type}`,
         );
   }
+  if (list?.currencyField !== undefined && type !== "money")
+    throw new Error(`field.list.currencyField is only for money fields: ${item["key"]}`);
   if (
     list?.aggregations &&
     new Set(list.aggregations).size !== list.aggregations.length

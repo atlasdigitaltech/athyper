@@ -182,7 +182,10 @@ export function createRecordListExecutor<Transaction = unknown>(
           })),
           ...(query.group ? [{ field: query.group, use: "group" }] : []),
           // Aggregates are published only with group use (queryableListFields).
-          ...(query.groupAggregates ?? []).map((item) => ({ field: item.field, use: "group" })),
+          ...(query.groupAggregates ?? []).flatMap((item) => {
+            const currency = descriptor.fields.find((field) => field.key === item.field)?.list?.currencyField;
+            return [{ field: item.field, use: "group" }, ...(currency ? [{ field: currency, use: "group" }] : [])];
+          }),
           ...(query.search
             ? readableFields
                 .filter((field) => field.searchable)
@@ -375,7 +378,14 @@ export function createRecordListExecutor<Transaction = unknown>(
                   : {}),
                 ...(query.group ? { group: query.group } : {}),
                 ...(query.groupBucket ? { groupBucket: query.groupBucket } : {}),
-                ...(query.groupAggregates?.length ? { groupAggregates: query.groupAggregates } : {}),
+                ...(query.groupAggregates?.length
+                  ? {
+                      groupAggregates: query.groupAggregates.map((item) => {
+                        const currency = descriptor.fields.find((field) => field.key === item.field)?.list?.currencyField;
+                        return currency ? { ...item, currencyField: currency } : item;
+                      }),
+                    }
+                  : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
@@ -794,6 +804,10 @@ function validateQueryFields(
       const field = fields.find((candidate) => candidate.key === item.field);
       if (!field || !readable.has(item.field) || !["integer", "decimal", "money"].includes(field.type) || !(field.list?.aggregations ?? []).includes(item.aggregate))
         throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", `Aggregate is not published: ${item.field}:${item.aggregate}`);
+      // A money total needs the row's currency, readable, so a group whose
+      // rows span currencies can show no total rather than a meaningless one.
+      if (field.type === "money" && (!field.list?.currencyField || !readable.has(field.list.currencyField)))
+        throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", `A money aggregate needs a readable currency field: ${item.field}`);
     }
   }
   if ((query.fields?.length ?? 0) > 100)

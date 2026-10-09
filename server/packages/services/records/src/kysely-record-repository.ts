@@ -1,5 +1,5 @@
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
-import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
+import { LIST_GROUP_LIMIT, entityListRelativeDateRange, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 import { compileStandardViewRelationship } from "./standard-view-relationship-sql.js";
 import { validateFilterValue } from "./filter-value-validation.js";
 import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
@@ -87,8 +87,9 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.hierarchy?.mode === "matches" && tree) return listTreeMatches(input, conditions, tree, executor, scopeCompilers);
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
-        const buckets = await groupBuckets(input, conditions, executor);
-        return { data: [], groups: buckets, pagination: { pageSize: 0, hasMore: false, total: buckets.reduce((sum, bucket) => sum + bucket.count, 0), countMode: "exact" as const } };
+        const { buckets, truncated } = await groupBuckets(input, conditions, executor);
+        const total = truncated ? await countRows(input, conditions, executor) : buckets.reduce((sum, bucket) => sum + bucket.count, 0);
+        return { data: [], groups: buckets, ...(truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       }
       const order = orderBy(input);
       const cursor = decodeRecordCursor(input);
@@ -105,9 +106,10 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const rows = tree ? page.map(({ [HAS_CHILDREN]: _flag, ...row }) => row) : page;
       // Group counts follow the count-mode rule (layout foundation section 5): the
       // full-set GROUP BY runs only under exact counts.
-      const groups = input.group && input.countMode === "exact" ? await groupBuckets(input, conditions, executor) : undefined;
+      const grouped = input.group && input.countMode === "exact" ? await groupBuckets(input, conditions, executor) : undefined;
+      const groups = grouped?.buckets;
       let total: number | undefined;
-      if (input.countMode === "exact" && groups) {
+      if (input.countMode === "exact" && groups && !grouped.truncated) {
         total = groups.reduce((sum, bucket) => sum + bucket.count, 0);
       } else if (input.countMode === "exact") {
         const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${tree ? sql`${table(input.descriptor)} AS ${sql.ref(TREE_ROW)}` : table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
@@ -115,7 +117,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       }
       const countMode = input.countMode === "exact" ? "exact" : "none";
       const last = rows.at(-1);
-      return { data: rows, ...(groups ? { groups } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
+      return { data: rows, ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projectionKeys, transaction) {
       const executor = transaction ?? databaseFor(descriptor);
@@ -305,7 +307,9 @@ export function relativeDateCondition(ref: RawBuilder<unknown>, value: unknown):
 }
 /** Group buckets with their counts and, when requested, aggregates (Tree
  * blueprint A2), grouping a date field by month or quarter (A3) through
- * date_trunc in the viewer's zone for a datetime field. One GROUP BY. */
+ * date_trunc in the viewer's zone for a datetime field. One GROUP BY, capped
+ * at 50 groups plus the No value group; a money aggregate also counts its
+ * currencies, so a group spanning currencies shows no total. */
 async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
   const field = input.descriptor.fields.find((item) => item.key === input.group);
   if (!field) throw new Error(`Unknown descriptor field: ${input.group}`);
@@ -319,28 +323,60 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
         return sql`to_char(date_trunc(${unit}, ${local}), ${format})`;
       })()
     : sql`${ref}`;
-  const aggregates = (input.groupAggregates ?? []).map((item) => {
+  const aggregates = (input.groupAggregates ?? []).map((item, index) => {
     const target = sql.ref(fieldPath(input.descriptor, item.field));
     const fn = { sum: sql`sum`, average: sql`avg`, minimum: sql`min`, maximum: sql`max` }[item.aggregate];
-    return { name: `${item.field}:${item.aggregate}`, select: sql`${fn}(${target})` };
+    const currency = item.currencyField ? sql.ref(fieldPath(input.descriptor, item.currencyField)) : undefined;
+    return {
+      name: `${item.field}:${item.aggregate}`,
+      select: sql`, ${fn}(${target}) AS ${sql.ref(`__aggregate_${index}`)}${currency ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}` : sql``}`,
+      money: Boolean(currency),
+    };
   });
   const result = await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint }>`
-    SELECT ${key} AS value, count(*) AS count${sql.join(aggregates.map((item, index) => sql`, ${item.select} AS ${sql.ref(`__aggregate_${index}`)}`), sql``)}
+    SELECT ${key} AS value, count(*) AS count${sql.join(aggregates.map((item) => item.select), sql``)}
       FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
-     GROUP BY 1 ORDER BY 1 ASC NULLS LAST`.execute(executor);
-  return Object.freeze(result.rows.map((row) => Object.freeze({
-    value: row.value,
-    count: Number(row.count),
-    ...(aggregates.length ? { aggregates: Object.freeze(Object.fromEntries(aggregates.map((item, index) => [item.name, aggregateValue(row[`__aggregate_${index}`])]))) } : {}),
-  })));
+     GROUP BY 1 ORDER BY 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 2}`.execute(executor);
+  // The No value group sorts first so the cap never drops it; it is drawn last.
+  const none = result.rows.filter((row) => row.value === null);
+  const values = result.rows.filter((row) => row.value !== null);
+  const truncated = values.length > LIST_GROUP_LIMIT;
+  const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
+  return {
+    truncated,
+    buckets: Object.freeze(rows.map((row) => {
+      const currencies: Record<string, string> = {};
+      const mixed: string[] = [];
+      const values = Object.fromEntries(aggregates.map((item, index) => {
+        if (item.money) {
+          if (Number(row[`__currencies_${index}`] ?? 0) > 1) {
+            mixed.push(item.name);
+            return [item.name, null];
+          }
+          if (typeof row[`__currency_${index}`] === "string") currencies[item.name] = row[`__currency_${index}`] as string;
+        }
+        return [item.name, aggregateValue(row[`__aggregate_${index}`])];
+      }));
+      return Object.freeze({
+        value: row.value,
+        count: Number(row.count),
+        ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
+        ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
+        ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
+      });
+    })),
+  };
+}
+async function countRows(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction): Promise<number> {
+  const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
+  return Number(count.rows[0]?.count ?? 0);
 }
 /** An aggregate as a JSON number when it is exact, otherwise its decimal text. */
 export function aggregateValue(value: unknown): number | string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   const text = String(value);
-  const number = Number(text);
-  return Number.isFinite(number) && (Number.isSafeInteger(number) || String(number) === text.replace(/\.?0+$/, "")) ? number : text;
+  return isExactDecimal(text) ? exactAggregate(text) : null;
 }
 function orderBy(input: RecordRepositoryListInput): RawBuilder<unknown> { const items = (input.sort ?? []).map((item) => sql`${sql.ref(fieldPath(input.descriptor, item.field))} ${item.direction === "desc" ? sql`DESC` : sql`ASC`} ${item.nulls === "first" ? sql`NULLS FIRST` : item.nulls === "last" ? sql`NULLS LAST` : sql``}`); items.push(sql`${sql.ref(input.descriptor.storage.idField)} ASC`); return sql`ORDER BY ${sql.join(items)}`; }
 function cursorCondition(input: RecordRepositoryListInput, cursor: DecodedRecordCursor): RawBuilder<unknown> {

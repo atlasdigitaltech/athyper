@@ -37,6 +37,8 @@ export interface ListTreeV1 {
 }
 
 export const LIST_TREE_MAX_DEPTH = 16;
+/** Groups returned per level; more shows the "more groups" notice (Tree blueprint A3). */
+export const LIST_GROUP_LIMIT = 50;
 /** Loaded nodes the Tree layout draws at most (section 7.2). */
 export const LIST_TREE_NODE_CEILING = 500;
 

@@ -162,3 +162,15 @@ it("rejects a directory binding whose scope field is unavailable or not immutabl
   expect(parseEntityRuntimeDescriptor({ ...scoped, compiled_json: { ...scoped.compiled_json, fields: [scopeField] } }).directoryScope?.fieldBinding?.organizationField).toBe("org_id");
   expect(() => parseEntityRuntimeDescriptor({ ...scoped, compiled_json: { ...scoped.compiled_json, fields: [{ ...scopeField, writableOn: ["patch"] }] } })).toThrow("immutable stored UUID field");
 });
+
+it("accepts a money field's currency field and refuses it elsewhere (Tree blueprint A2)", () => {
+  const withFields = (fields: Record<string, unknown>[]) => {
+    const base = row({});
+    return { ...base, compiled_json: { ...base.compiled_json, fields } };
+  };
+  const amount = { key: "amount", storagePath: "amount", type: "money", required: true, writableOn: [], list: { aggregations: ["sum"], currencyField: "currency" } };
+  const currency = { key: "currency", storagePath: "currency", type: "string", required: true, writableOn: [] };
+  expect(parseEntityRuntimeDescriptor(withFields([amount, currency])).fields[0]?.list?.currencyField).toBe("currency");
+  expect(() => parseEntityRuntimeDescriptor(withFields([amount]))).toThrow(/currencyField must name a string or enum field/);
+  expect(() => parseEntityRuntimeDescriptor(row({ currencyField: "currency" }))).toThrow(/only for money fields/);
+});

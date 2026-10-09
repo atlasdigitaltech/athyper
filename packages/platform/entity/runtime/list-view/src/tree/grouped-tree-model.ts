@@ -5,6 +5,7 @@ import type {
   ListFilterV1,
 } from "@athyper/contract-platform-entity-list";
 import { zonedDayStart } from "@athyper/platform-temporal";
+import { addDecimals, compareDecimals, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 
 /** One grouping level: a field, or a date field by month or quarter (A3). */
 export interface GroupLevel {
@@ -66,10 +67,28 @@ export interface GroupHeading {
   readonly count?: number;
   /** Requested aggregates keyed `field:aggregate` (A2), exact counts only. */
   readonly aggregates?: Readonly<Record<string, number | string | null>>;
+  /** The one currency of a money aggregate, by aggregate key. */
+  readonly aggregateCurrencies?: Readonly<Record<string, string>>;
+  /** Money aggregates left out because the rows span currencies. */
+  readonly mixedCurrencies?: readonly string[];
 }
 
+/** A bucket as the server returns it. */
+type Bucket = {
+  readonly value: JsonValue;
+  readonly count?: number;
+  readonly aggregates?: GroupHeading["aggregates"];
+  readonly aggregateCurrencies?: GroupHeading["aggregateCurrencies"];
+  readonly mixedCurrencies?: GroupHeading["mixedCurrencies"];
+};
+const totals = (bucket: Bucket) => ({
+  ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}),
+  ...(bucket.aggregateCurrencies ? { aggregateCurrencies: bucket.aggregateCurrencies } : {}),
+  ...(bucket.mixedCurrencies ? { mixedCurrencies: bucket.mixedCurrencies } : {}),
+});
+
 /** At most this many headings per level; more shows the "more groups" notice. */
-export const GROUP_HEADING_LIMIT = 50;
+export { LIST_GROUP_LIMIT as GROUP_HEADING_LIMIT } from "@athyper/contract-platform-entity-list";
 
 const keyFor = (field: string, kind: string, value?: JsonValue) => JSON.stringify([field, kind, value ?? null]);
 
@@ -91,15 +110,17 @@ export function groupChoices(field: ListFieldDescriptorV1, booleanLabels: { read
 export function groupHeadings(
   field: ListFieldDescriptorV1,
   choices: readonly { readonly value: JsonValue; readonly label: string }[],
-  buckets: readonly { readonly value: JsonValue; readonly count?: number; readonly aggregates?: GroupHeading["aggregates"] }[] | undefined,
+  buckets: readonly Bucket[] | undefined,
   unit?: GroupLevel["unit"],
 ): readonly GroupHeading[] {
   // Date buckets (A3) come only from the group query, in chronological order.
   if (unit) {
-    return (buckets ?? []).map((bucket) =>
-      bucket.value === null || bucket.value === ""
-        ? { key: keyFor(field.key, "none"), kind: "none" as const, ...(bucket.count !== undefined ? { count: bucket.count } : {}), ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}) }
-        : { key: keyFor(field.key, "choice", bucket.value), kind: "choice" as const, value: bucket.value, ...(bucket.count !== undefined ? { count: bucket.count } : {}), ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}) },
+    // Pass-through keeps the server's chronological order; No value is last.
+    const none = (bucket: Bucket) => bucket.value === null || bucket.value === "";
+    return [...(buckets ?? []).filter((bucket) => !none(bucket)), ...(buckets ?? []).filter(none)].map((bucket) =>
+      none(bucket)
+        ? { key: keyFor(field.key, "none"), kind: "none" as const, ...(bucket.count !== undefined ? { count: bucket.count } : {}), ...totals(bucket) }
+        : { key: keyFor(field.key, "choice", bucket.value), kind: "choice" as const, value: bucket.value, ...(bucket.count !== undefined ? { count: bucket.count } : {}), ...totals(bucket) },
     );
   }
   const nullable = field.filterOperators.includes("is_null");
@@ -109,12 +130,13 @@ export function groupHeadings(
       ...(nullable ? [{ key: keyFor(field.key, "none"), kind: "none" as const }] : []),
     ];
   }
-  const counts = new Map<string, { count: number; aggregates?: GroupHeading["aggregates"] }>();
-  let none: { count: number; aggregates?: GroupHeading["aggregates"] } | undefined;
-  const unmapped: { value: JsonValue; count: number; aggregates?: GroupHeading["aggregates"] }[] = [];
+  type Item = { count: number } & ReturnType<typeof totals>;
+  const counts = new Map<string, Item>();
+  let none: Item | undefined;
+  const unmapped: ({ value: JsonValue } & Item)[] = [];
   const known = new Set(choices.map((choice) => JSON.stringify(choice.value)));
   for (const bucket of buckets) {
-    const item = { count: bucket.count ?? 0, ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}) };
+    const item = { count: bucket.count ?? 0, ...totals(bucket) };
     if (bucket.value === null || bucket.value === "") none = none ? { count: none.count + item.count } : item;
     else if (known.has(JSON.stringify(bucket.value))) counts.set(JSON.stringify(bucket.value), item);
     else unmapped.push({ value: bucket.value, ...item });
@@ -131,22 +153,41 @@ export function groupHeadings(
           kind: "unmapped" as const,
           values: unmapped.map((item) => item.value),
           count: unmapped.reduce((sum, item) => sum + item.count, 0),
-          ...(unmapped.some((item) => item.aggregates) ? { aggregates: combineAggregates(unmapped.map((item) => item.aggregates ?? {})) } : {}),
+          ...(unmapped.some((item) => item.aggregates) ? combineAggregates(unmapped) : {}),
         }]
       : []),
   ];
 }
 
-/** Unmapped values combine their buckets' sums, minimums and maximums; an
- * average cannot be combined from averages, so it is left out. */
-export function combineAggregates(items: readonly Readonly<Record<string, number | string | null>>[]): Readonly<Record<string, number | null>> {
-  const combined: Record<string, number | null> = {};
-  for (const key of new Set(items.flatMap((item) => Object.keys(item)))) {
+/** Unmapped values combine their buckets' sums, minimums and maximums
+ * exactly; an average cannot be combined from averages, so it is left out. A
+ * money total combines only when every bucket has the same one currency. */
+export function combineAggregates(items: readonly ReturnType<typeof totals>[]): Pick<GroupHeading, "aggregates" | "aggregateCurrencies" | "mixedCurrencies"> {
+  const combined: Record<string, number | string | null> = {};
+  const currencies: Record<string, string> = {};
+  const mixed: string[] = [];
+  for (const key of new Set(items.flatMap((item) => Object.keys(item.aggregates ?? {})))) {
     if (key.endsWith(":average")) continue;
-    const values = items.map((item) => item[key]).filter((value): value is number | string => value !== null && value !== undefined).map(Number);
-    combined[key] = !values.length ? null : key.endsWith(":sum") ? values.reduce((sum, value) => sum + value, 0) : key.endsWith(":minimum") ? Math.min(...values) : Math.max(...values);
+    const codes = new Set(items.flatMap((item) => (item.aggregateCurrencies?.[key] ? [item.aggregateCurrencies[key]!] : [])));
+    if (items.some((item) => item.mixedCurrencies?.includes(key)) || codes.size > 1) {
+      mixed.push(key);
+      combined[key] = null;
+      continue;
+    }
+    if (codes.size === 1) currencies[key] = [...codes][0]!;
+    const values = items.map((item) => item.aggregates?.[key]).filter(isExactDecimal);
+    if (!values.length) combined[key] = null;
+    else if (key.endsWith(":sum")) combined[key] = exactAggregate(addDecimals(values));
+    else {
+      const minimum = key.endsWith(":minimum");
+      combined[key] = values.reduce((best, next) => ((minimum ? compareDecimals(next, best) < 0 : compareDecimals(next, best) > 0) ? next : best));
+    }
   }
-  return combined;
+  return {
+    aggregates: combined,
+    ...(Object.keys(currencies).length ? { aggregateCurrencies: currencies } : {}),
+    ...(mixed.length ? { mixedCurrencies: mixed } : {}),
+  };
 }
 
 /** The filters that select a heading's records (ANDed with its ancestors' and

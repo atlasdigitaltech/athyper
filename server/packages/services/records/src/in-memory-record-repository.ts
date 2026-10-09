@@ -1,4 +1,5 @@
 import { assembleTreeMatches } from "./tree-matches.js";
+import { LIST_GROUP_LIMIT, addDecimals, averageDecimals, compareDecimals, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
 import { randomUUID } from "node:crypto";
@@ -95,9 +96,10 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
         return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(input.countMode === "exact" ? { total } : {}), countMode: input.countMode === "exact" ? "exact" as const : "none" as const } };
       }
       // Group counts only under exact counts (layout foundation section 5).
-      const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates) : undefined;
+      const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates) : undefined;
+      const groups = grouped?.buckets;
       if (input.groupsOnly && groups)
-        return { data: [], groups, pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+        return { data: [], groups, ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       const cursor = decodeRecordCursor(input);
       if (cursor) rows = rows.filter((row) => afterCursor(row, input.descriptor, input.sort ?? [], cursor));
       const candidates = rows.slice(0, input.limit + 1);
@@ -107,7 +109,7 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const projected = page.map((row) => project(input.descriptor, row, input.projection));
       const hasChildren = hierarchy ? page.map((row) => visibleSet.some((child) => parentOf(child) === idOf(row) && scopeOf(child) === scopeOf(row) && childMatches(child))) : undefined;
       const last = projected.at(-1);
-      return { data: projected, ...(groups ? { groups } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
+      return { data: projected, ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projection, transaction) { const row = table(descriptor, tenantId, transaction?.state).get(recordId); return row && visible(descriptor, row) ? project(descriptor, row, projection) : null; },
     async create(descriptor, tenantId, input, transaction) {
@@ -208,19 +210,42 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
   };
   const groups = new Map<unknown, Row[]>();
   for (const row of rows) { const key = keyOf(value(row, descriptor, field)); groups.set(key, [...(groups.get(key) ?? []), row]); }
-  const numeric = (list: Row[], key: string) => list.map((row) => value(row, descriptor, key)).filter((item) => item !== null && item !== undefined).map(Number);
-  const compute = (list: Row[], item: NonNullable<RecordRepositoryListInput["groupAggregates"]>[number]): number | null => {
-    const values = numeric(list, item.field);
+  // Exact decimals, as the SQL does: no floating-point sums.
+  const decimals = (list: Row[], key: string) => list.map((row) => value(row, descriptor, key)).filter(isExactDecimal);
+  const compute = (list: Row[], item: NonNullable<RecordRepositoryListInput["groupAggregates"]>[number]): number | string | null => {
+    const values = decimals(list, item.field);
     if (!values.length) return null;
-    if (item.aggregate === "sum") return values.reduce((sum, next) => sum + next, 0);
-    if (item.aggregate === "average") return values.reduce((sum, next) => sum + next, 0) / values.length;
-    return item.aggregate === "minimum" ? Math.min(...values) : Math.max(...values);
+    if (item.aggregate === "sum") return exactAggregate(addDecimals(values));
+    if (item.aggregate === "average") return exactAggregate(averageDecimals(values));
+    const pick = values.reduce((best, next) => ((item.aggregate === "minimum" ? compareDecimals(next, best) < 0 : compareDecimals(next, best) > 0) ? next : best));
+    return typeof pick === "number" ? pick : exactAggregate(pick);
   };
-  return Object.freeze([...groups].sort(([left], [right]) => (left === null ? 1 : right === null ? -1 : compare(left, right))).map(([item, list]) => Object.freeze({
-    value: item,
-    count: list.length,
-    ...(aggregates.length ? { aggregates: Object.freeze(Object.fromEntries(aggregates.map((aggregate) => [`${aggregate.field}:${aggregate.aggregate}`, compute(list, aggregate)]))) } : {}),
-  })));
+  const ordered = [...groups].sort(([left], [right]) => (left === null ? 1 : right === null ? -1 : compare(left, right)));
+  const nonNull = ordered.filter(([item]) => item !== null);
+  const kept = [...nonNull.slice(0, LIST_GROUP_LIMIT), ...ordered.filter(([item]) => item === null)];
+  return {
+    truncated: nonNull.length > LIST_GROUP_LIMIT,
+    buckets: Object.freeze(kept.map(([item, list]) => {
+      const currencies: Record<string, string> = {};
+      const mixed: string[] = [];
+      const values = Object.fromEntries(aggregates.map((aggregate) => {
+        const name = `${aggregate.field}:${aggregate.aggregate}`;
+        if (aggregate.currencyField) {
+          const codes = new Set(list.map((row) => value(row, descriptor, aggregate.currencyField!)).filter((code) => code !== null && code !== undefined));
+          if (codes.size > 1) { mixed.push(name); return [name, null]; }
+          if (codes.size === 1) currencies[name] = String([...codes][0]);
+        }
+        return [name, compute(list, aggregate)];
+      }));
+      return Object.freeze({
+        value: item,
+        count: list.length,
+        ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
+        ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
+        ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
+      });
+    })),
+  };
 }
 function compareRows(a: Row, b: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[]): number { for (const item of sort) { const result = ordered(value(a, descriptor, item.field), value(b, descriptor, item.field), item); if (result) return result; } return compare(String(a[descriptor.storage.idField]), String(b[descriptor.storage.idField])); }
 function afterCursor(row: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[], cursor: DecodedRecordCursor): boolean { for (const [index, item] of sort.entries()) { const result = ordered(value(row, descriptor, item.field), cursor.values[index], item); if (result) return result > 0; } return compare(String(row[descriptor.storage.idField]), cursor.id) > 0; }

@@ -70,7 +70,12 @@ describe("group aggregates and date buckets (A2, A3)", () => {
   it("asks for the first non-count aggregate of each visible numeric column, and combines Unmapped values without averages", () => {
     const descriptor = { fields: [{ key: "budget", valueKind: "money", aggregations: ["count", "sum"] }, { key: "name", valueKind: "string", aggregations: ["count"] }, { key: "rate", valueKind: "decimal", aggregations: ["average"] }] } as never;
     assert.deepEqual(groupAggregates(descriptor, ["name", "budget", "rate"]), ["budget:sum", "rate:average"]);
-    assert.deepEqual(combineAggregates([{ "budget:sum": 2, "rate:average": 1 }, { "budget:sum": "3.5", "rate:average": 4 }]), { "budget:sum": 5.5 });
+    assert.deepEqual(combineAggregates([{ aggregates: { "budget:sum": 2, "rate:average": 1 } }, { aggregates: { "budget:sum": "3.5", "rate:average": 4 } }]), { aggregates: { "budget:sum": 5.5 } });
+    // Exact: a large decimal total stays exact text.
+    assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": "1234567890123456.78" } }, { aggregates: { "amount:sum": "0.01" } }]).aggregates, { "amount:sum": "1234567890123456.79" });
+    // Money combines only within one currency.
+    assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": 2 }, aggregateCurrencies: { "amount:sum": "MYR" } }]), { aggregates: { "amount:sum": 3 }, aggregateCurrencies: { "amount:sum": "MYR" } });
+    assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": 2 }, aggregateCurrencies: { "amount:sum": "USD" } }]), { aggregates: { "amount:sum": null }, mixedCurrencies: ["amount:sum"] });
     const headings = groupHeadings(status, [{ value: "active", label: "Active" }], [{ value: "active", count: 1, aggregates: { "budget:sum": 10 } }, { value: "legacy", count: 1, aggregates: { "budget:sum": 4 } }, { value: "retired", count: 1, aggregates: { "budget:sum": 6 } }]);
     assert.deepEqual(headings.map((heading) => heading.aggregates), [{ "budget:sum": 10 }, { "budget:sum": 10 }]);
   });

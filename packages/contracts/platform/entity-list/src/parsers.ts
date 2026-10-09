@@ -734,6 +734,11 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     scopeFingerprint: digest(record.scopeFingerprint, "scopeFingerprint"),
     queryHash: digest(record.queryHash, "queryHash"),
     rows,
+    ...(record.groupsTruncated === undefined
+      ? {}
+      : record.groupsTruncated === true
+        ? { groupsTruncated: true as const }
+        : (() => { throw new TypeError("groupsTruncated must be true when present"); })()),
     ...(record.matchesTruncated === undefined
       ? {}
       : record.matchesTruncated === true
@@ -1295,11 +1300,23 @@ function parseBuckets(value: unknown, name: string) {
           aggregates[key] = raw as number | string | null;
         }
       }
+      const aggregateKey = (key: string) => {
+        if (!/^[a-z][a-z0-9_]*:(sum|average|minimum|maximum)$/.test(key)) throw new TypeError(`${name}[${index}] aggregate key is invalid`);
+        return key;
+      };
+      const currencies = item.aggregateCurrencies === undefined
+        ? undefined
+        : Object.freeze(Object.fromEntries(Object.entries(object(item.aggregateCurrencies, `${name}[${index}].aggregateCurrencies`)).map(([key, code]) => [aggregateKey(key), text(code, `${name}[${index}].aggregateCurrencies.${key}`)])));
+      const mixed = item.mixedCurrencies === undefined
+        ? undefined
+        : Object.freeze(array(item.mixedCurrencies, `${name}[${index}].mixedCurrencies`).map((key) => aggregateKey(text(key, `${name}[${index}].mixedCurrencies`))));
       return Object.freeze({
         value: json(item.value, `${name}[${index}].value`),
         label: text(item.label, `${name}[${index}].label`),
         ...(count !== undefined ? { count } : {}),
         ...(aggregates ? { aggregates: Object.freeze(aggregates) } : {}),
+        ...(currencies ? { aggregateCurrencies: currencies } : {}),
+        ...(mixed ? { mixedCurrencies: mixed } : {}),
       });
     }),
   );

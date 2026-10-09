@@ -111,7 +111,7 @@ const script = buildSync({
       const bucketOf=r=>{const v=r.values[gField];if(v==null)return null;if(!gUnit)return v;const m=Number(String(v).slice(5,7));return gUnit==='quarter'?String(v).slice(0,4)+'-Q'+Math.ceil(m/3):String(v).slice(0,7)};
       const wanted=[].concat(q.aggregate??[]);
       const groups=q.group&&exact?Object.entries(matched.reduce((acc,r)=>{const k=JSON.stringify(bucketOf(r));(acc[k]??=[]).push(r);return acc},{})).map(([k,list])=>({value:JSON.parse(k),label:String(JSON.parse(k)),count:list.length,...(wanted.length?{aggregates:Object.fromEntries(wanted.map(w=>{const f=w.split(':')[0];const vals=list.map(r=>r.values[f]).filter(v=>v!=null);return [w,vals.length?vals.reduce((x,y)=>x+y,0):null]}))}:{})})).sort((a,b)=>a.value===null?1:b.value===null?-1:cmp(a.value,b.value)):undefined;
-      if(q.groupsOnly==='true')return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:[],groups,pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:matched.length,countMode:'exact'}};
+      if(q.groupsOnly==='true')return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:[],groups,...(cfg.truncateGroups?{groupsTruncated:true}:{}),pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:matched.length,countMode:'exact'}};
       const start=q.cursor?Number(q.cursor):0,limit=Number(q.limit),page=matched.slice(start,start+limit),more=start+limit<matched.length;
       return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:page,...(groups?{groups}:{}),
         pagination:{pageSize:page.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,...(exact?{total:matched.length}:{}),countMode:exact?'exact':'none'}};
@@ -127,7 +127,7 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean; movable?: boolean; moveError?: string; picker?: boolean };
+type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean; movable?: boolean; moveError?: string; picker?: boolean; truncateGroups?: boolean };
 type Query = { filter?: string[]; group?: string; aggregate?: string | string[]; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -572,5 +572,10 @@ test.describe("A2 group aggregates and A3 month and quarter groups", () => {
     await expect(page.getByRole("option", { name: "Opened by month" })).toBeVisible();
     await expect(page.getByRole("option", { name: "Opened by quarter" })).toBeVisible();
   });
+});
+
+test("when the server returns the first 50 groups of more, the level says so", async ({ page }) => {
+  await mount(page, 1440, { exact: true, truncateGroups: true }, "?groups=opened:month");
+  await expect(page.getByText("Showing the first 50 groups. Narrow the filters to see the rest.")).toBeVisible();
 });
 

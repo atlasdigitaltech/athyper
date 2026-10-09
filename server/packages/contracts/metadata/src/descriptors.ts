@@ -135,6 +135,10 @@ export interface EntityFieldDescriptor {
     readonly aggregations?: readonly (
       "count" | "sum" | "average" | "minimum" | "maximum"
     )[];
+    /** For a money field: the field holding each row's currency code. Money
+     * aggregates other than count need it, and a group whose rows span more
+     * than one currency shows no total (Tree blueprint A2). */
+    readonly currencyField?: string;
   };
 }
 

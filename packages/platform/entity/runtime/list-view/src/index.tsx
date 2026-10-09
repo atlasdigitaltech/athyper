@@ -4906,6 +4906,7 @@ function EntityRows({
           descriptor={descriptor}
           groups={groups!}
           levelOne={page.groups}
+          levelOneTruncated={page.groupsTruncated === true}
           source={groupedSource!}
           variant="cards"
           columnCount={1}
@@ -5228,6 +5229,7 @@ function EntityRows({
               descriptor={descriptor}
               groups={groups!}
               levelOne={page.groups}
+          levelOneTruncated={page.groupsTruncated === true}
               source={groupedSource!}
               variant="table"
               columnCount={columnCount}

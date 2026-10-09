@@ -428,7 +428,13 @@ export interface EntityListResultV1 {
     readonly count?: number;
     /** Keyed `field:aggregate`, only when requested (Tree blueprint A2). */
     readonly aggregates?: Readonly<Record<string, number | string | null>>;
+    /** The one currency of a money aggregate's rows, by aggregate key. */
+    readonly aggregateCurrencies?: Readonly<Record<string, string>>;
+    /** Money aggregates left out because the group's rows span currencies. */
+    readonly mixedCurrencies?: readonly string[];
   }[];
+  /** More groups exist than the 50 returned (the "more groups" notice). */
+  readonly groupsTruncated?: true;
 }
 
 export interface EntityApplicationDescriptorV1 {

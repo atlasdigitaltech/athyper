@@ -1141,6 +1141,7 @@ export function createEntityListService(options: {
           countMode: query.countMode ?? "none",
         }),
         rows: Object.freeze(rows),
+        ...(result.groupsTruncated ? { groupsTruncated: true as const } : {}),
         ...(result.matchesTruncated ? { matchesTruncated: true as const } : {}),
         ...(result.matchesBeyondDepth ? { matchesBeyondDepth: result.matchesBeyondDepth } : {}),
         pagination: Object.freeze({
@@ -1169,6 +1170,8 @@ export function createEntityListService(options: {
                       : formatGroupLabel(group.value),
                     count: group.count,
                     ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),
+                    ...(group.aggregateCurrencies ? { aggregateCurrencies: Object.freeze({ ...group.aggregateCurrencies }) } : {}),
+                    ...(group.mixedCurrencies?.length ? { mixedCurrencies: Object.freeze([...group.mixedCurrencies]) } : {}),
                   }),
                 ),
               ),
@@ -1455,7 +1458,20 @@ export function compileEntityListDescriptor(
         (descriptor.listPresentation?.limits?.countMode ??
           descriptor.listPresentation?.countMode) === "exact",
       ),
-      aggregations: Object.freeze(field.list?.aggregations ?? []),
+      // A money field publishes totals only with a readable currency field
+      // (Tree blueprint A2); otherwise only its count.
+      aggregations: Object.freeze(
+        (field.list?.aggregations ?? []).filter(
+          (aggregate) =>
+            aggregate === "count" ||
+            field.type !== "money" ||
+            Boolean(
+              field.list?.currencyField &&
+                readableFields.some((candidate) => candidate.key === field.list!.currencyField) &&
+                !maskedPresentationField(descriptor, field.list.currencyField),
+            ),
+        ),
+      ),
     });
   });
   const ordered = Object.freeze(

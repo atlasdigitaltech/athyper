@@ -10,7 +10,8 @@
   - Pilot 1, Commodity Category (section 12.1), as a full Entity onboarding after the metadata cleanup, gated by the section 2.4 checklist.
 - **B2 build approved (9 October 2026):** the project owner approved building B2 (sections 5.5 and 7.3) in these words: "B2 build approved - Best class code to avoid performance issue and robust search". Built; see the delivery status.
 - **B4 and B5 build approved (9 October 2026):** the project owner approved both in these words: "B4 and B5 - approved". Their build contracts are sections 5.6, 5.7, 7.5 and 7.6, written at the start of the build within the approved direction (section 7.5 for B4; section 5.4's shape for B5).
-- **Not approved:** B3, A2, A3 and T4. B3 and T4 are on hold (section 14, item 18).
+- **A2 and A3 build approved (9 October 2026):** the project owner approved both in these words: "A2 and A3 approved". Their build contracts are sections 5.8 and 5.9 (written into this document at the A2/A3 review: the first write at the start of the build was lost, so the build was done against the contract stated in the build commit and is recorded here as built, with the review amendments).
+- **Not approved:** B3 and T4. Both are on hold (section 14, item 18).
 - **Known gaps until the metadata cleanup lands** (both close in the same onboarding DDL-rehearsal task, which inspects the DDL):
   - **`movable` is declared on trust.** The published descriptor cannot see triggers, so `hierarchy.movable` is accepted whenever the parent is writable. `hierarchyMovableFinding` (`TREE_MOVABLE_UNGUARDED`) is built and tested but not yet wired. Until it is, `movable` may only be set by hand by someone who has checked the DDL for a cycle guard (checklist item 7). The framework now refuses any cycle it can see (section 7.5), so a wrong declaration can no longer close a cycle through a move; the database guard still protects other writers.
   - **The parent-key check (`TREE_SCOPE_FIELD_REQUIRED`, `hierarchyParentKeyFinding`)** is built and tested but not yet wired into the onboarding DDL rehearsal. Until it is, a scoped hierarchy declared without `scopeField` would be accepted and browsed as one forest across owners; checklist item 1 (section 2.4), checked by hand at onboarding, is the only guard. No hierarchy is published, so nothing is affected today.
@@ -228,8 +229,8 @@ hierarchy?: {
 | B3 Rollups                | Rollup values per node (section 7.4)                                                                  |
 | B4 Reparent               | Approved and built: section 5.6 contract, section 7.5 integrity split |
 | B5 Pickers and breadcrumb | Approved and built: section 5.7 contract, section 7.6 behaviour |
-| A2 Group aggregates       | Per-group totals from published `aggregations`, under exact counts                                    |
-| A3 Date grouping          | Grouping a date field by month or quarter                                                             |
+| A2 Group aggregates       | Approved and built: section 5.8 |
+| A3 Date grouping          | Approved and built: section 5.9 |
 
 ### 5.5 Phase B2 contract: search with ancestor context (design approved in revision 3; build approved and built 9 October 2026)
 
@@ -263,6 +264,29 @@ hierarchy?: {
 | Picker selection | Records loaded anywhere in the tree are selectable, not only the top level |
 | Ancestor path | The record detail read (`EntityDetailReadV1`) gains `ancestorPath?: { items: readonly { id; label; href? }[]; parentOutsideView?: true }`, items from the root down to the record's parent (at most 16), computed by the B2 walk inside the visible set and the scope. `label` is the readable identity and title; `href` comes from the published detail route. `parentOutsideView` says the first item's parent (or the record's own, when there are no items) is a record the viewer cannot read; it is never named. Absent when the Entity has no hierarchy the viewer can browse or the record is a root |
 | Detail page | The record header shows the path as a navigation landmark of links to each ancestor's record, then the record itself as the current location |
+
+### 5.8 Phase A2 contract: group aggregates (approved 9 October 2026)
+
+| Aspect | Shape |
+| --- | --- |
+| Which aggregates | For each visible column whose field publishes `aggregations` (`field.list.aggregations`), the first published aggregate other than `count` (the heading already shows the count): `sum`, `average`, `minimum` or `maximum`, on an `integer`, `decimal` or `money` field the viewer can read unmasked. At most 5 per request |
+| Money (amended at the A2/A3 review) | A money field publishes aggregates other than `count` only when it declares `field.list.currencyField` (a string or enum field holding each row's currency code) and the viewer can read that field; otherwise only its count is published and a money aggregate request is refused. The group query also counts each group's currencies: one currency shows the total with its code; more than one shows "more than one currency" and no total. The framework never converts currencies; it refuses to present a sum across them |
+| Request | `aggregate`, repeated `field:aggregate` values on the list operation, accepted only with `group` and `countMode=exact`; anything else, or an unpublished, unreadable or non-numeric aggregate, is 400 `LIST_GROUP_AGGREGATE_INVALID`. Aggregate fields (and a money field's currency field) are declared to field authorization with group use |
+| Response | Each group bucket gains `aggregates?: { "field:aggregate": number \| string \| null }`, plus `aggregateCurrencies?` and `mixedCurrencies?` for money, computed by the same `GROUP BY`, inside the same authorization and visible set as its count. Values are numbers when that is exact, otherwise decimal text. The view formats decimal text without a floating-point round trip; the in-memory repository and the Unmapped values heading add and compare with the shared exact-decimal helper (`entity-list/src/decimal.ts`) |
+| Hashes | The requested aggregates are part of the `queryHash` |
+| View | Each group heading shows its aggregates after its count, labelled by field and aggregate ("Annual budget total 1,705,000"), formatted like the field. Only under exact counts (foundation section 5). The Unmapped values heading combines `sum`, `minimum` and `maximum` exactly across its values (money only within one currency) and shows no `average` |
+
+### 5.9 Phase A3 contract: grouping by month or quarter (approved 9 October 2026)
+
+| Aspect | Shape |
+| --- | --- |
+| Grouping state | A `groups` entry may name a date bucket as `field:month` or `field:quarter`. The URL keeps `groups=a,b,c`; older builds ignore the unknown entry and open ungrouped (decision 2's rule) |
+| Eligibility | A `date` or `datetime` field published `groupable`, filterable with `gte` and `lt` (and `is_null` when nullable), unmasked, on a list with exact counts: date buckets are only known from the group query. Published to the browser as `groupable` on that field; the Group dialog offers "by month" and "by quarter" for it |
+| Request | `group=field:month` or `field:quarter`; a `datetime` field also needs `timeZone` (an IANA zone, the viewer's), so a month is the viewer's month. Otherwise 400 `LIST_GROUP_INVALID` |
+| Buckets | `YYYY-MM` for months and `YYYY-Qn` for quarters, from `date_trunc` in the viewer's zone for `datetime` (a plain date is never shifted); no value is the No value heading, drawn last. Chronological order, passed through by the view without reordering |
+| Records of a bucket | The bucket's own filters: `gte` its first day and `lt` the next bucket's first day (for `datetime`, the zoned start of those days), the same edges Calendar uses |
+| Limit (amended at the A2/A3 review) | Enforced by the server: the group query returns at most 50 groups plus the No value group (`LIST_GROUP_LIMIT`; no value sorts first in SQL so the cap never drops it) and `groupsTruncated: true` when more exist; the record total is then counted separately. The view shows the "more groups" notice. This applies to every grouping, not only date buckets |
+| Combinations | A date bucket can be any of the three levels; Tree (Part B) does not use it |
 
 ## 6. Validation, availability and finding codes
 
@@ -453,6 +477,8 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
     - **Server.** The list operation accepts repeated `aggregate=field:aggregate` and `group=field:month|quarter` with `timeZone`; the query service refuses unpublished, unreadable or non-numeric aggregates and anything without a group and exact counts (`LIST_GROUP_AGGREGATE_INVALID`), and date buckets on a non-date field, a date field without a bucket, without exact counts, or a datetime without a valid zone (`LIST_GROUP_INVALID`). Both repositories compute buckets and aggregates in the same group query (SQL: one `GROUP BY` with `to_char(date_trunc(…))` in the viewer's zone and `sum`/`avg`/`min`/`max`); aggregate values are numbers when exact, otherwise decimal text. Aggregate fields are declared to field authorization with group use. A date field is published `groupable` only under exact counts.
     - **Browser.** The contract parses `field:month|quarter` group entries and bucket aggregates; grouped requests carry the visible columns' aggregates and the viewer's zone; date headings read "October 2026" or "Q4 2026"; headings show aggregates after their count; a level shows at most 50 headings with the notice; the Group dialog offers "Opened by month" and "Opened by quarter".
     - **Tests.** `list-group-aggregates.test.ts` (service, routes, buckets in a zone, values), `kysely-record-repository.test.ts` (one group query), `tests/foundation/entity-list-grouped-tree.test.ts`, four browser tests.
+- **A2/A3 review (9 October 2026):** decimal aggregates stay exact end to end (shared `addDecimals`, `compareDecimals`, `averageDecimals` and `exactAggregate` in `entity-list/src/decimal.ts`, used by the in-memory repository, the SQL value mapping and the Unmapped values heading; the view formats decimal text exactly); the 50-group cap is enforced in both repositories with `groupsTruncated`; money totals need a declared, readable `currencyField` and are withheld for groups spanning currencies. Tests: `tests/foundation/entity-list-decimal.test.ts`, `list-group-aggregates.test.ts` (currency, exact sums, the limit with a separate total), `descriptor-parser.test.ts` (`currencyField`), `kysely-record-repository.test.ts`, one browser test for the notice.
+- **New Meta Entity property:** `field.list.currencyField` (money fields only, naming a string or enum field). Its authoring storage follows the other list field properties in the Entity Studio blueprint once the metadata cleanup lands.
 - Not landed: the component catalogue row for the list host (a publication gate, as for Calendar and Gantt); authoring storage (decision 9, behind the metadata-cleanup gate); B2–B5, A2 and A3 (each needs its own approval).
 
 ## 13. Dependencies and risks
@@ -536,4 +562,4 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
 | Revision 3 review | Status line moved to revision 3 with the build-versus-design split; depth checklist precedence and `TREE_DEPTH_ABOVE_CAP` added (section 2.4 item 4); this row and the one above name each direction of correction; pilot 1's full-onboarding effort and the 16-versus-32 depth risk recorded (sections 12.1 and 13) |
 | Revision 3 final review (B2 follow-up) | Depth precedence recorded as done: data deeper than 16 is refused (`TREE_DEPTH_ABOVE_CAP`), a `maxDepth` below the data is refused (`TREE_DEPTH_BELOW_DATA`), headroom is a warning; section 6 now says which fires first. Checklist item 1 already carries the reason a scope field is refused without an owner column (the key cannot prove parent and child share a scope), matching the code comment |
 | B4/B5 review | `movable` named as a known gap beside the parent-key check, with `hierarchyMovableFinding` built for the same DDL-rehearsal task; the framework now refuses cycles it can see (`HIERARCHY_CYCLE`), reversing the revision-3 rejection with the owner's approval; the refusal mapping is narrowed to the parent write and to deferred foreign keys that name the parent column |
-| A2/A3 build | Built within sections 5.8 and 5.9; no review findings yet |
+| A2/A3 review | Decimal precision kept exact in display, combining and the in-memory repository; the 50-group cap enforced on the server with `groupsTruncated`; money totals made an enforced precondition (`currencyField`, mixed currencies withheld) rather than an assumption; sections 5.8 and 5.9 written in full (the first write had been lost) |

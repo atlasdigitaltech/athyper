@@ -17,3 +17,4 @@ export {
   type EntityScopeFilterV1,
 } from "./scope-filters";
 export * from "./filter-defaults";
+export * from "./decimal";

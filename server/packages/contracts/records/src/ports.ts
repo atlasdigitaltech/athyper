@@ -201,7 +201,10 @@ export interface RecordRepositoryListInput {
   readonly sort: ListRecordsQuery["sort"];
   readonly group?: string;
   readonly groupBucket?: import("./query.js").RecordGroupBucket;
-  readonly groupAggregates?: readonly import("./query.js").RecordGroupAggregate[];
+  readonly groupAggregates?: readonly (import("./query.js").RecordGroupAggregate & {
+    /** For a money field: its currency field, so a group spanning currencies shows no total. */
+    readonly currencyField?: string;
+  })[];
   /** Skip the row query and return only the group buckets. */
   readonly groupsOnly?: boolean;
   /** Record hierarchy: child existence per row, or orphans only. */

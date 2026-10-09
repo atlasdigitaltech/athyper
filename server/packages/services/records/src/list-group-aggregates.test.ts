@@ -20,7 +20,10 @@ const descriptor = (countMode: "exact" | "none" = "exact") =>
       { key: "status", storagePath: "status", type: "enum", required: true, writableOn: [], filterable: true, list: { groupable: true }, validation: { options: ["open", "paid"] } },
       { key: "due", storagePath: "due", type: "date", required: false, writableOn: [], filterable: true, list: { groupable: true } },
       { key: "posted", storagePath: "posted", type: "datetime", required: true, writableOn: [], filterable: true, list: { groupable: true } },
-      { key: "amount", storagePath: "amount", type: "money", required: true, writableOn: [], list: { aggregations: ["count", "sum"] } },
+      { key: "amount", storagePath: "amount", type: "money", required: true, writableOn: [], list: { aggregations: ["count", "sum"], currencyField: "currency" } },
+      { key: "currency", storagePath: "currency", type: "string", required: true, writableOn: [] },
+      { key: "fee", storagePath: "fee", type: "money", required: false, writableOn: [], list: { aggregations: ["count", "sum"] } },
+      { key: "units", storagePath: "units", type: "decimal", required: false, writableOn: [], list: { aggregations: ["sum"] } },
       { key: "rate", storagePath: "rate", type: "decimal", required: false, writableOn: [] },
     ],
     operations: { read: { code: "read", permissionCode: "invoice.read" } },
@@ -32,13 +35,14 @@ const context = {
   permissions: { planeKey: "neon", tenantId, principalId: "actor", principalFingerprint: "a", profileHash: "p", schemaHash: "s", resolvedAt: 1, allowed: [], denied: [], planLocked: [], planeExcluded: [], entries: [], authorizationScopes: [] },
 } as unknown as VerifiedRequestContext;
 
-function lists(described = descriptor()) {
+function lists(described = descriptor(), extra: Record<string, unknown>[] = []) {
   const persistence = createInMemoryRecordPersistence();
   persistence.seed(described, tenantId, [
-    { id: id(1), tenant_id: tenantId, code: "INV-1", status: "open", due: "2026-09-15", posted: "2026-09-30T20:00:00Z", amount: 100, rate: 1 },
-    { id: id(2), tenant_id: tenantId, code: "INV-2", status: "open", due: "2026-10-02", posted: "2026-10-01T10:00:00Z", amount: 250.5, rate: 2 },
-    { id: id(3), tenant_id: tenantId, code: "INV-3", status: "paid", due: "2026-10-20", posted: "2026-10-20T10:00:00Z", amount: 50, rate: null },
-    { id: id(4), tenant_id: tenantId, code: "INV-4", status: "paid", due: null, posted: "2026-12-31T10:00:00Z", amount: 10, rate: null },
+    { id: id(1), tenant_id: tenantId, code: "INV-1", status: "open", due: "2026-09-15", posted: "2026-09-30T20:00:00Z", amount: 100, currency: "MYR", rate: 1, units: "1234567890123456.78" },
+    { id: id(2), tenant_id: tenantId, code: "INV-2", status: "open", due: "2026-10-02", posted: "2026-10-01T10:00:00Z", amount: 250.5, currency: "MYR", rate: 2, units: "0.01" },
+    { id: id(3), tenant_id: tenantId, code: "INV-3", status: "paid", due: "2026-10-20", posted: "2026-10-20T10:00:00Z", amount: 50, currency: "MYR", rate: null },
+    { id: id(4), tenant_id: tenantId, code: "INV-4", status: "paid", due: null, posted: "2026-12-31T10:00:00Z", amount: 10, currency: "USD", rate: null },
+    ...extra,
   ]);
   const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true }) } };
   const listExecutor = createRecordListExecutor(options);
@@ -50,9 +54,22 @@ describe("group aggregates (A2)", () => {
   it("returns each group's published aggregates beside its count", async () => {
     const page = parseEntityListResult(await lists().list({ ...request, group: "status", groupAggregates: [{ field: "amount", aggregate: "sum" }] }));
     expect(page.groups).toEqual([
-      { value: "open", label: "open", count: 2, aggregates: { "amount:sum": 350.5 } },
-      { value: "paid", label: "paid", count: 2, aggregates: { "amount:sum": 60 } },
+      { value: "open", label: "open", count: 2, aggregates: { "amount:sum": 350.5 }, aggregateCurrencies: { "amount:sum": "MYR" } },
+      // INV-3 is MYR and INV-4 USD: no meaningless total.
+      { value: "paid", label: "paid", count: 2, aggregates: { "amount:sum": null }, mixedCurrencies: ["amount:sum"] },
     ]);
+  });
+
+  it("refuses a money aggregate without a currency field, and publishes only its count", async () => {
+    await expect(lists().list({ ...request, group: "status", groupAggregates: [{ field: "fee", aggregate: "sum" }] })).rejects.toMatchObject({ code: "LIST_GROUP_AGGREGATE_INVALID" });
+    const published = await lists().descriptor(context, "invoice");
+    expect(published.fields.find((field) => field.key === "fee")?.aggregations).toEqual(["count"]);
+    expect(published.fields.find((field) => field.key === "amount")?.aggregations).toEqual(["count", "sum"]);
+  });
+
+  it("sums decimals exactly, as the database does", async () => {
+    const page = parseEntityListResult(await lists().list({ ...request, group: "status", groupAggregates: [{ field: "units", aggregate: "sum" }] }));
+    expect(page.groups?.[0]?.aggregates).toEqual({ "units:sum": "1234567890123456.79" });
   });
 
   it("refuses an unpublished aggregate, a non-numeric field, or aggregates without exact counts", async () => {
@@ -109,6 +126,21 @@ describe("aggregate values from the database", () => {
     expect(aggregateValue("100")).toBe(100);
     expect(aggregateValue("12345678901234567890.12")).toBe("12345678901234567890.12");
     expect(aggregateValue(null)).toBeNull();
+  });
+});
+
+describe("the group limit (A3)", () => {
+  it("returns at most 50 groups plus No value, says more exist, and still counts every record", async () => {
+    const months = Array.from({ length: 60 }, (_, index) => ({
+      id: id(100 + index), tenant_id: tenantId, code: `M-${index}`, status: "open", due: `${2020 + Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}-01`,
+      posted: "2026-01-01T00:00:00Z", amount: 1, currency: "MYR",
+    }));
+    const page = parseEntityListResult(await lists(descriptor(), months).list({ ...request, group: "due", groupBucket: { unit: "month" } }));
+    expect(page.groupsTruncated).toBe(true);
+    expect(page.groups).toHaveLength(51);
+    expect(page.groups?.at(-1)?.value).toBeNull();
+    expect(page.groups?.[0]?.value).toBe("2020-01");
+    expect(page.pagination.total).toBe(64);
   });
 });
 
