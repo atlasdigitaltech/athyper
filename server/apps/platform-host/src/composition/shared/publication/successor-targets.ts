@@ -10,6 +10,7 @@ import {
 export async function assertSuccessorTargetHeads(
   pins: readonly EntitySuccessorTargetPin[],
   databases: Partial<Record<PublicationPlane, Kysely<Record<string, never>>>>,
+  committed?: { releaseId: string; releaseNo: number; artifactHash: string },
 ): Promise<void> {
   for (const pin of pins) {
     const db = databases[pin.plane];
@@ -31,6 +32,16 @@ export async function assertSuccessorTargetHeads(
     if (rows.length > 1 || (rows.length === 1 && rows[0]!.valid !== true))
       throw Error("ENTITY_SUCCESSOR_TARGET_HEAD_INVALID");
     const head = rows.length === 1 ? rows[0]! : null;
+    // Exact signed artifact already installed by this release: replay is safe.
+    // Any unrelated successor still fails the normal predecessor comparison.
+    if (
+      head &&
+      committed &&
+      head.source_release_id === committed.releaseId &&
+      Number(head.source_release_no) === committed.releaseNo &&
+      head.artifact_hash === committed.artifactHash
+    )
+      continue;
     assertEntitySuccessorTargetHead(
       pin,
       head

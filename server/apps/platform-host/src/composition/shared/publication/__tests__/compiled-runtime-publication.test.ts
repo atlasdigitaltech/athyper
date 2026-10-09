@@ -488,6 +488,7 @@ it("keeps the host adapter product-free with an explicit import boundary", () =>
   );
   const allowed = new Set([
     "./native-compilation-recovery-authority.js",
+    "./local-publication-policy.js",
     "./human-publication-policy.js",
     "@athyper/server-platform-ai",
     "@athyper/server-adapter-publication-signing",

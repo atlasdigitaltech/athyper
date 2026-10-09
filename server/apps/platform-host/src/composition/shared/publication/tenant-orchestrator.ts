@@ -1,3 +1,4 @@
+import { authorizeLocalPublicationActivation } from "./local-publication-activation.js";
 import type { PublicationArtifactLoader } from "@athyper/server-contract-publication";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import {
@@ -56,6 +57,12 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
           await stamp(authority);
           const apply = async (local: Kysely<Database>) => {
             await stamp(local);
+            await authorizeLocalPublicationActivation({
+              authority,
+              target: local,
+              deploymentId,
+              configuration: this.coordinatedWorkload,
+            });
             const coordinated = await deployHumanPublicationGroup({
               deploymentId,
               authority,

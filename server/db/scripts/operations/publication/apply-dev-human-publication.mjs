@@ -8,12 +8,15 @@ const { Client } = createRequire(
 )("pg");
 const initialTarget =
   process.argv[2] === "--apply=DEV-SUCCESSOR-INITIAL-TARGET";
-assert.equal(process.argv.length, initialTarget ? 4 : 3);
+const rehearse = !initialTarget && process.argv[3] === "--rehearse";
+assert.equal(process.argv.length, initialTarget || rehearse ? 4 : 3);
 const plane = initialTarget
   ? process.argv[3].replace(/^--plane=/, "")
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-RELEASE":
+    "20261009_local_publication_release.sql",
   "--apply=DEV-LOCAL-PUBLICATION-DISPATCH":
     "20261009_local_publication_dispatch.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ADMISSION-REPLAY":
@@ -188,6 +191,24 @@ try {
     assert.equal(installed?.status, "applied");
     assert.equal(installed?.sha256, dependency.sha256);
   }
+  if (name === "20261009_local_publication_release.sql") {
+    for (const dependencyName of [
+      "20261009_local_publication_dispatch.sql",
+      "20261009_native_publication_validation.sql",
+    ]) {
+      const dependency = JSON.parse(
+        readFileSync(new URL("migrations/inventory.json", root), "utf8"),
+      ).entries.find((e) => e.path === "migrations/" + dependencyName);
+      const installed = (
+        await db.query(
+          "SELECT sha256,status FROM public.athyper_schema_migration_v1 WHERE migration_name=$1",
+          [dependencyName],
+        )
+      ).rows[0];
+      assert.equal(installed?.status, "applied");
+      assert.equal(installed.sha256, dependency.sha256);
+    }
+  }
   const prior = (
     await db.query(
       "SELECT sha256,status FROM public.athyper_schema_migration_v1 WHERE migration_name=$1",
@@ -222,9 +243,10 @@ try {
   }
   const after = (await state()).rows[0];
   assert.deepEqual(after, before);
-  await db.query("COMMIT");
+  await db.query(rehearse ? "ROLLBACK" : "COMMIT");
   Object.assign(report, {
-    applied: true,
+    applied: !rehearse,
+    rehearsed: rehearse,
     qualifiedFunctions: expected.length,
     publicationStateUnchanged: true,
     before,

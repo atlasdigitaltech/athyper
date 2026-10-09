@@ -1,3 +1,5 @@
+import { createLocalNativeRelease } from "./local-publication-release.js";
+import type { ArtifactSigner } from "@athyper/server-contract-meta-entity-authoring";
 import { randomUUID } from "node:crypto";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import {
@@ -21,6 +23,7 @@ import type { AuthoringServiceOptions } from "@athyper/server-plane-studio-meta-
  * reader requires the current enrolled workload for each locked source read. */
 export function createNativePublicationStartup(options: {
   environment: NodeJS.ProcessEnv;
+  signer?: ArtifactSigner;
   audit?: AuditRecorder<Kysely<Record<string, never>>>;
   loader: ComponentLoaderOptions;
   targetDatabases?: Partial<
@@ -40,6 +43,9 @@ export function createNativePublicationStartup(options: {
   };
   run<T>(work: (tx: Kysely<Record<string, never>>) => Promise<T>): Promise<T>;
 }): Pick<AuthoringServiceOptions, "nativePublicationSource"> & {
+  releaseLocalNativeSource?: (
+    requestHash: string,
+  ) => Promise<{ id: string; releaseNo: number; replayed: boolean }>;
   readNativeSource?: ReturnType<typeof createNativeReviewSource>;
   transitionLocalNativeSource?: (
     requestHash: string,
@@ -48,7 +54,7 @@ export function createNativePublicationStartup(options: {
     basis: "local_development_authority";
     requestHash: string;
     revision: number;
-    status: "in_review" | "approved";
+    status: "in_review" | "approved" | "published";
     replayed: boolean;
   }>;
   readLocalNativeSource?: (
@@ -129,11 +135,19 @@ export function createNativePublicationStartup(options: {
           const resolved = await source(tx, request.inputs.changeSetId);
           const current = await sql<{
             lock_version: string | number;
-          }>`SELECT root_json->>'lock_version' AS lock_version FROM publication.read_native_worker_source(${request.inputs.changeSetId}::uuid,4194304)`.execute(
+            predecessor: string | null;
+          }>`SELECT root_json->>'lock_version' AS lock_version,root_json->>'base_release_id' AS predecessor FROM publication.read_native_worker_source(${request.inputs.changeSetId}::uuid,4194304)`.execute(
             tx,
           );
           if (current.rows.length !== 1)
             throw Error("LOCAL_PUBLICATION_SOURCE_UNAVAILABLE");
+          const committed = (
+            await sql<{
+              receipt: { id: string; releaseNo: number } | null;
+            }>`SELECT publication.local_publication_release_receipt(${request.hash}) receipt`.execute(
+              tx,
+            )
+          ).rows[0]?.receipt;
           return {
             authority,
             inputs: await resolveLocalPublicationInputs({
@@ -142,6 +156,15 @@ export function createNativePublicationStartup(options: {
               source: resolved,
               changeSetId: request.inputs.changeSetId,
               revision: request.inputs.revision,
+              predecessorReleaseId: current.rows[0]!.predecessor,
+              ...(committed
+                ? {
+                    committed: {
+                      ...committed,
+                      targets: request.inputs.targets,
+                    },
+                  }
+                : {}),
               instance: local.instance,
             }),
           };
@@ -149,6 +172,31 @@ export function createNativePublicationStartup(options: {
       }
     : options.localRequests;
   return {
+    ...(local?.localAuthority &&
+    localRequests &&
+    options.signer &&
+    options.audit
+      ? {
+          releaseLocalNativeSource: (requestHash: string) =>
+            localRequests.run((tx) =>
+              withLocalPublicationRequest({
+                transaction: tx,
+                host: localRequests.host,
+                requestHash,
+                resolveCurrent: localRequests.resolveCurrent,
+                execute: (request, transaction) =>
+                  createLocalNativeRelease({
+                    transaction,
+                    request,
+                    configuration: local,
+                    source,
+                    signer: options.signer!,
+                    audit: options.audit!,
+                  }),
+              }),
+            ),
+        }
+      : {}),
     ...(local?.localAuthority && localRequests
       ? {
           transitionLocalNativeSource: (
@@ -237,7 +285,7 @@ export function createNativePublicationStartup(options: {
                       basis: "local_development_authority";
                       requestHash: string;
                       revision: number;
-                      status: "in_review" | "approved";
+                      status: "in_review" | "approved" | "published";
                       replayed: boolean;
                     };
                   }>`SELECT publication.transition_local_publication_request(
@@ -252,8 +300,11 @@ export function createNativePublicationStartup(options: {
                     receipt.basis !== "local_development_authority" ||
                     !Number.isSafeInteger(receipt.revision) ||
                     receipt.revision <= request.inputs.revision ||
-                    !["in_review", "approved"].includes(receipt.status) ||
-                    (phase === "review" && receipt.status !== "approved") ||
+                    !["in_review", "approved", "published"].includes(
+                      receipt.status,
+                    ) ||
+                    (phase === "review" &&
+                      !["approved", "published"].includes(receipt.status)) ||
                     typeof receipt.replayed !== "boolean"
                   )
                     throw Error("LOCAL_PUBLICATION_TRANSITION_RECEIPT_INVALID");

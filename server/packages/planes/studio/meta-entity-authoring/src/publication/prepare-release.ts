@@ -158,18 +158,6 @@ export async function prepareSystemReferenceRelease(
         (surface) => surface.layoutConfig?.tableEntityProduct !== undefined,
       );
   const key = `metadata.${table ? "entity" : "reference"}.${source.entity_code}`;
-  const successorPolicy =
-    Number(source.release_no) > 1
-      ? (
-          await sql<{
-            policy: unknown;
-          }>`SELECT publication.fn_system_entity_successor_policy(${input.releaseId}::uuid) policy`.execute(
-            db,
-          )
-        ).rows[0]?.policy
-      : undefined;
-  if (Number(source.release_no) > 1 && !successorPolicy)
-    throw Error("ENTITY_SUCCESSOR_POLICY_REQUIRED");
   const executionMetadataAvailable = (
     await sql<{ available: boolean }>`SELECT
     to_regprocedure('publication.fn_system_entity_execution_metadata(uuid)') IS NOT NULL available`.execute(
@@ -184,17 +172,37 @@ export async function prepareSystemReferenceRelease(
     ${input.releaseId}::uuid) metadata`.execute(db)
       ).rows[0]?.metadata ?? {})
     : {};
+  const successorPolicy =
+    Number(source.release_no) > 1 &&
+    humanExecution.approvalBasis !== "local_development_authority"
+      ? (
+          await sql<{
+            policy: unknown;
+          }>`SELECT publication.fn_system_entity_successor_policy(${input.releaseId}::uuid) policy`.execute(
+            db,
+          )
+        ).rows[0]?.policy
+      : undefined;
+  if (
+    Number(source.release_no) > 1 &&
+    !successorPolicy &&
+    humanExecution.approvalBasis !== "local_development_authority"
+  )
+    throw Error("ENTITY_SUCCESSOR_POLICY_REQUIRED");
   await sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`.execute(
     db,
   );
-  const conflict = (
-    await sql`SELECT p.id FROM publication.release p
+  const conflict =
+    humanExecution.approvalBasis === "local_development_authority"
+      ? []
+      : (
+          await sql`SELECT p.id FROM publication.release p
     JOIN publication.entity_release_link l ON l.publication_release_id=p.id
     JOIN metadata.entity_release r ON r.id=l.entity_release_id
     WHERE p.release_key=${key} AND (r.entity_id<>${source.entity_id}::uuid OR r.tenant_id IS NOT NULL)`.execute(
-      db,
-    )
-  ).rows;
+            db,
+          )
+        ).rows;
   if (conflict.length)
     throw Error("SYSTEM_REFERENCE_PUBLICATION_IDENTITY_CONFLICT");
   // No ON CONFLICT overwrite: immutable sources and release coordinates must
@@ -259,7 +267,7 @@ export async function prepareSystemReferenceRelease(
     db,
   );
   await sql`SELECT publication.fn_transition_release(${input.releaseId}::uuid,'approved',${source.approved_by}::uuid,NULL::uuid,
-    ${JSON.stringify({ review: "meta-entity-change-set", changeSetId: source.change_set_id, sourceTenantId: null })}::jsonb)`.execute(
+    ${JSON.stringify({ review: "meta-entity-change-set", changeSetId: source.change_set_id, sourceTenantId: null, ...(humanExecution.approvalBasis === "local_development_authority" ? { approvalBasis: "local_development_authority", requestHash: (humanExecution.localPublicationRequest as { hash: string }).hash } : {}) })}::jsonb)`.execute(
     db,
   );
   return true;

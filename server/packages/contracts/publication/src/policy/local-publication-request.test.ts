@@ -131,3 +131,44 @@ it("rejects tampering, authority replacement and destination mismatch", () => {
     ),
   ).toThrow("ADMISSION_TARGET_MISMATCH");
 });
+
+it("pins the release envelope and predecessor independently of target descriptors", () => {
+  const input = {
+    ...source,
+    release: { descriptorHash: "a".repeat(64), predecessorReleaseId: null },
+  };
+  const request = createLocalPublicationRequest(
+    authority,
+    admission,
+    input,
+    now,
+  );
+  assertLocalPublicationRequest(request, authority, admission, input, now);
+  for (const release of [
+    { ...input.release, descriptorHash: "b".repeat(64) },
+    {
+      ...input.release,
+      predecessorReleaseId: "00000000-0000-4000-8000-000000000001",
+    },
+  ])
+    expect(() =>
+      assertLocalPublicationRequest(
+        request,
+        authority,
+        admission,
+        { ...input, release },
+        now,
+      ),
+    ).toThrow("INPUT_CHANGED");
+  expect(() =>
+    createLocalPublicationRequest(
+      authority,
+      admission,
+      {
+        ...input,
+        release: { ...input.release, predecessorReleaseId: "not-an-id" },
+      },
+      now,
+    ),
+  ).toThrow("RELEASE_INVALID");
+});

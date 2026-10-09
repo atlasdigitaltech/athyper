@@ -26,7 +26,7 @@
     "jobs:new": 67,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 413,
+    "operational-scripts:new": 414,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -16370,6 +16370,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/publication/install-dev-entity-successor.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:install-local-publication",
+      "category": "operational-scripts",
+      "key": "install-local-publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/install-local-publication.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

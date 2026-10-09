@@ -2551,6 +2551,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/43_local_publication_dispatch.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_release.sql",
+      "path": "migrations/20261009_local_publication_release.sql",
+      "sha256": "e34715cd982dc450bec062a599a5c1a1cc6bae601a675b871e808805f70e908c",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Bind signed native releases and existing preparation/link functions to exact local requests with current authority, replay and explicit approval basis.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/44_local_publication_release.sql"
+      ]
     }
   ]
 }

@@ -1,4 +1,9 @@
 import {
+  createLocalPublicationRequest,
+  type LocalDevelopmentAuthority,
+} from "@athyper/server-contract-publication";
+import * as localAuthority from "./local-publication-policy.js";
+import {
   canonicalBytes,
   sha256 as hashBytes,
 } from "@athyper/server-adapter-publication-signing";
@@ -24,12 +29,25 @@ afterEach(() => vi.restoreAllMocks());
 it.each([
   ...(["studio", "neon", "mesh"] as const).flatMap((plane) =>
     [false, true].flatMap((recovery) =>
-      [false, true].map((successor) => ({ plane, recovery, successor })),
+      [false, true].map((successor) => ({
+        plane,
+        recovery,
+        successor,
+        local: false,
+      })),
     ),
   ),
+  ...(["studio", "neon", "mesh"] as const).flatMap((plane) =>
+    [false, true].map((successor) => ({
+      plane,
+      successor,
+      recovery: false,
+      local: true,
+    })),
+  ),
 ])(
-  "recompiles native reviewed sources at the worker boundary (plane=$plane, recovery=$recovery, successor=$successor)",
-  async ({ plane, recovery, successor }) => {
+  "recompiles native reviewed sources at the worker boundary (plane=$plane, recovery=$recovery, successor=$successor, local=$local)",
+  async ({ plane, recovery, successor, local }) => {
     const f = nativeReleaseFixture();
     f.graph.entity.ownershipModel = "system";
     f.graph.entity.entityClass = "reference";
@@ -204,6 +222,73 @@ it.each([
         pin: { id: randomUUID(), version: 1, hash: "e".repeat(64) },
       } as never);
     }
+    const standing: LocalDevelopmentAuthority = {
+      schema: "athyper.local-development-authority/1",
+      id: randomUUID(),
+      version: 1,
+      hash: "a".repeat(64),
+      active: true,
+      enrollmentReceiptId: "fixture",
+      validFrom: new Date(Date.now() - 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 600000).toISOString(),
+      host: {
+        environment: "local",
+        instance: "dev",
+        domainSuffix: "dev.athyper.test",
+      },
+      scope: { kind: "product" },
+      developerPrincipalIds: [member.authorId],
+      authorWorkloadId: configuration.author.principalId,
+      publisherWorkloadId: publisherId,
+      actions: ["publish"],
+      destinations: planes.map((plane) => ({ plane, instance: "dev" })),
+    };
+    const request = createLocalPublicationRequest(
+      standing,
+      {
+        host: standing.host,
+        scope: standing.scope,
+        action: "publish",
+        targets: standing.destinations,
+        developerPrincipalId: member.authorId,
+        authorWorkloadId: configuration.author.principalId,
+        publisherWorkloadId: publisherId,
+      },
+      {
+        changeSetId,
+        revision: 1,
+        sourceHash: artifact.contractHash,
+        compilerHash: publicationCompilerIdentity().buildHash,
+        release: {
+          descriptorHash: artifact.descriptorHash,
+          predecessorReleaseId: successor ? previousId : null,
+        },
+        resourceHashes: [
+          ...new Set(
+            (resolved.targetCompilers ?? [resolved.compiler]).map((c) =>
+              sha256(c),
+            ),
+          ),
+        ].sort(),
+        targets: targets.map((t) => ({
+          plane: t.targetPlane,
+          instance: "dev",
+          artifactHash: t.artifact.descriptorHash,
+          predecessorHash: null,
+          ...(successor
+            ? {
+                predecessor: policy.predecessors[0]!.targets.find(
+                  (p) => p.plane === t.targetPlane,
+                ) as never,
+              }
+            : {}),
+        })),
+      },
+    );
+    vi.spyOn(
+      localAuthority,
+      "resolveLocalPublicationAuthority",
+    ).mockResolvedValue(standing);
     const row = {
       publication_release_id: releaseId,
       release_key: "metadata.reference." + f.graph.entity.entityCode,
@@ -221,31 +306,35 @@ it.each([
       target_planes: planes,
     };
     const query = vi.fn(async (text: string) => ({
-      rows: text.includes("information_schema.tables")
-        ? [{ name: "shared.synthetic_reference" }]
-        : text.includes("executionPolicyId")
-          ? [{ id: randomUUID() }]
-          : text.includes("FROM master.principal")
-            ? [{ id: publisherId }]
-            : text.includes("fn_compiled_entity_compilation_source")
-              ? targets.map((target) => ({
-                  ...row,
-                  plane_key: target.targetPlane,
-                  compiled_json: target.artifact.descriptor,
-                }))
-              : text.includes("metadata ?")
-                ? [{ human: true }]
-                : text.includes("fn_human_execution_context")
-                  ? [
-                      {
-                        execution: {
-                          policy,
-                          coordinationHash: sha256(policy.plan),
-                          sources: [{ changeSetId, graph: f.graph }],
-                        },
-                      },
-                    ]
-                  : [],
+      rows: text.includes("local_publication_execution_context")
+        ? [{ value: { request } }]
+        : text.includes("approvalBasis")
+          ? [{ local }]
+          : text.includes("information_schema.tables")
+            ? [{ name: "shared.synthetic_reference" }]
+            : text.includes("executionPolicyId")
+              ? [{ id: randomUUID() }]
+              : text.includes("FROM master.principal")
+                ? [{ id: publisherId }]
+                : text.includes("fn_compiled_entity_compilation_source")
+                  ? targets.map((target) => ({
+                      ...row,
+                      plane_key: target.targetPlane,
+                      compiled_json: target.artifact.descriptor,
+                    }))
+                  : text.includes("metadata ?")
+                    ? [{ human: !local }]
+                    : text.includes("fn_human_execution_context")
+                      ? [
+                          {
+                            execution: {
+                              policy,
+                              coordinationHash: sha256(policy.plan),
+                              sources: [{ changeSetId, graph: f.graph }],
+                            },
+                          },
+                        ]
+                      : [],
     }));
     const db = new Kysely<Record<string, never>>({
       dialect: new PostgresDialect({
@@ -261,7 +350,18 @@ it.each([
       .mockResolvedValue();
     const adapter = createCompiledRuntimePublication({
       authority: db,
-      configuration,
+      configuration: {
+        ...configuration,
+        ...(local
+          ? {
+              localAuthority: {
+                id: standing.id,
+                version: standing.version,
+                hash: standing.hash,
+              },
+            }
+          : {}),
+      },
       nativeSource,
       targets: () => ({
         databases: { studio: db, neon: db, mesh: db },
@@ -291,7 +391,7 @@ it.each([
           }
         : {}),
       contract: f.graph as unknown as Record<string, unknown>,
-      coordinationHash: sha256(policy.plan),
+      ...(!local ? { coordinationHash: sha256(policy.plan) } : {}),
     };
     try {
       const registry = await adapter.registry(plane);

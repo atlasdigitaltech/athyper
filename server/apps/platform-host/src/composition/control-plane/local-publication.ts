@@ -156,7 +156,8 @@ export function createLocalPublicationAdmission(options: Options) {
           await sql<{
             revision: string;
             status: string;
-          }>`SELECT root_json->>'lock_version' AS revision,root_json->>'status' AS status FROM publication.read_native_product_review_source(${id}::uuid,4194304)`.execute(
+            predecessor: string | null;
+          }>`SELECT root_json->>'lock_version' AS revision,root_json->>'status' AS status,root_json->>'base_release_id' AS predecessor FROM publication.read_native_product_review_source(${id}::uuid,4194304)`.execute(
             tx,
           )
         ).rows[0];
@@ -179,6 +180,7 @@ export function createLocalPublicationAdmission(options: Options) {
           source,
           changeSetId: id,
           revision: command.expectedRevision,
+          predecessorReleaseId: root.predecessor,
           instance: configuration.instance,
         });
         const request = createLocalPublicationRequest(

@@ -162,3 +162,39 @@ it("cancellation prevents the next durable phase", async () => {
   ).rejects.toThrow();
   expect(transition).toHaveBeenCalledTimes(1);
 });
+it("retries dispatch of the committed release without allocating another release", async () => {
+  const transition = vi.fn(async (requestHash: string) => ({
+    basis: "local_development_authority" as const,
+    requestHash,
+    revision: 4,
+    status: "published" as const,
+    replayed: true,
+  }));
+  const release = vi
+    .fn()
+    .mockResolvedValue({ id: "committed", releaseNo: 3, replayed: true });
+  const dispatch = vi
+    .fn()
+    .mockRejectedValueOnce(Error("queue unavailable"))
+    .mockResolvedValue(undefined);
+  const handler = createLocalPublicationPreparationHandler({
+    configuration,
+    transition,
+    release,
+    dispatch,
+  });
+  await expect(handler.handle(job, context())).rejects.toThrow(
+    "queue unavailable",
+  );
+  await expect(handler.handle(job, context())).resolves.toMatchObject({
+    output: { stage: "dispatched", releaseId: "committed" },
+  });
+  expect(dispatch.mock.calls).toEqual([["committed"], ["committed"]]);
+  expect(() =>
+    createLocalPublicationPreparationHandler({
+      configuration,
+      transition,
+      release,
+    }),
+  ).toThrow("RELEASE_DISPATCH_REQUIRED");
+});

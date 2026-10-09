@@ -1,3 +1,7 @@
+import {
+  parseEntitySuccessorTargetPin,
+  type EntitySuccessorTargetPin,
+} from "./entity-successor-policy.js";
 import { createHash } from "node:crypto";
 import {
   assertLocalDevelopmentAuthority,
@@ -12,11 +16,17 @@ export interface LocalPublicationInputs {
   readonly revision: number;
   readonly sourceHash: string;
   readonly compilerHash: string;
+  /** Older preparation-only requests omit this. Release execution requires it. */
+  readonly release?: {
+    readonly descriptorHash: string;
+    readonly predecessorReleaseId: string | null;
+  };
   readonly resourceHashes: readonly string[];
   readonly targets: readonly {
     readonly plane: "studio" | "neon" | "mesh";
     readonly instance: string;
     readonly predecessorHash: string | null;
+    readonly predecessor?: EntitySuccessorTargetPin;
     readonly artifactHash: string;
   }[];
 }
@@ -72,11 +82,30 @@ function inputs(value: LocalPublicationInputs): LocalPublicationInputs {
           ["studio", "neon", "mesh"].includes(t.plane) &&
           t.instance === "dev" &&
           hashPattern.test(t.artifactHash) &&
+          (!t.predecessor ||
+            (t.predecessor.plane === t.plane &&
+              t.predecessor.instance === t.instance &&
+              (t.predecessor.artifactHash ?? null) === t.predecessorHash &&
+              t.predecessor.sourceReleaseId ===
+                value.release?.predecessorReleaseId)) &&
           (t.predecessorHash === null || hashPattern.test(t.predecessorHash)),
       ),
     "TARGETS_INVALID",
   );
+  if (value.release !== undefined)
+    required(
+      value.release !== null &&
+        Object.keys(value.release).sort().join() ===
+          "descriptorHash,predecessorReleaseId" &&
+        hashPattern.test(value.release.descriptorHash) &&
+        (value.release.predecessorReleaseId === null ||
+          /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
+            value.release.predecessorReleaseId,
+          )),
+      "RELEASE_INVALID",
+    );
   return {
+    ...(value.release ? { release: { ...value.release } } : {}),
     changeSetId: value.changeSetId,
     revision: value.revision,
     sourceHash: value.sourceHash,
@@ -88,6 +117,9 @@ function inputs(value: LocalPublicationInputs): LocalPublicationInputs {
         instance: t.instance,
         predecessorHash: t.predecessorHash,
         artifactHash: t.artifactHash,
+        ...(t.predecessor
+          ? { predecessor: parseEntitySuccessorTargetPin(t.predecessor) }
+          : {}),
       }))
       .sort((a, b) => a.plane.localeCompare(b.plane)),
   };

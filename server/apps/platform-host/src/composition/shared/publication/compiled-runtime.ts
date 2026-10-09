@@ -1,3 +1,8 @@
+import {
+  assertLocalPublicationRequest,
+  type LocalPublicationRequest,
+} from "@athyper/server-contract-publication";
+import { resolveLocalPublicationAuthority } from "./local-publication-policy.js";
 import { findNativeCompilationRecovery } from "./native-compilation-recovery-authority.js";
 import { ACTIVITY_ACTIONS } from "@athyper/server-contract-publication";
 import { resolveAtlasEntityToolManifest } from "@athyper/server-platform-ai";
@@ -85,6 +90,7 @@ export function createCompiledRuntimePublication(options: {
     plane: PublicationPlane,
   ): Promise<
     CompiledRuntimeSource & {
+      localBasis?: boolean;
       recoveryEvidence?: unknown;
       humanTargets?: ReturnType<typeof nativePublicationTargets>;
     }
@@ -142,6 +148,89 @@ export function createCompiledRuntimePublication(options: {
             }>`SELECT metadata ? 'humanExecutionPolicy' AS human
         FROM publication.release WHERE id=${releaseId}::uuid`.execute(tx)
           ).rows[0]?.human === true;
+        const local =
+          (
+            await sql<{
+              local: boolean;
+            }>`SELECT metadata->>'approvalBasis'='local_development_authority' AS local FROM publication.release WHERE id=${releaseId}::uuid`.execute(
+              tx,
+            )
+          ).rows[0]?.local === true;
+        let localRequest: LocalPublicationRequest | undefined;
+        let localTargets:
+          ReturnType<typeof nativePublicationTargets> | undefined;
+        if (local) {
+          if (!configuration.localAuthority || !options.nativeSource)
+            throw Error("LOCAL_PUBLICATION_AUTHORITY_NOT_CONFIGURED");
+          const execution = (
+            await sql<{
+              value: { request: LocalPublicationRequest };
+            }>`SELECT publication.local_publication_execution_context(${releaseId}::uuid) value`.execute(
+              tx,
+            )
+          ).rows[0]?.value;
+          if (!execution?.request?.inputs.release)
+            throw Error("LOCAL_PUBLICATION_RELEASE_PINS_REQUIRED");
+          localRequest = execution.request;
+          await sql`SELECT set_config('app.local_publication_request_hash',${localRequest.hash},true)`.execute(
+            tx,
+          );
+          const currentAuthority = await resolveLocalPublicationAuthority({
+            transaction: tx,
+            context: {
+              tenantId: configuration.tenantId,
+              principalId: configuration.publisher.principalId,
+              planeKey: "studio",
+            },
+            pin: configuration.localAuthority,
+          });
+          const resolved = await options.nativeSource(
+            tx,
+            localRequest.inputs.changeSetId,
+          );
+          const compiled = compileNativePublication(resolved);
+          localTargets = nativePublicationTargets(resolved.graph, compiled);
+          assertLocalPublicationRequest(
+            localRequest,
+            currentAuthority,
+            {
+              ...localRequest.admission,
+              host: {
+                environment: configuration.environment,
+                instance: configuration.instance,
+                domainSuffix: configuration.domainSuffix,
+              },
+            },
+            {
+              ...localRequest.inputs,
+              sourceHash: compiled.contractHash,
+              compilerHash: publicationCompilerIdentity().buildHash,
+              release: {
+                ...localRequest.inputs.release!,
+                descriptorHash: compiled.descriptorHash,
+              },
+              resourceHashes: [
+                ...new Set(
+                  (resolved.targetCompilers ?? [resolved.compiler]).map((c) =>
+                    sha256(c),
+                  ),
+                ),
+              ].sort(),
+              targets: localRequest.inputs.targets.map((t) => ({
+                ...t,
+                artifactHash:
+                  localTargets!.find((x) => x.targetPlane === t.plane)?.artifact
+                    .descriptorHash ?? "",
+              })),
+            },
+          );
+          if (
+            compiled.contractHash !== sha256(row.contract_json) ||
+            compiled.descriptorHash !==
+              localRequest.inputs.release!.descriptorHash
+          )
+            throw Error("LOCAL_PUBLICATION_SIGNED_SOURCE_CHANGED");
+        }
         const execution = human
           ? (
               await sql<{
@@ -247,7 +336,7 @@ export function createCompiledRuntimePublication(options: {
             throw Error("HUMAN_PUBLICATION_GROUP_MEMBER_REQUIRED");
         }
         const successor =
-          Number(row.release_no) > 1
+          Number(row.release_no) > 1 && !localRequest
             ? parseDevEntitySuccessorPolicy(row.successor_policy)
             : undefined;
         if (
@@ -266,9 +355,9 @@ export function createCompiledRuntimePublication(options: {
           recoveryEvidence = recovery.evidence;
         } else if (successor && !humanTargets)
           assertPublicationCompilerIdentity(successor.compiler);
-        const expectedPredecessor = successor?.targets.find(
-          (t) => t.plane === plane,
-        );
+        const expectedPredecessor =
+          localRequest?.inputs.targets.find((t) => t.plane === plane)
+            ?.predecessor ?? successor?.targets.find((t) => t.plane === plane);
         if (
           successor &&
           (!expectedPredecessor ||
@@ -298,6 +387,9 @@ export function createCompiledRuntimePublication(options: {
           contract: row.contract_json as unknown as Record<string, unknown>,
           ...(expectedPredecessor ? { expectedPredecessor } : {}),
           ...(recoveryEvidence ? { recoveryEvidence } : {}),
+          ...(localTargets
+            ? { humanTargets: localTargets, localBasis: true }
+            : {}),
           ...(execution
             ? { coordinationHash: execution.coordinationHash, humanTargets }
             : {}),
@@ -398,11 +490,13 @@ export function createCompiledRuntimePublication(options: {
   async function lower(source: CompiledRuntimeSource) {
     const saved = await persisted(source.releaseId, source.plane);
     const {
+      localBasis: _localBasis,
       recoveryEvidence: _recovery,
       humanTargets: _targets,
       ...originalSource
     } = saved;
     const {
+      localBasis: _providedLocalBasis,
       recoveryEvidence: _providedRecovery,
       humanTargets: _providedTargets,
       ...providedSource
@@ -516,11 +610,32 @@ export function createCompiledRuntimePublication(options: {
         source.coordinationHash !== input.coordinationHash
       )
         throw Error("COMPILED_PUBLICATION_SOURCE_PIN_MISMATCH");
-      if (source.expectedPredecessor)
+      if (source.expectedPredecessor) {
+        const signed = source.localBasis
+          ? (
+              await sql<{
+                content_hash: string;
+              }>`SELECT content_hash FROM publication.artifact
+          WHERE publication_release_id=${source.releaseId}::uuid AND plane_code=${source.plane}
+          AND artifact_kind='compiled_entity_runtime' AND status='signed'`.execute(
+                options.authority,
+              )
+            ).rows
+          : [];
+        if (signed.length > 1)
+          throw Error("LOCAL_PUBLICATION_SIGNED_ARTIFACT_AMBIGUOUS");
         await assertSuccessorTargetHeads(
           [source.expectedPredecessor],
           options.targets().databases,
+          signed[0]
+            ? {
+                releaseId: source.releaseId,
+                releaseNo: source.releaseNo,
+                artifactHash: signed[0].content_hash,
+              }
+            : undefined,
         );
+      }
       const lowered = await lower(source);
       const compilation = compileCompiledEntityArtifacts({
         ...lowered,

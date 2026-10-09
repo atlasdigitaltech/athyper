@@ -439,6 +439,24 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Exact local DEV developer command replay or publisher-scoped pending request discovery; no direct request/source table grants."
+  },
+  {
+    "signature": "publication.bind_local_publication_release(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
+  },
+  {
+    "signature": "publication.local_publication_release_receipt(text)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
+  },
+  {
+    "signature": "publication.local_publication_execution_context(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -680,7 +698,10 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)",
+  "publication.bind_local_publication_release(uuid)",
+  "publication.local_publication_release_receipt(text)",
+  "publication.local_publication_execution_context(uuid)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;

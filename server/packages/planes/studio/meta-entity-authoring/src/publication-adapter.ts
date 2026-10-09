@@ -34,18 +34,7 @@ export class PublicationServiceMetaEntityAdapter implements MetaEntityPublicatio
     targetPlanes: readonly ("studio" | "neon" | "mesh")[];
   }) {
     await this.options.prepare?.(input);
-    const jobId = await this.options.jobs.enqueue(
-      "publication.authority",
-      "publication.compile-artifact",
-      { releaseId: input.releaseId },
-      {
-        enqueueKey: `publication:${input.releaseId}:compile:1`,
-        maxAttempts: 5,
-        payloadSchema: { name: "publication.compile-artifact", version: 1 },
-        execution: this.options.execution(),
-      },
-    );
-    await this.options.jobs.retry?.("publication.authority", jobId);
+    await enqueueMetaEntityCompilation(this.options, input.releaseId);
   }
   async activate(input: {
     releaseId: string;
@@ -73,4 +62,23 @@ export class KyselyMetadataGenerationEventStore {
       this.database,
     );
   }
+}
+
+/** Shared durable compile dispatch for both human and local publication. */
+export async function enqueueMetaEntityCompilation(
+  options: Pick<PublicationServiceAdapterOptions, "jobs" | "execution">,
+  releaseId: string,
+) {
+  const jobId = await options.jobs.enqueue(
+    "publication.authority",
+    "publication.compile-artifact",
+    { releaseId: releaseId },
+    {
+      enqueueKey: `publication:${releaseId}:compile:1`,
+      maxAttempts: 5,
+      payloadSchema: { name: "publication.compile-artifact", version: 1 },
+      execution: options.execution(),
+    },
+  );
+  await options.jobs.retry?.("publication.authority", jobId);
 }

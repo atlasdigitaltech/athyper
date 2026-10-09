@@ -61,8 +61,14 @@ export async function enqueueLocalPublicationPreparation(options: {
 export function createLocalPublicationPreparationHandler(options: {
   configuration: Configuration;
   transition: Transition;
+  release?: (
+    hash: string,
+  ) => Promise<{ id: string; releaseNo: number; replayed: boolean }>;
+  dispatch?: (releaseId: string) => Promise<void>;
 }): JobHandler<typeof PREPARE_LOCAL_PUBLICATION_JOB, { requestHash: string }> {
   configured(options.configuration);
+  if (Boolean(options.release) !== Boolean(options.dispatch))
+    throw Error("LOCAL_PUBLICATION_RELEASE_DISPATCH_REQUIRED");
   return {
     async handle(job, context) {
       const execution = job.execution;
@@ -89,6 +95,25 @@ export function createLocalPublicationPreparationHandler(options: {
           revision: receipt.revision,
           status: receipt.status,
         });
+      }
+      if (options.release && options.dispatch) {
+        context.signal.throwIfAborted();
+        const release = await options.release(hash);
+        await options.dispatch(release.id);
+        await context.reportProgress({
+          phase: "release",
+          requestHash: hash,
+          releaseId: release.id,
+        });
+        return {
+          status: "completed",
+          output: {
+            requestHash: hash,
+            stage: "dispatched",
+            releaseId: release.id,
+            basis: "local_development_authority",
+          },
+        };
       }
       return {
         status: "completed",

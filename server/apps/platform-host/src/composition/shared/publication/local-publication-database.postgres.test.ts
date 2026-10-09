@@ -27,6 +27,8 @@ it.skipIf(process.env.LOCAL_PUBLICATION_POSTGRES !== "1")(
           name,
           "psql",
           "-XqAt",
+          "-h",
+          "127.0.0.1",
           "-U",
           "postgres",
           "-v",
@@ -55,6 +57,8 @@ it.skipIf(process.env.LOCAL_PUBLICATION_POSTGRES !== "1")(
     const graph = {
       authoringSource: { entityId: entity },
       contractSchema: "athyper.meta-entity-contract/2.5",
+      entity: { entityClass: "reference", entityCode: "fixture_reference" },
+      referenceMembers: { members: { target: [{ targetPlane: "neon" }] } },
     };
     const sourceHash = createHash("sha256")
       .update(JSON.stringify(graph))
@@ -115,6 +119,10 @@ it.skipIf(process.env.LOCAL_PUBLICATION_POSTGRES !== "1")(
       revision: 1,
       sourceHash,
       compilerHash: "b".repeat(64),
+      release: {
+        descriptorHash: createHash("sha256").update("{}").digest("hex"),
+        predecessorReleaseId: null,
+      },
       resourceHashes: [],
       targets: [
         {
@@ -141,7 +149,15 @@ it.skipIf(process.env.LOCAL_PUBLICATION_POSTGRES !== "1")(
       );
       for (let n = 0; n < 60; n++) {
         try {
-          docker("exec", name, "pg_isready", "-U", "postgres");
+          docker(
+            "exec",
+            name,
+            "pg_isready",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "postgres",
+          );
           break;
         } catch {
           await new Promise((r) => setTimeout(r, 250));
@@ -445,6 +461,97 @@ GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bi
           `BEGIN; ${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true); SELECT publication.fn_system_entity_authority('${draft}','release'); ROLLBACK;`,
         ),
       ).toThrow(/permission denied|NOT_CONFIGURED/);
+      // Release execution uses the same signed-source writer and immutable
+      // snapshot/link validation. The reduced tables below isolate that boundary;
+      // they do not attest a deployed full-schema native publication.
+      q(`CREATE TABLE metadata.entity_release(id uuid PRIMARY KEY,tenant_id uuid,entity_id uuid,change_set_id uuid,revision_id uuid,release_no bigint,release_kind text,supersedes_release_id uuid,contract_schema_code text,contract_schema_version text,contract_hash text,revision_hash text,release_hash text,compatibility_level text,target_planes text[],signature_algorithm text,signing_key_id text,contract_signature text,published_by uuid);
+CREATE TABLE publication.release(id uuid,tenant_id uuid,release_key text,release_no bigint,release_hash text,release_kind text,created_by uuid,metadata jsonb,status text);
+CREATE TABLE publication.entity_release_link(publication_release_id uuid,entity_release_id uuid);
+ALTER TABLE metadata.entity ADD COLUMN entity_code text;
+UPDATE metadata.entity SET entity_code='fixture_reference';
+GRANT SELECT,INSERT ON metadata.entity_release,publication.release TO athyper_definer_product_publication;
+CREATE FUNCTION metadata.fixture_publish() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+ UPDATE metadata.entity_change_set SET status='published',status_changed_by=NEW.published_by WHERE id=NEW.change_set_id;
+ RETURN NEW; END $$;
+CREATE TRIGGER fixture_publish AFTER INSERT ON metadata.entity_release FOR EACH ROW EXECUTE FUNCTION metadata.fixture_publish();`);
+      const linkStart = commands.indexOf(
+        "CREATE OR REPLACE FUNCTION publication.fn_link_system_entity_release(",
+      );
+      q(commands.slice(linkStart, commands.indexOf("END $$;", linkStart) + 7));
+      q(ddl("publication/44_local_publication_release.sql"));
+      q(`ALTER FUNCTION publication.fn_link_system_entity_release(uuid) OWNER TO athyper_definer_product_publication;
+GRANT SELECT,INSERT ON publication.entity_release_link TO athyper_definer_product_publication;
+CREATE TRIGGER fixture_link BEFORE INSERT ON publication.entity_release_link FOR EACH ROW EXECUTE FUNCTION publication.trg_validate_entity_release_link();`);
+      q(`ALTER FUNCTION publication.fn_create_system_entity_release(uuid,uuid,bigint,jsonb,text[],uuid) OWNER TO athyper_definer_product_publication;
+ALTER FUNCTION publication.fn_system_entity_execution_metadata(uuid) OWNER TO athyper_definer_product_publication;
+GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,bigint,jsonb,text[],uuid),publication.fn_system_entity_execution_metadata(uuid) TO athyper_worker;`);
+      const releaseId = randomUUID();
+      const artifact = {
+        contractHash: sourceHash,
+        descriptorHash: inputs.release.descriptorHash,
+        descriptor: {},
+        signatureAlgorithm: "Ed25519",
+        signingKeyId: "fixture-key",
+        signature: "fixture-signature",
+      };
+      const scoped = `${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true);`;
+      const createRelease = (value = artifact) =>
+        `SELECT id FROM publication.fn_create_system_entity_release('${releaseId}','${draft}',3,${literal(value)},ARRAY['neon'],'${publisher}');`;
+      expect(() =>
+        q(
+          `BEGIN; ${scoped} ${createRelease({ ...artifact, descriptorHash: "f".repeat(64) })} ROLLBACK;`,
+        ),
+      ).toThrow(/SIGNED_SOURCE_MISMATCH/);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", author)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true); ${createRelease()} ROLLBACK;`,
+        ),
+      ).toThrow(/PHASE_DENIED/);
+      q(`BEGIN; ${scoped} ${createRelease()} ROLLBACK;`);
+      expect(q("SELECT count(*) FROM metadata.entity_release;").trim()).toBe(
+        "0",
+      );
+      expect(
+        q(
+          `SELECT execution_status FROM publication.local_publication_request WHERE request_hash='${request.hash}';`,
+        ).trim(),
+      ).toBe("approved");
+      const link = `RESET ROLE; INSERT INTO publication.release VALUES('${releaseId}','${tenant}','metadata.reference.fixture_reference',1,'${artifact.descriptorHash}','publish','${publisher}',
+ jsonb_build_object('sourceContractHash','${sourceHash}','sourceDescriptorHash','${artifact.descriptorHash}','productHash','${sourceHash}') || publication.fn_system_entity_execution_metadata('${releaseId}'),'approved');
+ ${scoped} SELECT publication.fn_link_system_entity_release('${releaseId}');`;
+      expect(
+        q(
+          `BEGIN; ${scoped} ${createRelease()} ${link} SELECT publication.local_publication_release_receipt('${request.hash}'); COMMIT;`,
+        ),
+      ).toContain(releaseId);
+      expect(
+        q(
+          `BEGIN; ${scoped} SELECT publication.local_publication_release_receipt('${request.hash}'); SELECT publication.local_publication_execution_context('${releaseId}')->>'basis'; ${transition("review")} ROLLBACK;`,
+        ),
+      ).toContain('"replayed": true');
+      expect(() =>
+        q(
+          `BEGIN; UPDATE publication.release SET metadata=jsonb_set(metadata,'{localPublicationRequest,hash}','"wrong"'); ${scoped} SELECT publication.local_publication_execution_context('${releaseId}'); ROLLBACK;`,
+        ),
+      ).toThrow(/COMMITTED_RELEASE_REQUIRED/);
+      expect(
+        q(
+          `SELECT execution_status||':'||execution_revision||':'||execution_release_id FROM publication.local_publication_request WHERE request_hash='${request.hash}';`,
+        ).trim(),
+      ).toBe(`published:4:${releaseId}`);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} ${admit} ROLLBACK;`,
+        ),
+      ).toContain(request.hash);
+      expect(() => q(`BEGIN; ${scoped} ${createRelease()} ROLLBACK;`)).toThrow(
+        /PHASE_DENIED/,
+      );
+      expect(
+        q(
+          `SELECT count(*),count(DISTINCT graph::text) FROM snapshot.entity_draft_save WHERE change_set_id='${draft}';`,
+        ).trim(),
+      ).toBe("4|1");
     } finally {
       try {
         docker("rm", "-f", name);

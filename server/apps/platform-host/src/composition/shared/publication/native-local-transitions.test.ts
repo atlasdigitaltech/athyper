@@ -95,6 +95,7 @@ it("production startup compiles current inputs, enforces IAM, transitions and au
       revision: 1,
       sourceHash: "c".repeat(64),
       compilerHash: "b".repeat(64),
+      release: { descriptorHash: "e".repeat(64), predecessorReleaseId: null },
       resourceHashes: [sha256({})],
       targets: [
         {
@@ -113,6 +114,7 @@ it("production startup compiles current inputs, enforces IAM, transitions and au
   });
   dependencies.compile.mockReturnValue({
     contractHash: request.inputs.sourceHash,
+    descriptorHash: "e".repeat(64),
   });
   dependencies.targets.mockReturnValue([
     { targetPlane: "studio", artifact: { descriptorHash: "d".repeat(64) } },
@@ -126,7 +128,7 @@ it("production startup compiles current inputs, enforces IAM, transitions and au
         : text.includes("FROM master.principal")
           ? [{ id: "actor" }]
           : text.includes("read_native_worker_source")
-            ? [{ lock_version: 1 }]
+            ? [{ lock_version: 1, predecessor: null }]
             : text.includes("transition_local_publication_request")
               ? [
                   {

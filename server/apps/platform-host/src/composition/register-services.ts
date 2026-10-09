@@ -1,3 +1,4 @@
+import { enqueueMetaEntityCompilation } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
   createLocalPublicationDispatchHandler,
   DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
@@ -1151,6 +1152,15 @@ export function registerServices(
           const native = createNativePublicationStartup({
             environment: process.env,
             localConfiguration: configuration,
+            ...(container.adapters.publicationSigner &&
+            config.publication.signingKeyId
+              ? {
+                  signer: new MetaEntityArtifactSigner(
+                    container.adapters.publicationSigner,
+                    config.publication.signingKeyId,
+                  ),
+                }
+              : {}),
             audit: container.platform.audit,
             targetDatabases: metadataDatabases,
             run: (work) =>
@@ -1176,6 +1186,27 @@ export function registerServices(
             localPublicationPreparations.set(container, {
               configuration,
               transition: native.transitionLocalNativeSource,
+              ...(native.releaseLocalNativeSource
+                ? {
+                    release: native.releaseLocalNativeSource,
+                    dispatch: async (releaseId: string) => {
+                      if (!container.runtimes.jobs)
+                        throw Error("LOCAL_PUBLICATION_QUEUE_REQUIRED");
+                      await enqueueMetaEntityCompilation(
+                        {
+                          jobs: container.runtimes.jobs,
+                          execution: () => ({
+                            planeKey: "studio",
+                            scope: "plane",
+                            tenantId: configuration.tenantId,
+                            principalId: configuration.publisher.principalId,
+                          }),
+                        },
+                        releaseId,
+                      );
+                    },
+                  }
+                : {}),
             });
           return createCompiledRuntimePublication({
             nativeSource: native.readNativeSource,

@@ -1141,7 +1141,32 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       });
     });
   }
+  private async localPublicationRow(
+    db: Kysely<Database>,
+    id: string,
+  ): Promise<ChangeSetRow | undefined> {
+    const scope = (
+      await sql<{
+        hash: string | null;
+      }>`SELECT NULLIF(current_setting('app.local_publication_request_hash',true),'') AS hash`.execute(
+        db,
+      )
+    ).rows[0]?.hash;
+    if (!scope) return undefined;
+    const row = (
+      await sql<{
+        root: ChangeSetRow;
+      }>`SELECT root_json || jsonb_build_object('entity_code',graph#>>'{entity,entityCode}') AS root FROM publication.read_native_worker_source(${id}::uuid,4194304)`.execute(
+        db,
+      )
+    ).rows[0]?.root;
+    if (!row)
+      throw new AuthoringConflictError("Local publication source unavailable");
+    return row;
+  }
   async get(id: string) {
+    const local = await this.localPublicationRow(this.database, id);
+    if (local) return this.map(local);
     const result =
       await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${id}::uuid`.execute(
         this.database,
@@ -1470,13 +1495,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       );
     return atomic(this.database, async (tx) => {
       const current = required(
-        (
-          await sql<{
-            tenant_id: string | null;
-          }>`SELECT tenant_id FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid`.execute(
-            tx,
-          )
-        ).rows[0],
+        (await this.localPublicationRow(tx, input.changeSetId)) ??
+          (
+            await sql<{
+              tenant_id: string | null;
+            }>`SELECT tenant_id FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid`.execute(
+              tx,
+            )
+          ).rows[0],
       );
       if (current.tenant_id === null) {
         if (
