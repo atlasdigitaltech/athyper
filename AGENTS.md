@@ -106,6 +106,22 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
   both documents together where they meet.
 
+## Entity list Compare
+
+- The active design is the
+  [Entity list Compare blueprint](docs/blueprints/entity-list-compare/blueprint.md).
+  Read it before implementing record comparison or changing the shared
+  comparison core, and update it in place. Implement only phases the project
+  owner has approved.
+- Compare is a selection action of the shared Entity list, offered only when
+  the list surface declares a comparison in governed, published Meta Entity
+  properties. Do not infer a comparison field set, and do not create a
+  comparison route, page, provider stack or entity-specific comparison.
+- Never align related records by array position. Line comparison requires a
+  declared match key backed by a database unique key.
+- The snapshot comparison and record comparison share one core package; fix
+  comparison rules there, not in a consumer.
+
 ## Entity list identity and record navigation
 
 - Define navigation groups, section behavior, visible columns and readable

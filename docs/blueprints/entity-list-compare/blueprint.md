@@ -1,10 +1,14 @@
 # Entity list Compare — blueprint
 
-**Status:** proposed, revision 1 (9 October 2026). Nothing in this document is approved for build.
+**Status:** approved, revision 2 (9 October 2026).
 
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
-- **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code. The audit's six findings and its view on the four open decisions are recorded in section 16. Two of its factual statements were corrected against the code and are marked there.
-- **Decisions required:** section 14. Until the owner approves them, no contract property, package, URL key or authoring member in this document may be implemented.
+- **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
+- **Approval (9 October 2026).** The project owner (nchandravel-atlas) approved decisions 15.1 through 15.10 in these words: "APPROVED 15.1 through 15.10 as written with finding 2 folded into 8.2 and finding 3 into 5.1, and to note finding 1 as a specification clarification APPROVED". Revision 2 makes exactly those changes:
+  - **Finding 2,** folded into section 8.2: money is compared only when its currency cells are comparable values and equal; a masked, absent or unreadable currency makes the row `not_comparable` ("Currency not compared").
+  - **Finding 3,** folded into section 5.1: the binding constraint is stated, and 60 is recorded as a measured budget against the candidate tables (section 3).
+  - **Finding 1,** a specification clarification in section 5.3 and section 3: the masked signal's source is the authorization field policy, through the existing `maskedPresentationField`, and the existing prohibition on masked fields in queries is cited.
+- **Approved for build (implementation authority):** C1 and C2 (decision 9). C1b, C3 and C4 each need their own approval. C2 runs on synthetic fixtures until the metadata cleanup lands; publishing a real Entity's comparison waits for the authoring storage (section 12) and a pilot.
 - **What this is not.** Compare is not a list Layout. It adds no route, page, provider stack or entity-specific comparison, and no mode to the registry.
 
 **Scope and authority.**
@@ -77,6 +81,9 @@ Verified against the repository on 9 October 2026.
 | A requested field the viewer cannot read is **refused**, not dropped | `validateQueryFields` in `query-service.ts`: `PROJECTION_FIELD_NOT_ALLOWED` for an unknown or unreadable field, `TOO_MANY_PROJECTION_FIELDS` above 100; the route schema caps `fields` at `MAX_LIST_FIELDS` = 100 (`INVALID_FIELDS`) | A comparison must request only fields readable for this viewer, known in advance from the per-viewer descriptor (section 5.3); the response's own filtering in `responseProjection` runs after that validation |
 | The projection always adds the identity, and the group field when grouping | `responseProjection` (`query-service.ts`): the configured identity, or the storage identity when the configured one is unreadable, plus `query.group` | The Compare request asks for its title field explicitly and never sends `group` |
 | Masked fields return masked values | `projectEffectiveReadRow` applies the field's mask (`entity-effective-read-projection.ts`) | A masked cell is shown as returned and never compared (section 8.1) |
+| "Masked" is a property of the authorization field policy, not of the field descriptor | `EntityFieldPolicyV1.representation: "plain" \| "masked"` (`server/packages/contracts/metadata/src/entity-authorization.ts:31`); the list descriptor already uses it through `maskedPresentationField` (`entity-list-service.ts:2355`) to keep masked fields out of list chrome, including a money field's currency (`entity-list-service.ts:1472`) | The Compare projection derives `masked` from the same function: one source of truth (section 5.3) |
+| Masked fields may not take part in queries | "Masked raw fields cannot participate in queries; publish a safe projection field" (`entity-authorization.ts:250`), refused when a masked policy declares any query use | Written policy for what section 8.1 does: a masked value is displayed, never filtered, sorted or compared |
+| Candidate tables have far fewer than 60 comparable fields | Measured on the real Neon DDL (9 October 2026), excluding identity, tenant, version and audit columns: `gl_account` 26 columns in total (16 non-reference), `catalog` 24, `cost_center` 23, `catalog_price` 22, `catalog_item` 21, `item` 21, `profit_center` 21, `chart_of_account` 19, `product` 17, `commodity_category` 16, `customer` 15, `supplier` 15. No quotation table exists yet | 60 is a budget with more than twice the headroom of the widest candidate (section 5.1) |
 | A money field may name its currency field | `field.list.currencyField` (`server/packages/contracts/metadata/src/descriptors.ts:141`); authoring column `entity_field.currency_field_id` (`normalized-core-contract.ts:215`) | Money equality and C3 ranking reuse it; no second currency declaration |
 | Exact decimal helpers exist | `addDecimals`, `compareDecimals` in `packages/contracts/platform/entity-list/src/decimal.ts` | Decimal and money equality is exact |
 | The selection bar already hosts framework actions | `SelectionBar` in `list-view/src/index.tsx` (bookmarks, Export, select all matching), shown only outside pickers (`!embedding`) | Compare is one more selection-bar action |
@@ -111,7 +118,9 @@ export const COMPARE_MAX_FIELDS = 60;       // declared comparison fields per su
 
 These are presentation bounds of the UI, not contract bounds of the server. Each has a test. If one ever needs to vary per Entity, it becomes a published property then, not now.
 
-`COMPARE_MAX_FIELDS` keeps a Compare request well inside the server's 100-field projection limit (`MAX_LIST_FIELDS`). A request carries the declared fields, the identity, the title and the currency field of each declared money field; publication validation checks that this total stays within 100 (`COMPARE_FIELDS_ABOVE_CAP`, section 6).
+**The binding constraint** is the server's projection limit: declared fields + identity + title + the currency field of each declared money field ≤ `MAX_LIST_FIELDS` (100). Publication validation checks exactly this sum (`COMPARE_FIELDS_ABOVE_CAP`, section 6).
+
+**`COMPARE_MAX_FIELDS` = 60 is the declared-field budget inside that constraint,** chosen to leave headroom for the identity, title and currency fields. It is measured, not round: the widest candidate table, `gl_account`, has 26 columns in total once technical columns are excluded, and no candidate exceeds 26 (section 3). A comparison wider than 60 fields would also stop being readable as a side-by-side view. If a real Entity needs more, raising the budget is a change to this section, not a per-Entity exception.
 
 ### 5.2 The comparison declaration (published, per list surface)
 
@@ -164,9 +173,10 @@ compare?: {
 };
 ```
 
-- The projection lists **only readable fields**, so the browser requests nothing the server would refuse.
+- **This projection is load-bearing, not defensive.** The server refuses a request naming any field the viewer cannot read (`PROJECTION_FIELD_NOT_ALLOWED`), so a single unreadable field would fail the whole comparison. The projection lists **only readable fields**, so the browser requests nothing the server would refuse.
 - A field hidden from the viewer is left out **without its name, label or count**, following the snapshot rule that layout metadata never discloses restricted fields. Its existence is acknowledged only by the boolean `fieldsRestricted`, which the panel states in one line (section 9.4).
-- Masking is the viewer's effective field policy (`representation: "masked"`), already known to the server at compile time.
+- **Source of `masked` (specification clarification, revision 2).** `masked` is not a field-descriptor property: it comes from the authorization field policy (`EntityFieldPolicyV1.representation`). The projection sets it exactly where the existing `maskedPresentationField(descriptor, key)` returns true, the same function that keeps masked fields out of list chrome. There is one source of truth for "this viewer sees this field masked", and Compare adds no second one. Masked fields are already barred from queries (`entity-authorization.ts:250`); Compare extends the same rule to comparison.
+- A declared money field's `currencyField` is listed with its own `masked` flag when the policy masks it, so the browser can apply the currency rule in section 8.2.
 - If no declared field is readable, `compare` is absent and Compare is not offered to this viewer. This is a per-viewer outcome, not an error.
 
 ### 5.4 URL state (browser contract)
@@ -222,7 +232,7 @@ compare?: { better: "lower" | "higher" };
 
 - Eligible types: integer, decimal, money, date, datetime. Anything else is refused at publication (`COMPARE_BETTER_INELIGIBLE`).
 - This is **new authoring**: a per-field property with its own Studio storage (section 12). It cannot be inferred from a name or type.
-- Money is ranked only when every compared cell carries the same currency through the field's existing `field.list.currencyField`. Without a declared and readable currency field, money is never ranked. With mixed currencies, the row shows "Mixed currencies" and no best mark. No second currency declaration is introduced.
+- Money is ranked only when every compared cell carries the same currency through the field's existing `field.list.currencyField`, by the section 8.2 rule. Without a declared, readable and unmasked currency field, money is never ranked. With mixed currencies, the row shows "Mixed currencies" and no best mark. No second currency declaration is introduced.
 
 ### 5.7 C4: related collections (shape only; needs its own approval and server contract)
 
@@ -318,7 +328,7 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 | string, text | Exactly equal. No case folding, trimming or locale collation |
 | integer | Numerically equal |
 | decimal | `compareDecimals` returns 0 (exact; "1.50" equals "1.5") |
-| money | Amounts equal by `compareDecimals` **and** currencies equal through `currencyField`. Without a declared and readable currency field the row is `not_comparable` ("Currency not recorded") |
+| money | Amounts equal by `compareDecimals` **and** every currency cell is a `value` cell and all are equal, through the field's `currencyField`. In every other case the row is `not_comparable`, shown as "Currency not compared": no `currencyField` declared; the currency field unreadable; the currency field masked (a masked currency cannot tell MYR from USD, so equality is unknowable, not satisfied); or a currency cell `empty` or `unavailable`. Different currencies make the row `differs`. The framework never converts currencies and never assumes two are equal |
 | boolean, enum | Same stored value |
 | date | Same calendar date string |
 | datetime | Same instant |
@@ -327,7 +337,7 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 
 ### 8.3 Row outcome
 
-- `not_comparable` when any cell is `masked` or `unavailable`, or money lacks its currency rule. The row is shown in "all rows", and in "differences only" it is listed under a separate "Not compared" group at the end of its section, so it is never silently hidden.
+- `not_comparable` when any cell is `masked` or `unavailable`, or a money row fails the currency rule in section 8.2. The row is shown in "all rows", and in "differences only" it is listed under a separate "Not compared" group at the end of its section, so it is never silently hidden.
 - `differs` when the comparable cells are not all equal.
 - `same` otherwise.
 
@@ -446,7 +456,7 @@ The comparison declaration is authored on the list surface in the existing Entit
 
 - The composer's **Start from detail sections** copies the detail surface's field placements into compare rows once, at authoring time, for the author to edit. Nothing at runtime reads detail sections for Compare.
 - **Registration inventory:** the same nine steps as Calendar section 10: the Studio dictionary section, contract members, generated output, hand-written guards (section 6 codes), reconciliation, storage and qualification sites, generated types, a forward upgrade, and no change for existing drafts.
-- **Studio blueprint.** On approval, the two tables are added to the Entity Studio blueprint's field dictionary and composer map as "proposed", in the same change as this document's approval. They are not added now because that document has concurrent uncommitted work by another session.
+- **Studio blueprint.** Added with this approval: the Compare editor row in its section 7.6 table and the two tables in its composer map, both marked proposed (built behind the metadata-cleanup gate). Their field-dictionary entries are written when the storage is built, with the registration inventory above.
 
 ## 13. Folder structure and test registration
 
@@ -476,20 +486,20 @@ Styles stay on the breakpoint scale and use design-system tokens.
 
 **Order of work.** C1, then C2 on fixtures, in parallel with the cleanup. After the cleanup: authoring storage (section 12), then a pilot. **Pilot proposal:** a master-data Entity already onboarded with a readable identity and enough comparable fields; the candidate is chosen with the owner when the cleanup lands. Quotation comparison waits for C3, C4 and the quotation Entities' onboarding.
 
-## 15. Decisions required (project owner)
+## 15. Decisions (project owner)
 
-Recommendations are the author's and the auditor's; none is approved.
+All ten were approved on 9 October 2026 (owner wording in the status line). Decision 9 makes C1 and C2 the approved build; C1b, C3 and C4 each need their own approval.
 
-1. **Placement.** Compare is a selection-bar action opening an in-page panel, not a Layout or a route (section 4). *Recommended.*
-2. **Opt-in per list surface.** Absent declaration means Compare is not offered (section 5.2). *Recommended by the audit on the precedent of Board lanes, Calendar and Gantt dates and Tree hierarchies.*
-3. **Caps.** `COMPARE_MAX_RECORDS` = 4, `COMPARE_NARROW_COLUMNS` = 2, `COMPARE_MAX_FIELDS` = 60, as named constants with tests (section 5.1). *Recommended.*
-4. **Baseline.** Supported, marked by text, in the URL, cleared explicitly on removal, relative vocabulary (section 8.4). *Recommended.*
-5. **C1 may change the snapshot view's code,** on the condition in section 11.4 (rendering test first, passing unchanged). C1b's visible change is a separate approval. *Recommended.*
-6. **Authoring storage:** two new tables on the list surface plus one field column for C3 (section 12). *Recommended.*
-7. **Restricted-field rule:** omit hidden fields without names or count, with the single `fieldsRestricted` statement (section 5.3). *Recommended; an alternative is to state nothing at all, as the snapshot view does today.*
-8. **Standalone request:** Compare ignores the list's filters and search, keeps scope and work context (section 7.1). *Recommended.*
-9. **Phases:** C1 and C2 first; C1b, C3 and C4 each need their own approval.
-10. **AGENTS.md entry** (section 18), added on approval.
+1. **Approved 9 October 2026.** **Placement.** Compare is a selection-bar action opening an in-page panel, not a Layout or a route (section 4).
+2. **Approved 9 October 2026.** **Opt-in per list surface.** Absent declaration means Compare is not offered (section 5.2). Same precedent as Board lanes, Calendar and Gantt dates, and Tree hierarchies.
+3. **Approved 9 October 2026.** **Caps.** `COMPARE_MAX_RECORDS` = 4, `COMPARE_NARROW_COLUMNS` = 2, `COMPARE_MAX_FIELDS` = 60, as named constants with tests (section 5.1).
+4. **Approved 9 October 2026.** **Baseline.** Supported, marked by text, in the URL, cleared explicitly on removal, relative vocabulary (section 8.4).
+5. **Approved 9 October 2026.** **C1 may change the snapshot view's code,** on the condition in section 11.4 (rendering test first, passing unchanged). C1b's visible change is a separate approval.
+6. **Approved 9 October 2026.** **Authoring storage:** two new tables on the list surface plus one field column for C3 (section 12).
+7. **Approved 9 October 2026.** **Restricted-field rule:** omit hidden fields without names or count, with the single `fieldsRestricted` statement (section 5.3).
+8. **Approved 9 October 2026.** **Standalone request:** Compare ignores the list's filters and search, keeps scope and work context (section 7.1).
+9. **Approved 9 October 2026.** **Phases:** C1 and C2 first; C1b, C3 and C4 each need their own approval.
+10. **Approved 9 October 2026.** **AGENTS.md entry** (section 18), added with this approval.
 
 ## 16. Rejected and out-of-scope options
 
@@ -525,10 +535,15 @@ Recommendations are the author's and the auditor's; none is approved.
 | Audit 1 | Blueprint contents (extraction inventory, property, placement, URL, caps and omission rule, cell vocabulary, line-item omissions, match-key identity domain, accessibility, phase gates) | Sections 5–14 |
 | Audit 1 | AGENTS.md entry under the Entity list rules, with opt-in and no-position rules | Section 18 |
 | Audit 1 | Record more than four records and cross-entity comparison as out of scope | Section 16 |
+| Audit 2 | Confirms both corrections to audit 1: the server refuses unreadable and excess fields rather than dropping them, so the real risk is one unreadable field failing the whole comparison; the browser spec exercises the snapshot flow but nothing pins its rendered output. Confirms Compare stays available from Tree's search view, because the Compare request carries no `hierarchy` | Section 5.3 now states that the per-viewer projection is load-bearing; section 3 and 11.4 unchanged |
+| Audit 2, finding 1 | `masked` needs a named source: it is a property of the authorization field policy, not of the field descriptor; cite the existing prohibition on masked fields in queries | Specification clarification (owner's wording): sections 3 and 5.3 name `EntityFieldPolicyV1.representation` through `maskedPresentationField` as the single source, and cite `entity-authorization.ts:250` |
+| Audit 2, finding 2 | A masked currency field could produce a false "same" for money | Folded into section 8.2 (owner's wording): money is compared only when every currency cell is an equal `value` cell; masked, unreadable, undeclared, empty or unavailable currency makes the row `not_comparable` ("Currency not compared"). Section 5.6 (C3 ranking) follows the same rule |
+| Audit 2, finding 3 | 60 is an unverified budget | Folded into section 5.1 (owner's wording): the binding constraint is stated, and 60 is measured against the candidate tables (section 3; widest is `gl_account` at 26 columns) |
+| Audit 2 | Record-section URL ownership may not exist (`contentOnly`, `scopeCoordinate`, `viewNamespace`, no `embedding`) | Already the first check of C2 (section 9.5), with the caveat to be written there if the section list owns no location state |
 
-## 18. Proposed AGENTS.md entry
+## 18. AGENTS.md entry
 
-To be added under the Entity list rules on approval, not before:
+Added under the Entity list rules with the approval (decision 10):
 
 > **Entity list Compare**
 >
