@@ -486,6 +486,22 @@ Styles stay on the breakpoint scale and use design-system tokens.
 
 **Order of work.** C1, then C2 on fixtures, in parallel with the cleanup. After the cleanup: authoring storage (section 12), then a pilot. **Pilot proposal:** a master-data Entity already onboarded with a readable identity and enough comparable fields; the candidate is chosen with the owner when the cleanup lands. Quotation comparison waits for C3, C4 and the quotation Entities' onboarding.
 
+**Delivery status (9 October 2026).** Implementation only; nothing is published and no Entity declares a comparison.
+
+- **C1, built.** Three steps, as section 11.4 requires:
+  1. `ac3ed62ca` pins the snapshot comparison's rendered output in `tests/foundation/activity-comparison-view.test.tsx`: the full rendered outline, grouping, choice labels, decimals, dates, empty and uncaptured cells, the changes-only toggle, collapse, and the no-differences state. Datetimes are pinned in UTC, and the test also passes in another zone.
+  2. `dcb3e2fe0` extracts the core into `@athyper/platform-entity-comparison`:
+     - `groupComparisonFields` and `formatComparisonValue` (the two state labels are now parameters);
+     - the section 5.5 types;
+     - the section 8 rules: `equalComparisonValues`, `comparisonRowOutcome` (including the revision 2 money rule) and `comparisonRelativeToBaseline`.
+
+     The snapshot model is now an adapter: `comparable`, `changed` and `activityCell` stay with it, and its wording is unchanged. The core's tests are in `tests/foundation/entity-comparison-model.test.ts`.
+  3. This status: the pinned rendering test is unedited since step 1 and passes after the extraction, as does `activity-comparison-model.test.ts`.
+- **Not run:** `tests/foundation-browser/entity-activity.spec.ts`. It does not load on this branch ("exports is not defined in ES module scope", from `tooling/scripts/metadata/source-workspace.mjs`), the same pre-existing breakage as `metadata-detail-navigation.spec.ts`. The jsdom rendering test is the evidence for "no visible change".
+- **Foundation suite:** 78 files pass and 7 fail. The 7 failures (reference choice policy, Atlas answer and history, related presentation, error boundaries, header context identity, public auth surface) are unrelated to comparison. The related-presentation failure was confirmed to fail with the pre-extraction model as well.
+- **Deferred within the inventory:** `bestColumns` (section 11.2) belongs to C3 and is not built until C3 is approved. Boolean values still use the snapshot's `activity.yes` / `activity.no` messages through the core, unchanged; record comparison wording is settled in C2.
+- **C2:** not started.
+
 ## 15. Decisions (project owner)
 
 All ten were approved on 9 October 2026 (owner wording in the status line). Decision 9 makes C1 and C2 the approved build; C1b, C3 and C4 each need their own approval.
