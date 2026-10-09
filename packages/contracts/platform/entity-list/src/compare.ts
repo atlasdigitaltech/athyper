@@ -29,6 +29,10 @@ export interface ListCompareFieldV1 {
   readonly currencyField?: string;
   /** Money: the currency field is masked for this viewer, so amounts are not compared. */
   readonly currencyMasked?: true;
+  /** C3: the best value is the lower or the higher one (section 5.6). */
+  readonly better?: "lower" | "higher";
+  /** C3: the summary chip's label, only with `better`. */
+  readonly summaryLabel?: string;
 }
 
 export interface ListCompareSectionV1 {
@@ -104,7 +108,7 @@ function parseField(
   seen: Set<string>,
 ): ListCompareFieldV1 {
   const field = record(raw, at);
-  allowKeys(field, ["key", "label", "valueKind", "options", "masked", "currencyField", "currencyMasked"], at, "Compare field");
+  allowKeys(field, ["key", "label", "valueKind", "options", "masked", "currencyField", "currencyMasked", "better", "summaryLabel"], at, "Compare field");
   const key = text(field.key, `${at}.key`);
   if (seen.has(key)) fail(`${at}.key`, "must be compared once");
   seen.add(key);
@@ -115,6 +119,11 @@ function parseField(
   const currencyField = field.currencyField === undefined ? undefined : text(field.currencyField, `${at}.currencyField`);
   if (currencyField !== undefined && (valueKind !== "money" || !listed.has(currencyField))) fail(`${at}.currencyField`, "must be a listed field of a money field");
   if (field.currencyMasked !== undefined && currencyField === undefined) fail(`${at}.currencyMasked`, "needs a currency field");
+  const better = field.better;
+  if (better !== undefined && (better !== "lower" && better !== "higher" || !["integer", "decimal", "money", "date", "datetime"].includes(valueKind)))
+    fail(`${at}.better`, "must be lower or higher on a number or date field");
+  const summaryLabel = field.summaryLabel === undefined ? undefined : text(field.summaryLabel, `${at}.summaryLabel`);
+  if (summaryLabel !== undefined && better === undefined) fail(`${at}.summaryLabel`, "needs better");
   const options = field.options === undefined ? undefined : list(field.options, `${at}.options`).map((option, index) => {
     const item = record(option, `${at}.options[${index}]`);
     allowKeys(item, ["value", "label"], `${at}.options[${index}]`, "choice");
@@ -129,6 +138,8 @@ function parseField(
     ...(field.masked ? { masked: true as const } : {}),
     ...(currencyField ? { currencyField } : {}),
     ...(field.currencyMasked ? { currencyMasked: true as const } : {}),
+    ...(better ? { better: better as "lower" | "higher" } : {}),
+    ...(summaryLabel ? { summaryLabel } : {}),
   });
 }
 

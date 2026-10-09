@@ -1,4 +1,4 @@
-import { parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
+import { parseFieldCompare, parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
 import { parseDetailFieldRenderer } from "@athyper/contract-platform-entity-runtime";
 import {
   parsePublishedCardContent,
@@ -1335,6 +1335,8 @@ function parseField(raw: unknown): EntityFieldDescriptor {
   }
   if (list?.currencyField !== undefined && type !== "money")
     throw new Error(`field.list.currencyField is only for money fields: ${item["key"]}`);
+  const compareProperty =
+    item["compare"] === undefined ? undefined : parseFieldCompare(item["compare"], type, String(item["key"]));
   if (
     list?.aggregations &&
     new Set(list.aggregations).size !== list.aggregations.length
@@ -1366,6 +1368,7 @@ function parseField(raw: unknown): EntityFieldDescriptor {
   )
     throw Error("ENTITY_KEY_REFERENCE_TARGET_MISMATCH");
   return {
+    ...(compareProperty ? { compare: compareProperty } : {}),
     ...(detailPresentation ? { detail: detailPresentation } : {}),
     ...(keyReference ? { keyReference } : {}),
     ...(item["referenceTargetEntity"] === undefined

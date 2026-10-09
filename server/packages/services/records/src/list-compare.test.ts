@@ -60,6 +60,13 @@ describe("per-viewer Compare projection", () => {
     expect(result.fieldsRestricted).toBe(true);
   });
 
+  it("carries the authored best-value direction and summary label (C3)", () => {
+    const withBest = entityFields.map((field) => (field.key === "cost" ? { ...field, compare: { better: "lower" as const, summaryLabel: "Lowest cost" } } : field));
+    const result = resolveListCompare({ compare, fields: listed, entityFields: withBest, masked: () => false })!;
+    expect(result.sections[0]!.fields[2]).toMatchObject({ key: "cost", better: "lower", summaryLabel: "Lowest cost" });
+    expect(parseListCompare(JSON.parse(JSON.stringify(result)), new Map(listed.map((field) => [field.key, field])))).toEqual(result);
+  });
+
   it("is absent when no declared field is readable", () => {
     expect(resolveListCompare({ compare: { sections: [{ key: "secret", label: "Restricted", fields: ["margin"] }] }, fields: listed, entityFields, masked: () => false })).toBeUndefined();
   });

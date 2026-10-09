@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  comparisonBestColumns,
   comparisonRelativeToBaseline,
   comparisonRowOutcome,
   equalComparisonValues,
@@ -86,4 +87,18 @@ test("formatting takes the consumer's wording for empty and unavailable cells", 
 test("grouping is generic over any keyed row", () => {
   const groups = groupComparisonFields([{ key: "a", n: 1 }, { key: "z", n: 2 }], { fields: [], presentation: { sections: [{ key: "s", label: "S", fields: ["a"] }] } } as never);
   assert.deepEqual(groups.map((group) => [group.key, group.fields.map((row) => row.n)]), [["section:s", [1]], ["additional", [2]]]);
+});
+
+test("best value (C3): direction, ties, empty cells, unavailable columns, all equal and mixed currencies", () => {
+  const usd = v("USD"), myr = v("MYR");
+  assert.deepEqual(comparisonBestColumns("money", [v("1248500.00"), v("1192300.00"), v("1271900")], "lower", { currencies: [myr, myr, myr] }), { best: [1], mixedCurrencies: false });
+  assert.deepEqual(comparisonBestColumns("money", [v("10"), v("12")], "lower", { currencies: [myr, usd] }), { best: [], mixedCurrencies: true });
+  assert.deepEqual(comparisonBestColumns("money", [v("10"), v("12")], "lower", { currencies: [masked, masked] }), { best: [], mixedCurrencies: false });
+  assert.deepEqual(comparisonBestColumns("date", [v("2026-11-30"), v("2026-11-15"), v("2026-11-30")], "higher").best, [0, 2]);
+  assert.deepEqual(comparisonBestColumns("integer", [v(21), empty, v(28)], "lower").best, [0]);
+  assert.deepEqual(comparisonBestColumns("integer", [v(21), gone, v(28)], "lower").best, [0]);
+  assert.deepEqual(comparisonBestColumns("integer", [v(14), v(14)], "lower").best, []);
+  assert.deepEqual(comparisonBestColumns("integer", [v(14), empty], "lower").best, []);
+  assert.deepEqual(comparisonBestColumns("decimal", [v("2.50"), masked, v("1.5")], "higher").best, []);
+  assert.deepEqual(comparisonBestColumns("datetime", [v("2026-10-02T09:14:00Z"), v("2026-10-01T11:05:00Z")], "lower").best, [1]);
 });

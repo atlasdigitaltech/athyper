@@ -46,6 +46,9 @@ export function resolveListCompare(input: {
           ...(masked ? { masked: true as const } : {}),
           ...(currency ? { currencyField: currency } : {}),
           ...(currency && input.masked(currency) ? { currencyMasked: true as const } : {}),
+          // C3: the authored best-value direction and summary label.
+          ...(declared.get(key)?.compare ? { better: declared.get(key)!.compare!.better } : {}),
+          ...(declared.get(key)?.compare?.summaryLabel ? { summaryLabel: declared.get(key)!.compare!.summaryLabel! } : {}),
         }),
       ];
     });

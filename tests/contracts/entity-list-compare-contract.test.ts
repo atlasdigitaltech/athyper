@@ -31,6 +31,10 @@ test("parses the projection and refuses what the server never publishes", () => 
   assert.throws(bad((value) => { value.statusField = "cur"; }), /compared field/);
   assert.throws(bad((value) => { value.sections[0].fields[0].currencyField = "cur"; }), /money field/);
   assert.throws(bad((value) => { value.sections[0].guess = true; }), /not a Compare section property/);
+  // C3: a best value only on number or date fields, and a summary label only with it.
+  assert.equal(parseListCompare(JSON.parse(JSON.stringify({ ...projection, statusField: undefined, sections: [{ ...projection.sections[0], fields: [{ key: "cost", label: "Cost", valueKind: "money", currencyField: "cur", better: "lower", summaryLabel: "Lowest cost" }] }] })), listed).sections[0]!.fields[0]!.better, "lower");
+  assert.throws(bad((value) => { value.sections[0].fields[0].better = "lower"; }), /number or date/);
+  assert.throws(bad((value) => { value.sections[0].fields[1].summaryLabel = "Lowest"; }), /needs better/);
 });
 
 const field = (key: string, valueKind: string, defaultOrder: number) => ({ key, label: key, valueKind, defaultVisible: true, defaultOrder, filterOperators: ["eq"], sortable: true, groupable: false, aggregations: [] });

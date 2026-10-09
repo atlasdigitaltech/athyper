@@ -44,6 +44,8 @@ export interface ComparisonTableRow {
   readonly outcome: ComparisonOutcome;
   /** "Differs", "Not compared" or a specific reason such as "Currency not compared". */
   readonly badge?: string;
+  /** A further note under the badge, for example "Mixed currencies". */
+  readonly note?: string;
   readonly cells: readonly ComparisonTableCell[];
 }
 
@@ -138,6 +140,7 @@ function Row({ row }: { readonly row: ComparisonTableRow }) {
       <th scope="row" id={row.id} tabIndex={-1}>
         <span className="a-comparison__label">{row.label}</span>
         {row.badge ? <span className="a-comparison__badge" data-outcome={row.outcome}>{row.badge}</span> : null}
+        {row.note ? <span className="a-comparison__row-note">{row.note}</span> : null}
       </th>
       {row.cells.map((cell, index) => (
         <td key={index} className="a-comparison__cell" data-state={cell.state} data-baseline={cell.baseline ? "" : undefined} data-best={cell.best ? "" : undefined}>

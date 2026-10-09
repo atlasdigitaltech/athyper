@@ -236,6 +236,45 @@ export function comparisonRelativeToBaseline(
   });
 }
 
+/** Section 8.5 (C3): the columns holding the best value by the authored
+ * direction. Only over comparable rows: a masked or not-captured cell, or a
+ * money row failing the currency rule, ranks nothing. Unavailable columns are
+ * left out (decision 11), empty cells are never best, ties are all best, and a
+ * row whose values are all equal, or with fewer than two values, has none.
+ * Money with more than one currency ranks nothing and says so. */
+export function comparisonBestColumns(
+  kind: ComparisonValueKind,
+  cells: readonly ComparisonCell[],
+  better: "lower" | "higher",
+  money?: ComparisonCurrencyRule,
+): { readonly best: readonly number[]; readonly mixedCurrencies: boolean } {
+  const none = { best: [] as readonly number[], mixedCurrencies: false };
+  if (comparisonRowOutcome(kind, cells, money) === "not_comparable") return none;
+  const values = cells.flatMap((cell, index) => (cell.state === "value" ? [{ index, value: cell.value }] : []));
+  if (kind === "money") {
+    const currencies = new Set(values.map(({ index }) => {
+      const currency = money?.currencies?.[index];
+      return currency?.state === "value" ? JSON.stringify(currency.value) : "";
+    }));
+    if (currencies.size > 1) return { best: [], mixedCurrencies: true };
+  }
+  if (values.length < 2) return none;
+  const order = (a: JsonValue, b: JsonValue): number => {
+    if (kind === "integer" || kind === "decimal" || kind === "money")
+      return isExactDecimal(a) && isExactDecimal(b) ? compareDecimals(a, b) : 0;
+    if (kind === "datetime") return Date.parse(String(a)) - Date.parse(String(b));
+    if (kind === "date") return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
+    return 0;
+  };
+  let top = values[0]!;
+  for (const candidate of values) {
+    const comparison = order(candidate.value, top.value);
+    if ((better === "lower" && comparison < 0) || (better === "higher" && comparison > 0)) top = candidate;
+  }
+  const best = values.filter((candidate) => order(candidate.value, top.value) === 0).map((candidate) => candidate.index);
+  return best.length === values.length ? none : { best, mixedCurrencies: false };
+}
+
 /** Canonical JSON: object keys sorted, so key order never makes a difference. */
 function canonical(value: JsonValue): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;

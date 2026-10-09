@@ -140,6 +140,12 @@ export interface EntityFieldDescriptor {
      * than one currency shows no total (Tree blueprint A2). */
     readonly currencyField?: string;
   };
+  /** Compare C3 (Entity list Compare blueprint 5.6): which direction is the
+   * best value, and an optional summary-chip label. Authored, never inferred. */
+  readonly compare?: {
+    readonly better: "lower" | "higher";
+    readonly summaryLabel?: string;
+  };
 }
 
 /** Immutable content references needed to prepare a page intent. The browser sees

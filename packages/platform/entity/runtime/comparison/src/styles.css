@@ -43,3 +43,4 @@
 .a-comparison mark{background:var(--a-warning-subtle);color:var(--a-warning-subtle-foreground);border-radius:2px}
 .a-comparison__visually-hidden{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.a-comparison__chevron{transition:none}}
+.a-comparison__row-note{display:block;margin-block-start:var(--a-space-1);color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);font-style:italic}

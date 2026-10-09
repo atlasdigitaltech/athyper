@@ -138,7 +138,7 @@ test("a masked currency or an unavailable record follows the revision 2 and 3 ru
 
 type Pending = { query: Record<string, unknown>; resolve: (page: EntityListResultV1) => void; reject: (cause: unknown) => void };
 
-async function withPanel(run: (h: { container: HTMLElement; requests: Pending[]; changes: ListCompareLocationV1[]; closed: () => number; render: (where: ListCompareLocationV1, narrow?: boolean) => Promise<void> }) => Promise<void>) {
+async function withPanel(run: (h: { container: HTMLElement; requests: Pending[]; changes: ListCompareLocationV1[]; closed: () => number; render: (where: ListCompareLocationV1, narrow?: boolean, override?: typeof compare) => Promise<void> }) => Promise<void>) {
   const dom = new JSDOM("<div id='root'></div>", { url: "https://example.test/app/material" });
   const names = ["window", "document", "IS_REACT_ACT_ENVIRONMENT", "React"] as const;
   const saved = names.map((name) => Object.getOwnPropertyDescriptor(globalThis, name));
@@ -155,9 +155,9 @@ async function withPanel(run: (h: { container: HTMLElement; requests: Pending[];
       requests,
       changes,
       closed: () => closes,
-      render: (where, narrow = false) =>
+      render: (where, narrow = false, override = compare) =>
         act(async () =>
-          root.render(<ComparePanel client={client} descriptor={descriptor} compare={compare} location={where} narrow={narrow} onChange={(next) => changes.push(next)} onClose={() => closes++} />),
+          root.render(<ComparePanel client={client} descriptor={descriptor} compare={override} location={where} narrow={narrow} onChange={(next) => changes.push(next)} onClose={() => closes++} />),
         ),
     });
   } finally {
@@ -348,4 +348,47 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
     names.forEach((name, index) => (saved[index] ? Object.defineProperty(globalThis, name, saved[index]!) : delete (globalThis as Record<string, unknown>)[name]));
     dom.window.close();
   }
+});
+
+test("best value (C3): marks, summary chips with ties, and mixed currencies ranking nothing", () => {
+  const ranked = {
+    ...compare,
+    sections: compare.sections.map((section) => ({
+      ...section,
+      fields: section.fields.map((item) =>
+        item.key === "cost" ? { ...item, better: "lower" as const, summaryLabel: "Lowest cost" } : item.key === "lead" ? { ...item, better: "lower" as const, summaryLabel: "Shortest lead time" } : item,
+      ),
+    })),
+  };
+  const priced = rows.map((item, index) => ({ ...item, values: { ...item.values, cur: "MYR", cost: ["4.85", "5.40", "4.850"][index], lead: [14, 21, 28][index] } }));
+  const model = buildCompareModel({ descriptor, compare: ranked, location: location([id(1), id(2), id(3)]), rows: priced });
+  const rowOf = (key: string) => model.sections.flatMap((section) => section.rows).find((item) => item.key === key)!;
+  assert.deepEqual(rowOf("cost").best, [0, 2]);
+  assert.deepEqual(rowOf("lead").best, [0]);
+  assert.deepEqual(model.summaries.map((summary) => [summary.label, summary.columns, summary.display]), [["Lowest cost", [0, 2], "MYR 4.85"], ["Shortest lead time", [0], "14"]]);
+  // A different currency in one column ranks nothing and says so.
+  const mixed = buildCompareModel({ descriptor, compare: ranked, location: location([id(1), id(2), id(3)]), rows });
+  const cost = mixed.sections.flatMap((section) => section.rows).find((item) => item.key === "cost")!;
+  assert.deepEqual(cost.best, []);
+  assert.equal(cost.mixedCurrencies, true);
+  assert.deepEqual(mixed.summaries.map((summary) => summary.label), []);
+});
+
+test("the panel shows Best marks, tie-aware summary chips and the mixed-currency note (C3)", async () => {
+  const ranked = { ...compare, sections: compare.sections.map((section) => ({ ...section, fields: section.fields.map((item) => (item.key === "cost" ? { ...item, better: "lower" as const, summaryLabel: "Lowest cost" } : item)) })) };
+  const priced = rows.map((item, index) => ({ ...item, values: { ...item.values, cur: "MYR", cost: ["4.85", "5.40", "4.850"][index] } }));
+  await withPanel(async ({ container, requests, render }) => {
+    await render(location([id(1), id(2), id(3)]), false, ranked);
+    await act(async () => requests[0]!.resolve(result(priced)));
+    assert.equal(container.querySelector(".a-entity-compare__summaries")!.textContent, "Lowest cost: MAT-1001, MAT-1003 · MYR 4.85 (tie)");
+    assert.equal(container.querySelectorAll("td[data-best]").length, 2);
+    assert.match(container.textContent!, /Best/);
+  });
+  await withPanel(async ({ container, requests, render }) => {
+    await render(location([id(1), id(2), id(3)]), false, ranked);
+    await act(async () => requests[0]!.resolve(result(rows)));
+    assert.equal(container.querySelector(".a-entity-compare__summaries"), null);
+    assert.match(container.textContent!, /Mixed currencies/);
+    assert.equal(container.querySelectorAll("td[data-best]").length, 0);
+  });
 });

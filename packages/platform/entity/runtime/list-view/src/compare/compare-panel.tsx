@@ -272,6 +272,7 @@ export function ComparePanel(props: ComparePanelProps) {
       : row.outcome === "not_comparable"
         ? { badge: intl.message(row.currencyNotCompared ? "list.compare.currencyNotCompared" : "list.compare.notCompared") }
         : {}),
+    ...(row.mixedCurrencies ? { note: intl.message("list.compare.mixedCurrencies") } : {}),
     cells: shown.map((index) => cellView(row, index, baseline, words && offerWords, intl)),
   });
   const sections: ComparisonTableSection[] = model.sections.map((section) => {
@@ -329,6 +330,19 @@ export function ComparePanel(props: ComparePanelProps) {
         </div>
       ) : null}
       {compare.fieldsRestricted ? <p className="a-entity-compare__note" role="note">{intl.message("list.compare.restricted")}</p> : null}
+      {model.summaries.length ? (
+        <ul className="a-entity-compare__summaries" aria-label={intl.message("list.compare.summaries")}>
+          {model.summaries.map((summary) => (
+            <li key={summary.label}>
+              {intl.message(summary.columns.length > 1 ? "list.compare.summaryChipTie" : "list.compare.summaryChip", {
+                label: summary.label,
+                records: summary.columns.map((index) => recordName(index)).join(", "),
+                value: summary.display,
+              })}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {props.narrow ? (
         <div className="a-entity-compare__pair">
           {([0, 1] as const).map((slot) => (
@@ -403,6 +417,8 @@ function cellView(row: CompareRowModel, index: number, baseline: number, highlig
           : { tone: "muted", label: intl.message("list.compare.notCompared") },
     );
   if (row.differentRecord[index]) marks.push({ tone: "muted", label: intl.message("list.compare.differentRecord") });
+  const best = row.best.includes(index);
+  if (best) marks.unshift({ tone: "best", label: intl.message("list.compare.best") });
   const segments = highlight ? row.words[index] : undefined;
   const content =
     cell.state === "value" ? (
@@ -429,7 +445,7 @@ function cellView(row: CompareRowModel, index: number, baseline: number, highlig
     ) : (
       intl.message("list.compare.unavailableRecord")
     );
-  return { content, state: cell.state, ...(marks.length ? { marks } : {}), ...(index === baseline ? { baseline: true } : {}) };
+  return { content, state: cell.state, ...(marks.length ? { marks } : {}), ...(index === baseline ? { baseline: true } : {}), ...(best ? { best: true } : {}) };
 }
 
 function ColumnMenu(props: {

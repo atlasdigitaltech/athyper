@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { technicalFieldKeys, type EntityFieldDescriptor } from "@athyper/server-contract-metadata";
-import { parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
+import { parseFieldCompare, parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
 
 // Publication checks of the comparison declaration (Entity list Compare blueprint section 6).
 const field = (key: string, type: EntityFieldDescriptor["type"], extra: Partial<EntityFieldDescriptor> = {}): EntityFieldDescriptor => ({ key, storagePath: key, type, required: false, writableOn: [], ...extra });
@@ -8,6 +8,19 @@ const byKey = new Map([field("code", "string"), field("name", "string"), field("
 const valid = { sections: [{ key: "basic", label: "Basic data", fields: ["uom", "cost"] }, { key: "audit", label: "Record details", fields: ["name"], collapsed: true }] };
 const check = (raw: unknown, extra: Partial<Parameters<typeof validatePublishedListCompare>[1]> = {}) =>
   validatePublishedListCompare(parsePublishedListCompare(raw), { byKey, identityField: "code", titleField: "name", storage: { idField: "id", versionField: "version" }, ...extra });
+
+describe("best value property (C3)", () => {
+  it("parses an authored direction and summary label on number and date fields", () => {
+    expect(parseFieldCompare({ better: "lower", summaryLabel: "Lowest total price" }, "money", "total")).toEqual({ better: "lower", summaryLabel: "Lowest total price" });
+    expect(parseFieldCompare({ better: "higher" }, "date", "valid_until")).toEqual({ better: "higher" });
+  });
+  it("refuses ineligible types, a summary label without a direction, and unknown properties", () => {
+    expect(() => parseFieldCompare({ better: "lower" }, "string", "name")).toThrow(/COMPARE_BETTER_INELIGIBLE/);
+    expect(() => parseFieldCompare({ summaryLabel: "Best" }, "money", "total")).toThrow(/COMPARE_SUMMARY_WITHOUT_BETTER/);
+    expect(() => parseFieldCompare({ better: "cheaper" }, "money", "total")).toThrow(/lower or higher/);
+    expect(() => parseFieldCompare({ better: "lower", inferred: true }, "money", "total")).toThrow(/not a published comparison property/);
+  });
+});
 
 describe("the one technical-identity rule", () => {
   it("names the storage identity and version fields by key or storage path, and UUID-typed fields", () => {

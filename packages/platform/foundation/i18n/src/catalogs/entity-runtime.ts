@@ -2036,4 +2036,29 @@ export const entityRuntimeMessages = {
     "Bandingkan tidak tersedia untuk senarai ini.",
     "المقارنة غير متاحة لهذه القائمة.",
   ],
+  "list.compare.best": [
+    "Best",
+    "Terbaik",
+    "الأفضل",
+  ],
+  "list.compare.mixedCurrencies": [
+    "Mixed currencies",
+    "Mata wang bercampur",
+    "عملات مختلطة",
+  ],
+  "list.compare.summaries": [
+    "Best values",
+    "Nilai terbaik",
+    "أفضل القيم",
+  ],
+  "list.compare.summaryChip": [
+    "{label}: {records} · {value}",
+    "{label}: {records} · {value}",
+    "{label}: {records} · {value}",
+  ],
+  "list.compare.summaryChipTie": [
+    "{label}: {records} · {value} (tie)",
+    "{label}: {records} · {value} (seri)",
+    "{label}: {records} · {value} (تعادل)",
+  ],
 } as const;

@@ -64,6 +64,27 @@ export function parsePublishedListCompare(raw: unknown): EntityListCompareDescri
   return Object.freeze({ sections: Object.freeze(sections) });
 }
 
+/** Field types a best value may rank (section 5.6). */
+export const COMPARE_BETTER_TYPES = ["integer", "decimal", "money", "date", "datetime"] as const;
+
+/** Parses a field's C3 comparison property (`field.compare`). */
+export function parseFieldCompare(raw: unknown, type: string, key: string): NonNullable<EntityFieldDescriptor["compare"]> {
+  const path = `field.compare (${key})`;
+  const value = record(raw, path);
+  only(value, ["better", "summaryLabel"], path);
+  if (value.better === undefined) {
+    if (value.summaryLabel !== undefined) fail(path, "COMPARE_SUMMARY_WITHOUT_BETTER: a summary label needs a best-value direction");
+    fail(path, "must declare better");
+  }
+  if (value.better !== "lower" && value.better !== "higher") fail(`${path}.better`, "must be lower or higher");
+  if (!(COMPARE_BETTER_TYPES as readonly string[]).includes(type))
+    fail(path, `COMPARE_BETTER_INELIGIBLE: a ${type} field cannot rank a best value`);
+  return Object.freeze({
+    better: value.better,
+    ...(value.summaryLabel === undefined ? {} : { summaryLabel: text(value.summaryLabel, `${path}.summaryLabel`) }),
+  });
+}
+
 /** Section 6 publication checks against the Entity's fields. */
 export function validatePublishedListCompare(
   compare: EntityListCompareDescriptor | undefined,

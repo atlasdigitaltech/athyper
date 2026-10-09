@@ -9,6 +9,7 @@ import type {
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
 import {
+  comparisonBestColumns,
   comparisonRelativeToBaseline,
   comparisonRowOutcome,
   differingWords,
@@ -83,6 +84,17 @@ export interface CompareRowModel {
   readonly differentRecord: readonly boolean[];
   /** Differing words against the baseline, per column (section 8.7). */
   readonly words: readonly (readonly ComparisonWordSegment[] | undefined)[];
+  /** C3: columns holding the best value (section 8.5). */
+  readonly best: readonly number[];
+  /** C3: a money row with more than one currency ranks nothing. */
+  readonly mixedCurrencies?: boolean;
+}
+
+/** C3 summary chip (section 5.6): one per field with a summary label and a best value. */
+export interface CompareSummaryModel {
+  readonly label: string;
+  readonly columns: readonly number[];
+  readonly display: string;
 }
 
 export interface CompareSectionModel {
@@ -96,6 +108,8 @@ export interface CompareSectionModel {
 
 export interface CompareModel {
   readonly columns: readonly CompareColumnModel[];
+  /** At most six, in declaration order (section 5.6). */
+  readonly summaries: readonly CompareSummaryModel[];
   readonly sections: readonly CompareSectionModel[];
   readonly fields: number;
   readonly differs: number;
@@ -167,6 +181,7 @@ export function buildCompareModel(input: {
       relative?.forEach((mark, index) => {
         if (index !== baseline && mark === "differs") differFromBaseline[index]!++;
       });
+      const ranked = field.better ? comparisonBestColumns(kind, cells, field.better, money) : undefined;
       const currencyNotCompared =
         kind === "money" && outcome === "not_comparable" && cells.filter((cell) => cell.state !== "unavailable" || cell.reason !== "record_unavailable").every((cell) => cell.state === "value" || cell.state === "empty");
       return {
@@ -178,6 +193,8 @@ export function buildCompareModel(input: {
         ...(currencyNotCompared ? { currencyNotCompared: true } : {}),
         ...(relative ? { relative } : {}),
         differentRecord: sameLabelDifferentRecord(kind, cells, outcome),
+        best: ranked?.best ?? [],
+        ...(ranked?.mixedCurrencies ? { mixedCurrencies: true } : {}),
         words: cells.map((cell, index) => {
           const base = baseline >= 0 ? cells[baseline] : undefined;
           if (kind !== "text" || index === baseline || relative?.[index] !== "differs" || cell.state !== "value" || base?.state !== "value") return undefined;
@@ -194,7 +211,16 @@ export function buildCompareModel(input: {
       notCompared: rows.filter((row) => row.outcome === "not_comparable").length,
     };
   });
+  const summaries = sections
+    .flatMap((section) => section.rows)
+    .flatMap((row): CompareSummaryModel[] => {
+      const first = row.best[0];
+      const cell = first === undefined ? undefined : row.cells[first];
+      return row.field.summaryLabel && cell?.state === "value" ? [{ label: row.field.summaryLabel, columns: row.best, display: cell.display }] : [];
+    })
+    .slice(0, 6);
   return {
+    summaries,
     columns: columns.map((column, index) => (baseline >= 0 && index !== baseline && !column.unavailable ? { ...column, differFromBaseline: differFromBaseline[index]! } : column)),
     sections,
     fields: sections.reduce((total, section) => total + section.rows.length, 0),
