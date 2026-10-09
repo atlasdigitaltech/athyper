@@ -110,7 +110,6 @@ export * from "./native-detail-sections.js";
 export * from "./native-supplemental-storage.js";
 
 export * from "./native-expanded-conversion.js";
-export * from "./legacy-native-resources-adapter.js";
 
 export * from "./native-supplemental-save.js";
 export * from "./native-operation-bootstrap.js";
@@ -144,8 +143,6 @@ export * from "./native-field-reference-compilation.js";
 export * from "./legacy-source-enrollment.js";
 
 export * from "./legacy-enrollment-application.js";
-
-export * from "./legacy-native-whole-source.js";
 
 export * from "./native-schema-qualification.js";
 export {
