@@ -240,22 +240,25 @@ test("narrow screens show a pair of columns, with the baseline fixed in the firs
     await render(location([id(1), id(2), id(3)], { baseline: id(3) }), true);
     await act(async () => requests[0]!.resolve(result(rows)));
     assert.equal(container.querySelectorAll("thead th").length, 3);
-    const selects = container.querySelectorAll<HTMLSelectElement>(".a-entity-compare__pair select");
-    assert.equal(selects[0]!.value, "2");
-    assert.equal(selects[0]!.disabled, true);
+    // Each slot is a segmented choice of record (at most four), not a native select.
+    const slots = [...container.querySelectorAll<HTMLElement>(".a-entity-compare__pair [role=radiogroup]")];
+    const checked = (slot: HTMLElement) => [...slot.querySelectorAll<HTMLButtonElement>("[role=radio]")].findIndex((radio) => radio.getAttribute("aria-checked") === "true");
+    assert.equal(checked(slots[0]!), 2);
+    assert.equal(slots[0]!.getAttribute("aria-disabled"), "true");
   });
   await withPanel(async ({ container, requests, render }) => {
     await render(location([id(1), id(2), id(3)]), true);
     await act(async () => requests[0]!.resolve(result(rows)));
-    const second = () => container.querySelectorAll<HTMLSelectElement>(".a-entity-compare__pair select")[1]!;
-    await act(async () => {
-      second().value = "2";
-      second().dispatchEvent(new window.Event("change", { bubbles: true }));
-    });
-    assert.equal(second().value, "2");
+    const slots = () => [...container.querySelectorAll<HTMLElement>(".a-entity-compare__pair [role=radiogroup]")];
+    const radios = (slot: HTMLElement) => [...slot.querySelectorAll<HTMLButtonElement>("[role=radio]")];
+    const checked = (slot: HTMLElement) => radios(slot).findIndex((radio) => radio.getAttribute("aria-checked") === "true");
+    // The record shown in the other slot cannot be chosen again.
+    assert.equal(radios(slots()[1]!)[0]!.disabled, true);
+    await act(async () => radios(slots()[1]!)[2]!.click());
+    assert.equal(checked(slots()[1]!), 2);
     // A change of baseline returns the pair to the first two columns.
     await render(location([id(1), id(2), id(3)], { baseline: id(1) }), true);
-    assert.deepEqual([...container.querySelectorAll<HTMLSelectElement>(".a-entity-compare__pair select")].map((select) => select.value), ["0", "1"]);
+    assert.deepEqual(slots().map(checked), [0, 1]);
   });
 });
 

@@ -8,6 +8,7 @@ import type {
 } from "@athyper/contract-platform-entity-list";
 import {
   addDays,
+  parseInstant,
   zonedDay,
   zonedDayStart,
   zonedToday,
@@ -222,7 +223,7 @@ export function placeEntries(
         field.kind === "date"
           ? end.slice(0, 10)
           : zonedDay(
-              Math.max(Date.parse(end) - 1, Date.parse(start)),
+              Math.max(parseInstant(end) - 1, parseInstant(start)),
               timeZone,
             );
     if (lastDay < firstDay) lastDay = firstDay;
@@ -249,7 +250,7 @@ export function compareWithinDay(left: DatedEntry, right: DatedEntry): number {
     Number(right.multiDay) - Number(left.multiDay) ||
     Number(right.allDay) - Number(left.allDay) ||
     (left.startsAt && right.startsAt
-      ? Date.parse(left.startsAt) - Date.parse(right.startsAt)
+      ? parseInstant(left.startsAt) - parseInstant(right.startsAt)
       : 0) ||
     left.order - right.order
   );

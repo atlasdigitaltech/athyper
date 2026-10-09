@@ -11,7 +11,7 @@
   ],
   "counts": {
     "Shared contract": 31,
-    "Shared platform": 43,
+    "Shared platform": 44,
     "Shared domain": 0,
     "Product-specific": 5,
     "Application composition": 18,
@@ -1301,6 +1301,22 @@
       "deploymentTargets": "neon, studio, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
       "proposedFinalLocation": "packages/platform/entity/runtime/collection-controls/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/platform-entity-comparison",
+      "physicalPath": "packages/platform/entity/runtime/comparison/package.json",
+      "currentConsumers": [
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "packages/platform/entity/runtime/list-view/package.json"
+      ],
+      "intendedOwner": "Shared Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/platform/entity/runtime/comparison/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Shared platform",
       "workspaceActive": true

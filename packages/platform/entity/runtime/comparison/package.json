@@ -15,7 +15,8 @@
   "dependencies": {
     "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/contract-platform-entity-runtime": "workspace:*",
-    "@athyper/platform-i18n": "workspace:*"
+    "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

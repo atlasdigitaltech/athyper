@@ -7,6 +7,7 @@ import {
 import type { EntityDetailDescriptorV1 } from "@athyper/contract-platform-entity-runtime";
 import type { IntlRuntime } from "@athyper/platform-i18n";
 import { formatExactDecimal } from "@athyper/platform-i18n/entity-value";
+import { parseInstant } from "@athyper/platform-temporal";
 
 // The comparison core (Entity list Compare blueprint, sections 5.5, 8 and 11).
 // Columns are peers: a row "differs", never "changed". The snapshot view
@@ -110,7 +111,7 @@ export function formatComparisonValue(
     typeof value === "string" &&
     (field?.kind === "date" || field?.kind === "datetime")
   ) {
-    const timestamp = Date.parse(value);
+    const timestamp = parseInstant(value);
     if (Number.isFinite(timestamp))
       return intl.date(
         value,
@@ -164,8 +165,8 @@ export function equalComparisonValues(kind: ComparisonValueKind, a: JsonValue, b
     case "money":
       return isExactDecimal(a) && isExactDecimal(b) ? compareDecimals(a, b) === 0 : canonical(a) === canonical(b);
     case "datetime": {
-      const left = typeof a === "string" ? Date.parse(a) : Number.NaN;
-      const right = typeof b === "string" ? Date.parse(b) : Number.NaN;
+      const left = typeof a === "string" ? parseInstant(a) : Number.NaN;
+      const right = typeof b === "string" ? parseInstant(b) : Number.NaN;
       return Number.isFinite(left) && Number.isFinite(right) ? left === right : canonical(a) === canonical(b);
     }
     case "json":
@@ -262,7 +263,7 @@ export function comparisonBestColumns(
   const order = (a: JsonValue, b: JsonValue): number => {
     if (kind === "integer" || kind === "decimal" || kind === "money")
       return isExactDecimal(a) && isExactDecimal(b) ? compareDecimals(a, b) : 0;
-    if (kind === "datetime") return Date.parse(String(a)) - Date.parse(String(b));
+    if (kind === "datetime") return parseInstant(String(a)) - parseInstant(String(b));
     if (kind === "date") return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
     return 0;
   };

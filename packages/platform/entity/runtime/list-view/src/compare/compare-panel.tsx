@@ -25,6 +25,7 @@ import {
   type ComparisonTableSection,
 } from "@athyper/platform-entity-comparison";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { SegmentedControl } from "@athyper/platform-ui";
 import { formatFieldValue } from "../field-format";
 import { CompareCollection } from "./compare-collection";
 import {
@@ -352,23 +353,22 @@ export function ComparePanel(props: ComparePanelProps) {
       {props.narrow ? (
         <div className="a-entity-compare__pair">
           {([0, 1] as const).map((slot) => (
-            <label key={slot}>
-              <span>{intl.message(slot === 0 ? "list.compare.firstRecord" : "list.compare.secondRecord")}</span>
-              <select
-                value={shown[slot]}
+            <div key={slot} className="a-entity-compare__pair-slot">
+              <SegmentedControl
+                label={intl.message(slot === 0 ? "list.compare.firstRecord" : "list.compare.secondRecord")}
+                value={String(shown[slot])}
                 disabled={slot === 0 && baseline >= 0}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
+                options={model.columns.map((column, index) => ({
+                  value: String(index),
+                  label: [recordName(index), column.title].filter(Boolean).join(" · "),
+                  disabled: index === shown[slot === 0 ? 1 : 0],
+                }))}
+                onValueChange={(next) => {
+                  const value = Number(next);
                   setPair((current) => (slot === 0 ? [value, current[1]] : [current[0], value]));
                 }}
-              >
-                {model.columns.map((column, index) => (
-                  <option key={column.id} value={index} disabled={index === shown[slot === 0 ? 1 : 0]}>
-                    {[recordName(index), column.title].filter(Boolean).join(" · ")}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
           ))}
         </div>
       ) : null}

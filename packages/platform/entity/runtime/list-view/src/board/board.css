@@ -28,7 +28,7 @@
 .a-entity-board__lane[data-collapsed] .a-entity-board__lane-header{flex-direction:column;padding:var(--a-space-3) var(--a-space-1)}
 .a-entity-board__lane[data-collapsed] .a-entity-board__lane-header h2{flex:none;max-block-size:14rem;writing-mode:vertical-rl}
 .a-entity-board__count{padding:0 var(--a-space-2);border-radius:var(--a-radius-round);background:var(--board-tone-soft);color:var(--board-tone-text);font-size:var(--a-font-size-xs);font-variant-numeric:tabular-nums;font-weight:var(--a-font-weight-strong)}
-.a-entity-board__tag{padding:0 var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-sm);color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);letter-spacing:.06em;text-transform:uppercase}
+.a-entity-board__tag{padding:0 var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-sm);color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);letter-spacing:var(--a-tracking-wide);text-transform:uppercase}
 .a-entity-board__toggle svg{transition:transform var(--a-motion-fast) var(--a-easing)}
 .a-entity-board__lane[data-collapsed] .a-entity-board__toggle svg{transform:rotate(-90deg)}
 [dir=rtl] .a-entity-board__lane[data-collapsed] .a-entity-board__toggle svg{transform:rotate(90deg)}

@@ -140,7 +140,7 @@
   display: flex;
   align-items: center;
   gap: var(--a-space-2);
-  min-block-size: 2rem;
+  min-block-size: var(--a-density-control-height-small);
   padding: 0 var(--a-space-3);
   border: 0;
   background: none;
@@ -285,7 +285,7 @@ a.a-entity-gantt__name:hover {
   inset-block-start: 50%;
   inline-size: 0.8125rem;
   block-size: 0.8125rem;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--dated-tone);
   box-shadow: 0 0 0 2px var(--a-surface);
   transform: translate(-50%, -50%) rotate(45deg);

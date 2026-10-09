@@ -1042,6 +1042,9 @@ importers:
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../../foundation/i18n
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../foundation/temporal
     devDependencies:
       '@athyper/config':
         specifier: workspace:*

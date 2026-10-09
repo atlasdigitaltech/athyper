@@ -15,6 +15,8 @@ import {
   type ComparisonTableRow,
 } from "@athyper/platform-entity-comparison";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
+import { SearchableSelect } from "@athyper/platform-ui";
 import {
   COMPARE_LINE_PAGE,
   COMPARE_MASTER_PAGE,
@@ -254,20 +256,17 @@ export function CompareCollection(props: CompareCollectionProps) {
               />
             ) : null}
             {master?.filters.map((filter) => (
-              <select
-                key={filter.key}
-                className="a-entity-compare__search"
-                aria-label={filter.label}
-                value={filters[filter.key] ?? ""}
-                onChange={(event) => setFilters((previous) => ({ ...previous, [filter.key]: event.target.value }))}
-              >
-                <option value="">{intl.message("list.compare.lines.filterAll", { label: filter.label })}</option>
-                {filter.options.map((option) => (
-                  <option key={String(option.value)} value={String(option.value)}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div key={filter.key} className="a-entity-compare__filter">
+                <SearchableSelect
+                  id={`compare-${props.collection.key}-${filter.key}`}
+                  label={filter.label}
+                  value={filters[filter.key] ?? ""}
+                  placeholder={intl.message("list.compare.lines.filterAll", { label: filter.label })}
+                  options={filter.options.map((option) => ({ value: String(option.value), label: option.label }))}
+                  messages={createEntityReferenceMessages((id) => intl.message(id))}
+                  onChange={(value) => setFilters((previous) => ({ ...previous, [filter.key]: value }))}
+                />
+              </div>
             ))}
             {master ? (
               <label className="a-entity-compare__switch">

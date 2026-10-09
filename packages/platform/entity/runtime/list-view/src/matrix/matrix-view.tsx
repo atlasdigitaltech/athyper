@@ -24,7 +24,7 @@ import {
   type ListMatrixV1,
 } from "@athyper/contract-platform-entity-list";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { Button } from "@athyper/platform-ui";
+import { Button, SegmentedControl } from "@athyper/platform-ui";
 import { ComparePanel } from "../compare/compare-panel";
 import { formatFieldValue } from "../field-format";
 import type { ListWidthTier } from "../presentation-tier";
@@ -373,13 +373,15 @@ export function EntityMatrix(props: EntityMatrixProps) {
           </form>
         ) : null}
         {matrix.measures.length > 1 ? (
-          <label className="a-entity-matrix__display">
-            <span>{intl.message("list.matrix.display")}</span>
-            <select value={preset} onChange={(event) => change({ measures: event.target.value === "primary" ? presets.primary : presets.everything })}>
-              <option value="primary">{intl.message(rank ? "list.matrix.presetPrimaryRank" : "list.matrix.presetPrimary", { measure: matrix.measures[0]!.label })}</option>
-              <option value="everything">{intl.message("list.matrix.presetEverything")}</option>
-            </select>
-          </label>
+          <SegmentedControl
+            label={intl.message("list.matrix.display")}
+            value={preset}
+            options={[
+              { value: "primary", label: intl.message(rank ? "list.matrix.presetPrimaryRank" : "list.matrix.presetPrimary", { measure: matrix.measures[0]!.label }) },
+              { value: "everything", label: intl.message("list.matrix.presetEverything") },
+            ]}
+            onValueChange={(next) => change({ measures: next === "primary" ? presets.primary : presets.everything })}
+          />
         ) : null}
         <span className="a-entity-matrix__spacer" />
         {saved.columns.length ? (

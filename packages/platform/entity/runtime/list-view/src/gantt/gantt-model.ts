@@ -11,6 +11,8 @@ import {
   addDays,
   addMonths,
   daysBetween,
+  parseBusinessDate,
+  parseInstant,
   periodWindow,
   type CalendarWindow,
   type DatePeriod,
@@ -159,7 +161,7 @@ export function ganttMilestone(
   return (
     typeof start === "string" &&
     typeof end === "string" &&
-    Date.parse(start) === Date.parse(end)
+    parseInstant(start) === parseInstant(end)
   );
 }
 
@@ -200,8 +202,8 @@ export function ganttBar(
 function startValue(entry: DatedEntry, field: ListDateRangeFieldV1): number {
   const value = String(entry.row.values[field.start]);
   return field.kind === "date"
-    ? Date.parse(`${value.slice(0, 10)}T00:00:00Z`)
-    : Date.parse(value);
+    ? parseBusinessDate(value.slice(0, 10))
+    : parseInstant(value);
 }
 
 /** The rows a Gantt draws: placed on the window, in start order (then server

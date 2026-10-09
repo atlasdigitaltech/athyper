@@ -20,10 +20,10 @@
 .a-entity-compare__state p{margin:0;font-weight:var(--a-font-weight-medium)}
 .a-entity-compare__scroll{max-block-size:70vh;overflow:auto;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg)}
 .a-entity-compare__pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--a-space-2)}
-.a-entity-compare__pair label{display:grid;gap:var(--a-space-1);font-size:var(--a-font-size-xs);color:var(--a-muted-foreground)}
-.a-entity-compare__pair select{min-block-size:2.25rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-foreground);font:inherit}
+.a-entity-compare__pair-slot{display:grid;min-inline-size:0;overflow-x:auto}
+.a-entity-compare__filter{min-inline-size:12rem}
 .a-entity-compare__menu{position:relative;flex:none}
-.a-entity-compare__menu-trigger{display:inline-grid;place-items:center;inline-size:1.75rem;block-size:1.75rem;padding:0;border:0;border-radius:var(--a-radius-sm);background:none;color:var(--a-muted-foreground);font-size:1rem;cursor:pointer}
+.a-entity-compare__menu-trigger{display:inline-grid;place-items:center;inline-size:var(--a-density-control-height-small);block-size:var(--a-density-control-height-small);padding:0;border:0;border-radius:var(--a-radius-sm);background:none;color:var(--a-muted-foreground);font-size:var(--a-font-size-md);cursor:pointer}
 .a-entity-compare__menu-trigger:hover{background:var(--a-surface);color:var(--a-foreground)}
 .a-entity-compare__menu-items{position:absolute;inset-inline-end:0;inset-block-start:100%;z-index:5;display:grid;min-inline-size:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-md)}
 .a-entity-compare__menu-items button{padding:var(--a-space-2);border:0;border-radius:var(--a-radius-sm);background:none;color:var(--a-foreground);font:inherit;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-regular);text-align:start;cursor:pointer}
