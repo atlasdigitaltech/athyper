@@ -2,6 +2,8 @@
 
 **Status:** approved, revision 6 (10 October 2026). Revision 5 sets C4's design (sections 5.8 and 5.9). Revision 6 records the build authority and the build-time specifics (section 5.8, point 10a).
 
+- **Matrix drill-down (10 October 2026).** The Matrix Layout's "Compare selected" opens this panel unchanged, on the column Entity's own descriptor and `compare` declaration (Matrix blueprint 5.4 point 6 and 5.6 point 10). No comparison rule changed.
+
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
 - **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
 - **Approval (9 October 2026).** The project owner (nchandravel-atlas) approved decisions 15.1 through 15.10 in these words: "APPROVED 15.1 through 15.10 as written with finding 2 folded into 8.2 and finding 3 into 5.1, and to note finding 1 as a specification clarification APPROVED". Revision 2 makes exactly those changes:

@@ -8,6 +8,9 @@
   - the revised prototype, `docs/prototypes/Neon Matrix Prototype.html`;
   - the author's recommendations on the items that prototype raised (section 5.3).
 - **Phases now authorized:** M1 and M2. M3 needs the metadata cleanup.
+- **Delivery (10 October 2026): M1 and M2 built, on synthetic fixtures.** Commits 64e11a31c (server and contract) and 6cbadd8c5 (browser). Section 5.6 records what the build decided. What is verified and what is not:
+  - **Verified by tests:** publication parsing and section 6 codes; per-viewer projection; rank admission; `rankWithin` on real PostgreSQL (session temporary tables shaped as a two-key fact, not the Neon DDL); the browser contract and URL state; the grid model and a rendered grid with a fake client.
+  - **Not verified:** a real Entity (none publishes a Matrix until M3), and a real browser.
 
 - **Direction approved (10 October 2026).** The owner reviewed a reference screenshot of a bid-award grid (items as rows, every participant as a column, price, rank, % above lowest and allocation per cell) and the recommendation to build it as a list Layout. The owner approved in these words: "totally agreeed". The recommendation was:
   - Matrix as a new list Layout with its own blueprint, not a stretched Compare;
@@ -113,7 +116,7 @@ Verified on 10 October 2026.
 
 Compare shows two to four **chosen** records in detail. The Matrix shows the **whole result set** of a fact Entity, page by page, pivoted. That is what a list Layout is, so the Matrix is a mode of the shared list beside Table, Cards, Board, Calendar, Gantt and Tree. It inherits the list's scope, filters, search, saved views and export.
 
-## 5. Contract properties (proposed; not approved)
+## 5. Contract properties (approved in section 14)
 
 ### 5.1 Published declaration (per list surface)
 
@@ -196,8 +199,32 @@ These close three points sections 5.1–8 leave open. They are decided within th
 
 ### 5.5 URL and saved state
 
-- **Saved:** `matrix.measures` (which measures show) and `matrix.columns` (the participant filter: pinned column ids, kept as routing identities, never displayed).
-- **Location only:** `matrix.rowPage` and `matrix.columnPage`.
+- **Saved:** `matrix.measures` (which measures show) and `matrix.columns` (the participant filter: pinned column ids, kept as routing identities, never displayed). URL keys `matrix.measures` and `matrix.columns`.
+- **Location only:** the row and column page indices (`matrixRowPage`, `matrixColumnPage`; URL keys `matrix.rows` and `matrix.cols`). Pages are cursor-paged, so opening page *n* from a link walks the cursors from the first page; a page past the end settles on the last one.
+
+### 5.6 Build record (M1 and M2, 10 October 2026)
+
+What the build decided inside the approved contract, so a reviewer can check each point against the code.
+
+1. **Projection.** The list service reads the row and column Entities' per-viewer list views *before* compiling the list descriptor, so the surface's modes and hash include them (`resolveMatrixAxes`, `resolveListMatrix` in `list-matrix.ts`).
+   - A money measure whose currency field is unreadable is dropped with the restricted statement: an amount is never shown in an unknown currency.
+   - Header fields, the declined state, the eligibility state and the column order each need the column Entity's field to be readable, unmasked and not a technical identity. An unreadable one is dropped with the restricted statement.
+   - The projection carries `accessIndependent` when the fact's access does not follow the parent's (record predicates, owner access, a non-tenant directory scope). The absence label is then never claimed, the same rule as Compare 5.8 point 3.
+2. **Ranked types.** A ranked integer or decimal needs no evaluation amount, because it has no currency. A ranked money field must be the declared evaluation amount. The "proven single currency" alternative is not built: money without `evaluation` is refused (`MATRIX_RANK_WITHOUT_EVALUATION`), which fails closed.
+3. **Rank admission** (`list-matrix-rank.ts`). The field must be a ranked measure, readable and unmasked, with the row, column and pivot-dimension keys. The list must publish exact counts. The request is a plain page (no group, hierarchy or count).
+   - When per-record authorization cannot be expressed in SQL, rank is refused: it could not cover every record the viewer can read.
+   - An eligibility rule that cannot be applied (the column Entity or its field is unavailable) is refused rather than ignored.
+4. **The rank query.** One window over the list's full conditions with `rank()`, so ties share a rank. The partition is the row key plus any declared pivot dimensions.
+   - Eligibility is an `EXISTS` on the column Entity's table, tenant, soft delete and stored predicates.
+   - `matrixColumns` narrows only the returned rows.
+   - Difference to best is `round(|v − best| × 100 / |best|, 1)` in numeric arithmetic, absent at the best value and at a best of zero.
+   - The revision is an MD5 digest of the ranked set's `id:version:value` marks.
+5. **The browser's screen.** The rows page, the columns page, one cell request carrying its ranks, and one coverage count. With a ranked measure, the cell request has no column filter (the pinned participants excepted) and sends the page's columns as `matrixColumns`. The list's own page query still runs, at a limit of one, once per filter change, to keep the list's authority check.
+6. **Row search** is the Matrix's own box, searching the row Entity. It is not saved state.
+7. **Locked parent.** In a record section, the row and column Entities are filtered by the scope's parent record id. The fact Entity's locked scope does not reach them.
+8. **The request-cost diagnostic** is a `data-matrix-requests` attribute on the grid, not a visible strip: the runtime has no development-mode signal to hide a strip behind.
+9. **Revision notice.** Its wording is entity-neutral ("Values changed since the first page. Refresh to see current ranks."); section 5.3's "A bid changed" was the prototype's wording for its one example. The digest itself is not shown in the banner: it is compared, and only a change is shown.
+10. **Drill-down.** "Compare selected" appears only once the column Entity's list descriptor shows a `compare` declaration. It is read when the viewer selects two columns.
 
 ## 6. Validation, availability and finding codes
 
@@ -210,8 +237,14 @@ These close three points sections 5.1–8 leave open. They are decided within th
 | `MATRIX_RANK_WITHOUT_EVALUATION` | A ranked measure with no declared evaluation amount and no single-currency proof; the direction is never inferred |
 | `MATRIX_MEASURE_INELIGIBLE` | A measure of an unsupported type (audit 9: narrowed to this one mistake) |
 | `MATRIX_RANK_DIRECTION_REQUIRED` | A ranked measure without `better` |
-| `MATRIX_SCOPE_UNBOUND` (runtime) | No common parent fixes the master list; the prompt asks for the event |
-| `LIST_MATRIX_KEY_UNAVAILABLE` (per viewer) | A key field is unreadable or masked for this viewer |
+| `MATRIX_PARENT_FIELD_INELIGIBLE` | The parent field is not a required reference with `eq` and `in` (section 5.4 point 1; added by the build) |
+| `MATRIX_SCOPE_UNBOUND` (runtime) | No common parent fixes the master list; the prompt asks for the parent |
+| `LIST_MATRIX_KEY_UNAVAILABLE` (per viewer) | A key field is unreadable or masked for this viewer, or the row or column Entity, or its reference to the parent, is unreadable |
+| `LIST_MATRIX_MEASURE_UNAVAILABLE` (per viewer) | No declared measure is readable (added by the build) |
+| `LIST_MATRIX_SCOPE_UNBOUND` (per viewer) | A record section's locked scope does not fix the parent, as Tree's `LIST_TREE_SCOPE_UNBOUND` (added by the build) |
+| `LIST_MATRIX_RANK_UNAVAILABLE`, `LIST_MATRIX_RANK_INVALID` (request) | The rank field is not a usable ranked measure, the list has no exact counts, or the request is not a plain page (section 5.6 point 3) |
+| `LIST_MATRIX_RANK_RECORD_AUTHORIZATION_UNSUPPORTED` (request) | Per-record authorization is not expressible in SQL, so a rank could not cover every readable record |
+| `LIST_MATRIX_ELIGIBILITY_UNAVAILABLE` (request) | The declared eligibility rule cannot be applied |
 
 ## 7. Query semantics and paging
 
@@ -290,6 +323,8 @@ The registration inventory follows the same nine steps as Calendar section 10. I
 | M3 | Pilot: `sourcing_event_award_allocation` as demand × award (awarded quantity and amount). The company dimension is covered in one of two authored ways: pinned by a locked company-code scope, or declared as a pivot dimension so that columns are award × company. Also builds `matrixKeyFinding` and wires it into the onboarding DDL rehearsal (audit 9) | Yes |
 | — | RFP bid tabulation: needs the supplier response and response-line Entities onboarded first | Onboarding |
 
+**Status (10 October 2026).** M1 and M2 are built on fixtures (see the status block and section 5.6). From M1, the drawing of declared `pivotDimensions` as part of the column identity also remains for M3, as section 5.4 point 5 says; the rank's partition already includes them. M3 is not started.
+
 ## 14. Decisions (project owner)
 
 All five were approved on 10 October 2026: "Matrix section 14 approved". Audit 9's two conditions are written into section 2.1 and M3.
@@ -327,4 +362,4 @@ All five were approved on 10 October 2026: "Matrix section 14 approved". Audit 9
 | Audit 9 | Overlapping codes | `MATRIX_MEASURE_INELIGIBLE` narrowed to unsupported types; `MATRIX_RANK_DIRECTION_REQUIRED` added; `MATRIX_RANK_CURRENCY` dropped (covered by `MATRIX_RANK_WITHOUT_EVALUATION`) |
 | Audit 9 | Coverage is per request, not per link | Section 2.1, point 4 |
 | Owner's revised prototype (10 October 2026) | Eligibility, partial bids, data revision, evaluation basis, a second fact, declined cells, presets, Table fallback, cell filters, header aggregate | Section 5.3 |
-| Audit 8, prototype | Keep the request-cost strip as a development diagnostic; units gate display per cell; 6-row demo paging | Recorded: the strip is proposed as a development-only diagnostic for M1; the unit rule in section 8; product sizes are 20 × 5 |
+| Audit 8, prototype | Keep the request-cost strip as a development diagnostic; units gate display per cell; 6-row demo paging | Recorded: the diagnostic is built as a `data-matrix-requests` attribute (section 5.6 point 8); the unit rule in section 8; product sizes are 20 × 5 |
