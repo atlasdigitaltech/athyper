@@ -1903,6 +1903,24 @@ function EntityCollectionRuntime({
                     }
                   : {})}
               />
+            ) : // Matrix reads its own rows, columns and cells, so it never waits
+            // for (or is unmounted by) the list's own page query.
+            state.mode === "matrix" &&
+              descriptor.surface.matrix &&
+              hostLayouts(host).matrix ? (
+              <EntityMatrix
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                matrix={descriptor.surface.matrix}
+                state={state}
+                {...(scopeCoordinate ? { scope: scopeCoordinate } : {})}
+                widthTier={widthTier}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                onMatrixChange={(change) =>
+                  update({ ...state, ...change }, "replace")
+                }
+              />
             ) : loading && !page ? (
               <LoadingTable columns={fields.length} />
             ) : page &&
@@ -1932,22 +1950,6 @@ function EntityCollectionRuntime({
                   />
                 )}
                 onCalendarChange={(change) =>
-                  update({ ...state, ...change }, "replace")
-                }
-              />
-            ) : state.mode === "matrix" &&
-              descriptor.surface.matrix &&
-              hostLayouts(host).matrix ? (
-              <EntityMatrix
-                key={authorityKey}
-                client={client}
-                descriptor={descriptor}
-                matrix={descriptor.surface.matrix}
-                state={state}
-                {...(scopeCoordinate ? { scope: scopeCoordinate } : {})}
-                widthTier={widthTier}
-                refreshKey={`${authorityKey}:${refreshAttempt}`}
-                onMatrixChange={(change) =>
                   update({ ...state, ...change }, "replace")
                 }
               />

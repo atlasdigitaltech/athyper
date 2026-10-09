@@ -10,7 +10,16 @@
 - **Phases now authorized:** M1 and M2. M3 needs the metadata cleanup.
 - **Delivery (10 October 2026): M1 and M2 built, on synthetic fixtures.** Commits 64e11a31c (server and contract) and 6cbadd8c5 (browser). Section 5.6 records what the build decided. What is verified and what is not:
   - **Verified by tests:** publication parsing and section 6 codes; per-viewer projection; rank admission; `rankWithin` on real PostgreSQL (session temporary tables shaped as a two-key fact, not the Neon DDL); the browser contract and URL state; the grid model and a rendered grid with a fake client.
-  - **Not verified:** a real Entity (none publishes a Matrix until M3), and a real browser. The six grid tests in `tests/foundation/entity-list-matrix.test.tsx` run in jsdom with a fake client. The Playwright spec planned in section 12, `tests/foundation-browser/entity-list-matrix.spec.ts`, does not exist yet, so the request budget against a server, sideways paging and the narrow layout are unverified. Compare C2, C1b, C3 and C4 have the same gap (Compare blueprint status).
+  - **Verified in a real browser (10 October 2026):** `tests/foundation-browser/entity-list-matrix.spec.ts`, 6 tests, registered in `test:country-browser`. It runs the real list runtime and Neon CSS against a fixture that ranks as `rankWithin` does. It checks:
+    - the request budget (`data-matrix-requests` = 4) and the cell request's shape;
+    - ranks, states, coverage and the absence of identifiers;
+    - sideways and downward paging, each reading only its axis and the cells;
+    - a shared link opening on its page, and pinned participants;
+    - the Compare drill-down;
+    - the phone layout with no horizontal scroll.
+
+    The spec found one defect, fixed with it. The Matrix was drawn below the list's loading state, so the list's own page query unmounted and remounted it, and the rows, columns and coverage were requested twice. The Matrix now mounts independently of that query (section 5.6 point 5).
+  - **Not verified:** a real Entity (none publishes a Matrix until M3), and the server's real responses in a browser. The spec's fixture plays the server's part. Compare C2, C1b, C3 and C4 still have no Playwright spec (Compare blueprint status).
 
 - **Direction approved (10 October 2026).** The owner reviewed a reference screenshot of a bid-award grid (items as rows, every participant as a column, price, rank, % above lowest and allocation per cell) and the recommendation to build it as a list Layout. The owner approved in these words: "totally agreeed". The recommendation was:
   - Matrix as a new list Layout with its own blueprint, not a stretched Compare;
@@ -219,7 +228,7 @@ What the build decided inside the approved contract, so a reviewer can check eac
    - `matrixColumns` narrows only the returned rows.
    - Difference to best is `round(|v − best| × 100 / |best|, 1)` in numeric arithmetic, absent at the best value and at a best of zero.
    - The revision is an MD5 digest of the ranked set's `id:version:value` marks.
-5. **The browser's screen.** The rows page, the columns page, one cell request carrying its ranks, and one coverage count. With a ranked measure, the cell request has no column filter (the pinned participants excepted) and sends the page's columns as `matrixColumns`. The list's own page query still runs, at a limit of one, once per filter change, to keep the list's authority check.
+5. **The browser's screen.** The rows page, the columns page, one cell request carrying its ranks, and one coverage count. With a ranked measure, the cell request has no column filter (the pinned participants excepted) and sends the page's columns as `matrixColumns`. The list's own page query still runs, at a limit of one, once per filter change, to keep the list's authority check. The Matrix is mounted before the list's loading state, so that query never unmounts it (found by the browser spec).
 6. **Row search** is the Matrix's own box, searching the row Entity. It is not saved state.
 7. **Locked parent.** In a record section, the row and column Entities are filtered by the scope's parent record id. The fact Entity's locked scope does not reach them.
 8. **The request-cost diagnostic** is a `data-matrix-requests` attribute on the grid, not a visible strip: the runtime has no development-mode signal to hide a strip behind.
