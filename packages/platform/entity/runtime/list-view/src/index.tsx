@@ -90,7 +90,7 @@ import {
   listModeTraits,
   listRendererKind,
   hostLayouts,
-  listHost,
+  classifyListHost,
   type ListHost,
   withRenderableModes,
 } from "./mode-renderers";
@@ -769,7 +769,7 @@ function EntityCollectionRuntime({
   useQuickReturnToolbar(panelElement, widthTier === "narrow" && !embedding);
   // Which layouts this list may offer follows its declared host (foundation
   // section 8): a record lookup is a picker; record sections and pages are not.
-  const host: ListHost = listHost({
+  const host: ListHost = classifyListHost({
     lookup: Boolean(embedding),
     section: Boolean(section),
   });

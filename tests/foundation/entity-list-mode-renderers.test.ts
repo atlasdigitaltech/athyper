@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ENTITY_LIST_VIEW_MODES } from "@athyper/contract-platform-entity-list";
 import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { LIST_MODE_RENDERER_MISSING, hostLayouts, listHost, listModeTraits, listRendererKind, withRenderableModes } from "../../packages/platform/entity/runtime/list-view/src/mode-renderers";
+import { LIST_MODE_RENDERER_MISSING, hostLayouts, classifyListHost, listModeTraits, listRendererKind, withRenderableModes } from "../../packages/platform/entity/runtime/list-view/src/mode-renderers";
 
 describe("list mode renderer registry", () => {
   it("declares per-layout list policy as renderer traits, not mode comparisons", () => {
@@ -83,9 +83,9 @@ describe("list mode renderer registry", () => {
   });
 
   it("decides layouts by declared host: pages and record sections offer every layout, record pickers none", () => {
-    assert.equal(listHost({ lookup: false, section: false }), "page");
-    assert.equal(listHost({ lookup: false, section: true }), "section");
-    assert.equal(listHost({ lookup: true, section: false }), "picker");
+    assert.equal(classifyListHost({ lookup: false, section: false }), "page");
+    assert.equal(classifyListHost({ lookup: false, section: true }), "section");
+    assert.equal(classifyListHost({ lookup: true, section: false }), "picker");
     assert.deepEqual(hostLayouts("section"), { board: true, calendar: true, gantt: true, tree: true });
     assert.deepEqual(hostLayouts("page"), { board: true, calendar: true, gantt: true, tree: true });
     assert.deepEqual(hostLayouts("picker"), { board: false, calendar: false, gantt: false, tree: false });

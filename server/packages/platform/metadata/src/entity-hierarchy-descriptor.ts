@@ -138,6 +138,11 @@ export function hierarchyParentKeyFinding(input: {
   if (!parent || !input.parentKeyColumns.includes(parent)) return "TREE_PARENT_FIELD_NOT_SELF_REFERENCE";
   const owners = input.parentKeyColumns.filter((column) => column !== parent && column !== input.tenantColumn);
   const scope = input.hierarchy.scopeField ? input.byKey.get(input.hierarchy.scopeField)?.storagePath : undefined;
+  // A scope is accepted only when the key itself proves parent and child share
+  // it. If the foreign key has no owner column, a child can name a parent in
+  // another scope and a single-scope filter would still draw them as one tree,
+  // so a scope field on such a table is refused rather than trusted. Relaxing
+  // this needs a database guarantee, not a declaration.
   if (!owners.length) return input.hierarchy.scopeField ? "TREE_SCOPE_FIELD_INELIGIBLE" : undefined;
   if (owners.length > 1) return "TREE_SCOPE_FIELD_INELIGIBLE";
   if (!input.hierarchy.scopeField) return "TREE_SCOPE_FIELD_REQUIRED";

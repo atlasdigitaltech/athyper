@@ -126,7 +126,7 @@ export type ListHost = "page" | "section" | "picker";
 /** The host of one list: a record lookup (`EntityDirectoryEmbedding`, which
  * carries the lookup's options) is a picker; a list with record-section
  * options is a section; anything else is a page. */
-export function listHost(input: { readonly lookup: boolean; readonly section: boolean }): ListHost {
+export function classifyListHost(input: { readonly lookup: boolean; readonly section: boolean }): ListHost {
   return input.lookup ? "picker" : input.section ? "section" : "page";
 }
 
