@@ -73,12 +73,12 @@ for an excluded target. However, the current **governed system-reference importe
 and target compiler require Studio in the product target set**. Do not infer full
 single-plane publication support from successful offline compilation.
 
-| Requested rollout | Current Country-style governed path |
-| --- | --- |
-| Studio only | Target set `["studio"]`; qualify and activate Studio. |
-| Studio and Neon | `["studio", "neon"]`; separate qualification and receipts. |
-| Studio and Mesh | `["studio", "mesh"]`; separate qualification and receipts. |
-| All current planes | `["studio", "neon", "mesh"]`; “all” is this explicit list, not a wildcard. |
+| Requested rollout                                   | Current Country-style governed path                                                                                                                                                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Studio only                                         | Target set `["studio"]`; qualify and activate Studio.                                                                                                                                                                        |
+| Studio and Neon                                     | `["studio", "neon"]`; separate qualification and receipts.                                                                                                                                                                   |
+| Studio and Mesh                                     | `["studio", "mesh"]`; separate qualification and receipts.                                                                                                                                                                   |
+| All current planes                                  | `["studio", "neon", "mesh"]`; “all” is this explicit list, not a wildcard.                                                                                                                                                   |
 | Neon only, Mesh only, or Neon + Mesh without Studio | Product-level compilation is possible, but the system-reference import/lowering path rejects omission of Studio. Separate source-plane ownership from runtime enrollment in a tested change before promising these rollouts. |
 
 Evidence: [product parser](../../server/packages/planes/studio/meta-entity-authoring/src/authoring/product.ts),
@@ -109,37 +109,37 @@ prove that every mode is implemented in this publication path.
 
 Finalize the following decisions for each entity before requesting publication:
 
-| Decision | What must be recorded |
-| --- | --- |
-| Identity and ownership | Canonical code, module, class, owner scope; whether an existing identity/release must be reused. |
-| Storage and isolation | Table/view/facade, plane, schema, object, tenant/version/deletion columns where applicable, SQL privileges and RLS. |
-| Fields | Type/configuration, nullability/cardinality, storage mapping, origin, mutability, validation, classification and retention. Expose only approved fields. |
-| Keys and references | UUID identity, actual natural/alternate composite keys, null semantics, country/parent relations, lookup domains, active-only rules. |
-| Query contract | Search membership, matching, default sorting, pagination, independent search/filter/sort/group authorization. |
-| Presentation | Localized plural/singular names, field labels, columns, detail sections, tabs, summary and supported layouts. |
-| Operations | Exact handlers, permissions, scope recipes, required context, MFA, audit, idempotency and concurrency. |
-| Business behavior | Lifecycle, numbering, policy, flows, change cases and materialization, where required and supported. |
-| Optional services | Comments, attachments, activity; exact declaration, binding, versioned profile and overrides if used. |
-| Release and evidence | Targets, dependencies, compatibility, minimum runtime, tests, independent review, signer and per-plane acceptance. |
+| Decision               | What must be recorded                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity and ownership | Canonical code, module, class, owner scope; whether an existing identity/release must be reused.                                                         |
+| Storage and isolation  | Table/view/facade, plane, schema, object, tenant/version/deletion columns where applicable, SQL privileges and RLS.                                      |
+| Fields                 | Type/configuration, nullability/cardinality, storage mapping, origin, mutability, validation, classification and retention. Expose only approved fields. |
+| Keys and references    | UUID identity, actual natural/alternate composite keys, null semantics, country/parent relations, lookup domains, active-only rules.                     |
+| Query contract         | Search membership, matching, default sorting, pagination, independent search/filter/sort/group authorization.                                            |
+| Presentation           | Localized plural/singular names, field labels, columns, detail sections, tabs, summary and supported layouts.                                            |
+| Operations             | Exact handlers, permissions, scope recipes, required context, MFA, audit, idempotency and concurrency.                                                   |
+| Business behavior      | Lifecycle, numbering, policy, flows, change cases and materialization, where required and supported.                                                     |
+| Optional services      | Comments, attachments, activity; exact declaration, binding, versioned profile and overrides if used.                                                    |
+| Release and evidence   | Targets, dependencies, compatibility, minimum runtime, tests, independent review, signer and per-plane acceptance.                                       |
 
 ### Country product properties and their persisted meaning
 
-| Product property | Meaning and resulting graph |
-| --- | --- |
-| `schema` | `athyper.shared-reference-product/1`; versioned input format. It is distinct from the graph's `athyper.meta-entity-contract/2.1`. |
-| `moduleCode` | Resolves an active Studio `control.module`; Country uses `ent`. It does not automatically install a navigation entry. |
-| `planes` | Explicit enrollment, persisted in the source marker and checked during target derivation. |
-| `definition.entityCode` | Stable identity; `^[a-z][a-z0-9_]{1,62}$`. No silent case conversion or trimming. |
-| `title`, `entityLabel`, `localizedTitle` | Plural page title, singular entity label and optional localization reference. A label object contains `labelKey` and `defaultText`; fallbacks must agree when supplied separately. |
-| `storageObject` | Existing table under `shared` for this helper. Schema, table backing, generic read and no entity writes are explicit generated settings. |
-| `codeField`, `titleField` | Display/search identity and record heading. UUID `id` remains record identity. The helper also emits a single-column alternate key for `codeField`; review this assumption. |
-| `fields[].key/label/type/required` | Storage column, UI label, one of UUID/string/boolean/datetime, and `one` versus `zero_or_one` cardinality. Generated fields are stored, public, read-only and active. |
-| `columns` | Default-visible list fields and order. Other declared fields still exist; hiding a column is not access control. |
-| `searchFields` | Keyword-search membership, generated `contains` matching and minimum query length 1. Search permission and membership are both required. |
-| `sections[].key/label/fields` | Record presentation grouping embedded in detail `layout_config`; the helper does not need separate normalized section rows for these groups. |
-| `navigation` | Validated detail navigation mode/tabs and references to existing section keys. |
-| `summaryView` | Optional typed record summary presentation; do not assume every field is a supported summary widget. |
-| `runtimeBindings[]` | Explicit operation/handler/resolver identifiers. Country binds list/read to `entity.record.list.v1`, `entity.record.read.v1` and `tenant.record.v1`. Host registration proves availability. |
+| Product property                         | Meaning and resulting graph                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`                                 | `athyper.shared-reference-product/1`; versioned input format. It is distinct from the graph's `athyper.meta-entity-contract/2.1`.                                                           |
+| `moduleCode`                             | Resolves an active Studio `control.module`; Country uses `ent`. It does not automatically install a navigation entry.                                                                       |
+| `planes`                                 | Explicit enrollment, persisted in the source marker and checked during target derivation.                                                                                                   |
+| `definition.entityCode`                  | Stable identity; `^[a-z][a-z0-9_]{1,62}$`. No silent case conversion or trimming.                                                                                                           |
+| `title`, `entityLabel`, `localizedTitle` | Plural page title, singular entity label and optional localization reference. A label object contains `labelKey` and `defaultText`; fallbacks must agree when supplied separately.          |
+| `storageObject`                          | Existing table under `shared` for this helper. Schema, table backing, generic read and no entity writes are explicit generated settings.                                                    |
+| `codeField`, `titleField`                | Display/search identity and record heading. UUID `id` remains record identity. The helper also emits a single-column alternate key for `codeField`; review this assumption.                 |
+| `fields[].key/label/type/required`       | Storage column, UI label, one of UUID/string/boolean/datetime, and `one` versus `zero_or_one` cardinality. Generated fields are stored, public, read-only and active.                       |
+| `columns`                                | Default-visible list fields and order. Other declared fields still exist; hiding a column is not access control.                                                                            |
+| `searchFields`                           | Keyword-search membership, generated `contains` matching and minimum query length 1. Search permission and membership are both required.                                                    |
+| `sections[].key/label/fields`            | Record presentation grouping embedded in detail `layout_config`; the helper does not need separate normalized section rows for these groups.                                                |
+| `navigation`                             | Validated detail navigation mode/tabs and references to existing section keys.                                                                                                              |
+| `summaryView`                            | Optional typed record summary presentation; do not assume every field is a supported summary widget.                                                                                        |
+| `runtimeBindings[]`                      | Explicit operation/handler/resolver identifiers. Country binds list/read to `entity.record.list.v1`, `entity.record.read.v1` and `tenant.record.v1`. Host registration proves availability. |
 
 The [graph builder](../../server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts)
 also emits primary/alternate keys, list/detail surfaces, field bindings, list/read
@@ -290,7 +290,7 @@ sources and connects the authoring release to `publication.release` through
 `publication.entity_release_link`.
 
 The publication worker reads approved sources through
-`publication.fn_compiled_entity_compilation_source`, performs target-qualified
+`publication.fn_compiled_entity_compilation_source_v4`, performs target-qualified
 lowering into split artifacts, records compilation and builds signed runtime
 envelopes. `publication.artifact`, `artifact_compilation`, `deployment`,
 `deployment_event` and `deployment_acknowledgement` track the distribution work.
@@ -357,17 +357,17 @@ consistency and hierarchy rules, including cycle/active-parent checks. The
 [seed source](../../server/db/ddl/common/shared/reference-data/002_state_region.sql)
 is not evidence that every target has the same installed rows.
 
-| Physical property | Proposed first app treatment |
-| --- | --- |
-| `id` UUID | Required read-only record identity; preserve existing IDs. |
-| `code` text | Required display code; stored format is country prefix plus subdivision suffix. |
-| `name` text | Required title and search field. |
-| `country_code` char(2) | Required visible/filterable country coordinate; do not replace it with a Country UUID. |
-| `category` text, `parent_code` text | Optional visible fields; start with scalar presentation if relations are not yet qualified. |
-| `metadata` JSONB | Do not expose by default. The current reference-product parser cannot declare JSON fields. |
-| `status`, generated `is_active` | Read-only lifecycle display; never author a write to generated `is_active`. |
+| Physical property                                        | Proposed first app treatment                                                                                   |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `id` UUID                                                | Required read-only record identity; preserve existing IDs.                                                     |
+| `code` text                                              | Required display code; stored format is country prefix plus subdivision suffix.                                |
+| `name` text                                              | Required title and search field.                                                                               |
+| `country_code` char(2)                                   | Required visible/filterable country coordinate; do not replace it with a Country UUID.                         |
+| `category` text, `parent_code` text                      | Optional visible fields; start with scalar presentation if relations are not yet qualified.                    |
+| `metadata` JSONB                                         | Do not expose by default. The current reference-product parser cannot declare JSON fields.                     |
+| `status`, generated `is_active`                          | Read-only lifecycle display; never author a write to generated `is_active`.                                    |
 | `status_changed_at/by`, `created_at/by`, `updated_at/by` | Audit data; decide deliberate exposure. Timestamp fields can be shown without exposing actor UUIDs by default. |
-| `(country_code, code)` | Actual composite unique key; model both ordered members. |
+| `(country_code, code)`                                   | Actual composite unique key; model both ordered members.                                                       |
 
 Suggested initial columns: code, name, country, category, parent, status. Suggested
 search: code and name, with country filtering tested explicitly. Suggested detail
@@ -413,14 +413,14 @@ published version, authorization rule, seed readiness and acceptance evidence.
 Inventory actual FK/reference bindings and selected business workflows to make
 this exhaustive. The following are planning groups, not a claim of finalized codes:
 
-| Order | Work and release gate |
-| --- | --- |
-| 1 | Accept `state_region` with Country and key correctness. |
-| 2 | Define BP root and its first usable scope; inventory actual schema, legacy integration and required references. |
-| 3 | Qualify required geographic, currency/language/timezone, classification/type/role/status, address/contact, tax/registration and payment/bank reference groups for that scope. Small enumerations may remain lookup domains rather than separate entity apps. |
-| 4 | Publish a BP read slice with approved field exposure, tenant/company scope and qualified child/reference reads. |
-| 5 | Add create/change operations only after handlers, field policies, concurrency, idempotency, validation and audit are proven. |
-| 6 | Add lifecycle/numbering, approval/change cases, workflow and materialization only when their complete lowering/runtime branches qualify. Add broader modules and optional references as subsequent releases. |
+| Order | Work and release gate                                                                                                                                                                                                                                        |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1     | Accept `state_region` with Country and key correctness.                                                                                                                                                                                                      |
+| 2     | Define BP root and its first usable scope; inventory actual schema, legacy integration and required references.                                                                                                                                              |
+| 3     | Qualify required geographic, currency/language/timezone, classification/type/role/status, address/contact, tax/registration and payment/bank reference groups for that scope. Small enumerations may remain lookup domains rather than separate entity apps. |
+| 4     | Publish a BP read slice with approved field exposure, tenant/company scope and qualified child/reference reads.                                                                                                                                              |
+| 5     | Add create/change operations only after handlers, field policies, concurrency, idempotency, validation and audit are proven.                                                                                                                                 |
+| 6     | Add lifecycle/numbering, approval/change cases, workflow and materialization only when their complete lowering/runtime branches qualify. Add broader modules and optional references as subsequent releases.                                                 |
 
 For every BP relation, determine cardinality, owning side, natural/UUID join,
 allowed child mutations, deletion semantics, parent authorization and collection
