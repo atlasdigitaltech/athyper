@@ -82,13 +82,14 @@ describe("list mode renderer registry", () => {
     assert.equal(withRenderableModes(descriptor), descriptor);
   });
 
-  it("decides layouts by declared host: pages and record sections offer every layout, record pickers none", () => {
+  it("decides layouts by declared host: pages and record sections offer every layout, record pickers Tree only", () => {
     assert.equal(classifyListHost({ lookup: false, section: false }), "page");
     assert.equal(classifyListHost({ lookup: false, section: true }), "section");
     assert.equal(classifyListHost({ lookup: true, section: false }), "picker");
     assert.deepEqual(hostLayouts("section"), { board: true, calendar: true, gantt: true, tree: true });
     assert.deepEqual(hostLayouts("page"), { board: true, calendar: true, gantt: true, tree: true });
-    assert.deepEqual(hostLayouts("picker"), { board: false, calendar: false, gantt: false, tree: false });
+    // A picker may offer Tree for a hierarchical target (Tree blueprint B5).
+    assert.deepEqual(hostLayouts("picker"), { board: false, calendar: false, gantt: false, tree: true });
     assert.equal(listModeTraits("tree").ownPaging, true);
     assert.equal(listRendererKind("tree", "narrow"), "tree");
   });

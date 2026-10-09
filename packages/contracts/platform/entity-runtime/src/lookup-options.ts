@@ -16,7 +16,9 @@ export interface EntityLookupOptions {
   readonly display: {
     readonly settingsShowIn: readonly ("compact" | "full")[];
     readonly defaults: {
-      readonly layout: "table" | "compact";
+      /** `tree` applies only when the target Entity publishes a hierarchy
+       * (Entity list Tree blueprint B5); otherwise the lookup's view decides. */
+      readonly layout: "table" | "compact" | "tree";
       readonly density: "compact" | "comfortable" | "spacious";
       readonly searchBehavior: "instant" | "submit";
     };
@@ -149,7 +151,7 @@ export function parseEntityLookupOptions(raw: unknown): EntityLookupOptions {
     display: {
       settingsShowIn: list(d.settingsShowIn, ["compact", "full"], ["full"]),
       defaults: {
-        layout: value(defaults.layout, ["table", "compact"], "table"),
+        layout: value(defaults.layout, ["table", "compact", "tree"], "table"),
         density: value(
           defaults.density,
           ["compact", "comfortable", "spacious"],

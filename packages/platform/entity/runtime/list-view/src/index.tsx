@@ -1270,7 +1270,11 @@ function EntityCollectionRuntime({
               : config.display.defaults.density,
             mode: config.display.userOverrides.includes("layout")
               ? next.mode
-              : config.display.defaults.layout,
+              : descriptor.surface.supportedModes.includes(
+                    config.display.defaults.layout,
+                  )
+                ? config.display.defaults.layout
+                : next.mode,
           };
         }
         // A Tree deep link belongs to the Tree layout: switching away drops it.
@@ -1963,6 +1967,7 @@ function EntityCollectionRuntime({
                   }}
                   pageCurrent={resultsCurrent}
                   revealId={state.treeNode}
+                  onTreeChanged={() => setRefreshAttempt((value) => value + 1)}
                   onLoadedRows={setLoadedRows}
                   query={(pageState ?? state).query}
                   filtered={(pageState?.filters ?? state.filters).length > 0}
@@ -1993,8 +1998,13 @@ function EntityCollectionRuntime({
                   }
                   onSelectionChange={(next) => {
                     if (embedding) {
+                      // A tree picker selects at any level (B5).
                       const candidates = new Map(
-                        [...embedding.selectedRows, ...(page?.rows ?? [])].map(
+                        [
+                          ...embedding.selectedRows,
+                          ...(page?.rows ?? []),
+                          ...loadedRows,
+                        ].map(
                           (row) => [row.id, row],
                         ),
                       );
@@ -4392,6 +4402,7 @@ function EntityRows({
   pageCurrent = true,
   revealId,
   onLoadedRows,
+  onTreeChanged,
 }: {
   readonly emptyContent?: EntityDirectoryEmbedding["emptyContent"];
   readonly emptyAction?: React.ReactNode;
@@ -4426,6 +4437,8 @@ function EntityRows({
   readonly pageCurrent?: boolean;
   /** Tree deep link (`tree.node`). */
   readonly revealId?: string;
+  /** After a committed Tree move: reload the list and the tree. */
+  readonly onTreeChanged?: () => void;
   /** Records loaded outside the page (Tree nodes, grouped records), for selection. */
   readonly onLoadedRows?: (rows: readonly EntityListRowV1[]) => void;
 }) {
@@ -4443,6 +4456,7 @@ function EntityRows({
   const hierarchy = useHierarchyTree({
     descriptor,
     source: scopeSatisfied ? groupedSource : undefined,
+    onChanged: onTreeChanged,
     rootsPage: pageCurrent ? page : undefined,
     revealId,
   });
@@ -4774,14 +4788,36 @@ function EntityRows({
                   className="a-entity-tree__item"
                 >
                   <div role="gridcell" className="a-entity-tree__item-cell">
-                    <TreeNodeLabel
-                      entry={entry}
-                      hierarchy={hierarchy}
-                      descriptor={descriptor}
-                      intl={intl}
-                      href={href}
-                      onOpen={recordClick(row)}
-                    />
+                    <div className="a-entity-tree__item-line">
+                      {selectionEnabled && chooser ? (
+                        // A tree picker selects at any level, on phones too
+                        // (B5); list pages keep the phone tier selection-free.
+                        <input
+                          className="a-entity-tree__select"
+                          name={singleSelection ? selectionName : undefined}
+                          type={singleSelection ? "radio" : "checkbox"}
+                          aria-label={intl.message("list.row.selectRecord", {
+                            record: formatFieldValue(
+                              row.values[descriptor.entity.identityField],
+                              undefined,
+                              intl,
+                            ),
+                          })}
+                          checked={selectedIds.has(row.id)}
+                          onChange={(event) =>
+                            toggle(row.id, event.currentTarget.checked)
+                          }
+                        />
+                      ) : null}
+                      <TreeNodeLabel
+                        entry={entry}
+                        hierarchy={hierarchy}
+                        descriptor={descriptor}
+                        intl={intl}
+                        href={href}
+                        onOpen={recordClick(row)}
+                      />
+                    </div>
                     {detailFields.length ? (
                       <dl
                         className="a-entity-tree__details"
@@ -4805,7 +4841,14 @@ function EntityRows({
                     ) : null}
                     {!chooser ? (
                       <span className="a-entity-tree__item-actions">
-                        <RowMenu descriptor={descriptor} row={row} intl={intl} />
+                        <RowMenu
+                          descriptor={descriptor}
+                          row={row}
+                          intl={intl}
+                          {...(hierarchy.tree.movable
+                            ? { onMove: () => hierarchy.startMove(row) }
+                            : {})}
+                        />
                       </span>
                     ) : null}
                   </div>
@@ -5002,7 +5045,14 @@ function EntityRows({
           </td>
           <td className="a-entity-list__row-actions">
             {!chooser ? (
-              <RowMenu descriptor={descriptor} row={row} intl={intl} />
+              <RowMenu
+                descriptor={descriptor}
+                row={row}
+                intl={intl}
+                {...(node && hierarchy?.tree.movable
+                  ? { onMove: () => hierarchy.startMove(row) }
+                  : {})}
+              />
             ) : null}
           </td>
         </tr>
@@ -5319,10 +5369,13 @@ function RowMenu({
   descriptor,
   row,
   intl,
+  onMove,
 }: {
   readonly descriptor: EntityListDescriptorV1;
   readonly row: EntityListRowV1;
   readonly intl: ReturnType<typeof useEntityI18n>;
+  /** Tree move mode (B4), when the hierarchy is movable. */
+  readonly onMove?: () => void;
 }) {
   const navigate = useEntityNavigate();
   const identity = formatFieldValue(
@@ -5352,6 +5405,9 @@ function RowMenu({
           <CopyIcon size={16} />
           {intl.message("list.row.copy")}
         </MenuItem>
+        {onMove ? (
+          <MenuItem onClick={onMove}>{intl.message("list.tree.moveTo")}</MenuItem>
+        ) : null}
       </MenuContent>
     </Menu>
   );
@@ -6062,4 +6118,4 @@ export {
   lookupSearchBehavior,
 } from "./lookup-directory";
 
-export { EntityNavigationProvider } from "./entity-navigation";
+export { EntityLink, EntityNavigationProvider } from "./entity-navigation";

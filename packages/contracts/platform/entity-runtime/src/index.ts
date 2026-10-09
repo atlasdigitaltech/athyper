@@ -444,9 +444,30 @@ export * from "./activity-date-range";
 export * from "./entity-relationship";
 
 /** Descriptor and projected record from one authorized server read. */
+/** The visible ancestors of a hierarchical record, root first (Entity list
+ * Tree blueprint section 5.7). `parentOutsideView` says the first item's
+ * parent, or the record's own when there are no items, is a record the viewer
+ * cannot read; that record is never named. Labels are readable identities. */
+export interface EntityAncestorPathV1 {
+  readonly items: readonly { readonly id: string; readonly label: string; readonly href?: string }[];
+  readonly parentOutsideView?: true;
+}
 export interface EntityDetailReadV1 {
   readonly descriptor: EntityDetailDescriptorV1;
   readonly record: EntityRecordV1;
+  readonly ancestorPath?: EntityAncestorPathV1;
+}
+function parseAncestorPath(value: unknown): EntityAncestorPathV1 {
+  const path = object(value, "ancestor path");
+  if (!Array.isArray(path.items) || path.items.length > 16) fail("ancestor path items");
+  const items = (path.items as unknown[]).map((raw) => {
+    const item = object(raw, "ancestor");
+    if (typeof item.id !== "string" || !item.id || typeof item.label !== "string") fail("ancestor identity");
+    if (item.href !== undefined && (typeof item.href !== "string" || !/^\/(?!\/)/.test(item.href))) fail("ancestor href");
+    return Object.freeze({ id: item.id, label: item.label, ...(typeof item.href === "string" ? { href: item.href } : {}) });
+  });
+  if (path.parentOutsideView !== undefined && path.parentOutsideView !== true) fail("ancestor path marker");
+  return Object.freeze({ items: Object.freeze(items), ...(path.parentOutsideView === true ? { parentOutsideView: true as const } : {}) });
 }
 export function parseEntityDetailRead(value: unknown): EntityDetailReadV1 {
   const root = object(value, "detail read");
@@ -455,7 +476,11 @@ export function parseEntityDetailRead(value: unknown): EntityDetailReadV1 {
   const allowed = new Set(descriptor.fields.map((field) => field.key));
   if (Object.keys(record.values).some((key) => !allowed.has(key)))
     fail("detail read field projection");
-  return Object.freeze({ descriptor, record });
+  return Object.freeze({
+    descriptor,
+    record,
+    ...(root.ancestorPath === undefined ? {} : { ancestorPath: parseAncestorPath(root.ancestorPath) }),
+  });
 }
 
 export { entityTransferWorkspaces } from "./transfer-workspace";

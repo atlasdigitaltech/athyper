@@ -11,7 +11,9 @@ const script = buildSync({
     import React from 'react';
     import {createRoot} from 'react-dom/client';
     import {EntityListRuntime} from './packages/platform/entity/runtime/list-view/src/index';
-    import {entityListDescriptorOperation,entityListOperation} from './packages/platform/foundation/api-client/src/entity-list';
+    import {entityListDescriptorOperation,entityListOperation,entityRecordPatchOperation} from './packages/platform/foundation/api-client/src/entity-list';
+    import {ApiTransportError} from './packages/platform/foundation/api-client/src/index';
+    import {parseEntityLookupOptions} from './packages/contracts/platform/entity-runtime/src/lookup-options';
     const cfg=window.treeFixture;
     const uuid=i=>'7f3c2e1d-4b5a-4c6d-8e9f-'+String(100000000000+i).slice(-12);
     const ops={string:['contains','eq'],enum:['eq','in','is_null','is_not_null'],decimal:['eq','gt','lt'],reference:['eq','in','is_null','is_not_null']};
@@ -42,7 +44,7 @@ const script = buildSync({
       entity:{code:'gl_account',label:'gl_account',pluralLabel:'Chart of Accounts',identityField:'code',detailRouteTemplate:'/gl_account/:recordId'},
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
       surface:{key:'list',title:'Chart of Accounts',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','name','status','account_type','kind','budget'],density:'comfortable',mode:cfg.defaultMode??'table'},search:{minimumQueryLength:1},filterPresentation:{quickFields:[],source:'metadata',allowUserPinning:true},
-        ...(cfg.tree?{supportedModes:['table','compact','tree'],tree:{parentField:'parent',...(cfg.scoped?{scopeField:'chart'}:{}),...(cfg.scopeLocked?{scopeLocked:true}:{}),nodeKind:cfg.booleanKind?{kind:'boolean',field:'postable',branchWhen:false}:{kind:'choice',field:'kind',branchValues:['summary'],tones:{summary:'success'}},maxDepth:cfg.maxDepth??5}}
+        ...(cfg.tree?{supportedModes:['table','compact','tree'],tree:{parentField:'parent',...(cfg.scoped?{scopeField:'chart'}:{}),...(cfg.scopeLocked?{scopeLocked:true}:{}),...(cfg.movable?{movable:true}:{}),nodeKind:cfg.booleanKind?{kind:'boolean',field:'postable',branchWhen:false}:{kind:'choice',field:'kind',branchValues:['summary'],tones:{summary:'success'}},maxDepth:cfg.maxDepth??5}}
           :cfg.treeUnavailable?{supportedModes:['table','compact'],unavailableModes:[{mode:'tree',code:'LIST_TREE_PARENT_FIELD_UNAVAILABLE'}]}
           :{supportedModes:['table','compact']})},
       fields:fields.map((f,i)=>({...f,defaultOrder:i})),actions:[],
@@ -52,6 +54,12 @@ const script = buildSync({
     const cmp=(a,b)=>String(a??'').localeCompare(String(b??''));
     const client={request:async(op,options)=>{
       if(op===entityListDescriptorOperation)return descriptor;
+      if(op===entityRecordPatchOperation){
+        window.treePatches=[...(window.treePatches??[]),{recordId:options.params.recordId,body:options.body,headers:options.headers,idempotencyKey:options.idempotencyKey}];
+        if(cfg.moveError)throw new ApiTransportError('conflict','refused',409,{type:'about:blank',title:'Conflict',status:409,code:cfg.moveError});
+        const moved=rows.find(r=>r.id===options.params.recordId);moved.values={...moved.values,parent:options.body.parent};
+        return {recordId:moved.id};
+      }
       if(op!==entityListOperation)throw Error('Unexpected fixture operation');
       const q=options.query??{};window.treeRequests.push(q);
       // Records the viewer cannot read are never returned or counted.
@@ -102,7 +110,10 @@ const script = buildSync({
       return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:page,...(groups?{groups}:{}),
         pagination:{pageSize:page.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,...(exact?{total:matched.length}:{}),countMode:exact?'exact':'none'}};
     }};
-    createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode="gl_account" {...(cfg.section?{section:{}}:{})}/>);
+    // A record picker (B5): the lookup embedding with a tree default layout.
+    const Picker=()=>{const [selected,setSelected]=React.useState([]);window.pickerSelection=selected.map(r=>r.values.code);
+      return <EntityListRuntime client={client} entityCode="gl_account" contentOnly embedding={{options:parseEntityLookupOptions({presentation:{viewType:'full',fullViewHost:'inline'},display:{defaults:{layout:'tree'}}}),selectedRows:selected,onSelectionChange:setSelected,selectionAllowed:true}}/>};
+    createRoot(document.getElementById('root')).render(cfg.picker?<Picker/>:<EntityListRuntime client={client} entityCode="gl_account" {...(cfg.section?{section:{}}:{})}/>);
   ` },
   bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
   loader: { ".css": "empty" },
@@ -110,7 +121,7 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean };
+type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean; movable?: boolean; moveError?: string; picker?: boolean };
 type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -461,5 +472,67 @@ test.describe("B2 search with ancestor context", () => {
 test("a record section host offers Tree; only record pickers keep Table and Cards (foundation section 8)", async ({ page }) => {
   await mount(page, 1440, { tree: true, section: true }, "?view=tree");
   await expect(page.getByRole("treegrid")).toBeVisible();
+});
+
+test.describe("B4 moving a node", () => {
+  const patches = (page: Page) => page.evaluate(() => (window as unknown as { treePatches?: { recordId: string; body: Record<string, unknown>; idempotencyKey: string }[] }).treePatches ?? []);
+
+  test("Move to… offers Move here only on eligible loaded nodes, then patches the parent and reloads", async ({ page }) => {
+    await mount(page, 1440, { tree: true, movable: true }, "?view=tree");
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await node(page, "1100").getByRole("button", { name: /Expand 1100/ }).click();
+    await node(page, "1130").getByRole("button", { name: /Actions for 1130/ }).click();
+    await page.getByRole("menuitem", { name: "Move to…" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Moving 1130 Inventory" })).toBeVisible();
+    // Not on itself, not on its current parent, not on a leaf kind; yes on another branch.
+    await expect(node(page, "1130").getByRole("button", { name: /Move under/ })).toHaveCount(0);
+    await expect(node(page, "1100").getByRole("button", { name: /Move under/ })).toHaveCount(0);
+    await expect(node(page, "3000").getByRole("button", { name: /Move under/ })).toHaveCount(0);
+    await node(page, "1200").getByRole("button", { name: "Move under 1200 Non-current assets" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Moving" })).toHaveCount(0);
+    const [patch] = await patches(page);
+    expect(patch!.body).toEqual({ parent: idOf(7) });
+    expect(patch!.idempotencyKey).toMatch(/^tree-move-/);
+    // The list reloads: 1130 now sits under 1200.
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await node(page, "1200").getByRole("button", { name: /Expand 1200/ }).click();
+    await expect(node(page, "1130")).toHaveAttribute("aria-level", "3");
+    await page.screenshot({ path: "tooling/config/test-results/entity-list-tree-move.png", fullPage: true });
+  });
+
+  test("a refused move explains itself and keeps move mode open", async ({ page }) => {
+    await mount(page, 1440, { tree: true, movable: true, moveError: "HIERARCHY_DEPTH_EXCEEDED", maxDepth: 4 }, "?view=tree");
+    await node(page, "2000").getByRole("button", { name: /Actions for 2000/ }).click();
+    await page.getByRole("menuitem", { name: "Move to…" }).click();
+    await node(page, "1000").getByRole("button", { name: /Move under 1000/ }).click();
+    await expect(page.getByRole("alert")).toHaveText("This move would go deeper than the 4 levels this tree allows.");
+    await expect(page.getByRole("status").filter({ hasText: "Moving 2000 Liabilities" })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel move" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Moving" })).toHaveCount(0);
+  });
+
+  test("without movable, the row menu offers no move", async ({ page }) => {
+    await mount(page, 1440, { tree: true }, "?view=tree");
+    await node(page, "1000").getByRole("button", { name: /Actions for 1000/ }).click();
+    await expect(page.getByRole("menuitem", { name: "Move to…" })).toHaveCount(0);
+  });
+});
+
+test.describe("B5 tree picker", () => {
+  test("a record lookup to a hierarchical Entity shows Tree and chooses at any level", async ({ page }) => {
+    await mount(page, 1440, { tree: true, picker: true });
+    await expect(page.getByRole("treegrid")).toBeVisible();
+    await node(page, "1000").getByRole("button", { name: /Expand 1000/ }).click();
+    await node(page, "1100").getByRole("radio", { name: "Select 1100" }).check();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { pickerSelection: string[] }).pickerSelection)).toEqual(["1100"]);
+    // Board, Calendar and Gantt stay off in pickers; nothing here offers them.
+    await expect(page.getByText("Move to…")).toHaveCount(0);
+  });
+
+  test("on phones the tree picker still offers a choice per node", async ({ page }) => {
+    await mount(page, 390, { tree: true, picker: true });
+    await node(page, "1000").getByRole("radio", { name: "Select 1000" }).check();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { pickerSelection: string[] }).pickerSelection)).toEqual(["1000"]);
+  });
 });
 

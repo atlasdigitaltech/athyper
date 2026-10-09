@@ -179,3 +179,12 @@
   max-inline-size:100%;
   box-sizing:border-box;
 }
+/* Record ancestor path (Entity list Tree blueprint B5). */
+.a-metadata-detail__ancestors ol{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-1) var(--a-space-2);margin:var(--a-space-2) 0 0;padding:0;list-style:none;color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+.a-metadata-detail__ancestors li{display:inline-flex;align-items:center;gap:var(--a-space-2);min-inline-size:0}
+.a-metadata-detail__ancestors li+li::before{content:"›";opacity:.6}
+[dir=rtl] .a-metadata-detail__ancestors li+li::before{content:"‹"}
+.a-metadata-detail__ancestors a{color:inherit}
+.a-metadata-detail__ancestors a:hover{color:var(--a-foreground)}
+.a-metadata-detail__ancestors [aria-current]{color:var(--a-foreground);font-weight:var(--a-font-weight-medium)}
+.a-metadata-detail__ancestor-hidden{font-style:italic}

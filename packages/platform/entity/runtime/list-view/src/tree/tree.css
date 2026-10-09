@@ -78,3 +78,9 @@ a.a-entity-tree__label:hover .a-entity-tree__title{text-decoration:underline}
 .a-entity-tree__scope-filter .a-entity-list__column-filter{opacity:1}
 [data-tree-role=context] .a-entity-tree__title,[data-tree-role=context] .a-entity-tree__identity{color:var(--a-muted-foreground);font-weight:var(--a-font-weight-regular)}
 .a-entity-tree__marker--context{background:transparent;border:var(--a-border-width) dashed var(--a-border)}
+.a-entity-tree__move{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2) var(--a-space-3);padding:var(--a-space-2) var(--a-space-3);border:var(--a-border-width) solid var(--a-primary);border-radius:var(--a-radius-md);background:color-mix(in srgb,var(--a-primary) 6%,var(--a-surface))}
+.a-entity-tree__move>span{flex:1 1 16rem}
+.a-entity-tree__move-here{flex:none;margin-inline-start:var(--a-space-2)}
+.a-entity-tree__item-line{display:flex;align-items:center;gap:var(--a-space-2);min-inline-size:0}
+.a-entity-tree__item-line>.a-entity-tree__node{flex:1 1 auto}
+.a-entity-tree__select{flex:none;margin:0}

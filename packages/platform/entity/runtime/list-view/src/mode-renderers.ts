@@ -118,8 +118,9 @@ export function listRendererKind(
 }
 
 /** Where a list is placed (foundation section 8). A record picker chooses
- * records and keeps Table and Cards; a list page and an embedded record
- * section may offer every layout. The host is declared by the caller's intent,
+ * records and keeps Table, Cards and, for a hierarchical target, Tree (Tree
+ * blueprint B5); a list page and an embedded record section may offer every
+ * layout. The host is declared by the caller's intent,
  * never inferred from which component mounts the list. */
 export type ListHost = "page" | "section" | "picker";
 
@@ -138,7 +139,8 @@ export function hostLayouts(host: ListHost): {
   readonly tree: boolean;
 } {
   const allowed = host !== "picker";
-  return { board: allowed, calendar: allowed, gantt: allowed, tree: allowed };
+  // Tree also helps choose a record: a picker offers it for hierarchies.
+  return { board: allowed, calendar: allowed, gantt: allowed, tree: true };
 }
 
 /** Moves supported modes that this runtime cannot render into

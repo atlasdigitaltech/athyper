@@ -14,6 +14,10 @@ export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = 
   const raw = parseObject(value);
   return raw.viewCatalog === undefined ? descriptor : Object.freeze({ ...descriptor, viewCatalog: parseViewCatalog(raw.viewCatalog) });
 }, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+/** Patches one record through the governed record operation (for example a
+ * Tree move, blueprint B4): the If-Match version and Idempotency-Key are
+ * required, and authorization, audit and integrity stay on the server. */
+export const entityRecordPatchOperation: Operation<{ readonly recordId: string; readonly version?: number }, Readonly<Record<string, unknown>>> = Object.freeze({ method: "PATCH", path: (params: EntityListParams) => `/api/records/${entityCode(params)}/${encodeURIComponent(String(params["recordId"] ?? ""))}`, parse: (value: unknown) => { const item = value as { kind?: unknown; recordId?: unknown; version?: unknown }; if (!item || item.kind !== "Committed" || typeof item.recordId !== "string") throw new TypeError("Invalid record patch receipt"); return Object.freeze({ recordId: item.recordId, ...(typeof item.version === "number" ? { version: item.version } : {}) }); }, requestClass: "interactive", idempotency: "required", response: "json" });
 export const entityListOperation: Operation<EntityListResultV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list`, parse: parseEntityListResult, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 
 export interface RecordBookmarkItemV1 { readonly description?: string; /** Current readable business code. */ readonly code?: string; /** Current readable status. */ readonly status?: string; readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }

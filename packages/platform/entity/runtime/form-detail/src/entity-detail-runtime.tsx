@@ -30,6 +30,7 @@ import { ThumbnailRecordScope } from "./thumbnail-scope";
 interface LoadedDetail {
   readonly descriptor: EntityDetailDescriptorV1;
   readonly record: EntityRecordV1;
+  readonly ancestorPath?: import("@athyper/contract-platform-entity-runtime").EntityAncestorPathV1;
 }
 
 export function EntityDetailRuntime(props: { readonly entityCode: string; readonly recordId: string; readonly editHref?: string }) {
@@ -94,7 +95,7 @@ function AuthorizedDetailRuntime({
         )}
       </PageWorkspace>
     );
-  const { descriptor, record } = loaded.data;
+  const { descriptor, record, ancestorPath } = loaded.data;
   return (
     <SurfaceErrorBoundary
       resetKey={key}
@@ -112,6 +113,7 @@ function AuthorizedDetailRuntime({
             descriptor.presentation ?? fallbackPresentation(descriptor, intl),
         }}
         record={record}
+        {...(ancestorPath ? { ancestorPath } : {})}
         editHref={editHref}
         status=""
       />

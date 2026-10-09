@@ -3,13 +3,15 @@ import { EntityReferencePreviewProvider, ReferenceOrigin } from "./reference-pre
 import { EntityRecordFields } from "./record-fields";
 import { RegisteredEntitySection } from "./registered-renderers/entity-section-component";
 import { EntityRelatedSection } from "./related-entity-section";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   resolveRecordHeader,
   requireEntityDetailNavigation,
+  type EntityAncestorPathV1,
   type EntityDetailDescriptorV1,
   type EntityRecordV1,
 } from "@athyper/contract-platform-entity-runtime";
+import { EntityLink } from "@athyper/platform-entity-list-view";
 import {
   PageWorkspace,
   useAtlasBusinessContextPublisher,
@@ -40,9 +42,12 @@ export function MetadataDetailWorkspace({
   preferenceKey,
   editHref,
   status,
+  ancestorPath,
 }: {
   descriptor: EntityDetailDescriptorV1;
   record: EntityRecordV1;
+  /** The record's visible ancestors in its hierarchy (Tree blueprint B5). */
+  ancestorPath?: EntityAncestorPathV1;
   entityCode: string;
   preferenceKey: string;
   editHref?: string;
@@ -195,11 +200,16 @@ export function MetadataDetailWorkspace({
           className="a-metadata-detail"
           status={status ? <p role="status">{status}</p> : null}
           header={
-            <EntityRecordHeader
-              header={header}
-              showNavigation={false}
-              breadcrumbLabel={header.title}
-            />
+            <>
+              <EntityRecordHeader
+                header={header}
+                showNavigation={false}
+                breadcrumbLabel={header.title}
+              />
+              {ancestorPath ? (
+                <RecordAncestorPath path={ancestorPath} current={header.code ?? header.title} intl={intl} />
+              ) : null}
+            </>
           }
           navigationKind="record-mode"
           navigationBand="shell"
@@ -371,3 +381,27 @@ export function MetadataDetailWorkspace({
     /></ReferenceOrigin></EntityReferencePreviewProvider>
   );
 }
+
+/** Where the record sits in its hierarchy: links to each visible ancestor,
+ * then the record as the current location. A hidden parent is marked, never
+ * named (Tree blueprint section 5.7). */
+export function RecordAncestorPath({ path, current, intl }: {
+  readonly path: EntityAncestorPathV1;
+  readonly current: string;
+  readonly intl: ReturnType<typeof useEntityI18n>;
+}) {
+  return (
+    <nav className="a-metadata-detail__ancestors" aria-label={intl.message("detail.ancestors")}>
+      <ol>
+        {path.parentOutsideView ? (
+          <li className="a-metadata-detail__ancestor-hidden">{intl.message("detail.ancestorsOutsideView")}</li>
+        ) : null}
+        {path.items.map((item) => (
+          <li key={item.id}>{item.href ? <EntityLink href={item.href}>{item.label}</EntityLink> : <span>{item.label}</span>}</li>
+        ))}
+        <li aria-current="page">{current}</li>
+      </ol>
+    </nav>
+  );
+}
+

@@ -204,12 +204,60 @@ export function createEntityListService(options: {
     ...createRelationshipStandardViewSources(options.authorizer),
     ...options.standardViewSources,
   };
+  /** The visible ancestors of one record, root first (Tree blueprint section
+   * 5.7): one `matches` request restricted to the record, through the same
+   * list executor, authorization, scope and visible set as the Tree. */
+  async function recordAncestorPath(
+    descriptor: EntityRuntimeDescriptor,
+    context: VerifiedRequestContext,
+    entityCode: string,
+    recordId: string,
+    scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
+  ): Promise<{ readonly items: readonly { readonly id: string; readonly label: string; readonly href?: string }[]; readonly parentOutsideView?: true } | undefined> {
+    const hierarchy = descriptor.hierarchy;
+    const identity = descriptor.listPresentation?.identityField;
+    if (!hierarchy || !identity) return undefined;
+    const titleKey = descriptor.fields.find((field) => field.list?.semanticRole === "title")?.key ?? descriptor.recordPresentation?.titleField;
+    const base = { context, entityCode, recordIds: [recordId], ...(scopeCoordinate ? { scopeCoordinate } : {}) };
+    let filters: { field: string; operator: "eq"; value: string }[] = [];
+    if (hierarchy.scopeField) {
+      const own = await options.listExecutor.execute({ ...base, limit: 1, fields: [hierarchy.scopeField] });
+      const scope = own.result.data[0]?.[hierarchy.scopeField];
+      if (typeof scope !== "string" || !scope) return undefined;
+      filters = [{ field: hierarchy.scopeField, operator: "eq", value: scope }];
+    }
+    const { result } = await options.listExecutor.execute({
+      ...base,
+      limit: 1,
+      filters,
+      hierarchy: "matches",
+      fields: [...new Set([identity, hierarchy.parentField, ...(titleKey ? [titleKey] : [])])],
+    });
+    const idField = descriptor.storage.idField;
+    const rows = new Map(result.data.map((row, index) => [String(row[idField]), { row, outside: result.parentOutsideView?.[index] === true }]));
+    const self = rows.get(recordId);
+    if (!self) return undefined;
+    const label = (row: Readonly<Record<string, unknown>>) =>
+      [row[identity], titleKey && titleKey !== identity ? row[titleKey] : undefined].filter((value) => typeof value === "string" && value.trim()).join(" ");
+    const items: { id: string; label: string; href?: string }[] = [];
+    let top = self;
+    for (let parent = self.row[hierarchy.parentField]; typeof parent === "string" && rows.has(parent) && items.length < hierarchy.maxDepth; ) {
+      const next = rows.get(parent)!;
+      items.unshift({ id: parent, label: label(next.row), ...(descriptor.detailRouteTemplate ? { href: descriptor.detailRouteTemplate.replace(":recordId", encodeURIComponent(parent)) } : {}) });
+      top = next;
+      parent = next.row[hierarchy.parentField];
+    }
+    if (!items.length && !top.outside) return undefined;
+    return { items, ...(top.outside ? { parentOutsideView: true as const } : {}) };
+  }
   async function compileDetail(
     context: VerifiedRequestContext,
     entityCode: string,
     recordId?: string,
     timing: (stage: string, durationMs: number) => void = () => {},
     scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
+    /** Receives the admitted runtime descriptor, so callers need no second metadata read. */
+    capture?: { descriptor?: EntityRuntimeDescriptor },
   ) {
     let previous = performance.now();
     const stage = (name: string) => {
@@ -246,6 +294,7 @@ export function createEntityListService(options: {
     const descriptor =
       admitted?.descriptor ??
       (await descriptorFor(options.metadata, context, entityCode));
+    if (capture) capture.descriptor = descriptor;
     stage(admitted ? "authorized_record" : "metadata");
     if (!admitted)
       await requireOperation(
@@ -864,8 +913,14 @@ export function createEntityListService(options: {
       return (await compileDetail(...args)).descriptor;
     },
     async detailRead(...args: Parameters<EntityListService["detailRead"]>) {
-      const result = await compileDetail(...args);
-      return parseEntityDetailRead(result);
+      const [context, entityCode, recordId, timing, scopeCoordinate] = args;
+      const capture: { descriptor?: EntityRuntimeDescriptor } = {};
+      const result = await compileDetail(context, entityCode, recordId, timing, scopeCoordinate, capture);
+      // The ancestor path (Tree blueprint B5) never fails the detail read.
+      const ancestorPath = recordId && capture.descriptor?.hierarchy
+        ? await recordAncestorPath(capture.descriptor, context, entityCode, recordId, scopeCoordinate).catch(() => undefined)
+        : undefined;
+      return parseEntityDetailRead({ ...result, ...(ancestorPath ? { ancestorPath } : {}) });
     },
     async record(
       context: VerifiedRequestContext,

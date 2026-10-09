@@ -159,6 +159,7 @@ export function createRecordListExecutor<Transaction = unknown>(
         if (
           query.hierarchy === "matches" &&
           !query.search &&
+          !query.recordIds?.length &&
           !(query.filters ?? []).some((filter) => filter.field !== descriptor.hierarchy!.parentField && filter.field !== scopeField)
         )
           throw new RecordServiceError(400, "LIST_TREE_MATCHES_UNCONSTRAINED", "Search or filter the tree to see matches");

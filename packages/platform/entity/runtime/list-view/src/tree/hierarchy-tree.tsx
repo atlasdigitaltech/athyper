@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState, type FocusEvent, type ReactNode } from "react";
-import { entityListOperation, entityListQuery, type HttpClient } from "@athyper/platform-api-client";
+import { ApiTransportError, entityListOperation, entityListQuery, entityRecordPatchOperation, type HttpClient } from "@athyper/platform-api-client";
 import {
   LIST_TREE_NODE_CEILING,
   type EntityListDescriptorV1,
@@ -38,6 +38,7 @@ import {
   type TreeQueryState,
 } from "./tree-model";
 import { TreeIndent, TreePath, TreeStrip, TreeToggle } from "./tree-parts";
+import { Button } from "@athyper/platform-ui";
 
 type EntityIntl = ReturnType<typeof useEntityI18n>;
 type NodeEntry = Extract<TreeEntry, { kind: "node" }>;
@@ -79,6 +80,16 @@ export interface HierarchyTree {
   readonly onFocus: (event: FocusEvent<HTMLElement>) => void;
   readonly focusNode: (id: string) => void;
   readonly gridRef: React.RefObject<HTMLElement | null>;
+  /** Move mode (B4): the node being moved, while its new parent is chosen. */
+  readonly moving?: { readonly row: EntityListRowV1; readonly busy: boolean };
+  /** The last move's refusal code, if any. */
+  readonly moveError?: string;
+  readonly startMove: (row: EntityListRowV1) => void;
+  readonly cancelMove: () => void;
+  /** Moves the node under `parentId`, or to the top level with null. */
+  readonly moveTo: (parentId: string | null) => void;
+  /** Whether a loaded node may take the node being moved (presentation only). */
+  readonly canReceive: (entry: NodeEntry) => boolean;
 }
 
 /** The Tree layout's loaded levels, expansion and deep-link reveal (Tree
@@ -95,6 +106,8 @@ export function useHierarchyTree(input: {
    * reveals the node again); it is revealed once per mount, so later search
    * or filter changes do not reapply it. */
   readonly revealId?: string;
+  /** After a committed move: the list reloads its page and the tree. */
+  readonly onChanged?: () => void;
 }): HierarchyTree | undefined {
   const { descriptor, source, rootsPage } = input;
   const tree = descriptor.surface.tree;
@@ -111,6 +124,8 @@ export function useHierarchyTree(input: {
   const [notice, setNotice] = useState<TreeNotice>();
   const [selected, setSelected] = useState<string>();
   const [focusRequest, setFocusRequest] = useState<{ readonly id: string; readonly seq: number }>();
+  const [moving, setMoving] = useState<{ readonly row: EntityListRowV1; readonly busy: boolean }>();
+  const [moveError, setMoveError] = useState<string>();
   const levelsRef = useRef<TreeLevels>(levels);
   const inflight = useRef(new Map<string, Promise<TreeLevel | undefined>>());
   const controllers = useRef(new Set<AbortController>());
@@ -131,6 +146,7 @@ export function useHierarchyTree(input: {
     setExpanded(new Set());
     setOrphansOpen(true);
     setNotice(undefined);
+    setMoving(undefined);
   }
   useEffect(() => () => {
     for (const controller of controllers.current) controller.abort();
@@ -380,6 +396,45 @@ export function useHierarchyTree(input: {
     },
     focusNode: (id) => setFocusRequest((previous) => ({ id, seq: (previous?.seq ?? 0) + 1 })),
     gridRef,
+    ...(moving ? { moving } : {}),
+    ...(moveError ? { moveError } : {}),
+    startMove: (row) => {
+      setMoveError(undefined);
+      setMoving({ row, busy: false });
+    },
+    cancelMove: () => setMoving(undefined),
+    moveTo: (parentId) => {
+      const current = moving;
+      const from = latest.current.source;
+      if (!current || current.busy || !from || !tree) return;
+      setMoving({ ...current, busy: true });
+      setMoveError(undefined);
+      // The ordinary governed patch of the parent field (section 5.6): the
+      // server checks authorization, version, scope, node kind and depth.
+      from.client
+        .request(entityRecordPatchOperation, {
+          params: { entityCode: descriptor.entity.code, recordId: current.row.id },
+          body: { [tree.parentField]: parentId },
+          headers: current.row.version !== undefined ? { "If-Match": String(current.row.version) } : {},
+          idempotencyKey: `tree-move-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
+        })
+        .then(() => {
+          setMoving(undefined);
+          latest.current.onChanged?.();
+        })
+        .catch((error: unknown) => {
+          setMoving({ ...current, busy: false });
+          setMoveError(error instanceof ApiTransportError && error.problem?.code ? error.problem.code : "HIERARCHY_MOVE_FAILED");
+        });
+    },
+    canReceive: (entry) => {
+      if (!moving || entry.row.id === moving.row.id) return false;
+      // Not inside the moved subtree, as far as it is loaded.
+      if (nodePath(levels, entry.row.id).some((row) => row.id === moving.row.id)) return false;
+      if (branchByKind(entry.row, tree) === false) return false;
+      // Already its parent: nothing to do.
+      return parentIdOf(moving.row, tree) !== entry.row.id && entry.depth < tree.maxDepth;
+    },
   };
 }
 
@@ -433,6 +488,22 @@ export function HierarchyTreeChrome({ hierarchy, descriptor, filtered, selecting
       {selecting ? <p className="a-entity-tree__caption">{intl.message("list.tree.selectionLoaded")}</p> : null}
       {hierarchy.capped ? (
         <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.ceiling", { count: LIST_TREE_NODE_CEILING })}</p>
+      ) : null}
+      {hierarchy.moving ? (
+        <div className="a-entity-tree__move" role="status">
+          <span>{intl.message("list.tree.moving", { record: treeNodeLabel(hierarchy.moving.row, descriptor).text })}</span>
+          {parentIdOf(hierarchy.moving.row, hierarchy.tree) ? (
+            <Button variant="secondary" size="small" disabled={hierarchy.moving.busy} onClick={() => hierarchy.moveTo(null)}>
+              {intl.message("list.tree.moveToTop")}
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="small" disabled={hierarchy.moving.busy} onClick={hierarchy.cancelMove}>
+            {intl.message("list.tree.moveCancel")}
+          </Button>
+        </div>
+      ) : null}
+      {hierarchy.moveError ? (
+        <p className="a-entity-tree__notice" role="alert">{intl.message(moveErrorKey(hierarchy.moveError), { depth: hierarchy.tree.maxDepth })}</p>
       ) : null}
       {hierarchy.notice ? (
         <p className="a-entity-tree__notice" role="status">{intl.message(`list.tree.${hierarchy.notice}`, { depth: hierarchy.tree.maxDepth })}</p>
@@ -499,6 +570,12 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
       {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
       {entry.orphan && entry.depth === 1 ? (
         <span className="a-entity-tree__marker" title={intl.message("list.tree.parentOutsideHint")}>{intl.message("list.tree.parentOutside")}</span>
+      ) : null}
+      {hierarchy.moving && hierarchy.canReceive(entry) ? (
+        <Button variant="secondary" size="small" className="a-entity-tree__move-here" disabled={hierarchy.moving.busy}
+          aria-label={intl.message("list.tree.moveHereNamed", { record: label.text })} onClick={() => hierarchy.moveTo(row.id)}>
+          {intl.message("list.tree.moveHere")}
+        </Button>
       ) : null}
       {row.treeRole === "context" ? (
         <span className="a-entity-tree__marker a-entity-tree__marker--context">{intl.message("list.tree.context")}</span>
@@ -606,6 +683,19 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
       })}
     </>
   );
+}
+
+/** The message for a move refusal: the server's hierarchy codes, then a
+ * generic failure. */
+function moveErrorKey(code: string): string {
+  const known: Record<string, string> = {
+    HIERARCHY_PARENT_OUTSIDE_SCOPE: "list.tree.moveError.outsideScope",
+    HIERARCHY_LEAF_PARENT: "list.tree.moveError.leafParent",
+    HIERARCHY_DEPTH_EXCEEDED: "list.tree.moveError.depth",
+    HIERARCHY_REJECTED: "list.tree.moveError.rejected",
+    HIERARCHY_MOVE_UNAVAILABLE: "list.tree.moveError.unavailable",
+  };
+  return known[code] ?? "list.tree.moveError.failed";
 }
 
 /** The attributes of a node line in the tree grid. */
