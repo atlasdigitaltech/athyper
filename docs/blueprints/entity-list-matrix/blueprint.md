@@ -1,6 +1,6 @@
 # Entity list Matrix — blueprint
 
-**Status:** proposed, revision 1 (10 October 2026). The direction is approved; the contract properties in section 5 are not, and none may be implemented until the project owner approves them.
+**Status:** proposed, revision 2 (10 October 2026). The direction is approved. Revision 2 folds in audit 8, and the audit recommends approving all five decisions in section 14. The project owner has not yet approved the contract properties, and none may be implemented until the owner does.
 
 - **Direction approved (10 October 2026).** The owner reviewed a reference screenshot of a bid-award grid (items as rows, every participant as a column, price, rank, % above lowest and allocation per cell) and the recommendation to build it as a list Layout. The owner approved in these words: "totally agreeed". The recommendation was:
   - Matrix as a new list Layout with its own blueprint, not a stretched Compare;
@@ -60,10 +60,24 @@ A list surface may declare Matrix when all of these hold (checked by Studio vali
 | `matrix` is in `supported_modes`, and a qualified `ui_component_contract` row declares `matrix` | `entity_surface.supported_modes`, component catalogue |
 | The row field is a required reference to a master Entity (for example `sourcing_event_demand`), filterable with `eq` and `in`, and sortable | field metadata |
 | The column field is a required reference to a second Entity (for example the supplier response), filterable with `eq` and `in` | field metadata |
-| (row field, column field) is unique per tenant by a database unique key | DDL (onboarding rehearsal, `matrixKeyFinding`) |
+| A database unique key contains both the row and the column field, and every **extra dimension** of that key is covered (section 2.1) | DDL (onboarding rehearsal, `matrixKeyFinding`) and the surface's published scope |
 | 1–6 measures: readable, unmasked number, money, date or text fields | field metadata |
 | A ranked measure is integer, decimal, or a declared evaluation amount; money ranks only through an evaluation amount or one currency | field metadata |
 | The surface is used under one common parent: an event's record section, or one `eq` filter on the parent field | foundation section 8 |
+| `rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE` (100) | publication rule (section 7) |
+| Every ranked measure has a declared evaluation amount (`evaluation`), or the currency rule proves one currency | field metadata (section 8) |
+
+### 2.1 Key coverage: the pivot's dimensions (audit 8, finding 1)
+
+The question is not "is there a unique key on the two pivot fields?". It is: **given the pivot's declared dimensions and the dimensions the list's scope pins, is (row, column) unique?** The rule is dimension-agnostic and names no field in code.
+
+1. Take the database unique key that contains both pivot columns. If none does: `MATRIX_KEY_NOT_UNIQUE`.
+2. Subtract the pivot columns and the tenant column. What remains are the key's **extra dimensions**. For `sourcing_event_award_allocation_uq` (tenant, award, demand, company code), the extra dimension is `company_code_id`, found from the key with no literal in the framework.
+3. Every extra dimension must be **covered** in one of two ways:
+   - **Pinned to exactly one value** for the surface: a locked record or parent scope predicate, a single-valued scope coordinate (the published operation scope binding's `scopeKind`, for example `company_code`, resolving to one value), or a declared `eq` filter.
+   - **Declared as a pivot dimension** (`pivotDimensions`, section 5.1). It then becomes part of the column identity: a column is (column field × dimension), for example "award × company".
+4. An uncovered dimension is refused at publication with `MATRIX_KEY_DIMENSION_UNCOVERED`, naming the field: "company_code_id is not covered by this surface's scope". The author decides whether to pin it in the scope or declare it as a pivot dimension. Both are authored decisions; neither is hardcoded.
+5. The same rule runs **at request time** on the applied filters and scope (section 7). Publication proves uniqueness for the declared scope, but a viewer filtering to two company codes could otherwise make one (demand, award) cell hold two allocations.
 
 ## 3. Current-state facts this design relies on
 
@@ -74,8 +88,11 @@ Verified on 10 October 2026.
 | The list operation pages at most 100 rows and accepts `recordIds` up to 100 | `MAX_LIST_PAGE_SIZE`, records routes | One cell block is at most 100 rows (section 7) |
 | The `in` filter has no published value limit | `filter-value-validation.ts` | Matrix depends on `MAX_LIST_FILTER_VALUES` = 100, which Compare C4 publishes (Compare 5.8 point 8) |
 | Group totals exist under exact counts (A2), and group queries are capped at 50 | Tree blueprint A2/A3, `LIST_GROUP_LIMIT` | Column totals reuse group totals; rank needs a new capability (section 8) |
-| The procurement master list exists: `sourcing_event_demand`, unique per event | Neon DDL | Rows can be onboarded today |
-| Award allocation per (award, demand, company) exists | `sourcing_event_award_allocation_uq` | A pilot Matrix today: demand lines × awards, measure awarded quantity and amount |
+| The procurement master list exists: `sourcing_event_demand`, unique per (event, requisition line) | `sourcing_event_demand_uq` | Rows have no dimension problem; only the pairing needs the coverage rule |
+| One award per supplier per event | `sourcing_event_award_uq` (tenant, event, business partner) | A supplier cannot hold two awards in one event; this is the intended business rule |
+| One allocation per award × demand × company code | `sourcing_event_award_allocation_uq` | One award can be split across the tenant's company codes. The pilot covers `company_code_id` by pinning it or by declaring it as a pivot dimension (section 2.1); no schema change |
+| A zero awarded amount is valid | `sourcing_event_award_allocation_amount_chk` permits `awarded_amount = 0` when `awarded_quantity > 0` | Difference to best must handle a best of zero (section 8) |
+| The scope vocabulary already exists | the operation scope binding's `scopeKind` (`tenant`, `company_code`, `legal_entity`, `operating_organization`, …; `operation-projection.ts`) and `EntityListScopeCoordinateV1` (`companyCodeIds`, `legalEntityId`, parent coordinates) | Coverage consumes the published scope; no new concept |
 | Evaluation amounts exist on demand lines | `sourcing_event_demand.evaluation_amount`, `evaluation_currency_code`, `fx_rate_snapshot` | The evaluation-amount pattern is already in the data model |
 | No supplier response or response-line Entity exists | Neon DDL | The bid-tabulation use case needs those Entities onboarded first |
 
@@ -95,10 +112,13 @@ matrix?: {
   };
   columns: {
     field: string;                 // reference to the column Entity (e.g. supplier response)
-    pageSize: 5;                   // columns per page
+    pageSize: 5;                   // columns per page; rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE
     headerFields?: readonly string[];   // column Entity fields shown in its header (e.g. total, status), max 3
     declined?: { field: string; values: readonly string[] };  // column Entity state meaning "declined to participate"
   };
+  /** Extra key dimensions that become part of the column identity, beyond
+   * (rows × columns), when the surface does not pin them (section 2.1). */
+  pivotDimensions?: readonly string[];   // 0–4, default none
   measures: readonly {             // 1–6, in display order; the first is the cell's primary value
     field: string;
     rank?: true;                   // show rank and difference to best (section 8)
@@ -126,7 +146,10 @@ matrix?: {
 | Code | When |
 | --- | --- |
 | `MATRIX_ROW_FIELD_INELIGIBLE` / `MATRIX_COLUMN_FIELD_INELIGIBLE` | The key is not a required reference with `eq` and `in` |
-| `MATRIX_KEY_NOT_UNIQUE` | No database unique key on (row, column); from `matrixKeyFinding` in the DDL rehearsal |
+| `MATRIX_KEY_NOT_UNIQUE` | No database unique key contains both the row and the column field; from `matrixKeyFinding` in the DDL rehearsal |
+| `MATRIX_KEY_DIMENSION_UNCOVERED` | A key contains both pivot fields, but one of its extra dimensions is neither pinned by the surface's scope nor declared in `pivotDimensions`; the finding names the field (section 2.1) |
+| `MATRIX_BLOCK_ABOVE_PAGE` | `rows.pageSize × columns.pageSize` exceeds `MAX_LIST_PAGE_SIZE` |
+| `MATRIX_RANK_WITHOUT_EVALUATION` | A ranked measure with no declared evaluation amount and no single-currency proof; the direction is never inferred |
 | `MATRIX_MEASURE_INELIGIBLE` | A measure of an unsupported type, or ranked without `better` |
 | `MATRIX_RANK_CURRENCY` | A ranked money measure without `evaluation` or a single-currency guarantee |
 | `MATRIX_SCOPE_UNBOUND` (runtime) | No common parent fixes the master list; the prompt asks for the event |
@@ -136,22 +159,32 @@ matrix?: {
 
 - **Rows:** one request for a page of the master list (20 rows), scoped to the common parent and narrowed by the master's own search and filters.
 - **Columns:** one request for a page of the column Entity (5 columns), with the participant filter.
-- **Cells:** one request per screen to the fact Entity, `row in (20 ids)` and `column in (5 ids)`, with the measures. That is at most 100 rows (unique key), so it is complete in one page.
+- **Cells:** one request per screen to the fact Entity: `row in (20 ids)` and `column in (5 ids)`, plus each pivot dimension in its page values, with the measures. The request sets `limit` explicitly to `rows.pageSize × columns.pageSize` (100 here, never the list's default of 50) and `countMode` none.
+- **Block size is a publication rule, not a fact (audit 8, finding 2).** `rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE` is checked at publication (`MATRIX_BLOCK_ABOVE_PAGE`). With the key covered (section 2.1), the block then holds at most one fact per cell, so it is complete in one page.
+- **A short or overfull block fails closed.**
+  - If the response has `hasNext`, or more than one fact for any cell, the grid does not draw that block. It shows "This page couldn't be read completely" with a retry.
+  - An incomplete block is never rendered with the absence label: that would call real records "Not quoted" or "Not allocated". Compare C4 has the same rule for "Not quoted" (Compare 5.8 point 3).
+- **Coverage at request time.** Before the cell request, the runtime checks that the applied scope and filters cover every extra key dimension (section 2.1, point 5). If they do not, for example when a viewer filtered to two company codes, the grid shows "Choose one company code to compare allocations", naming the field's label, instead of summing or choosing an amount.
 - **Budget:** 3 requests per screen, plus the rank request (section 8). Paging sideways repeats the column and cell requests; paging down repeats the row and cell requests.
-- **Absence.** A row with no fact for a column reads `absentLabel` only under the Compare 5.8 point 3 conditions: no fact-level filters, a complete response, and fact access following the parent's. A declined column reads "Declined to participate" in every cell. An unreadable column keeps the unavailable-column rule.
+- **Absence.** A row with no fact for a column reads `absentLabel` only under the Compare 5.8 point 3 conditions: no fact-level filters beyond the pivot keys and covered dimensions, a complete block, and fact access following the parent's. A declined column reads "Declined to participate" in every cell. An unreadable column keeps the unavailable-column rule.
 - **Totals.** A column-header total is either a declared header field or an A2 group total by column under exact counts. It is never summed from loaded cells.
 
 ## 8. Rank and difference to best (server capability; owner's decision 2)
 
-- **New repository capability,** `rankWithin`. For the shown rows and columns it returns, per cell:
-  - the rank of that record's measure among **all** records of the same row key the viewer can read under the list's scope and filters;
-  - the best value of that row;
-  - the count of ranked records.
+- **New repository capability, `rankWithin`,** kept in the record repository beside `measureHierarchy` (as audit 8 recommends).
+- **It takes the canonical predicate** (audit 8, finding 3), not a measure plus a page of IDs. The predicate is the pivot's row key and declared dimensions, the scope and the applied filter set, exactly as applied to the cell request. A rank therefore always describes the same set of records as the cells beside it.
+- **Partition.** It partitions by the row key plus every declared pivot dimension; pinned dimensions are fixed by the predicate. With `company_code` declared as a pivot dimension, ranks are per (demand, company); with it pinned by scope, per demand.
+- **What it returns, per cell:**
+  - the rank among **all** records in that partition that the viewer can read, never only the columns on screen;
+  - the partition's best value;
+  - the count ranked.
 
-  It is one window query (`rank() over (partition by row order by measure)`) bounded to the page's row keys, so its cost does not depend on the number of columns shown.
-- **Exact only.** Rank shows only where the list publishes exact counts (foundation section 5). Otherwise the cell shows the value without a rank.
-- **What is ranked.** Only a measure with `evaluation`, or one proven single-currency by the currency rule. Ties share a rank. Empty values are never ranked.
-- **Difference to best:** `(value − best) / best`, shown as "+16.2%", with "Lowest" (or "Highest") on rank 1. It is computed on the server with exact decimals.
+  It is one window query bounded to the page's row keys, so its cost does not depend on the number of columns shown.
+- **Rank is always on the evaluation amount.** `better` gives the direction. A ranked measure with no evaluation amount (and no single-currency proof) is refused at publication (`MATRIX_RANK_WITHOUT_EVALUATION`); the framework never infers "lower is better". `unitField` gates only the **display** of a unit price's rank. The rank itself is computed on the evaluation amount, which is already normalized, so a mixed-unit row stays comparable, and a cell whose unit differs shows "Units differ" in place of its rank.
+- **Exact only.** Rank shows only where the list publishes exact counts (foundation section 5); otherwise the cell shows the value without a rank. Ties share a rank, and empty values are never ranked.
+- **Difference to best** (audit 8, finding 4), computed on the server with exact decimals:
+  - **Sign:** the figure always means "how much worse than the best": `|value − best| / |best|`, shown as "+16.2%" for both directions. Rank 1 shows "Lowest" or "Highest" (from `better`) and no percentage.
+  - **Best of zero:** when the best value is 0 (valid for awarded amounts), the cell shows its value and rank with no percentage. It never shows ∞ or NaN.
 
 ## 9. Views and interaction
 
@@ -194,18 +227,20 @@ The registration inventory follows the same nine steps as Calendar section 10. I
 
 | Phase | Delivers | Needs the cleanup? |
 | --- | --- | --- |
-| M1 | Contract, per-viewer projection, the grid on fixtures, paging, measures, participant filter, absence and declined states, drill-down to Compare | Runtime on fixtures: no. A real Entity: yes |
+| M1 | Contract, per-viewer projection, the grid on fixtures, paging, measures, participant filter, absence and declined states, drill-down to Compare, and a development-only request-cost diagnostic (audit 8) | Runtime on fixtures: no. A real Entity: yes |
 | M2 | `rankWithin` and difference to best, with a real-PostgreSQL test | No |
-| M3 | Pilot: `sourcing_event_award_allocation` as demand × award (awarded quantity and amount) | Yes |
+| M3 | Pilot: `sourcing_event_award_allocation` as demand × award (awarded quantity and amount). The company dimension is covered in one of two authored ways: pinned by a locked company-code scope, or declared as a pivot dimension so that columns are award × company | Yes |
 | — | RFP bid tabulation: needs the supplier response and response-line Entities onboarded first | Onboarding |
 
 ## 14. Decisions required (project owner)
 
-1. The declaration in section 5.1 (row, column, measures, declined, absent label).
-2. Fixed page sizes of 20 rows by 5 columns for revision 1.
-3. `rankWithin` as a shared repository capability (direction approved).
-4. Ranking only on an evaluation amount or a proven single currency (direction approved).
-5. Phases M1–M3, and the pilot on award allocations.
+Audit 8 recommends approving all five as revised below. The project owner has not yet approved them.
+
+1. **The declaration** in section 5.1, with `pivotDimensions` and the key-coverage rule in section 2.1 (publication and request time).
+2. **Page sizes of 20 rows by 5 columns,** with the block rule `rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE` and short blocks failing closed (section 7).
+3. **`rankWithin`** as a shared repository capability beside `measureHierarchy`, taking the canonical predicate and ranking only on the evaluation amount (section 8). The direction is approved.
+4. **Ranking only on an evaluation amount or a proven single currency** (the direction is approved; AGENTS.md carries the rule), with the zero-best rule and the sign convention for difference to best.
+5. **Phases M1–M3,** and the award-allocation pilot with the company dimension pinned or declared.
 
 ## 15. Rejected and out-of-scope options
 
@@ -224,3 +259,9 @@ The registration inventory follows the same nine steps as Calendar section 10. I
 | --- | --- | --- |
 | Owner's screenshot review (10 October 2026) | Bid-award grid with rank, % above lowest, declined and allocation | Mapped in sections 5–9; allocation shown as a measure; editing out of scope |
 | Audit 7 | Rank must count all bidders, not just visible columns | Section 8, a server capability |
+| Audit 8, first finding 1 (withdrawn by the auditor) | The allocation key's company code was called a schema defect | Withdrawn: one award per supplier per event and one allocation per award × demand × company are the intended rules; no DDL change |
+| Audit 8, finding 1 (rewritten) | The matcher asked the wrong question; dimensions must come from the published scope | Adopted: section 2.1 (extra dimensions derived from the key, covered by scope or `pivotDimensions`, `MATRIX_KEY_DIMENSION_UNCOVERED`), checked at request time as well (section 7) |
+| Audit 8, finding 2 | The cell block can exceed or fall short of a page | Adopted: block rule at publication, explicit `limit`, and short or overfull blocks failing closed without the absence label (section 7) |
+| Audit 8, finding 3 | `rankWithin` under-specifies its predicate | Adopted: canonical predicate, partition by row key plus declared dimensions, always on the evaluation amount, refused without one (section 8) |
+| Audit 8, finding 4 | Difference to best at best = 0, and its sign | Adopted: always "worse than best" as a positive figure, and no percentage at a best of zero (section 8) |
+| Audit 8, prototype | Keep the request-cost strip as a development diagnostic; units gate display per cell; 6-row demo paging | Recorded: the strip is proposed as a development-only diagnostic for M1; the unit rule in section 8; product sizes are 20 × 5 |

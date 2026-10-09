@@ -360,6 +360,8 @@ collections?: readonly {                // 0–2 per comparison
 
   A line Entity that publishes its own record-level read policy (owner access, record predicates or field-row policies independent of the parent) is refused at publication with `COMPARE_LINE_ACCESS_INDEPENDENT`. A hidden line would otherwise read as "Not quoted". An unavailable compared record keeps the existing unavailable-column rule and is never shown as absent.
 
+  **Shared with the Matrix Layout** (audit 8): an incomplete or overfull response (`hasNext`, or two lines for one key) is never drawn with the absence label. The page shows "This page couldn't be read completely" with a retry. The [Entity list Matrix blueprint](../entity-list-matrix/blueprint.md) section 7 applies the same rule to its cell blocks.
+
 **4. Narrowing first, paging second.**
 - The panel opens the collection collapsed, with its counts. Expanded, it offers the master list's own published search and filters (for example item category), and **pinned items**: master rows the user picks, kept in the URL as `compareItems`.
 - These are server-side filters on the master list, so "steel products only" narrows 2,000 items to 140 before any line is read.
@@ -375,7 +377,9 @@ collections?: readonly {                // 0–2 per comparison
 
 **7. Best value on lines (replaces revision 4's deferral).**
 - The per-viewer list field descriptor gains an optional `compare { better, summaryLabel? }`, carried from the line Entity's `field.compare` (C3). This is a contract widening of `ListFieldDescriptorV1`.
-- **Unit rule:** a line measure may declare `compare.unitField`. It is ranked only when that unit is equal in every compared line; otherwise the line shows "Units differ" and ranks nothing.
+- **Unit rule, aligned with the Matrix (audit 8, finding 3):**
+  - When the line measure has a declared evaluation amount (already normalized for unit and currency), best value is computed on that amount. `compare.unitField` then gates only the **display**: a line whose unit differs shows "Units differ" in place of a best mark, while still counting in the comparison.
+  - Without an evaluation amount, a unit difference ranks nothing on that line.
 - Money follows the currency rule (section 8.2). Ranking across currencies is allowed only on a declared evaluation-amount field (owner's decision 3), never converted in the browser.
 
 **8. The `in` filter limit.** `MAX_LIST_FILTER_VALUES` = 100 is published in the shared list contract and enforced by the server (`INVALID_FILTER`). It lands with C4.
@@ -863,6 +867,7 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 | Audit 7 | "Page 2 absence is ambiguous" | Corrected: the line request names exactly the page's master rows, and one line per row is guaranteed, so a complete response makes absence exact. The real conditions are no line-level filters and line access following the parent's. Both are now in point 3, with `COMPARE_LINE_ACCESS_INDEPENDENT` |
 | Audit 7 | "Not quoted by at least one" is an ordinary master-list filter | Corrected: it is an existence test against another Entity, not a filter on the master's own fields. Recorded as a later decision (point 4) |
 | Audit 7 | Pilot on `purchase_requisition_line` / `sourcing_event_company` | Corrected against the DDL: requisition lines are unique by line number (not comparable) and `sourcing_event_company` holds buyer company codes. Pilot instead on `sourcing_event_award` and `sourcing_event_award_allocation` with `sourcing_event_demand` as the master list (point 10) |
+| Audit 8 | Revision 5 sound; decisions 24, 27 and 29 close the earlier gaps; keep "Differences only" within loaded pages; C4 ready to build once the prototype is accepted | Recorded. The complete-response rule is now shared with the Matrix (point 3), and best value on lines follows the Matrix's evaluation-amount rule (point 7) |
 | Audit 7 | Publish an `in` limit; keep the runtime duplicate refusal; record sections need multi-select | Adopted (points 5 and 8); record sections already offer selection (facts above) |
 | Audit 4, finding 1 | The pushed-history flag was a ref the URL did not agree with | Fixed (`3bcb4ca22`): the marker lives in the history entry itself |
 | Audit 4, finding 2 | An unreadable currency field gave "Currency not compared" without the restricted statement | Fixed: `fieldsRestricted` is set when a declared currency field is dropped |

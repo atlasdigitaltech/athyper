@@ -173,7 +173,7 @@ SUPPLIERS.forEach(function(s){
     if(SKIP[s.id].indexOf(it.id)>-1)return;
     var price=Math.round(BASE[i]*FACT[s.id]*WOBBLE[(i+s.id.length+parseInt(s.id.slice(2),10))%12]*100)/100;
     var uom=it.uom;
-    if(s.id==='R-09'&&it.id==='d10')uom='BOX';   /* quoted per box of 12: units differ */
+    if(s.id==='R-09'&&it.id==='d10'){uom='BOX';price=Math.round(price*12*100)/100;}   /* quoted per box of 12: units differ */
     LINES[s.id][it.id]={price:price,uom:uom,lead:LEAD[s.id]+(i%3)*2,alloc:(s.id==='R-01'&&['d1','d3','d4'].indexOf(it.id)>-1)?it.qty:0};
   });
 });
@@ -204,17 +204,19 @@ var ROWS_PER_PAGE=6, COLS_PER_PAGE=5, MASTER_PAGE=6;  /* production: 20 rows, 5 
 function sup(id){return SUPPLIERS.filter(function(s){return s.id===id})[0]}
 function announce(t){$('live').textContent=t}
 
-/* Rank across every participant the viewer can see under the list's filters (here: the participant filter), computed as the server would. */
+/* Evaluation amount: the line's price normalized to the item's unit and quantity, in the evaluation currency (a declared field in the product). */
+function evalAmount(l,it){return Math.round((l.uom==='BOX'?l.price/12:l.price)*it.qty*100)/100}
+/* Rank across every participant the viewer can see under the list's filters (here: the participant filter), always on the evaluation amount, computed as the server would. A cell whose unit differs still counts; only its rank display is gated. */
 function rankFor(itemId){
+  var it=ITEMS.filter(function(i){return i.id===itemId})[0];
   var pool=S.m.shown.filter(function(id){return LINES[id]&&LINES[id][itemId]});
-  var vals=pool.map(function(id){return{id:id,v:LINES[id][itemId].price,u:LINES[id][itemId].uom}});
-  var unit=ITEMS.filter(function(i){return i.id===itemId})[0].uom;
-  var ranked=vals.filter(function(x){return x.u===unit}).sort(function(a,b){return a.v-b.v});
+  var ranked=pool.map(function(id){var l=LINES[id][itemId];return{id:id,v:evalAmount(l,it),u:l.uom}}).sort(function(a,b){return a.v-b.v});
   var out={},best=ranked.length?ranked[0].v:null;
-  ranked.forEach(function(x){out[x.id]={rank:1+ranked.filter(function(y){return y.v<x.v}).length,of:ranked.length,best:best}});
-  vals.forEach(function(x){if(x.u!==unit)out[x.id]={unitsDiffer:true}});
+  ranked.forEach(function(x){out[x.id]={rank:1+ranked.filter(function(y){return y.v<x.v}).length,of:ranked.length,best:best,v:x.v,unitsDiffer:x.u!==it.uom}});
   return out;
 }
+/* Difference to best: always "how much worse than the best", positive; none when the best is zero. */
+function worse(v,best){return best===0||best===null?'':'+'+(Math.abs(v-best)/Math.abs(best)*100).toFixed(1)+'%'}
 
 /* ---- Matrix view ---- */
 function matrixHTML(){
@@ -231,7 +233,7 @@ function matrixHTML(){
    +'<button class="btn" id="mfilter" aria-expanded="'+M.filterOpen+'">Filter participants</button>'
    +'<button class="btn" id="mdisplay" aria-expanded="'+(M.displayOpen?'true':'false')+'">Display</button>'
    +'<button class="btn pri" id="mcompare"'+(M.sel.length<2||M.sel.length>4?' disabled':'')+'>Compare '+(M.sel.length||'')+' selected</button></div>';
-  h+='<p class="note">Showing <b>'+M.shown.length+' participants</b> ('+SUPPLIERS.length+' invited, '+submitted+' responded). Rank counts every participant you can see under these filters, computed on the server, never just the columns on screen. '+(M.sel.length<2?'Select 2 to 4 participants to compare them in detail.':M.sel.length>4?'Select at most 4 participants to compare.':'')+'</p>';
+  h+='<p class="note">Showing <b>'+M.shown.length+' participants</b> ('+SUPPLIERS.length+' invited, '+submitted+' responded). Rank counts every participant you can see under these filters, on the evaluation amount (normalized for unit and quantity), computed on the server, never just the columns on screen. '+(M.sel.length<2?'Select 2 to 4 participants to compare them in detail.':M.sel.length>4?'Select at most 4 participants to compare.':'')+'</p>';
   if(M.filterOpen){
     h+='<div class="drawer" role="group" aria-label="Participants shown">'+SUPPLIERS.map(function(s){var on=M.shown.indexOf(s.id)>-1;return '<label><input type="checkbox" data-shown="'+s.id+'"'+(on?' checked':'')+'> '+esc(s.name)+(s.status==='declined'?' <span class="chip">Declined</span>':'')+'</label>'}).join('')+'</div>';
   }
@@ -240,7 +242,7 @@ function matrixHTML(){
   }
   h+='<div class="scroll"><table><caption class="cap">Bid tabulation: items by participant</caption><thead><tr><th class="rowh" scope="col">'+items.length+' items · unit price</th>';
   pageCols.forEach(function(s){
-    var tot=0,n=0;if(LINES[s.id])ITEMS.forEach(function(it){var l=LINES[s.id][it.id];if(l&&l.uom===it.uom){tot+=l.price*it.qty;n++}});
+    var tot=0,n=0;if(LINES[s.id])ITEMS.forEach(function(it){var l=LINES[s.id][it.id];if(l){tot+=evalAmount(l,it);n++}});
     var on=M.sel.indexOf(s.id)>-1;
     h+='<th class="colh" scope="col"><label><input type="checkbox" data-sel="'+s.id+'"'+(on?' checked':'')+(s.status!=='submitted'?' disabled':'')+' aria-label="Select '+esc(s.name)+' to compare"><span><span class="code">'+s.code+'</span><br><span class="ttl">'+esc(s.name)+'</span>'
      +(s.status==='submitted'?'<span class="tot num">'+money(tot)+'</span><span class="sub">'+n+' of '+ITEMS.length+' items quoted</span>':'<span class="tot"><span class="chip">Declined to participate</span></span>')+'</span></label></th>';
@@ -257,8 +259,8 @@ function matrixHTML(){
       var r=rk[s.id]||{};
       var best=r.rank===1;
       var c='<span class="num">'+money(l.price)+'</span>'+(l.uom!==it.uom?' <span class="sub">per '+l.uom+'</span>':'')+'<br>';
-      if(r.unitsDiffer)c+='<span class="mk nc">Units differ · not ranked</span>';
-      else if(r.rank)c+='<span class="rank">Rank '+r.rank+' of '+r.of+'</span> '+(best?'<span class="low">Lowest</span>':'<span class="up">+'+((l.price-r.best)/r.best*100).toFixed(1)+'%</span>');
+      if(r.unitsDiffer){best=false;c+='<span class="mk nc">Units differ · rank not shown</span>'}
+      else if(r.rank)c+='<span class="rank">Rank '+r.rank+' of '+r.of+'</span> '+(best?'<span class="low">Lowest</span>':'<span class="up">'+worse(r.v,r.best)+'</span>');
       if(M.measures.lead)c+='<br><span class="sub">Lead time '+l.lead+' days</span>';
       if(M.measures.alloc&&l.alloc)c+='<br><span class="sub">Allocated '+l.alloc+' '+it.uom+' (100%)</span>';
       h+='<td class="cell'+(best?' best':'')+'">'+c+'</td>';
@@ -277,14 +279,16 @@ function matrixHTML(){
 /* ---- Compare view with C4 line items ---- */
 function cmpCells(values,better){
   /* values: [{state:'value'|'absent'|'units', v}]; best among comparable values */
-  var vs=values.map(function(x,i){return{i:i,x:x}}).filter(function(o){return o.x.state==='value'});
-  var outcome=values.some(function(x){return x.state==='absent'})?'differs':vs.length<2?'same':vs.every(function(o){return o.x.v===vs[0].x.v})?'same':'differs';
-  if(values.some(function(x){return x.state==='units'}))outcome='nc';
+  /* A 'units' cell compares on its evaluation amount (e); only its best-mark display is gated. */
+  var key=function(x){return x.e!==undefined?x.e:x.v};
+  var vs=values.map(function(x,i){return{i:i,x:x}}).filter(function(o){return o.x.state==='value'||o.x.state==='units'});
+  var outcome=values.some(function(x){return x.state==='absent'})?'differs':vs.length<2?'same':vs.every(function(o){return key(o.x)===key(vs[0].x)})?'same':'differs';
   var best=[];
-  if(better&&outcome!=='nc'&&vs.length>=2){
-    var top=vs.reduce(function(a,b){return (better==='lower'?b.x.v<a.x.v:b.x.v>a.x.v)?b:a});
-    best=vs.filter(function(o){return o.x.v===top.x.v}).map(function(o){return o.i});
+  if(better&&vs.length>=2){
+    var top=vs.reduce(function(a,b){return (better==='lower'?key(b.x)<key(a.x):key(b.x)>key(a.x))?b:a});
+    best=vs.filter(function(o){return key(o.x)===key(top.x)}).map(function(o){return o.i});
     if(best.length===vs.length)best=[];
+    best=best.filter(function(i){return values[i].state!=='units'});
   }
   return{outcome:outcome,best:best};
 }
@@ -321,7 +325,7 @@ function compareHTML(){
   var pages=Math.max(1,Math.ceil(master.length/MASTER_PAGE));if(C.page>=pages)C.page=pages-1;
   var page=master.slice(C.page*MASTER_PAGE,(C.page+1)*MASTER_PAGE);
   var lineRows=page.map(function(it){
-    var vals=cols.map(function(s){var l=LINES[s.id][it.id];if(!l)return{state:'absent'};if(l.uom!==it.uom)return{state:'units',v:l.price,d:money(l.price)+' per '+l.uom};return{state:'value',v:l.price,d:money(l.price)}});
+    var vals=cols.map(function(s){var l=LINES[s.id][it.id];if(!l)return{state:'absent'};var e=evalAmount(l,it);if(l.uom!==it.uom)return{state:'units',v:l.price,e:e,d:money(l.price)+' per '+l.uom};return{state:'value',v:l.price,e:e,d:money(l.price)}});
     return{label:it.code+' '+it.label,sub:it.qty+' '+it.uom,item:it,better:'lower',vals:vals};
   });
   var diffN=lineRows.filter(function(r){return cmpCells(r.vals,'lower').outcome!=='same'}).length;
@@ -354,7 +358,7 @@ function rowHTML(r,cols,bi,line){
   var res=cmpCells(r.vals,r.better);
   if(!S.c.all&&res.outcome==='same')return '';
   var h='<tr class="'+(res.outcome==='differs'?'rdiff':'')+'"><th class="rowh" scope="row"><span class="ttl">'+esc(r.label)+'</span>'+(r.sub?'<br><span class="sub">'+esc(r.sub)+'</span>':'')
-   +'<br>'+(res.outcome==='differs'?'<span class="badge d">Differs</span>':res.outcome==='nc'?'<span class="badge">Units differ</span>':'')
+   +'<br>'+(res.outcome==='differs'?'<span class="badge d">Differs</span>':'')
    +(line&&r.item?' <button class="btn" data-pin="'+r.item.id+'" style="min-height:24px;padding:0 8px;font-size:.72rem;margin-top:4px">'+(S.c.pins.indexOf(r.item.id)>-1?'Pinned':'Pin')+'</button>':'')+'</th>';
   r.vals.forEach(function(x,i){
     var marks='',content;
@@ -364,11 +368,12 @@ function rowHTML(r,cols,bi,line){
     if(res.best.indexOf(i)>-1)marks+='<span class="mk best">★ Best</span>';
     if(bi>-1&&i!==bi){
       var b=r.vals[bi];
-      if(x.state==='units'||b.state==='units')marks+='<span class="mk nc">Not compared</span>';
-      else if(x.state==='absent'&&b.state==='absent')marks+='<span class="mk same">Same as baseline</span>';
+      var ek=function(y){return y.e!==undefined?y.e:y.v};
+      if(x.state==='absent'&&b.state==='absent')marks+='<span class="mk same">Same as baseline</span>';
       else if(b.state==='absent')marks+='<span class="mk diff">Not in baseline</span>';
-      else marks+=x.state!=='absent'&&x.v===b.v?'<span class="mk same">Same as baseline</span>':'<span class="mk diff">Differs from baseline</span>';
+      else marks+=x.state!=='absent'&&ek(x)===ek(b)?'<span class="mk same">Same as baseline</span>':'<span class="mk diff">Differs from baseline</span>';
     }
+    if(x.state==='units')marks+='<span class="mk nc">Units differ</span>';
     h+='<td class="cell'+(res.best.indexOf(i)>-1?' best':'')+'">'+content+(marks?'<br>'+marks:'')+'</td>';
   });
   return h+'</tr>';
