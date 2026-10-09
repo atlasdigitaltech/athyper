@@ -2,6 +2,7 @@ import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-l
 import { ENTITY_LIST_MAX_GROUP_LEVELS } from "@athyper/contract-platform-entity-list";
 import { Button, Drawer } from "@athyper/platform-ui";
 import { SearchableFieldSelect } from "../field-catalogue";
+import { groupEntryLabel, groupLevel } from "../tree/grouped-tree-model";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import React, { useEffect, useState } from "react";
 
@@ -23,15 +24,23 @@ export function GroupDialog({
 }) {
   const intl = useEntityI18n();
   const [draft, setDraft] = useState<readonly string[]>(groups ?? []);
-  const fields = descriptor.fields.filter((field) => field.groupable);
+  // A date field is offered by month and by quarter (Tree blueprint A3).
+  const fields = descriptor.fields
+    .filter((field) => field.groupable)
+    .flatMap((field) =>
+      field.valueKind === "date" || field.valueKind === "datetime"
+        ? (["month", "quarter"] as const).map((unit) => ({ ...field, key: `${field.key}:${unit}`, label: groupEntryLabel(`${field.key}:${unit}`, descriptor.fields, intl) }))
+        : [field],
+    );
+  const base = (entry: string) => groupLevel(entry).field;
   useEffect(() => {
     if (open) setDraft(groups ?? []);
   }, [open, groups]);
   const dirty = draft.join(",") !== (groups ?? []).join(",");
-  const labels = draft.map((key) => fields.find((field) => field.key === key)?.label ?? key);
+  const labels = draft.map((entry) => groupEntryLabel(entry, descriptor.fields, intl));
   // Level n is offered once level n-1 is chosen; a cleared level drops the
   // levels after it, so the list stays ordered and dense.
-  const levels = Math.min(ENTITY_LIST_MAX_GROUP_LEVELS, draft.length + 1, fields.length);
+  const levels = Math.min(ENTITY_LIST_MAX_GROUP_LEVELS, draft.length + 1, new Set(fields.map((field) => base(field.key))).size);
   const choose = (level: number, key?: string) =>
     setDraft((current) => (key ? [...current.slice(0, level), key] : current.slice(0, level)));
   return (
@@ -46,7 +55,7 @@ export function GroupDialog({
                   <span aria-hidden="true">{label}</span>
                   <SearchableFieldSelect
                     label={label}
-                    fields={fields.filter((field) => field.key === draft[level] || !draft.includes(field.key))}
+                    fields={fields.filter((field) => field.key === draft[level] || !draft.some((entry) => base(entry) === base(field.key)))}
                     value={draft[level] ?? ""}
                     required={false}
                     placeholder={intl.message("collection.group.none")}

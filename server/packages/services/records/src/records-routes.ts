@@ -42,7 +42,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 404: { description: "Record not found" }, 423: { description: "Record lock required" }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({
     method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get",
     summary: "Get a record", tags: ["Records"], authenticated: true,
@@ -71,7 +71,21 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   const cursor = boundedQueryText(query["cursor"], "cursor", 4096);
   const search = boundedQueryText(query["search"], "search", 512);
   const fields = queryValues(query["fields"], "fields", MAX_LIST_FIELDS).map((value, index) => catalogQueryCode(value, `fields[${index}]`));
-  const group = query["group"] === undefined ? undefined : catalogQueryCode(query["group"], "group");
+  // `field` or, for a date field, `field:month` / `field:quarter` (Tree blueprint A3).
+  const groupSpec = query["group"] === undefined ? undefined : boundedQueryText(query["group"], "group", 140);
+  const [groupKey, groupUnit, ...groupRest] = groupSpec?.split(":") ?? [];
+  if (groupSpec !== undefined && (groupRest.length || (groupUnit !== undefined && groupUnit !== "month" && groupUnit !== "quarter")))
+    throw new RecordServiceError(400, "LIST_GROUP_INVALID", "group must be a field, or a date field with :month or :quarter");
+  const group = groupKey === undefined ? undefined : catalogQueryCode(groupKey, "group");
+  const timeZone = boundedQueryText(query["timeZone"], "timeZone", 64);
+  const groupBucket = groupUnit ? { unit: groupUnit as "month" | "quarter", ...(timeZone ? { timeZone } : {}) } : undefined;
+  // Per-group aggregates (A2): repeated field:aggregate values.
+  const groupAggregates = queryValues(query["aggregate"], "aggregate", 5).map((value) => {
+    const [field, aggregate, ...rest] = value.split(":");
+    if (rest.length || !field || !["sum", "average", "minimum", "maximum"].includes(aggregate ?? ""))
+      throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "aggregate must be field:sum, field:average, field:minimum or field:maximum");
+    return Object.freeze({ field: catalogQueryCode(field, "aggregate"), aggregate: aggregate as "sum" | "average" | "minimum" | "maximum" });
+  });
   const filters = queryValues(query["filter"], "filter", MAX_LIST_FILTERS).map(parseFilter);
   // Admission is capped here at the contract maximum; the Entity descriptor
   // applies its lower per-list maxSortLevels limit in the query service.
@@ -96,6 +110,8 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     ...(search ? { search } : {}),
     ...(fields.length ? { fields: Object.freeze([...new Set(fields)]) } : {}),
     ...(group ? { group } : {}),
+    ...(groupBucket ? { groupBucket } : {}),
+    ...(groupAggregates.length ? { groupAggregates: Object.freeze(groupAggregates) } : {}),
     ...(groupsOnly ? { groupsOnly } : {}),
     ...(hierarchy ? { hierarchy } : {}),
     ...(filters.length ? { filters } : {}),

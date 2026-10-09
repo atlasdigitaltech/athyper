@@ -181,6 +181,8 @@ export function createRecordListExecutor<Transaction = unknown>(
             use: "sort",
           })),
           ...(query.group ? [{ field: query.group, use: "group" }] : []),
+          // Aggregates are published only with group use (queryableListFields).
+          ...(query.groupAggregates ?? []).map((item) => ({ field: item.field, use: "group" })),
           ...(query.search
             ? readableFields
                 .filter((field) => field.searchable)
@@ -319,6 +321,10 @@ export function createRecordListExecutor<Transaction = unknown>(
                 ...(query.group
                   ? [{ key: query.group, use: "group" as const }]
                   : []),
+                ...(query.groupAggregates ?? []).map((item) => ({
+                  key: item.field,
+                  use: "group" as const,
+                })),
                 ...(query.search
                   ? descriptor.fields
                       .filter(
@@ -368,6 +374,8 @@ export function createRecordListExecutor<Transaction = unknown>(
                   ? { recordIds: Object.freeze([...new Set(query.recordIds)]) }
                   : {}),
                 ...(query.group ? { group: query.group } : {}),
+                ...(query.groupBucket ? { groupBucket: query.groupBucket } : {}),
+                ...(query.groupAggregates?.length ? { groupAggregates: query.groupAggregates } : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
@@ -763,6 +771,30 @@ function validateQueryFields(
         "GROUP_FIELD_NOT_ALLOWED",
         `Field is not groupable: ${query.group}`,
       );
+    // A date field groups only by month or quarter, and only under exact
+    // counts; a datetime month is the viewer's month (Tree blueprint A3).
+    const dated = field.type === "date" || field.type === "datetime";
+    if (dated !== Boolean(query.groupBucket))
+      throw new RecordServiceError(400, "LIST_GROUP_INVALID", "A date field groups by month or quarter, and only a date field does");
+    if (query.groupBucket) {
+      if (query.countMode !== "exact")
+        throw new RecordServiceError(400, "LIST_GROUP_INVALID", "Grouping by month or quarter needs exact counts");
+      const zone = query.groupBucket.timeZone;
+      if (field.type === "datetime" && !validTimeZone(zone))
+        throw new RecordServiceError(400, "LIST_GROUP_INVALID", "Grouping a datetime field needs the viewer's time zone");
+    }
+  } else if (query.groupBucket)
+    throw new RecordServiceError(400, "LIST_GROUP_INVALID", "A month or quarter needs a group field");
+  // Per-group aggregates (Tree blueprint A2): only published aggregates of
+  // readable numeric fields, only with a group and exact counts.
+  if (query.groupAggregates?.length) {
+    if (!query.group || query.countMode !== "exact" || query.groupAggregates.length > 5)
+      throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "Group aggregates need a group and exact counts");
+    for (const item of query.groupAggregates) {
+      const field = fields.find((candidate) => candidate.key === item.field);
+      if (!field || !readable.has(item.field) || !["integer", "decimal", "money"].includes(field.type) || !(field.list?.aggregations ?? []).includes(item.aggregate))
+        throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", `Aggregate is not published: ${item.field}:${item.aggregate}`);
+    }
   }
   if ((query.fields?.length ?? 0) > 100)
     throw new RecordServiceError(
@@ -887,4 +919,14 @@ function assertProfiledScalarProjection(
       "ENTITY_NESTED_PROVIDER_REQUIRED",
       "Nested values require an authorized provider projection",
     );
+}
+
+function validTimeZone(zone: string | undefined): boolean {
+  if (!zone) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
 }

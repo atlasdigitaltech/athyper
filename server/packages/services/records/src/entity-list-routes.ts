@@ -311,7 +311,9 @@ const query = {
         { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } },
       ],
     },
-    group: { type: "string", minLength: 1, maxLength: 127 },
+    group: { type: "string", minLength: 1, maxLength: 140 },
+    aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] },
+    timeZone: { type: "string", minLength: 1, maxLength: 64 },
     groupsOnly: { type: "string", enum: ["true"] },
     hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] },
     filter: {

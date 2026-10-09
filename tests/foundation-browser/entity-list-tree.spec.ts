@@ -16,14 +16,14 @@ const script = buildSync({
     import {parseEntityLookupOptions} from './packages/contracts/platform/entity-runtime/src/lookup-options';
     const cfg=window.treeFixture;
     const uuid=i=>'7f3c2e1d-4b5a-4c6d-8e9f-'+String(100000000000+i).slice(-12);
-    const ops={string:['contains','eq'],enum:['eq','in','is_null','is_not_null'],decimal:['eq','gt','lt'],reference:['eq','in','is_null','is_not_null']};
+    const ops={string:['contains','eq'],enum:['eq','in','is_null','is_not_null'],decimal:['eq','gt','lt'],reference:['eq','in','is_null','is_not_null'],date:['gte','lt','is_null']};
     const field=(key,label,valueKind,extra={})=>({key,label,valueKind,defaultVisible:true,defaultOrder:0,filterOperators:ops[valueKind],sortable:true,groupable:false,aggregations:[],...extra});
     const opts=(...values)=>values.map(([value,label])=>({value,label}));
     const fields=[field('code','Account','string'),field('name','Name','string',{semanticRole:'title'}),
       field('status','Status','enum',{groupable:true,filterOptions:opts(['active','Active'],['blocked','Blocked for posting'],['deprecated','Deprecated']),statusTones:{active:'success',blocked:'danger'}}),
       field('account_type','Account type','enum',{groupable:true,filterOptions:opts(['asset','Asset'],['liability','Liability'])}),
       field('kind','Kind','enum',{filterOptions:opts(['summary','Summary account'],['posting','Posting account'])}),
-      field('budget','Annual budget','decimal'),field('parent','Parent account','reference',{defaultVisible:false}),
+      field('budget','Annual budget','decimal',{aggregations:['count','sum']}),field('opened','Opened','date',{defaultVisible:false,groupable:true}),field('parent','Parent account','reference',{defaultVisible:false}),
       field('chart','Chart of accounts','reference',{defaultVisible:false,filterOperators:['eq','in'],filterOptions:opts(['chart-a','Operating chart'],['chart-b','Group chart'])}),
       field('postable','Postable','boolean',{defaultVisible:false,filterOperators:['eq']})];
     const accounts=[
@@ -39,7 +39,7 @@ const script = buildSync({
       ...(cfg.scoped?[['1000','Group assets','active','asset','summary',null,null,'chart-b'],['1100','Group current assets','active','asset','posting',null,'1000','chart-b']]:[])];
     const chartOf=a=>a[7]??'chart-a';
     const idOf=Object.fromEntries(accounts.map((a,i)=>[chartOf(a)+':'+a[0],uuid(i)]));
-    const rows=accounts.map((a,i)=>{const [code,name,status,account_type,kind,budget,parent]=a;return {id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[chartOf(a)+':'+parent]:null,chart:chartOf(a),postable:kind==='posting'},...(parent&&!(cfg.hidden??[]).includes(parent)?{displayValues:{parent:accounts.find(x=>x[0]===parent&&chartOf(x)===chartOf(a))[1]}}:{})}});
+    const rows=accounts.map((a,i)=>{const [code,name,status,account_type,kind,budget,parent]=a;return {id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[chartOf(a)+':'+parent]:null,chart:chartOf(a),postable:kind==='posting',opened:i%3===0?null:(i%3===1?'2026-09-1'+(i%9):'2026-10-0'+(1+i%8))},...(parent&&!(cfg.hidden??[]).includes(parent)?{displayValues:{parent:accounts.find(x=>x[0]===parent&&chartOf(x)===chartOf(a))[1]}}:{})}});
     const descriptor={schemaVersion:1,plane:'neon',
       entity:{code:'gl_account',label:'gl_account',pluralLabel:'Chart of Accounts',identityField:'code',detailRouteTemplate:'/gl_account/:recordId'},
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
@@ -76,6 +76,8 @@ const script = buildSync({
         else if(f.operator==='is_not_null')list=list.filter(r=>v(r)!=null);
         else if(f.operator==='eq')list=list.filter(r=>v(r)===f.value);
         else if(f.operator==='in')list=list.filter(r=>f.value.includes(v(r)));
+        else if(f.operator==='gte')list=list.filter(r=>v(r)!=null&&String(v(r))>=f.value);
+        else if(f.operator==='lt')list=list.filter(r=>v(r)!=null&&String(v(r))<f.value);
       }return list};
       matched=apply(matched,filters);
       if(q.search){const n=String(q.search).toLowerCase();matched=matched.filter(r=>[r.values.code,r.values.name].some(v=>String(v??'').toLowerCase().includes(n)));}
@@ -104,7 +106,11 @@ const script = buildSync({
           pagination:{pageSize:found.length,hasNext:false,hasPrevious:false,countMode:'none'}};
       }
       const exact=q.countMode==='exact';
-      const groups=q.group&&exact?Object.entries(matched.reduce((acc,r)=>{const k=JSON.stringify(r.values[q.group]??null);acc[k]=(acc[k]??0)+1;return acc},{})).map(([k,count])=>({value:JSON.parse(k),label:String(JSON.parse(k)),count})).sort((a,b)=>cmp(a.value,b.value)):undefined;
+      // Group buckets with month buckets (A3) and sums (A2), as the server does.
+      const [gField,gUnit]=String(q.group??'').split(':');
+      const bucketOf=r=>{const v=r.values[gField];if(v==null)return null;if(!gUnit)return v;const m=Number(String(v).slice(5,7));return gUnit==='quarter'?String(v).slice(0,4)+'-Q'+Math.ceil(m/3):String(v).slice(0,7)};
+      const wanted=[].concat(q.aggregate??[]);
+      const groups=q.group&&exact?Object.entries(matched.reduce((acc,r)=>{const k=JSON.stringify(bucketOf(r));(acc[k]??=[]).push(r);return acc},{})).map(([k,list])=>({value:JSON.parse(k),label:String(JSON.parse(k)),count:list.length,...(wanted.length?{aggregates:Object.fromEntries(wanted.map(w=>{const f=w.split(':')[0];const vals=list.map(r=>r.values[f]).filter(v=>v!=null);return [w,vals.length?vals.reduce((x,y)=>x+y,0):null]}))}:{})})).sort((a,b)=>a.value===null?1:b.value===null?-1:cmp(a.value,b.value)):undefined;
       if(q.groupsOnly==='true')return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:[],groups,pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:matched.length,countMode:'exact'}};
       const start=q.cursor?Number(q.cursor):0,limit=Number(q.limit),page=matched.slice(start,start+limit),more=start+limit<matched.length;
       return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:page,...(groups?{groups}:{}),
@@ -122,7 +128,7 @@ const script = buildSync({
 }).outputFiles[0]!.text;
 
 type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean; section?: boolean; movable?: boolean; moveError?: string; picker?: boolean };
-type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
+type Query = { filter?: string[]; group?: string; aggregate?: string | string[]; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 async function mount(page: Page, width: number, fixture: Fixture = {}, path = "", dir?: "rtl") {
@@ -533,6 +539,38 @@ test.describe("B5 tree picker", () => {
     await mount(page, 390, { tree: true, picker: true });
     await node(page, "1000").getByRole("radio", { name: "Select 1000" }).check();
     await expect.poll(() => page.evaluate(() => (window as unknown as { pickerSelection: string[] }).pickerSelection)).toEqual(["1000"]);
+  });
+});
+
+test.describe("A2 group aggregates and A3 month and quarter groups", () => {
+  test("group headings show each group's published total, under exact counts", async ({ page }) => {
+    await mount(page, 1440, { exact: true }, "?groups=status");
+    await expect(headingRow(page, "Active").locator(".a-entity-tree__aggregate")).toHaveText("Annual budget total 1,835,000");
+    await expect(headingRow(page, "Deprecated").locator(".a-entity-tree__aggregate")).toHaveText("Annual budget total 120,000");
+    expect((await requests(page)).find(q => q.groupsOnly === "true")?.aggregate).toEqual(["budget:sum"]);
+  });
+
+  test("no totals without exact counts", async ({ page }) => {
+    await mount(page, 1440, {}, "?groups=status");
+    await expect(page.locator(".a-entity-tree__aggregate")).toHaveCount(0);
+    expect((await requests(page)).some(q => q.aggregate)).toBe(false);
+  });
+
+  test("a date field groups by month in order, and a month loads its records by date range", async ({ page }) => {
+    await mount(page, 1440, { exact: true }, "?groups=opened:month");
+    await expect(page.locator('tr.a-entity-tree__group-row[aria-level="1"] strong')).toHaveText(["September 2026", "October 2026", "No value"]);
+    const september = (await requests(page)).filter(q => (q.filter ?? []).some(f => f.includes("gte")));
+    expect(september.at(-1)!.filter!.map(f => JSON.parse(f))).toEqual([{ field: "opened", operator: "gte", value: "2026-09-01" }, { field: "opened", operator: "lt", value: "2026-10-01" }]);
+  });
+
+  test("the Group dialog offers a date field by month and by quarter", async ({ page }) => {
+    await mount(page, 1440, { exact: true });
+    await page.getByRole("button", { name: "Controls", exact: true }).click();
+    await page.getByRole("menuitem", { name: /^Group by/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("combobox").first().click();
+    await expect(page.getByRole("option", { name: "Opened by month" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Opened by quarter" })).toBeVisible();
   });
 });
 

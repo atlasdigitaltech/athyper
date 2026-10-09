@@ -85,6 +85,10 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
   /** Groups only, no rows; valid only with `group` and exact counts. */
   readonly groupsOnly?: boolean;
   readonly hierarchy?: "nodes" | "orphans" | "matches";
+  /** Per-group aggregates as `field:aggregate` (Tree blueprint A2). */
+  readonly aggregates?: readonly string[];
+  /** The viewer's zone, for grouping a datetime field by month or quarter (A3). */
+  readonly timeZone?: string;
   /** Restricts the request to these records (at most 100), for example the
    * Tree layout resolving a deep link's ancestors. */
   readonly recordIds?: readonly string[];
@@ -100,6 +104,8 @@ export function entityListQuery(state: EntityListQueryState, descriptor: EntityL
     ...(state.columns.length ? { fields: Object.freeze([...state.columns]) } : {}),
     ...(state.group ? { group: state.group } : {}),
     ...(state.groupsOnly ? { groupsOnly: "true" } : {}),
+    ...(state.group && state.aggregates?.length ? { aggregate: Object.freeze([...state.aggregates]) } : {}),
+    ...(state.group && state.timeZone ? { timeZone: state.timeZone } : {}),
     ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),
     ...(state.recordIds?.length ? { recordIds: Object.freeze([...state.recordIds]) } : {}),
     ...(state.filters.length ? { filter: Object.freeze(state.filters.map((filter) => JSON.stringify(filter))) } : {}),

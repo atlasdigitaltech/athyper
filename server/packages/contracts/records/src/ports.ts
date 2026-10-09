@@ -200,6 +200,8 @@ export interface RecordRepositoryListInput {
   readonly filters: ListRecordsQuery["filters"];
   readonly sort: ListRecordsQuery["sort"];
   readonly group?: string;
+  readonly groupBucket?: import("./query.js").RecordGroupBucket;
+  readonly groupAggregates?: readonly import("./query.js").RecordGroupAggregate[];
   /** Skip the row query and return only the group buckets. */
   readonly groupsOnly?: boolean;
   /** Record hierarchy: child existence per row, or orphans only. */

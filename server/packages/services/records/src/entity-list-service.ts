@@ -1134,6 +1134,8 @@ export function createEntityListService(options: {
           sort: query.sort ?? [],
           group: query.group ?? null,
           groupsOnly: query.groupsOnly === true,
+          groupBucket: query.groupBucket ?? null,
+          groupAggregates: query.groupAggregates ?? [],
           hierarchy: query.hierarchy ?? null,
           search: query.search ?? null,
           countMode: query.countMode ?? "none",
@@ -1166,6 +1168,7 @@ export function createEntityListService(options: {
                       ? (groupLabels[index]?.[groupField!.key] ?? "—")
                       : formatGroupLabel(group.value),
                     count: group.count,
+                    ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),
                   }),
                 ),
               ),
@@ -1445,7 +1448,13 @@ export function compileEntityListDescriptor(
         ? configuredFilterOperators(field)
         : Object.freeze([]),
       sortable: field.sortable === true,
-      groupable: groupableForViewer(field, masked, options.length),
+      groupable: groupableForViewer(
+        field,
+        masked,
+        options.length,
+        (descriptor.listPresentation?.limits?.countMode ??
+          descriptor.listPresentation?.countMode) === "exact",
+      ),
       aggregations: Object.freeze(field.list?.aggregations ?? []),
     });
   });
@@ -1994,9 +2003,15 @@ function groupableForViewer(
   field: EntityFieldDescriptor,
   masked: boolean,
   choiceCount: number,
+  exactCounts = false,
 ): boolean {
   if (field.list?.groupable !== true || masked || !field.filterable) return false;
   const operators = configuredFilterOperators(field);
+  // A date field groups by month or quarter (Tree blueprint A3): its buckets
+  // are only known from the group query, so only under exact counts, and each
+  // bucket's records are selected with gte and lt.
+  if (field.type === "date" || field.type === "datetime")
+    return exactCounts && operators.includes("gte") && operators.includes("lt") && (field.required || operators.includes("is_null"));
   if (!operators.includes("eq") || (!field.required && !operators.includes("is_null"))) return false;
   return field.type === "boolean" || (choiceCount > 0 && choiceCount <= LIST_GROUP_CHOICE_LIMIT);
 }

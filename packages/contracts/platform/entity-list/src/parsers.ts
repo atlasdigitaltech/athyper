@@ -929,9 +929,15 @@ function parseState(
       : [record.group];
   const groups: string[] = [];
   for (const [index, candidate] of groupCandidates.entries()) {
-    const key = optionalCode(candidate, `groups[${index}]`);
-    if (key && rules.fields.get(key)?.groupable && !groups.includes(key) && groups.length < ENTITY_LIST_MAX_GROUP_LEVELS)
-      groups.push(key);
+    // `field`, or `field:month` / `field:quarter` for a date field (Tree
+    // blueprint A3); one level per field.
+    const [raw, unit, ...rest] = typeof candidate === "string" ? candidate.split(":") : [candidate];
+    const key = optionalCode(raw, `groups[${index}]`);
+    const field = key ? rules.fields.get(key) : undefined;
+    const dated = field?.valueKind === "date" || field?.valueKind === "datetime";
+    const valid = Boolean(field?.groupable) && !rest.length && (dated ? unit === "month" || unit === "quarter" : unit === undefined);
+    if (key && valid && !groups.some((entry) => entry.split(":")[0] === key) && groups.length < ENTITY_LIST_MAX_GROUP_LEVELS)
+      groups.push(unit ? `${key}:${unit}` : key);
   }
   const spreadsheet =
     record.spreadsheet === undefined
@@ -1280,10 +1286,20 @@ function parseBuckets(value: unknown, name: string) {
     array(value, name).map((candidate, index) => {
       const item = object(candidate, `${name}[${index}]`);
       const count = optionalInteger(item.count, `${name}[${index}].count`, 0);
+      let aggregates: Record<string, number | string | null> | undefined;
+      if (item.aggregates !== undefined) {
+        aggregates = {};
+        for (const [key, raw] of Object.entries(object(item.aggregates, `${name}[${index}].aggregates`))) {
+          if (!/^[a-z][a-z0-9_]*:(sum|average|minimum|maximum)$/.test(key)) throw new TypeError(`${name}[${index}].aggregates key is invalid`);
+          if (raw !== null && typeof raw !== "number" && !(typeof raw === "string" && /^-?\d+(\.\d+)?$/.test(raw))) throw new TypeError(`${name}[${index}].aggregates value is invalid`);
+          aggregates[key] = raw as number | string | null;
+        }
+      }
       return Object.freeze({
         value: json(item.value, `${name}[${index}].value`),
         label: text(item.label, `${name}[${index}].label`),
         ...(count !== undefined ? { count } : {}),
+        ...(aggregates ? { aggregates: Object.freeze(aggregates) } : {}),
       });
     }),
   );

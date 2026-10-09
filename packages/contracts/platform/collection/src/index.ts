@@ -576,7 +576,7 @@ export function adaptEntityCollection(
     density,
   } = descriptor.surface.defaultState;
   // Collections group by one field: the list's first grouping level.
-  const group = groups?.[0];
+  const group = groups?.[0]?.split(":")[0];
   return parseCollectionConfiguration(
     {
       schema: COLLECTION_SCHEMA,

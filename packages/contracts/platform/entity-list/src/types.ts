@@ -170,7 +170,8 @@ export interface SaveableListStateV1 {
   readonly filters: readonly ListFilterV1[];
   readonly sort: readonly ListSortV1[];
   /** Grouping fields, level 1 first (Tree blueprint section 5.1): 1–3, ordered,
-   * unique. A legacy single `group` reads as one level. */
+   * unique. A date field is grouped as `field:month` or `field:quarter` (A3).
+   * A legacy single `group` reads as one level. */
   readonly groups?: readonly string[];
   readonly columns: readonly string[];
   readonly density: ListDensity;
@@ -425,6 +426,8 @@ export interface EntityListResultV1 {
     readonly value: JsonValue;
     readonly label: string;
     readonly count?: number;
+    /** Keyed `field:aggregate`, only when requested (Tree blueprint A2). */
+    readonly aggregates?: Readonly<Record<string, number | string | null>>;
   }[];
 }
 

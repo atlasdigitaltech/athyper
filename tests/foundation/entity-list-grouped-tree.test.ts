@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { groupChoices, groupHeadings, groupedPageState, headingFilter } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
+import { bucketDays, combineAggregates, groupAggregates, groupChoices, groupHeadings, groupLevel, groupedPageState, headingFilters } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
 
 const status = {
   key: "status", label: "Status", valueKind: "enum", defaultVisible: true, defaultOrder: 0, sortable: false, groupable: true, aggregations: [],
@@ -33,9 +33,9 @@ describe("grouped tree headings", () => {
 
   it("selects a heading's records with eq or is_null; Unmapped values load per value", () => {
     const [active, , , none] = groupHeadings(status, groupChoices(status, labels), undefined);
-    assert.deepEqual(headingFilter("status", active!), { field: "status", operator: "eq", value: "active" });
-    assert.deepEqual(headingFilter("status", none!), { field: "status", operator: "is_null" });
-    assert.equal(headingFilter("status", { key: "u", kind: "unmapped", values: ["legacy"] }), undefined);
+    assert.deepEqual(headingFilters(status, active!), [{ field: "status", operator: "eq", value: "active" }]);
+    assert.deepEqual(headingFilters(status, none!), [{ field: "status", operator: "is_null" }]);
+    assert.equal(headingFilters(status, { key: "u", kind: "unmapped", values: ["legacy"] }), undefined);
   });
 
   it("turns the list's own page into a groups-only request under exact counts only", () => {
@@ -45,3 +45,40 @@ describe("grouped tree headings", () => {
     assert.equal(groupedPageState({ cursor: "x" }, true).cursor, "x");
   });
 });
+
+describe("group aggregates and date buckets (A2, A3)", () => {
+  const due = { ...status, key: "due", valueKind: "date", filterOptions: undefined, filterOperators: ["gte", "lt", "is_null"] } as unknown as ListFieldDescriptorV1;
+  const posted = { ...due, key: "posted", valueKind: "datetime" } as unknown as ListFieldDescriptorV1;
+
+  it("reads date levels and the days a bucket covers", () => {
+    assert.deepEqual(groupLevel("due:month"), { field: "due", unit: "month" });
+    assert.deepEqual(groupLevel("status"), { field: "status" });
+    assert.deepEqual(bucketDays("2026-12"), { start: "2026-12-01", end: "2027-01-01" });
+    assert.deepEqual(bucketDays("2026-Q4"), { start: "2026-10-01", end: "2027-01-01" });
+    assert.deepEqual(bucketDays("2026-Q1"), { start: "2026-01-01", end: "2026-04-01" });
+  });
+
+  it("draws date buckets in order from the group query, with No value, and selects each by gte and lt", () => {
+    const headings = groupHeadings(due, [], [{ value: "2026-09", count: 2 }, { value: "2026-10", count: 3 }, { value: null, count: 1 }], "month");
+    assert.deepEqual(headings.map((heading) => [heading.kind, heading.value ?? null, heading.count]), [["choice", "2026-09", 2], ["choice", "2026-10", 3], ["none", null, 1]]);
+    assert.deepEqual(headingFilters(due, headings[1]!, "month"), [{ field: "due", operator: "gte", value: "2026-10-01" }, { field: "due", operator: "lt", value: "2026-11-01" }]);
+    // A datetime bucket uses the zoned start of those days.
+    const zoned = headingFilters(posted, headings[1]!, "month", "Asia/Kuala_Lumpur")!;
+    assert.deepEqual(zoned.map((filter) => [filter.operator, filter.value]), [["gte", "2026-09-30T16:00:00.000Z"], ["lt", "2026-10-31T16:00:00.000Z"]]);
+  });
+
+  it("asks for the first non-count aggregate of each visible numeric column, and combines Unmapped values without averages", () => {
+    const descriptor = { fields: [{ key: "budget", valueKind: "money", aggregations: ["count", "sum"] }, { key: "name", valueKind: "string", aggregations: ["count"] }, { key: "rate", valueKind: "decimal", aggregations: ["average"] }] } as never;
+    assert.deepEqual(groupAggregates(descriptor, ["name", "budget", "rate"]), ["budget:sum", "rate:average"]);
+    assert.deepEqual(combineAggregates([{ "budget:sum": 2, "rate:average": 1 }, { "budget:sum": "3.5", "rate:average": 4 }]), { "budget:sum": 5.5 });
+    const headings = groupHeadings(status, [{ value: "active", label: "Active" }], [{ value: "active", count: 1, aggregates: { "budget:sum": 10 } }, { value: "legacy", count: 1, aggregates: { "budget:sum": 4 } }, { value: "retired", count: 1, aggregates: { "budget:sum": 6 } }]);
+    assert.deepEqual(headings.map((heading) => heading.aggregates), [{ "budget:sum": 10 }, { "budget:sum": 10 }]);
+  });
+
+  it("sends aggregates and the zone with the level-1 groups-only request", () => {
+    const page = groupedPageState({ groups: ["due:month"] }, true, { aggregates: ["budget:sum"], timeZone: "Asia/Kuala_Lumpur" });
+    assert.deepEqual([page.group, page.groupsOnly, page.aggregates, page.timeZone], ["due:month", true, ["budget:sum"], "Asia/Kuala_Lumpur"]);
+    assert.equal(groupedPageState({ groups: ["status"] }, true, { timeZone: "UTC" }).timeZone, undefined);
+  });
+});
+

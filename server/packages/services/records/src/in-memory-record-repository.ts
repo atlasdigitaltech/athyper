@@ -95,7 +95,7 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
         return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(input.countMode === "exact" ? { total } : {}), countMode: input.countMode === "exact" ? "exact" as const : "none" as const } };
       }
       // Group counts only under exact counts (layout foundation section 5).
-      const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group) : undefined;
+      const groups = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates) : undefined;
       if (input.groupsOnly && groups)
         return { data: [], groups, pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       const cursor = decodeRecordCursor(input);
@@ -195,7 +195,33 @@ export function relativeDateMatches(actual: unknown, relative: unknown): boolean
   };
   return timestamp >= bound(range.from) && timestamp < bound(range.to);
 }
-function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string) { const counts = new Map<unknown, number>(); for (const row of rows) { const item = value(row, descriptor, field) ?? null; counts.set(item, (counts.get(item) ?? 0) + 1); } return Object.freeze([...counts].sort(([left], [right]) => compare(left, right)).map(([item, count]) => Object.freeze({ value: item, count }))); }
+function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = []) {
+  // As the SQL does: a date bucket (A3) is the year and month or quarter, in
+  // the viewer's zone for a datetime; aggregates (A2) per bucket.
+  const type = descriptor.fields.find((item) => item.key === field)?.type;
+  const keyOf = (raw: unknown): unknown => {
+    if (!bucket || raw === null || raw === undefined) return raw ?? null;
+    const instant = new Date(type === "date" ? `${String(raw).slice(0, 10)}T00:00:00Z` : String(raw));
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: type === "date" ? "UTC" : (bucket.timeZone ?? "UTC"), year: "numeric", month: "2-digit" }).formatToParts(instant);
+    const year = parts.find((part) => part.type === "year")!.value, month = Number(parts.find((part) => part.type === "month")!.value);
+    return bucket.unit === "quarter" ? `${year}-Q${Math.ceil(month / 3)}` : `${year}-${String(month).padStart(2, "0")}`;
+  };
+  const groups = new Map<unknown, Row[]>();
+  for (const row of rows) { const key = keyOf(value(row, descriptor, field)); groups.set(key, [...(groups.get(key) ?? []), row]); }
+  const numeric = (list: Row[], key: string) => list.map((row) => value(row, descriptor, key)).filter((item) => item !== null && item !== undefined).map(Number);
+  const compute = (list: Row[], item: NonNullable<RecordRepositoryListInput["groupAggregates"]>[number]): number | null => {
+    const values = numeric(list, item.field);
+    if (!values.length) return null;
+    if (item.aggregate === "sum") return values.reduce((sum, next) => sum + next, 0);
+    if (item.aggregate === "average") return values.reduce((sum, next) => sum + next, 0) / values.length;
+    return item.aggregate === "minimum" ? Math.min(...values) : Math.max(...values);
+  };
+  return Object.freeze([...groups].sort(([left], [right]) => (left === null ? 1 : right === null ? -1 : compare(left, right))).map(([item, list]) => Object.freeze({
+    value: item,
+    count: list.length,
+    ...(aggregates.length ? { aggregates: Object.freeze(Object.fromEntries(aggregates.map((aggregate) => [`${aggregate.field}:${aggregate.aggregate}`, compute(list, aggregate)]))) } : {}),
+  })));
+}
 function compareRows(a: Row, b: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[]): number { for (const item of sort) { const result = ordered(value(a, descriptor, item.field), value(b, descriptor, item.field), item); if (result) return result; } return compare(String(a[descriptor.storage.idField]), String(b[descriptor.storage.idField])); }
 function afterCursor(row: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[], cursor: DecodedRecordCursor): boolean { for (const [index, item] of sort.entries()) { const result = ordered(value(row, descriptor, item.field), cursor.values[index], item); if (result) return result > 0; } return compare(String(row[descriptor.storage.idField]), cursor.id) > 0; }
 function ordered(a: unknown, b: unknown, sort: RecordSort): number { const aNull = a === null || a === undefined, bNull = b === null || b === undefined; if (aNull || bNull) { if (aNull && bNull) return 0; const nulls = sort.nulls ?? (sort.direction === "asc" ? "last" : "first"); return aNull ? (nulls === "first" ? -1 : 1) : (nulls === "first" ? 1 : -1); } const result = compare(a, b); return sort.direction === "desc" ? -result : result; }

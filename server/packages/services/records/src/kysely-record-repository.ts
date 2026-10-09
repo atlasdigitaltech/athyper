@@ -303,7 +303,45 @@ export function relativeDateCondition(ref: RawBuilder<unknown>, value: unknown):
     : sql.raw(`date_trunc('${range.unit}', CURRENT_DATE) + INTERVAL '${range.unit === "quarter" ? offset * 3 : offset} ${range.unit === "quarter" ? "months" : `${range.unit}s`}'`);
   return sql`${ref} >= ${bound(range.from)} AND ${ref} < ${bound(range.to)}`;
 }
-async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) { const ref = sql.ref(fieldPath(input.descriptor, input.group!)); const result = await sql<{ value: unknown; count: string | number | bigint }>`SELECT ${ref} AS value, count(*) AS count FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)} GROUP BY ${ref} ORDER BY ${ref} ASC`.execute(executor); return Object.freeze(result.rows.map((row) => Object.freeze({ value: row.value, count: Number(row.count) }))); }
+/** Group buckets with their counts and, when requested, aggregates (Tree
+ * blueprint A2), grouping a date field by month or quarter (A3) through
+ * date_trunc in the viewer's zone for a datetime field. One GROUP BY. */
+async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
+  const field = input.descriptor.fields.find((item) => item.key === input.group);
+  if (!field) throw new Error(`Unknown descriptor field: ${input.group}`);
+  const ref = sql.ref(field.storagePath);
+  const bucket = input.groupBucket;
+  const key = bucket
+    ? (() => {
+        const local = field.type === "datetime" ? sql`(${ref} AT TIME ZONE ${bucket.timeZone ?? "UTC"})` : sql`${ref}::timestamp`;
+        const unit = bucket.unit === "quarter" ? sql.lit("quarter") : sql.lit("month");
+        const format = bucket.unit === "quarter" ? sql.lit('YYYY-"Q"Q') : sql.lit("YYYY-MM");
+        return sql`to_char(date_trunc(${unit}, ${local}), ${format})`;
+      })()
+    : sql`${ref}`;
+  const aggregates = (input.groupAggregates ?? []).map((item) => {
+    const target = sql.ref(fieldPath(input.descriptor, item.field));
+    const fn = { sum: sql`sum`, average: sql`avg`, minimum: sql`min`, maximum: sql`max` }[item.aggregate];
+    return { name: `${item.field}:${item.aggregate}`, select: sql`${fn}(${target})` };
+  });
+  const result = await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint }>`
+    SELECT ${key} AS value, count(*) AS count${sql.join(aggregates.map((item, index) => sql`, ${item.select} AS ${sql.ref(`__aggregate_${index}`)}`), sql``)}
+      FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
+     GROUP BY 1 ORDER BY 1 ASC NULLS LAST`.execute(executor);
+  return Object.freeze(result.rows.map((row) => Object.freeze({
+    value: row.value,
+    count: Number(row.count),
+    ...(aggregates.length ? { aggregates: Object.freeze(Object.fromEntries(aggregates.map((item, index) => [item.name, aggregateValue(row[`__aggregate_${index}`])]))) } : {}),
+  })));
+}
+/** An aggregate as a JSON number when it is exact, otherwise its decimal text. */
+export function aggregateValue(value: unknown): number | string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = String(value);
+  const number = Number(text);
+  return Number.isFinite(number) && (Number.isSafeInteger(number) || String(number) === text.replace(/\.?0+$/, "")) ? number : text;
+}
 function orderBy(input: RecordRepositoryListInput): RawBuilder<unknown> { const items = (input.sort ?? []).map((item) => sql`${sql.ref(fieldPath(input.descriptor, item.field))} ${item.direction === "desc" ? sql`DESC` : sql`ASC`} ${item.nulls === "first" ? sql`NULLS FIRST` : item.nulls === "last" ? sql`NULLS LAST` : sql``}`); items.push(sql`${sql.ref(input.descriptor.storage.idField)} ASC`); return sql`ORDER BY ${sql.join(items)}`; }
 function cursorCondition(input: RecordRepositoryListInput, cursor: DecodedRecordCursor): RawBuilder<unknown> {
   const alternatives: RawBuilder<unknown>[] = [];

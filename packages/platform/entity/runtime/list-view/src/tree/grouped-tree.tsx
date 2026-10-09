@@ -13,7 +13,7 @@ import type {
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { useDateRangePages } from "../date-range/date-range-data";
 import { formatFieldValue } from "../field-format";
-import { groupChoices, groupHeadings, headingFilter, type GroupHeading } from "./grouped-tree-model";
+import { GROUP_HEADING_LIMIT, groupChoices, groupHeadings, groupLevel, headingFilters, type GroupHeading, type GroupLevel } from "./grouped-tree-model";
 import { TreeIndent, TreeToggle } from "./tree-parts";
 
 type EntityIntl = ReturnType<typeof useEntityI18n>;
@@ -34,11 +34,16 @@ export interface GroupedTreeSource {
   readonly refreshKey: string;
   readonly query: ListLocationStateV1;
   readonly exact: boolean;
+  /** Per-group aggregates as `field:aggregate` (A2), exact counts only. */
+  readonly aggregates?: readonly string[];
+  /** The viewer's zone, for date buckets (A3). */
+  readonly timeZone?: string;
 }
 
 interface TreeContext {
   readonly descriptor: EntityListDescriptorV1;
   readonly fields: readonly ListFieldDescriptorV1[];
+  readonly levels: readonly GroupLevel[];
   readonly source: GroupedTreeSource;
   readonly variant: "table" | "cards";
   readonly columnCount: number;
@@ -57,7 +62,7 @@ function useGroupBuckets(input: {
   readonly filters: readonly ListFilterV1[];
 }) {
   const { ctx, group, filters } = input;
-  const [state, setState] = useState<{ readonly buckets?: readonly { readonly value: JsonValue; readonly count?: number }[]; readonly failed?: boolean }>({});
+  const [state, setState] = useState<{ readonly buckets?: readonly { readonly value: JsonValue; readonly count?: number; readonly aggregates?: GroupHeading["aggregates"] }[]; readonly failed?: boolean }>({});
   const key = group ? JSON.stringify([ctx.descriptor.revision.descriptorHash, group, filters, ctx.source.query.query ?? null, ctx.source.query.standardViewKey ?? null, ctx.source.query.filters, ctx.source.refreshKey]) : undefined;
   const latest = useRef(input);
   latest.current = input;
@@ -69,7 +74,19 @@ function useGroupBuckets(input: {
     ctx.source.client
       .request(entityListOperation, {
         params: { entityCode: ctx.descriptor.entity.code },
-        query: entityListQuery({ ...ctx.source.query, filters: [...ctx.source.query.filters, ...filters], group, groupsOnly: true, cursor: undefined }, ctx.descriptor, ctx.source.scope),
+        query: entityListQuery(
+          {
+            ...ctx.source.query,
+            filters: [...ctx.source.query.filters, ...filters],
+            group,
+            groupsOnly: true,
+            cursor: undefined,
+            ...(ctx.source.aggregates?.length ? { aggregates: ctx.source.aggregates } : {}),
+            ...(groupLevel(group).unit && ctx.source.timeZone ? { timeZone: ctx.source.timeZone } : {}),
+          },
+          ctx.descriptor,
+          ctx.source.scope,
+        ),
         signal: controller.signal,
       })
       .then((page) => {
@@ -86,10 +103,35 @@ function useGroupBuckets(input: {
   return state;
 }
 
-function headingLabel(heading: GroupHeading, intl: EntityIntl): string {
+function headingLabel(heading: GroupHeading, intl: EntityIntl, unit?: GroupLevel["unit"]): string {
   if (heading.kind === "none") return intl.message("list.board.noValue");
   if (heading.kind === "unmapped") return intl.message("list.gantt.unmapped");
+  if (unit) {
+    // A date bucket (A3): "October 2026" or "Q4 2026".
+    const bucket = String(heading.value ?? "");
+    const quarter = /^(\d{4})-Q([1-4])$/.exec(bucket);
+    if (quarter) return intl.message("list.gantt.quarterTitle", { quarter: Number(quarter[2]), year: quarter[1]! });
+    return intl.date(`${bucket}-01T00:00:00Z`, { month: "long", year: "numeric", timeZone: "UTC" });
+  }
   return heading.label ?? "";
+}
+
+/** A heading's aggregates (A2), labelled by field and aggregate and formatted
+ * like the field. */
+function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDescriptorV1[], intl: EntityIntl): ReactNode {
+  const entries = Object.entries(heading.aggregates ?? {});
+  if (!entries.length) return null;
+  return entries.map(([key, value]) => {
+    const [fieldKey, aggregate] = key.split(":");
+    const field = fields.find((item) => item.key === fieldKey);
+    if (!field || value === null) return null;
+    return (
+      <span key={key} className="a-entity-tree__aggregate">
+        <span className="a-entity-tree__aggregate-label">{intl.message(`list.group.aggregate.${aggregate}`, { field: field.label })}</span>{" "}
+        <span className="a-entity-tree__aggregate-value">{formatFieldValue(typeof value === "string" ? Number(value) : value, field, intl)}</span>
+      </span>
+    );
+  });
 }
 
 function choicesFor(field: ListFieldDescriptorV1, intl: EntityIntl) {
@@ -114,15 +156,18 @@ export function GroupedTree({ descriptor, groups, levelOne, source, variant, col
    * selection can cover every loaded record. Must be stable. */
   readonly onGroupRows?: (key: string, rows: readonly EntityListRowV1[]) => void;
 }) {
-  const fields = groups.map((key) => descriptor.fields.find((field) => field.key === key)).filter((field): field is ListFieldDescriptorV1 => Boolean(field));
+  const levels = groups.map(groupLevel).filter((level) => descriptor.fields.some((field) => field.key === level.field));
+  const fields = levels.map((level) => descriptor.fields.find((field) => field.key === level.field)!);
   if (!fields.length) return null;
-  const ctx: TreeContext = { descriptor, fields, source, variant, columnCount, intl, ...(command ? { command } : {}), renderRecords, ...(onGroupRows ? { onGroupRows } : {}) };
-  const headings = groupHeadings(fields[0]!, choicesFor(fields[0]!, intl), source.exact ? (levelOne ?? []) : undefined);
+  const ctx: TreeContext = { descriptor, fields, levels, source, variant, columnCount, intl, ...(command ? { command } : {}), renderRecords, ...(onGroupRows ? { onGroupRows } : {}) };
+  const all = groupHeadings(fields[0]!, choicesFor(fields[0]!, intl), source.exact ? (levelOne ?? []) : undefined, levels[0]!.unit);
+  const headings = all.slice(0, GROUP_HEADING_LIMIT);
   return (
     <Context.Provider value={ctx}>
       {headings.map((heading, index) => (
         <GroupNode key={heading.key} heading={heading} fieldIndex={0} level={1} path="" filters={[]} defaultExpanded={index === 0} first={index === 0} />
       ))}
+      {all.length > headings.length ? <Message level={1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
     </Context.Provider>
   );
 }
@@ -142,6 +187,7 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
   const ctx = useContext(Context)!;
   const { intl, source, variant } = ctx;
   const field = ctx.fields[fieldIndex]!;
+  const unit = ctx.levels[fieldIndex]!.unit;
   const last = fieldIndex === ctx.fields.length - 1;
   const [expanded, setExpanded] = useState(defaultExpanded);
   const loadedOnce = useRef(defaultExpanded);
@@ -157,13 +203,15 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     else if (command.kind === "expandAll") { if (loadedOnce.current) setExpanded(true); }
     else setExpanded(level < command.level && loadedOnce.current);
   }, [ctx.command, level]);
-  const filter = headingFilter(field.key, heading);
-  const own = filter ? [...filters, filter] : filters;
+  const filter = headingFilters(field, heading, unit, source.timeZone);
+  const own = filter ? [...filters, ...filter] : filters;
   const key = `${path}/${heading.key}`;
-  const label = headingLabel(heading, intl);
+  const label = headingLabel(heading, intl, unit);
   const nextField = last ? undefined : ctx.fields[fieldIndex + 1];
+  const nextLevel = last ? undefined : ctx.levels[fieldIndex + 1];
+  const nextEntry = nextLevel ? (nextLevel.unit ? `${nextLevel.field}:${nextLevel.unit}` : nextLevel.field) : undefined;
   const wantsBuckets = loadedOnce.current && heading.kind !== "unmapped" && nextField && source.exact;
-  const buckets = useGroupBuckets({ ctx, group: wantsBuckets ? nextField.key : undefined, filters: own });
+  const buckets = useGroupBuckets({ ctx, group: wantsBuckets ? nextEntry : undefined, filters: own });
   const wantsRecords = loadedOnce.current && heading.kind !== "unmapped" && last;
   const records = useDateRangePages({
     client: source.client,
@@ -188,11 +236,17 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
           fieldIndex={fieldIndex} level={level + 1} path={key} filters={filters} defaultExpanded={false} visible={shown} />
       ));
     } else if (nextField) {
-      const subheadings = source.exact
-        ? buckets.buckets ? groupHeadings(nextField, choicesFor(nextField, intl), buckets.buckets) : undefined
-        : groupHeadings(nextField, choicesFor(nextField, intl), undefined);
+      const allSubheadings = source.exact
+        ? buckets.buckets ? groupHeadings(nextField, choicesFor(nextField, intl), buckets.buckets, nextLevel?.unit) : undefined
+        : groupHeadings(nextField, choicesFor(nextField, intl), undefined, nextLevel?.unit);
+      const subheadings = allSubheadings?.slice(0, GROUP_HEADING_LIMIT);
       children = subheadings?.length
-        ? subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} visible={shown} />)
+        ? (
+          <>
+            {subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} visible={shown} />)}
+            {shown && allSubheadings!.length > subheadings.length ? <Message level={level + 1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
+          </>
+        )
         : !shown
           ? null
           : buckets.failed
@@ -229,6 +283,7 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
       {toggle}
       <strong>{label}</strong>
       {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
+      {source.exact ? headingAggregates(heading, ctx.descriptor.fields, intl) : null}
     </>
   );
   if (!visible) return <>{children}</>;

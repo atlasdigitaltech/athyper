@@ -47,6 +47,11 @@ export interface ListRecordsQuery {
   /** Requested readable response fields. The server adds identity and query-internal fields as required. */
   readonly fields?: readonly string[];
   readonly group?: string;
+  /** Groups a date field by month or quarter (Tree blueprint A3); `timeZone`
+   * is the viewer's zone, required for a datetime field. */
+  readonly groupBucket?: RecordGroupBucket;
+  /** Per-group aggregates (Tree blueprint A2); only with `group` and exact counts. */
+  readonly groupAggregates?: readonly RecordGroupAggregate[];
   /** Groups only, no rows (Tree blueprint section 5.1). Valid only with
    * `group` and exact counts and no cursor. */
   readonly groupsOnly?: boolean;
@@ -72,6 +77,15 @@ export interface GetRecordQuery {
   readonly hydrateReferences?: boolean;
 }
 
+export interface RecordGroupBucket {
+  readonly unit: "month" | "quarter";
+  readonly timeZone?: string;
+}
+export interface RecordGroupAggregate {
+  readonly field: string;
+  readonly aggregate: "sum" | "average" | "minimum" | "maximum";
+}
+
 export interface RecordListResult {
   readonly data: readonly Readonly<Record<string, unknown>>[];
   /** Per row of a hierarchy request: has at least one child the viewer can read. */
@@ -84,7 +98,12 @@ export interface RecordListResult {
   readonly matchesTruncated?: boolean;
   /** Matches whose path does not reach a root within the maximum depth (not returned). */
   readonly matchesBeyondDepth?: number;
-  readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
+  readonly groups?: readonly Readonly<{
+    readonly value: unknown;
+    readonly count: number;
+    /** Keyed `field:aggregate` (A2). */
+    readonly aggregates?: Readonly<Record<string, number | string | null>>;
+  }>[];
   readonly pagination: {
     readonly pageSize: number;
     readonly hasMore: boolean;

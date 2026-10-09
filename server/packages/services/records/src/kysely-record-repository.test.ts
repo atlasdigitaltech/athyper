@@ -171,6 +171,14 @@ it("computes child existence and orphans inside the visible set with aliased cor
   expect(statements[0]).toContain('bool_or("__up_id" = $');
   expect(statements[1]).toContain('WITH RECURSIVE "__tree_down"');
   expect(statements[1]).toContain('"parent_id" = "__tree_down"."__down_id"');
+  // Group aggregates (A2) and date buckets (A3) are one GROUP BY.
+  statements.length = 0;
+  const dated = { ...tree, fields: [...tree.fields, { key: "posted", storagePath: "posted_at", type: "datetime", required: true, writableOn: [], filterable: true }, { key: "amount", storagePath: "amount", type: "money", required: true, writableOn: [] }] } as unknown as EntityRuntimeDescriptor;
+  await repository.list({ ...input, descriptor: dated, filters: [], countMode: "exact", groupsOnly: true, group: "posted", groupBucket: { unit: "quarter", timeZone: "Asia/Kuala_Lumpur" }, groupAggregates: [{ field: "amount", aggregate: "sum" }] });
+  expect(statements[0]).toContain("to_char(date_trunc('quarter', (\"posted_at\" AT TIME ZONE $");
+  expect(statements[0]).toContain(`'YYYY-"Q"Q'`);
+  expect(statements[0]).toContain('sum("amount") AS "__aggregate_0"');
+  expect(statements[0]).toContain("GROUP BY 1 ORDER BY 1 ASC NULLS LAST");
   // An ordinary request computes no child existence and returns no child flags.
   statements.length = 0;
   const flat = await repository.list(input);

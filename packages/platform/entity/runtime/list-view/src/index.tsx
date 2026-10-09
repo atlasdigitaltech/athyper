@@ -103,7 +103,11 @@ import {
   type TreeCommand,
 } from "./tree/grouped-tree";
 import { handleTreeKeyDown } from "./tree/tree-keyboard";
-import { groupedPageState } from "./tree/grouped-tree-model";
+import {
+  groupAggregates,
+  groupEntryLabel,
+  groupedPageState,
+} from "./tree/grouped-tree-model";
 import {
   recordQuery,
   treeOrdered,
@@ -1181,6 +1185,10 @@ function EntityCollectionRuntime({
               groupedPageState(
                 state,
                 descriptor.limits.countMode === "exact",
+                {
+                  aggregates: groupAggregates(descriptor, state.columns),
+                  timeZone: localization.timeZone,
+                },
               ),
           descriptor,
           scopeCoordinate,
@@ -1964,6 +1972,16 @@ function EntityCollectionRuntime({
                     refreshKey: `${authorityKey}:${refreshAttempt}`,
                     query: pageState ?? state,
                     exact: descriptor.limits.countMode === "exact",
+                    // A2: aggregates for the visible columns, exact counts only.
+                    ...(descriptor.limits.countMode === "exact"
+                      ? {
+                          aggregates: groupAggregates(
+                            descriptor,
+                            (pageState ?? state).columns,
+                          ),
+                        }
+                      : {}),
+                    timeZone: localization.timeZone,
                   }}
                   pageCurrent={resultsCurrent}
                   revealId={state.treeNode}
@@ -2298,10 +2316,7 @@ function ListChrome({
       : undefined);
   const groupLabel = state.groups?.length
     ? state.groups
-        .map(
-          (key) =>
-            descriptor.fields.find((field) => field.key === key)?.label ?? key,
-        )
+        .map((entry) => groupEntryLabel(entry, descriptor.fields, entityIntl))
         .join(" › ")
     : "None";
   const scopeLabel = descriptor.scope.labels.at(-1);
