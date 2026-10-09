@@ -121,6 +121,22 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   the viewer can read, never from the columns on screen, and only on a declared
   evaluation amount or a proven single currency.
 
+## Entity list Aggregate (Summary)
+
+- The active design is the
+  [Entity list Aggregate blueprint](docs/blueprints/entity-list-aggregate/blueprint.md).
+  Read it before implementing grouped totals, pivoted summaries or report
+  views, and update it in place. It is proposed until the project owner
+  approves its contract properties; do not implement unapproved properties.
+- Summary is a Layout of the shared Entity list, available to any eligible
+  Entity through governed, published Meta Entity properties. Its read is new
+  parameters on the existing list operation, never a second aggregate or
+  report endpoint, route, page or provider stack.
+- A measure's additivity is declared in metadata, never inferred. Totals are
+  computed by the server from base rows in the same statement, never summed
+  from group rows or loaded cells, and a semi-additive measure is never summed
+  across its time fields.
+
 ## Entity list Compare
 
 - The active design is the
