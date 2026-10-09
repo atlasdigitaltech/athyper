@@ -7,6 +7,7 @@ const ports = vi.hoisted(() => ({
   gate: vi.fn(),
   authority: vi.fn(),
   inputs: vi.fn(),
+  rollbackInputs: vi.fn(),
 }));
 vi.mock("@athyper/server-platform-iam", async (importOriginal) => {
   const actual =
@@ -35,10 +36,13 @@ vi.mock("../shared/publication/local-publication-policy.js", () => ({
 vi.mock("../shared/publication/local-publication-inputs.js", () => ({
   resolveLocalPublicationInputs: ports.inputs,
 }));
+vi.mock("../shared/publication/local-rollback-inputs.js", () => ({
+  resolveLocalRollbackInputs: ports.rollbackInputs,
+}));
 import { createLocalPublicationAdmission } from "./local-publication.js";
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-it.each(["draft", "in_review", "approved", "published"])(
+it.each(["draft", "in_review", "approved", "published", "rollback"])(
   "%s admission rebuilds exact pins, replays and rejects caller-selected pins",
   async (status) => {
     const host = {
@@ -76,7 +80,7 @@ it.each(["draft", "in_review", "approved", "published"])(
       developerPrincipalIds: [id(2)],
       authorWorkloadId: id(3),
       publisherWorkloadId: id(4),
-      actions: ["publish", "recover"],
+      actions: ["publish", "recover", "rollback"],
       destinations: [{ plane: "studio", instance: "dev" }],
     };
     ports.authorize.mockResolvedValue({ allowed: true });
@@ -96,6 +100,7 @@ it.each(["draft", "in_review", "approved", "published"])(
         },
       ],
     });
+    ports.rollbackInputs.mockImplementation(() => ports.inputs());
     let stored: LocalPublicationRequest | null = null;
     const query = vi.fn(async (text: string, params: unknown[] = []) => {
       if (text.includes("admit_local_publication_command")) {
@@ -108,7 +113,13 @@ it.each(["draft", "in_review", "approved", "published"])(
           : text.includes("read_local_publication_admission")
             ? [{ request: stored }]
             : text.includes("read_native_product_review_source")
-              ? [{ revision: 1, status }]
+              ? [
+                  {
+                    revision: 1,
+                    status: status === "rollback" ? "published" : status,
+                    source_hash: "b".repeat(64),
+                  },
+                ]
               : [],
       };
     });
@@ -163,12 +174,22 @@ it.each(["draft", "in_review", "approved", "published"])(
         configuration,
         source: vi.fn().mockResolvedValue({}),
       });
-      const command = { requestId: id(7), expectedRevision: 1 };
+      const command = {
+        requestId: id(7),
+        expectedRevision: 1,
+        ...(status === "rollback" ? { action: "rollback" as const } : {}),
+      };
       const first = await admit(context, id(6), command);
       expect(first).toMatchObject({ stage: "admitted", replayed: false });
       expect(
         (stored as unknown as LocalPublicationRequest).admission.action,
-      ).toBe(status === "published" ? "recover" : "publish");
+      ).toBe(
+        status === "rollback"
+          ? "rollback"
+          : status === "published"
+            ? "recover"
+            : "publish",
+      );
       expect(
         (stored as unknown as LocalPublicationRequest).admission
           .developerPrincipalId,

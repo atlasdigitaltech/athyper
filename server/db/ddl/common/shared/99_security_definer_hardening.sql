@@ -469,6 +469,12 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Exact predecessor coordinates after authenticated native draft admission; no generic applied rows, manifests or payload access."
+  },
+  {
+    "signature": "publication.read_local_rollback_targets(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Read exact signed and acknowledged native product artifacts for current local rollback authority."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -694,7 +700,9 @@ BEGIN
   "publication.native_worker_entity_visible(uuid)",
   "publication.pending_local_publication_requests(text, integer)",
   "publication.read_local_publication_admission(uuid)",
+  "publication.read_local_publication_predecessor(uuid)",
   "publication.read_local_publication_request(text)",
+  "publication.read_local_rollback_targets(uuid)",
   "publication.transition_local_publication_request(text, text, jsonb)",
   "runtime_meta.fn_activate_release(uuid, jsonb)",
   "runtime_meta.fn_active_business_partner_definition(text)",
@@ -714,8 +722,7 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)",
-  "publication.read_local_publication_predecessor(uuid)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;

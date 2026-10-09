@@ -1,3 +1,4 @@
+import { resolveLocalRollbackInputs } from "../shared/publication/local-rollback-inputs.js";
 import { sql, type Kysely } from "kysely";
 import type { Application } from "express";
 import type {
@@ -50,7 +51,11 @@ export function createLocalPublicationAdmission(options: Options) {
   return async (
     context: VerifiedRequestContext,
     id: string,
-    command: { requestId: string; expectedRevision: number },
+    command: {
+      requestId: string;
+      expectedRevision: number;
+      action?: "rollback";
+    },
   ) => {
     // This new local-basis action is not a human policy/release review. Preserve
     // verified session assurance and IAM as supplied; do not synthesize elevation
@@ -68,7 +73,11 @@ export function createLocalPublicationAdmission(options: Options) {
     if (
       !uuid.test(id) ||
       !command ||
-      Object.keys(command).sort().join() !== "expectedRevision,requestId" ||
+      ![
+        "expectedRevision,requestId",
+        "action,expectedRevision,requestId",
+      ].includes(Object.keys(command).sort().join()) ||
+      (command.action !== undefined && command.action !== "rollback") ||
       !uuid.test(command.requestId) ||
       !Number.isSafeInteger(command.expectedRevision) ||
       command.expectedRevision < 1
@@ -135,6 +144,8 @@ export function createLocalPublicationAdmission(options: Options) {
         ).rows[0]?.request;
         if (old) {
           if (
+            (old.admission.action === "rollback") !==
+              (command.action === "rollback") ||
             old.inputs.changeSetId !== id ||
             old.inputs.revision !== command.expectedRevision ||
             old.authority.id !== authority.id ||
@@ -157,7 +168,8 @@ export function createLocalPublicationAdmission(options: Options) {
             revision: string;
             status: string;
             predecessor: string | null;
-          }>`SELECT root_json->>'lock_version' AS revision,root_json->>'status' AS status,root_json->>'base_release_id' AS predecessor FROM publication.read_native_product_review_source(${id}::uuid,4194304)`.execute(
+            source_hash: string;
+          }>`SELECT root_json->>'lock_version' AS revision,root_json->>'status' AS status,root_json->>'base_release_id' AS predecessor,graph_hash AS source_hash FROM publication.read_native_product_review_source(${id}::uuid,4194304)`.execute(
             tx,
           )
         ).rows[0];
@@ -175,17 +187,28 @@ export function createLocalPublicationAdmission(options: Options) {
             "LOCAL_PUBLICATION_DRAFT_REQUIRED",
             "A draft or exact local publication in progress is required",
           );
-        const source = await options.source(tx, id);
-        const inputs = await resolveLocalPublicationInputs({
-          database: tx,
-          authority: "control",
-          targetDatabases: options.targetDatabases,
-          source,
-          changeSetId: id,
-          revision: command.expectedRevision,
-          predecessorReleaseId: root.predecessor,
-          instance: configuration.instance,
-        });
+        if (command.action === "rollback" && root.status !== "published")
+          throw Error("LOCAL_ROLLBACK_PUBLISHED_SOURCE_REQUIRED");
+        const inputs =
+          command.action === "rollback"
+            ? await resolveLocalRollbackInputs({
+                database: tx,
+                targetDatabases: options.targetDatabases,
+                changeSetId: id,
+                revision: command.expectedRevision,
+                sourceHash: root.source_hash,
+                instance: configuration.instance,
+              })
+            : await resolveLocalPublicationInputs({
+                database: tx,
+                authority: "control",
+                targetDatabases: options.targetDatabases,
+                source: await options.source(tx, id),
+                changeSetId: id,
+                revision: command.expectedRevision,
+                predecessorReleaseId: root.predecessor,
+                instance: configuration.instance,
+              });
         const request = createLocalPublicationRequest(
           authority,
           {
@@ -198,7 +221,12 @@ export function createLocalPublicationAdmission(options: Options) {
             authorWorkloadId: configuration.author.principalId,
             publisherWorkloadId: configuration.publisher.principalId,
             scope: { kind: "product" },
-            action: root.status === "published" ? "recover" : "publish",
+            action:
+              command.action === "rollback"
+                ? "rollback"
+                : root.status === "published"
+                  ? "recover"
+                  : "publish",
             targets: inputs.targets.map(({ plane, instance }) => ({
               plane,
               instance,

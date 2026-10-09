@@ -61,6 +61,7 @@ export async function enqueueLocalPublicationPreparation(options: {
 export function createLocalPublicationPreparationHandler(options: {
   configuration: Configuration;
   transition: Transition;
+  rollback?: (hash: string) => Promise<boolean>;
   release?: (
     hash: string,
   ) => Promise<{ id: string; releaseNo: number; replayed: boolean }>;
@@ -86,6 +87,16 @@ export function createLocalPublicationPreparationHandler(options: {
       )
         throw Error("LOCAL_PUBLICATION_JOB_SCOPE_DENIED");
       const hash = requestHash(job.data.requestHash);
+      context.signal.throwIfAborted();
+      if (await options.rollback?.(hash))
+        return {
+          status: "completed",
+          output: {
+            requestHash: hash,
+            stage: "rolled_back",
+            basis: "local_development_authority",
+          },
+        };
       for (const phase of ["submit", "review"] as const) {
         context.signal.throwIfAborted();
         const receipt = await options.transition(hash, phase);

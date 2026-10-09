@@ -198,3 +198,39 @@ it("retries dispatch of the committed release without allocating another release
     }),
   ).toThrow("RELEASE_DISPATCH_REQUIRED");
 });
+
+it("executes admitted rollback without source transitions, compilation or a new release", async () => {
+  const transition = vi.fn(),
+    release = vi.fn(),
+    dispatch = vi.fn(),
+    rollback = vi.fn(async () => true);
+  const handler = createLocalPublicationPreparationHandler({
+    configuration,
+    transition,
+    release,
+    dispatch,
+    rollback,
+  });
+  expect(await handler.handle(job, context())).toMatchObject({
+    status: "completed",
+    output: { stage: "rolled_back", requestHash: hash },
+  });
+  expect(rollback).toHaveBeenCalledWith(hash);
+  expect(transition).not.toHaveBeenCalled();
+  expect(release).not.toHaveBeenCalled();
+  expect(dispatch).not.toHaveBeenCalled();
+});
+it("does not fall back to publication when rollback authority rejects", async () => {
+  const transition = vi.fn();
+  const handler = createLocalPublicationPreparationHandler({
+    configuration,
+    transition,
+    rollback: vi.fn(async () => {
+      throw Error("LOCAL_PUBLICATION_AUTHORITY_CHANGED");
+    }),
+  });
+  await expect(handler.handle(job, context())).rejects.toThrow(
+    "LOCAL_PUBLICATION_AUTHORITY_CHANGED",
+  );
+  expect(transition).not.toHaveBeenCalled();
+});

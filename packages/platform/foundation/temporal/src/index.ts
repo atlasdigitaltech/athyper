@@ -45,4 +45,4 @@ export function parseBusinessDate(value: string): number {
     ? result
     : Number.NaN;
 }
-export * from "./date-scale.js";
+export * from "./date-scale";

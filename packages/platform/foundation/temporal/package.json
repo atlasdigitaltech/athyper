@@ -9,13 +9,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/index.test.ts src/date-scale.test.ts"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "esbuild": "^0.28.2"
   }
 }

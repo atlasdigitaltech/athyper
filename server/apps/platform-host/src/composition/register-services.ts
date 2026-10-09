@@ -1,3 +1,4 @@
+import { createLocalRollbackExecution } from "./shared/publication/local-rollback.js";
 import { enqueueMetaEntityCompilation } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
   createLocalPublicationDispatchHandler,
@@ -6558,7 +6559,15 @@ function registerPublication(
       container.runtimes.jobs.register(
         PUBLICATION_AUTHORITY_QUEUE,
         PREPARE_LOCAL_PUBLICATION_JOB,
-        createLocalPublicationPreparationHandler(localPreparation),
+        createLocalPublicationPreparationHandler({
+          ...localPreparation,
+          rollback: createLocalRollbackExecution({
+            database: authorityDatabase,
+            databases,
+            configuration: localPreparation.configuration,
+            readiness: container.platform.entityReadiness!,
+          }),
+        }),
       );
       container.runtimes.jobDefinitions.push({
         code: PREPARE_LOCAL_PUBLICATION_JOB,
