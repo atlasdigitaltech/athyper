@@ -88,9 +88,11 @@ test("typed formatting preserves precision, historical references, calendar date
     "Not captured",
   );
   assert.equal(format("2026-09-28", "date"), "Sep 28, 2026");
+  // C1b (Compare blueprint 9.6): exact decimals are formatted by kind,
+  // grouped and without losing precision.
   assert.equal(
     format("12345678901234567890.1234", "decimal"),
-    "12345678901234567890.1234",
+    "12,345,678,901,234,567,890.1234",
   );
   assert.equal(
     format("active", "enum", [{ value: "active", label: "Active" }]),

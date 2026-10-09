@@ -55,6 +55,10 @@ export interface ActivityComparisonField {
   readonly after: ActivityCapturedValue;
   /** True only for unequal, comparable captured values. */
   readonly changed: boolean;
+  /** A captured reference to another record: compared by its stored identity,
+   * shown as "Linked record", never resolved against today's label and never
+   * displayed as an identifier (Compare blueprint section 9.6). */
+  readonly reference?: true;
 }
 export interface ActivityComparison {
   readonly from: string;

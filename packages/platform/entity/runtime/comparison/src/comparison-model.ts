@@ -6,6 +6,7 @@ import {
 } from "@athyper/contract-platform-entity-list";
 import type { EntityDetailDescriptorV1 } from "@athyper/contract-platform-entity-runtime";
 import type { IntlRuntime } from "@athyper/platform-i18n";
+import { formatExactDecimal } from "@athyper/platform-i18n/entity-value";
 
 // The comparison core (Entity list Compare blueprint, sections 5.5, 8 and 11).
 // Columns are peers: a row "differs", never "changed". The snapshot view
@@ -98,6 +99,13 @@ export function formatComparisonValue(
     );
   if (typeof value === "number" && Number.isFinite(value))
     return intl.number(value, { maximumFractionDigits: 20 });
+  // Exact decimal strings are formatted by kind without losing precision (C1b).
+  if (
+    typeof value === "string" &&
+    (field?.kind === "integer" || field?.kind === "decimal" || field?.kind === "money") &&
+    /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)
+  )
+    return formatExactDecimal(value, intl);
   if (
     typeof value === "string" &&
     (field?.kind === "date" || field?.kind === "datetime")

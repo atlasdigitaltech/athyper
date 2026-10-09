@@ -899,6 +899,9 @@
 .a-activity-comparison__notes .a-activity-comparison__section { border-style:dashed; }
 .a-activity-comparison__result { padding:var(--a-space-4); background:var(--a-muted); border-radius:var(--a-radius-md); margin-block:var(--a-space-3); }
 .a-activity-comparison__result[data-limited="true"] { border-inline-start:var(--a-space-1) solid var(--a-warning); }
+/* C1b: the snapshot comparison on the shared comparison table. */
+.a-activity-comparison__summary { flex:1; font-size:var(--a-font-size-sm); font-weight:var(--a-font-weight-medium); }
+.a-activity-comparison__table { margin-block-start:var(--a-space-3); max-block-size:70vh; overflow:auto; border:var(--a-border-width) solid var(--a-border); border-radius:var(--a-radius-md); }
 .a-collaboration-panel[data-mode="pinned"] .a-entity-activity__items > .a-entity-activity__snapshot-row { grid-template-columns:minmax(0,1fr) auto; }
 @container (max-width: 40rem) {
   .a-activity-comparison__columns { display:none; }

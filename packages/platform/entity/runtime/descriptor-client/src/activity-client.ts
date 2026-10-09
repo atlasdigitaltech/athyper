@@ -223,6 +223,7 @@ export const entityActivityClient = {
                 before: state(f.before),
                 after: state(f.after),
                 changed: f.changed,
+                ...(f.reference === true ? { reference: true as const } : {}),
               };
             }),
           };

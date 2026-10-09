@@ -160,7 +160,7 @@ export function createEntityActivityProvider(options: {
           : { state: "uncaptured" as const }),
       })),
     };
-    return { snapshot, view };
+    return { snapshot, view, descriptor: current.descriptor, fields: current.fields };
   }
   async function collectionAccess(
     input: ActivitySubject,
@@ -454,11 +454,17 @@ export function createEntityActivityProvider(options: {
         [from, to] = [to, from];
       }
       // Intersect current visibility from both reads; a revoked field is never returned from either side.
+      // Technical identities are never compared or displayed (Compare blueprint
+      // section 9.6): the storage identity, the version field and UUID-typed fields.
+      const technical = new Set([a.descriptor.storage.idField, a.descriptor.storage.versionField].filter((value): value is string => Boolean(value)));
+      const declared = new Map(a.fields.map((field) => [field.key, field]));
       return {
         from,
         to,
         fields: a.view.fields.flatMap((left) => {
           const right = b.view.fields.find((f) => f.key === left.key);
+          const field = declared.get(left.key);
+          if (!field || field.type === "uuid" || technical.has(field.key) || technical.has(field.storagePath)) return [];
           return right
             ? [
                 {
@@ -476,6 +482,7 @@ export function createEntityActivityProvider(options: {
                     left.state === "value" &&
                     right.state === "value" &&
                     stable(left.value) !== stable(right.value),
+                  ...(field.type === "reference" ? { reference: true as const } : {}),
                 },
               ]
             : [];

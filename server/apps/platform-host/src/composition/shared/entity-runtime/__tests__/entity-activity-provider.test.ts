@@ -286,6 +286,24 @@ it("treats missing capture coverage as a limitation rather than a business chang
   } finally { await f.database.destroy(); vi.restoreAllMocks(); }
 });
 
+it("never compares technical identities, and marks captured references (Compare blueprint 9.6)", async () => {
+  const f = fixture();
+  try {
+    vi.mocked(readCompiledRuntimeContract).mockResolvedValue({
+      ...descriptor,
+      storage: { ...descriptor.storage, versionField: "version" },
+      fields: [...descriptor.fields, { key: "id", type: "uuid" }, { key: "version", type: "integer" }, { key: "owner_uuid", type: "uuid" }, { key: "country", type: "reference" }],
+    } as never);
+    const record = { name: "Name", nullable: null, id: "7f3c2e1d-4b5a-4c6d-8e9f-000000000001", version: 3, owner_uuid: "7f3c2e1d-4b5a-4c6d-8e9f-000000000002", country: "7f3c2e1d-4b5a-4c6d-8e9f-000000000003" };
+    const payload = { ...f.row.payload, record, coverage: { kind: "authorized_fields", fields: Object.keys(record) } };
+    f.get.mockResolvedValueOnce({ ...f.row, payload } as never).mockResolvedValueOnce({ ...f.row, versionNumber: 2, payload: { ...payload, record: { ...record, version: 4, country: "7f3c2e1d-4b5a-4c6d-8e9f-000000000004" } } } as never);
+    const result = await f.provider.compare(f.subject, f.admission, "first", "second");
+    expect(result.fields.map((field) => field.key)).toEqual(["name", "nullable", "uncaptured", "country"]);
+    expect(result.fields.find((field) => field.key === "country")).toMatchObject({ reference: true, changed: true });
+    expect(result.fields.find((field) => field.key === "name")).not.toHaveProperty("reference");
+  } finally { await f.database.destroy(); vi.restoreAllMocks(); }
+});
+
 it("normalizes comparison direction using the record's snapshot sequence", async () => {
   const f = fixture();
   try {

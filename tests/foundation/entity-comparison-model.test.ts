@@ -80,7 +80,7 @@ test("formatting takes the consumer's wording for empty and unavailable cells", 
   assert.equal(formatComparisonValue({ state: "value", value: "" }, undefined, intl, labels), "Not set");
   assert.equal(formatComparisonValue({ state: "unavailable", reason: "record_unavailable" }, undefined, intl, labels), "Not available");
   assert.equal(formatComparisonValue({ state: "value", value: true }, { kind: "boolean" } as never, intl, labels), "Yes");
-  assert.equal(formatComparisonValue({ state: "value", value: "12345678901234567890.1234" }, { kind: "decimal" } as never, intl, labels), "12345678901234567890.1234");
+  assert.equal(formatComparisonValue({ state: "value", value: "12345678901234567890.1234" }, { kind: "decimal" } as never, intl, labels), "12,345,678,901,234,567,890.1234");
 });
 
 test("grouping is generic over any keyed row", () => {
