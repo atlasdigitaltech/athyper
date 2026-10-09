@@ -389,7 +389,7 @@ it.each([
       f.dependencies.predecessor = vi.fn(async () => ({
         plane: "neon" as const,
         environment: "local" as const,
-        instance: "dev",
+        instance: "dev" as const,
         publicationKey: f.source.publicationKey,
         appliedReleaseId: id(90),
         sourceReleaseId: id(91),
