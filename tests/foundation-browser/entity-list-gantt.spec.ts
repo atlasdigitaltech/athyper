@@ -153,10 +153,10 @@ test("bars, one-day bars, open-ended records, groups and progress over the windo
   ).toHaveCount(0);
   // Groups: published choice order, then No value, then Unmapped values.
   await expect(chart.locator(".a-entity-gantt__group button")).toHaveText([
-    "▾Plan",
-    "▾Build",
-    "▾No value",
-    "▾Unmapped values",
+    "Plan",
+    "Build",
+    "No value",
+    "Unmapped values",
   ]);
   // Within each group, rows keep start order across both streams.
   await expect(chart.locator(".a-entity-gantt__row").nth(0)).toContainText(

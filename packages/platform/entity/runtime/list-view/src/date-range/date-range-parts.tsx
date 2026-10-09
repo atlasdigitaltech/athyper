@@ -5,6 +5,7 @@ import type {
   ListDateRangeFieldV1,
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { ArrowRightIcon } from "@athyper/platform-icons";
 import { Button } from "@athyper/platform-ui";
 import type { ListPages } from "../list-pages";
 import { StreamFailure } from "../stream-failure";
@@ -122,7 +123,7 @@ export function DatedEntryNote({
         <span>
           {intl.message("list.calendar.openEnded")}{" "}
           <span className="a-entity-dated__arrow" aria-hidden="true">
-            →
+            <ArrowRightIcon size="1em" />
           </span>
         </span>
       </>

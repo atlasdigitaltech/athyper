@@ -331,6 +331,7 @@ export { HomeIcon } from "./home";
 export { InfoIcon } from "./info";
 export {
   ArrowDownIcon,
+  ArrowRightIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
   Building2Icon,

@@ -27,6 +27,7 @@ import {
   weekRows,
   zonedToday,
 } from "@athyper/platform-temporal";
+import { ArrowRightIcon } from "@athyper/platform-icons";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import {
   Button,
@@ -502,7 +503,7 @@ function MonthGrid({
             key={row[0]}
             className="a-entity-calendar__week"
             role="row"
-            style={{ "--cal-lanes": CALENDAR_LANES_PER_WEEK } as CSSProperties}
+            style={{ ["--cal-lanes" as string]: CALENDAR_LANES_PER_WEEK }}
           >
             {row.map((day, column) => {
               const count = byDay.get(day)?.length ?? 0;
@@ -604,7 +605,7 @@ function Bar({
       <span className="a-entity-calendar__label">{text}</span>
       {ends ? (
         <span className="a-entity-dated__arrow" aria-hidden="true">
-          →
+          <ArrowRightIcon size="1em" />
         </span>
       ) : null}
     </>

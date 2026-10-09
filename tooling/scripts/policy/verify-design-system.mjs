@@ -50,6 +50,32 @@ const DEFAULT_DYNAMIC_INLINE_STYLE_ALLOWLIST = new Set([
   "packages/platform/shell/shell/src/client.tsx:style={{ top: navigationPeek.top }}",
   "packages/platform/foundation/ui/src/preview-frame.tsx:style={{ width }}",
   'packages/platform/foundation/ui/src/searchable-select.tsx:style={{ position: "fixed", ...position }}',
+  // Entity list layouts: geometry computed from record data at render time,
+  // which no stylesheet can express. Each entry is one exact style.
+  // Comparison table: column count drives the grid template
+  "packages/platform/entity/runtime/comparison/src/comparison-table.tsx:style={{ [\"--a-comparison-columns\" as string]: columns.length }}",
+  // Board summary bar: each lane's share of the records
+  "packages/platform/entity/runtime/list-view/src/board/board-view.tsx:style={{ flexGrow: count }}",
+  // Calendar: lanes per week, one constant shared with the layout logic
+  "packages/platform/entity/runtime/list-view/src/calendar/calendar-view.tsx:style={{ [\"--cal-lanes\" as string]: CALENDAR_LANES_PER_WEEK }}",
+  // Card progress fill: the record's progress value
+  "packages/platform/entity/runtime/list-view/src/card-renderers.tsx:style={{ inlineSize: `${percent}%` }}",
+  // Gantt axis tiers: each period's position and width in the window
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ insetInlineStart: at(position.start), inlineSize: at(position.size) }}",
+  // Gantt today tag and line: today's position in the window
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ insetInlineStart: at(todayAt) }}",
+  // Gantt grid: column count drives the grid template
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ [\"--gantt-columns\" as string]: columns.length }}",
+  // Gantt grid lines: each column's position
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ insetInlineStart: at(axisPosition(column, window).start) }}",
+  // Gantt milestone: the record's date in the window
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ insetInlineStart: `${bar.start * 100}%` }}",
+  // Gantt bar: the record's date range in the window
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ insetInlineStart: `${bar.start * 100}%`, inlineSize: `max(${bar.size * 100}%, var(--gantt-min-bar))` }}",
+  // Gantt progress fill: the record's progress value
+  "packages/platform/entity/runtime/list-view/src/gantt/gantt-view.tsx:style={{ inlineSize: `${percent}%` }}",
+  // Tree details: indented to the node's depth
+  "packages/platform/entity/runtime/list-view/src/index.tsx:style={{ marginInlineStart: `calc(${entry.level - 1} * var(--tree-indent) + 1.5rem)` }}",
 ]);
 
 const colorLiteral = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(/g;

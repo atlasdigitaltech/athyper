@@ -10,7 +10,7 @@
 - **Phases now authorized:** M1 and M2. M3 needs the metadata cleanup.
 - **Delivery (10 October 2026): M1 and M2 built, on synthetic fixtures.** Commits 64e11a31c (server and contract) and 6cbadd8c5 (browser). Section 5.6 records what the build decided. What is verified and what is not:
   - **Verified by tests:** publication parsing and section 6 codes; per-viewer projection; rank admission; `rankWithin` on real PostgreSQL (session temporary tables shaped as a two-key fact, not the Neon DDL); the browser contract and URL state; the grid model and a rendered grid with a fake client.
-  - **Not verified:** a real Entity (none publishes a Matrix until M3), and a real browser.
+  - **Not verified:** a real Entity (none publishes a Matrix until M3), and a real browser. The six grid tests in `tests/foundation/entity-list-matrix.test.tsx` run in jsdom with a fake client. The Playwright spec planned in section 12, `tests/foundation-browser/entity-list-matrix.spec.ts`, does not exist yet, so the request budget against a server, sideways paging and the narrow layout are unverified. Compare C2, C1b, C3 and C4 have the same gap (Compare blueprint status).
 
 - **Direction approved (10 October 2026).** The owner reviewed a reference screenshot of a bid-award grid (items as rows, every participant as a column, price, rank, % above lowest and allocation per cell) and the recommendation to build it as a list Layout. The owner approved in these words: "totally agreeed". The recommendation was:
   - Matrix as a new list Layout with its own blueprint, not a stretched Compare;

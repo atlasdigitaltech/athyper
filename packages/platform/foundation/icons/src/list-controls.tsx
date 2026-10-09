@@ -32,6 +32,7 @@ export function ArrowUpDownIcon(props: IconProps) { return <IconFrame {...props}
 export function ArrowUpIcon(props: IconProps) { return <IconFrame {...props}><path d="m5 12 7-7 7 7M12 19V5" /></IconFrame>; }
 /** Lucide ArrowDown geometry for an active descending sort. */
 export function ArrowDownIcon(props: IconProps) { return <IconFrame {...props}><path d="M12 5v14M19 12l-7 7-7-7" /></IconFrame>; }
+export function ArrowRightIcon(props: IconProps) { return <IconFrame {...props}><path d="M5 12h14M12 5l7 7-7 7" /></IconFrame>; }
 /** Lucide EllipsisVertical geometry for contextual row actions. */
 export function MoreVerticalIcon(props: IconProps) { return <IconFrame {...props}><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" /></IconFrame>; }
 /** Lucide Star geometry. Consumers opt into fill through currentColor. */

@@ -54,7 +54,7 @@
   font-size: var(--a-font-size-md);
 }
 /* ‹ and › are bidi-mirrored glyphs, so right-to-left text flips them already;
-   → is not, so the arrow is flipped explicitly. */
+   the arrow icon is not, so it is flipped explicitly. */
 [dir="rtl"] .a-entity-dated__arrow {
   display: inline-block;
   transform: scaleX(-1);

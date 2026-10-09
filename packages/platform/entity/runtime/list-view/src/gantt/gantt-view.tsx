@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
@@ -30,6 +29,7 @@ import {
   type CalendarWindow,
 } from "@athyper/platform-temporal";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { ChevronDownIcon, ChevronRightIcon } from "@athyper/platform-icons";
 import { Button, SegmentedControl } from "@athyper/platform-ui";
 import { resolveCardLayout } from "../card-content";
 import type { ListWidthTier } from "../presentation-tier";
@@ -539,10 +539,7 @@ function GanttChart({
               return (
                 <span
                   key={segment.start}
-                  style={{
-                    insetInlineStart: at(position.start),
-                    inlineSize: at(position.size),
-                  }}
+                  style={{ insetInlineStart: at(position.start), inlineSize: at(position.size) }}
                 >
                   {tierLabel(intl, segment.start, zoom, "upper")}
                 </span>
@@ -558,10 +555,7 @@ function GanttChart({
               return (
                 <span
                   key={column.start}
-                  style={{
-                    insetInlineStart: at(position.start),
-                    inlineSize: at(position.size),
-                  }}
+                  style={{ insetInlineStart: at(position.start), inlineSize: at(position.size) }}
                 >
                   {tierLabel(intl, column.start, zoom, "lower")}
                 </span>
@@ -581,15 +575,13 @@ function GanttChart({
       </div>
       <div
         className="a-entity-gantt__body"
-        style={{ "--gantt-columns": columns.length } as CSSProperties}
+        style={{ ["--gantt-columns" as string]: columns.length }}
       >
         <div className="a-entity-gantt__lines" aria-hidden="true">
           {columns.map((column) => (
             <i
               key={column.start}
-              style={{
-                insetInlineStart: at(axisPosition(column, window).start),
-              }}
+              style={{ insetInlineStart: at(axisPosition(column, window).start) }}
             />
           ))}
           {todayAt !== undefined ? (
@@ -678,7 +670,7 @@ function GroupRow({
           }
         >
           <span className="a-entity-gantt__chevron" aria-hidden="true">
-            {collapsed ? "▸" : "▾"}
+            {collapsed ? <ChevronRightIcon size="1em" /> : <ChevronDownIcon size="1em" />}
           </span>
           <span>{label}</span>
           {counts ? (
@@ -846,10 +838,7 @@ function GanttRow({
             data-open-ended={entry.openEnded || undefined}
             data-continues-before={bar.continuesBefore || undefined}
             data-continues-after={bar.continuesAfter || undefined}
-            style={{
-              insetInlineStart: `${bar.start * 100}%`,
-              inlineSize: `max(${bar.size * 100}%, var(--gantt-min-bar))`,
-            }}
+            style={{ insetInlineStart: `${bar.start * 100}%`, inlineSize: `max(${bar.size * 100}%, var(--gantt-min-bar))` }}
           >
             {percent !== undefined ? (
               <span
