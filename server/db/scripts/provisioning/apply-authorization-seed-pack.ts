@@ -31,6 +31,7 @@ export interface ApplyAuthorizationOptions {
   readonly databaseUrl?: string;
   readonly dryRun?: boolean;
   readonly catalogOnly?: boolean;
+  readonly skipPlaneResources?: boolean;
   /** Caller owns BEGIN/COMMIT/ROLLBACK and connection lifetime when supplied. */
   readonly transactionClient?: QueryClient;
 }
@@ -80,7 +81,7 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     ]);
     const result = options.catalogOnly
       ? await applyPlaneCatalog(client, inputs, options.plane)
-      : await applyPlaneSeed(client, inputs, options.plane);
+      : await applyPlaneSeed(client, inputs, options.plane, { includePlaneResources: !options.skipPlaneResources });
     await registerSeedPack(client, receipt);
     await recordSeedExecution(client, receipt, "upgrade");
     return { ...plan, mode: options.catalogOnly ? "catalog-applied" : "applied", result, receipt };
@@ -132,6 +133,7 @@ async function main(): Promise<void> {
     databaseUrl: option(args, "--database-url"),
     dryRun: args.includes("--dry-run") || args.includes("--plan"),
     catalogOnly: args.includes("--catalog-only"),
+    skipPlaneResources: args.includes("--skip-plane-resources"),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

@@ -46,6 +46,17 @@ BEGIN
 END;
 $$;
 
+-- Neon organization triggers run under this restricted definer and maintain
+-- their corresponding authorization scope targets. Keep this grant scoped to
+-- the definer rather than granting direct scope-target mutation to the app.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_definer_master') THEN
+        GRANT INSERT, UPDATE ON authz.scope_target TO athyper_definer_master;
+    END IF;
+END;
+$$;
+
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyper_projection_owner') THEN
     GRANT SELECT ON master.tenant TO athyper_projection_owner;

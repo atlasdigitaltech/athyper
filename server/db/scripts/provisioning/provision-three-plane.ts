@@ -22,6 +22,7 @@ export interface ThreePlaneProvisionOptions {
   readonly apply?: boolean;
   readonly skipFoundation?: boolean;
   readonly skipKeycloak?: boolean;
+  readonly skipPlaneResources?: boolean;
 }
 
 export async function provisionThreePlanes(options: ThreePlaneProvisionOptions): Promise<unknown> {
@@ -60,6 +61,7 @@ export async function provisionThreePlanes(options: ThreePlaneProvisionOptions):
     planeResults.push(await applyAuthorizationSeedPack({
       plane,
       manifestPath: inputs.manifestPath,
+      skipPlaneResources: options.skipPlaneResources,
     }));
   }
   const receiptId = await recordTopLevelReceipt(inputs, planeResults);
@@ -180,6 +182,7 @@ async function main(): Promise<void> {
     manifestPath: option(args, "--manifest"),
     skipFoundation: args.includes("--skip-foundation"),
     skipKeycloak: args.includes("--skip-keycloak"),
+    skipPlaneResources: args.includes("--skip-plane-resources"),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

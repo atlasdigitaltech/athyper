@@ -68,11 +68,12 @@ export async function applyPlaneSeed(
   client: QueryClient,
   inputs: ProvisionInputs,
   plane: ProvisionPlane,
+  options: { readonly includePlaneResources?: boolean } = {},
 ): Promise<PlaneApplicationResult> {
   const definition = inputs.manifest.planes[plane];
   await assertTarget(client, plane, definition.databaseName);
   await client.query(
-    "SELECT set_config('app.database_plane', $1, true), set_config('app.current_principal_id', $2, true)",
+    "SELECT set_config('app.database_plane', $1, true), set_config('app.current_tenant_id', '', true), set_config('app.current_principal_id', $2, true)",
     [plane, inputs.manifest.systemPrincipalId],
   );
   await applyTenants(client, inputs, plane);
@@ -83,13 +84,13 @@ export async function applyPlaneSeed(
   for (const tenant of inputs.manifest.tenants) {
     await applyTenantProfile(client, inputs, plane, tenant.id, tenant.code, provisionActors.get(tenant.id)!);
   }
-  await applyPlaneResources(client, inputs, plane, provisionActors);
+  if (options.includePlaneResources !== false) await applyPlaneResources(client, inputs, plane, provisionActors);
   const applicationProjectionCount = await applyTenantApplicationProjections(client, inputs, plane, provisionActors);
   const pack = inputs.authorizationPacks[plane];
   const projection = pack.tenantAuthorityProjection;
   await client.query(
-    "SELECT set_config('app.current_tenant_id', '', true), set_config('app.current_principal_id', $1, true)",
-    [inputs.manifest.systemPrincipalId],
+    "SELECT set_config('app.current_tenant_id', $1, true), set_config('app.current_principal_id', $2, true)",
+    [inputs.manifest.tenants[0]!.id, provisionActors.get(inputs.manifest.tenants[0]!.id)!],
   );
   await applyEmbeddedPermissions(client, pack, plane);
   await applyPermissionScopeCompatibility(client, plane, pack.permissionScopeCompatibility);
@@ -413,6 +414,7 @@ async function ensureProvisionActor(
 
 async function applyTenants(client: QueryClient, inputs: ProvisionInputs, plane: ProvisionPlane): Promise<void> {
   for (const tenant of inputs.manifest.tenants) {
+    await client.query("SELECT set_config('app.current_tenant_id', $1, true), set_config('app.current_principal_id', '', true)", [tenant.id]);
     const plan = await one<{ id: string }>(client,
       "SELECT id::text AS id FROM control.subscription_plan WHERE code=$1 AND status='active'",
       [tenant.subscriptionPlans[plane]]);
@@ -620,11 +622,12 @@ async function applyEmbeddedPermissions(
         IS DISTINCT FROM (EXCLUDED.permission_kind,EXCLUDED.module_id,EXCLUDED.risk_tier,
              EXCLUDED.requires_mfa,EXCLUDED.requires_sod,EXCLUDED.is_shareable,
              EXCLUDED.is_delegable,EXCLUDED.metadata,'published'::authz.catalog_status_d)
+        AND authz.permission.metadata #>> '{_seed,source}'=$12
     `, [operation.permissionId, operation.canonicalPermissionCode, operation.permissionKind ?? "entity_operation", module.id,
       operation.riskTier, operation.requiresMfa, operation.requiresSod,
       operation.shareable, operation.delegable,
       JSON.stringify({ _seed: { source: SOURCE_REF, plane, definitionSha256: operation.definitionSha256 } }),
-      SYSTEM_PRINCIPAL]);
+      SYSTEM_PRINCIPAL, SOURCE_REF]);
     const actual = await one<{ id: string }>(client,
       "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1",
       [operation.canonicalPermissionCode]);
