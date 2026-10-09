@@ -208,6 +208,20 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   metadata, knowledge, fixtures and learning candidates. Service-account seed or
   deployment receipts do not attest human authorship, review or evaluation.
 
+## Approved local Entity publication exception
+
+Owner instruction of 9 October 2026 authorizes implementing the local publication
+basis specified in the Entity Studio blueprint's Meta Entity Legacy Cleanup and
+Build Lifecycle Improvements plan. Within the trusted local DEV instance only,
+authenticated developers may publish, retry, recover and roll back compatible
+Entity artifacts under a reusable enrolled standing authorization without a new
+human review for each edit. Preserve real developer/workload attribution; do not
+fabricate independent human review. Initial standing-authority enrollment retains
+its existing governed review and MFA controls. This exception does not change
+permission catalog MFA values, login/session assurance, entity MFA requirements,
+or QA/STG/PROD approval requirements. Those remain subject to the instructions
+below. Local authority must reject QA even when QA uses the local runtime profile.
+
 ## Domain ownership
 
 Place business-specific rules and handlers in the owning domain service package.

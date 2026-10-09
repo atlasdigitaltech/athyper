@@ -73,7 +73,6 @@ const ALLOWLIST = [
   /^packages\/platform\/foundation\/temporal\//,
   /\/__tests__\//,
   /\.(test|spec)\.(ts|tsx|mts|cts)$/,
-  /^packages\/product-deprecated\//, // legacy code, frozen for reference per project policy
 ] as const;
 
 interface Rule {

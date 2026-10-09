@@ -46,14 +46,17 @@ export function registerEntityViewRoutes(
   });
 }
 
-function entityViewDescriptor(d: EntityListDescriptorV1): ViewCollectionDescriptor {
+function entityViewDescriptor(
+  d: EntityListDescriptorV1,
+): ViewCollectionDescriptor {
   return {
-    standardViews: (d.standardViews ?? []).map(v => ({
+    standardViews: (d.standardViews ?? []).map((v) => ({
       key: v.key,
       label: resolveEntityText(v.label),
       state: { ...d.surface.defaultState, standardViewKey: v.key },
     })),
-    validate: raw => validateViewState(raw, d) as unknown as Record<string, unknown>,
+    validate: (raw) =>
+      validateViewState(raw, d) as unknown as Record<string, unknown>,
   };
 }
 
@@ -66,7 +69,13 @@ export async function readEntityViewCatalog(
 ) {
   if (!/^[a-z][a-z0-9_.-]{0,126}$/.test(surface))
     throw new TypeError("Invalid collection identifier");
-  return readViewCatalog(service, context, descriptor.entity.code, surface, entityViewDescriptor(descriptor));
+  return readViewCatalog(
+    service,
+    context,
+    descriptor.entity.code,
+    surface,
+    entityViewDescriptor(descriptor),
+  );
 }
 
 async function readViewCatalog(
@@ -81,13 +90,23 @@ async function readViewCatalog(
     ...result,
     views: [
       ...result.views,
-      ...descriptor.standardViews.map(view => ({
-        id: `standard.${view.key}`, name: view.label, scope: "system" as const,
-        version: 1, state: view.state,
+      ...descriptor.standardViews.map((view) => ({
+        id: `standard.${view.key}`,
+        name: view.label,
+        scope: "system" as const,
+        version: 1,
+        state: view.state,
       })),
-    ].map(view => {
-      try { return { ...view, state: descriptor.validate(view.state), compatible: true }; }
-      catch { return { ...view, state: {}, compatible: false }; }
+    ].map((view) => {
+      try {
+        return {
+          ...view,
+          state: descriptor.validate(view.state),
+          compatible: true,
+        };
+      } catch {
+        return { ...view, state: {}, compatible: false };
+      }
     }),
   };
 }
@@ -128,16 +147,27 @@ export function registerViewCollectionRoutes(
       const started = performance.now();
       const timing = (stage: string, start: number) => {
         stages.push(`${stage};dur=${(performance.now() - start).toFixed(1)}`);
-        if (options.diagnostics === true) res.setHeader("Server-Timing", stages.join(", "));
+        if (options.diagnostics === true)
+          res.setHeader("Server-Timing", stages.join(", "));
       };
       res.setHeader("Cache-Control", "private, no-store");
       if (req.method === "GET") {
         const result = await withReadEvidence(async () => {
           const descriptorStart = performance.now();
-          const descriptor = await options.descriptor(context, entity, req.query);
+          const descriptor = await options.descriptor(
+            context,
+            entity,
+            req.query,
+          );
           timing("descriptor", descriptorStart);
           const viewsStart = performance.now();
-          const catalog = await readViewCatalog(options.service, context, entity, surface, descriptor);
+          const catalog = await readViewCatalog(
+            options.service,
+            context,
+            entity,
+            surface,
+            descriptor,
+          );
           timing("views", viewsStart);
           return catalog;
         });
@@ -147,7 +177,8 @@ export function registerViewCollectionRoutes(
       }
       // Commands deliberately do not share read evidence across mutations.
       const descriptor = await options.descriptor(context, entity, req.query);
-      const read = () => readViewCatalog(options.service, context, entity, surface, descriptor);
+      const read = () =>
+        readViewCatalog(options.service, context, entity, surface, descriptor);
       const value = req.body as Record<string, unknown>;
       if (!value || typeof value !== "object" || Array.isArray(value))
         throw new TypeError("Expected a view command");
@@ -158,10 +189,30 @@ export function registerViewCollectionRoutes(
           throw new TypeError("View name must contain 1–160 characters");
         if (value.visibility !== "personal" && value.visibility !== "shared")
           throw new TypeError("Invalid visibility");
-        const importKey=value.importKey;
-        if(importKey!==undefined&&(typeof importKey!=="string"||importKey.length>16384||value.visibility!=="personal"))throw new TypeError("Invalid personal import identity");
-        const code=typeof importKey==="string"?`import_${createHash("sha256").update(importKey).digest("hex")}`:`view_${randomUUID().replaceAll("-","")}`;
-        if(importKey){const prior=(await options.service.collection(context,entity,surface)).views.find(v=>v.code===code&&v.ownerPrincipalId===context.principalId);if(prior){res.status(201).json({...await read(),createdId:prior.id});return;}}
+        const importKey = value.importKey;
+        if (
+          importKey !== undefined &&
+          (typeof importKey !== "string" ||
+            importKey.length > 16384 ||
+            value.visibility !== "personal")
+        )
+          throw new TypeError("Invalid personal import identity");
+        const code =
+          typeof importKey === "string"
+            ? `import_${createHash("sha256").update(importKey).digest("hex")}`
+            : `view_${randomUUID().replaceAll("-", "")}`;
+        if (importKey) {
+          const prior = (
+            await options.service.collection(context, entity, surface)
+          ).views.find(
+            (v) =>
+              v.code === code && v.ownerPrincipalId === context.principalId,
+          );
+          if (prior) {
+            res.status(201).json({ ...(await read()), createdId: prior.id });
+            return;
+          }
+        }
         const input = {
           entityCode: entity,
           surfaceCode: surface,
@@ -269,16 +320,16 @@ export function registerViewCollectionRoutes(
             : error instanceof SavedViewVersionConflict
               ? 409
               : 400;
-        res
-          .status(status)
-          .json({
-            status,
-            code:
-              error instanceof SavedViewError
-                ? error.code
-                : error instanceof SavedViewVersionConflict ? "SAVED_VIEW_VERSION_CONFLICT" : "SAVED_VIEW_INVALID",
-            message: error.message,
-          });
+        res.status(status).json({
+          status,
+          code:
+            error instanceof SavedViewError
+              ? error.code
+              : error instanceof SavedViewVersionConflict
+                ? "SAVED_VIEW_VERSION_CONFLICT"
+                : "SAVED_VIEW_INVALID",
+          message: error.message,
+        });
       } else next(error);
     }
   };
@@ -314,7 +365,11 @@ export function validateViewState(
     value.filters.length !== parsed.filters.length ||
     !Array.isArray(value.sort) ||
     value.sort.length !== parsed.sort.length ||
-    (value.group && value.group !== parsed.group)
+    (value.groups !== undefined && !Array.isArray(value.groups)) ||
+    (value.groups !== undefined && value.group !== undefined) ||
+    JSON.stringify(
+      value.groups ?? (value.group === undefined ? [] : [value.group]),
+    ) !== JSON.stringify(parsed.groups ?? [])
   )
     throw new TypeError(
       "Saved view references unavailable filters, sorting or grouping",

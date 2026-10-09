@@ -5,7 +5,6 @@ packages:
   - "packages/domain/*/*"
   - "packages/planes/*"
   - "packages/planes/*/*"
-  - "packages/product-deprecated/*/*"
   - "packages/shared/*"
   - "packages/shared/*/*"
   - "!packages/shared/finance-rules"

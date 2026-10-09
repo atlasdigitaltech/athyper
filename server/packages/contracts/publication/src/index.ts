@@ -49,3 +49,6 @@ export * from "./change-request-binding.js";
 export * from "./entity-authoring-resource.js";
 
 export * from "./entity-live-read-resource.js";
+
+export * from "./policy/local-development-authority.js";
+export * from "./policy/local-publication-request.js";

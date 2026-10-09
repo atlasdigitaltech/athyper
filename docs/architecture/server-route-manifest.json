@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1232,
+    "identities": 1223,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 364,
+    "currentOnly": 355,
     "legacyOccurrences": 898,
-    "currentOccurrences": 430
+    "currentOccurrences": 421
   },
   "routes": [
     {
@@ -9021,36 +9021,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/studio/business-partner-case-contracts/:param",
-      "method": "GET",
-      "path": "/api/studio/business-partner-case-contracts/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
-          "line": 62,
-          "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/studio/business-partner-definitions/:param",
-      "method": "GET",
-      "path": "/api/studio/business-partner-definitions/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
-          "line": 78,
-          "declaredPath": "/api/studio/business-partner-definitions/:revisionId",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/studio/experience-surfaces",
       "method": "GET",
       "path": "/api/studio/experience-surfaces",
@@ -9060,21 +9030,6 @@
           "source": "server/packages/platform/experience/src/routes.ts",
           "line": 41,
           "declaredPath": "/api/studio/experience-surfaces",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/studio/local-business-partner-preview",
-      "method": "GET",
-      "path": "/api/studio/local-business-partner-preview",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
-          "line": 25,
-          "declaredPath": "/api/studio/local-business-partner-preview",
           "kind": "contract"
         }
       ],
@@ -17493,96 +17448,6 @@
           "line": 14,
           "declaredPath": "/api/studio/atlas-learning/:id/submit",
           "kind": "loop"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-case-contracts",
-      "method": "POST",
-      "path": "/api/studio/business-partner-case-contracts",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
-          "line": 23,
-          "declaredPath": "/api/studio/business-partner-case-contracts",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-case-contracts/:param/publish",
-      "method": "POST",
-      "path": "/api/studio/business-partner-case-contracts/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
-          "line": 76,
-          "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId/publish",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-case-contracts/simulations",
-      "method": "POST",
-      "path": "/api/studio/business-partner-case-contracts/simulations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
-          "line": 42,
-          "declaredPath": "/api/studio/business-partner-case-contracts/simulations",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-definitions",
-      "method": "POST",
-      "path": "/api/studio/business-partner-definitions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
-          "line": 39,
-          "declaredPath": "/api/studio/business-partner-definitions",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-definitions/:param/publish",
-      "method": "POST",
-      "path": "/api/studio/business-partner-definitions/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
-          "line": 92,
-          "declaredPath": "/api/studio/business-partner-definitions/:revisionId/publish",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/business-partner-definitions/simulations",
-      "method": "POST",
-      "path": "/api/studio/business-partner-definitions/simulations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
-          "line": 58,
-          "declaredPath": "/api/studio/business-partner-definitions/simulations",
-          "kind": "contract"
         }
       ],
       "status": "current-only"

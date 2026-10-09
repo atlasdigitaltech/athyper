@@ -4,9 +4,27 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"]);
-const sourceFilenames = new Set(["Dockerfile", "Dockerfile.dev", "Dockerfile.prod"]);
-const ignoredDirectories = new Set(["node_modules", ".next", "dist", ".turbo", ".cache"]);
+const sourceExtensions = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".json",
+]);
+const sourceFilenames = new Set([
+  "Dockerfile",
+  "Dockerfile.dev",
+  "Dockerfile.prod",
+]);
+const ignoredDirectories = new Set([
+  "node_modules",
+  ".next",
+  "dist",
+  ".turbo",
+  ".cache",
+]);
 
 interface BannedPackage {
   name: string;
@@ -107,11 +125,7 @@ const studioOnlyPackages = [
 const rules = [
   {
     label: "Shared + Core product",
-    roots: [
-      "packages/shared",
-      "packages/planes/design",
-      "packages/product-deprecated/runtime-ui",
-    ],
+    roots: ["packages/shared", "packages/planes/design"],
     bannedPackages: [
       ...neonOnlyPackages,
       ...meshOnlyPackages,
@@ -120,21 +134,12 @@ const rules = [
   },
   {
     label: "Mesh",
-    roots: [
-      "apps/mesh",
-      "packages/planes/mesh",
-    ],
-    bannedPackages: [
-      ...neonOnlyPackages,
-      ...studioOnlyPackages,
-    ],
+    roots: ["apps/mesh", "packages/planes/mesh"],
+    bannedPackages: [...neonOnlyPackages, ...studioOnlyPackages],
   },
   {
     label: "Neon",
-    roots: [
-      "apps/neon",
-      "packages/planes/neon",
-    ],
+    roots: ["apps/neon", "packages/planes/neon"],
     bannedPackages: [
       ...removedNeonProductPackages,
       ...meshOnlyPackages,
@@ -143,10 +148,7 @@ const rules = [
   },
   {
     label: "Studio",
-    roots: [
-      "apps/studio",
-      "packages/planes/studio",
-    ],
+    roots: ["apps/studio", "packages/planes/studio"],
     bannedPackages: [
       ...meshOnlyPackages,
       ...removedNeonProductPackages,
@@ -177,7 +179,12 @@ const productTierDependencyPolicy = {
 
 type ProductCoreGroup = keyof typeof productTierDependencyPolicy;
 
-const dependencySections = ["dependencies", "peerDependencies", "devDependencies", "optionalDependencies"] as const;
+const dependencySections = [
+  "dependencies",
+  "peerDependencies",
+  "devDependencies",
+  "optionalDependencies",
+] as const;
 
 const legacyRuntimePackages = [
   {
@@ -198,10 +205,7 @@ const legacyRuntimeImportScanRoots = [
   "server",
 ] as const;
 
-const legacyRuntimeImportIgnoredRoots = [
-  "packages/product-deprecated/runtime-ui/entity-runtime",
-  "packages/product-deprecated/runtime-ui/document-runtime",
-] as const;
+const legacyRuntimeImportIgnoredRoots: readonly string[] = [];
 
 const legacyRuntimeImportAllowlist = new Set([
   "apps/neon/app/providers.tsx",
@@ -245,7 +249,10 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-function packageOrSubpathIsReferenced(content: string, packageName: string): boolean {
+function packageOrSubpathIsReferenced(
+  content: string,
+  packageName: string,
+): boolean {
   return (
     content.includes(`"${packageName}"`) ||
     content.includes(`"${packageName}/`) ||
@@ -268,12 +275,21 @@ function isUnderRelRoot(path: string, relRoot: string): boolean {
 }
 
 function isProductCoreGroup(groupName: string): groupName is ProductCoreGroup {
-  return Object.prototype.hasOwnProperty.call(productTierDependencyPolicy, groupName);
+  return Object.prototype.hasOwnProperty.call(
+    productTierDependencyPolicy,
+    groupName,
+  );
 }
 
-function collectProductPackagesByName(): Map<string, { groupName: string; packageJsonPath: string }> {
+function collectProductPackagesByName(): Map<
+  string,
+  { groupName: string; packageJsonPath: string }
+> {
   const productRoot = join(repoRoot, "packages/planes");
-  const packagesByName = new Map<string, { groupName: string; packageJsonPath: string }>();
+  const packagesByName = new Map<
+    string,
+    { groupName: string; packageJsonPath: string }
+  >();
   if (!existsSync(productRoot)) return packagesByName;
 
   for (const groupName of readdirSync(productRoot)) {
@@ -287,7 +303,9 @@ function collectProductPackagesByName(): Map<string, { groupName: string; packag
       const packageJsonPath = join(packageRoot, "package.json");
       if (!existsSync(packageJsonPath)) continue;
 
-      const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: unknown };
+      const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+        name?: unknown;
+      };
       if (typeof manifest.name !== "string") continue;
 
       packagesByName.set(manifest.name, {
@@ -325,7 +343,11 @@ for (const relRoot of legacyRuntimeImportScanRoots) {
   if (!existsSync(absRoot)) continue;
 
   for (const file of walk(absRoot)) {
-    if (legacyRuntimeImportIgnoredRoots.some((ignoredRoot) => isUnderRelRoot(file, ignoredRoot))) {
+    if (
+      legacyRuntimeImportIgnoredRoots.some((ignoredRoot) =>
+        isUnderRelRoot(file, ignoredRoot),
+      )
+    ) {
       continue;
     }
 
@@ -347,8 +369,12 @@ const productPackagesByName = collectProductPackagesByName();
 for (const [_packageName, packageInfo] of productPackagesByName) {
   if (!isProductCoreGroup(packageInfo.groupName)) continue;
 
-  const allowedGroups = new Set<string>(productTierDependencyPolicy[packageInfo.groupName]);
-  const manifest = JSON.parse(readFileSync(packageInfo.packageJsonPath, "utf8")) as Record<string, unknown>;
+  const allowedGroups = new Set<string>(
+    productTierDependencyPolicy[packageInfo.groupName],
+  );
+  const manifest = JSON.parse(
+    readFileSync(packageInfo.packageJsonPath, "utf8"),
+  ) as Record<string, unknown>;
 
   for (const section of dependencySections) {
     const deps = manifest[section];
@@ -366,10 +392,12 @@ for (const [_packageName, packageInfo] of productPackagesByName) {
 }
 
 if (violations.length > 0) {
-  fail([
-    "Plane package boundary violations:",
-    ...violations.map((violation) => `- ${violation}`),
-  ].join("\n"));
+  fail(
+    [
+      "Plane package boundary violations:",
+      ...violations.map((violation) => `- ${violation}`),
+    ].join("\n"),
+  );
 }
 
 console.log("Plane package boundaries verified.");

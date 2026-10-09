@@ -10,8 +10,8 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | ---------------------------------------------------- | ----: |
 | Swagger operations                                   |   125 |
 | Swagger paths                                        |   117 |
-| Backend method/path identities extracted from source |   449 |
-| Source identities absent from Swagger                |   324 |
+| Backend method/path identities extracted from source |   440 |
+| Source identities absent from Swagger                |   323 |
 | studio URL entries (including patterns)              |    70 |
 | neon URL entries (including patterns)                |   146 |
 | mesh URL entries (including patterns)                |    61 |
@@ -32,7 +32,7 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin                          | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | ------------------------------- | ------------------: | ----------------: | ------------------------: | --------------------------: |
-| https://api.dev.athyper.test    |                 451 |               451 |                         0 |                          36 |
+| https://api.dev.athyper.test    |                 450 |               450 |                         0 |                          36 |
 | https://studio.dev.athyper.test |                  74 |                74 |                         0 |                           1 |
 | https://neon.dev.athyper.test   |                 150 |               150 |                         0 |                           1 |
 | https://mesh.dev.athyper.test   |                  65 |                65 |                         0 |                           1 |
@@ -1389,35 +1389,35 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** [/api/studio/business-partner-case-contracts](https://api.dev.athyper.test/api/studio/business-partner-case-contracts)  
   studio.authorBusinessPartnerCaseContract — Author an immutable Business Partner case contract revision  
-  Source match: [source](../../server/packages/services/publication/src/entity-case-contract-routes.ts)
+  Source match: Not found by source scanner
 
 - **POST** [/api/studio/business-partner-case-contracts/simulations](https://api.dev.athyper.test/api/studio/business-partner-case-contracts/simulations)  
   studio.simulateBusinessPartnerCaseContract — Dry-run Business Partner case contract compatibility without publication authority  
-  Source match: [source](../../server/packages/services/publication/src/entity-case-contract-routes.ts)
+  Source match: Not found by source scanner
 
 - **GET** `/api/studio/business-partner-case-contracts/{revisionId}`  
   studio.getBusinessPartnerCaseContract — Get a Business Partner case contract revision  
-  Source match: [source](../../server/packages/services/publication/src/entity-case-contract-routes.ts)
+  Source match: Not found by source scanner
 
 - **POST** `/api/studio/business-partner-case-contracts/{revisionId}/publish`  
   studio.publishBusinessPartnerCaseContract — Approve and queue a signed Business Partner case contract publication  
-  Source match: [source](../../server/packages/services/publication/src/entity-case-contract-routes.ts)
+  Source match: Not found by source scanner
 
 - **POST** [/api/studio/business-partner-definitions](https://api.dev.athyper.test/api/studio/business-partner-definitions)  
   studio.authorBusinessPartnerDefinition — Author an immutable Business Partner definition revision  
-  Source match: [source](../../server/packages/services/publication/src/entity-definition-routes.ts)
+  Source match: Not found by source scanner
 
 - **POST** [/api/studio/business-partner-definitions/simulations](https://api.dev.athyper.test/api/studio/business-partner-definitions/simulations)  
   studio.simulateBusinessPartnerDefinition — Dry-run Business Partner definition compatibility without publication authority  
-  Source match: [source](../../server/packages/services/publication/src/entity-definition-routes.ts)
+  Source match: Not found by source scanner
 
 - **GET** `/api/studio/business-partner-definitions/{revisionId}`  
   studio.getBusinessPartnerDefinition — Get a Business Partner definition revision  
-  Source match: [source](../../server/packages/services/publication/src/entity-definition-routes.ts)
+  Source match: Not found by source scanner
 
 - **POST** `/api/studio/business-partner-definitions/{revisionId}/publish`  
   studio.publishBusinessPartnerDefinition — Approve and queue a signed Business Partner definition publication  
-  Source match: [source](../../server/packages/services/publication/src/entity-definition-routes.ts)
+  Source match: Not found by source scanner
 
 ### Studio experience
 
@@ -2453,9 +2453,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/studio/atlas-learning/{id}/submit`  
   Raw route · [source](../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
-
-- **GET** [/api/studio/local-business-partner-preview](https://api.dev.athyper.test/api/studio/local-business-partner-preview)  
-  Route contract · [source](../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 - **POST** [/api/studio/onboarding/cases](https://api.dev.athyper.test/api/studio/onboarding/cases)  
   Raw route · [source](../../server/packages/planes/studio/onboarding/src/routes.ts)

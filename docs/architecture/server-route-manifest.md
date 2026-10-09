@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 364 |
+| Current-only identities | 355 |
 | Legacy occurrences | 898 |
-| Current occurrences | 430 |
+| Current occurrences | 421 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -596,10 +596,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/session/bootstrap` | 1 | 0 |
 | legacy-only | GET | `/api/session/contexts` | 1 | 0 |
 | current-only | GET | `/api/studio/atlas-learning` | 0 | 1 |
-| current-only | GET | `/api/studio/business-partner-case-contracts/:param` | 0 | 1 |
-| current-only | GET | `/api/studio/business-partner-definitions/:param` | 0 | 1 |
 | current-only | GET | `/api/studio/experience-surfaces` | 0 | 1 |
-| current-only | GET | `/api/studio/local-business-partner-preview` | 0 | 1 |
 | legacy-only | GET | `/api/user/tenant-admin` | 1 | 0 |
 | current-only | GET | `/api/v1/records/:param/import-template.xlsx` | 0 | 1 |
 | current-only | GET | `/api/v1/records/exports/:param/download` | 0 | 1 |
@@ -1138,12 +1135,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/studio/atlas-learning/:param/resume` | 0 | 1 |
 | current-only | POST | `/api/studio/atlas-learning/:param/stage` | 0 | 1 |
 | current-only | POST | `/api/studio/atlas-learning/:param/submit` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-case-contracts` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-case-contracts/:param/publish` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-case-contracts/simulations` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-definitions` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-definitions/:param/publish` | 0 | 1 |
-| current-only | POST | `/api/studio/business-partner-definitions/simulations` | 0 | 1 |
 | current-only | POST | `/api/studio/experience-surfaces/:param/publish` | 0 | 1 |
 | current-only | POST | `/api/studio/experience-surfaces/:param/rollback` | 0 | 1 |
 | current-only | POST | `/api/studio/experience-surfaces/atlas-drafts` | 0 | 1 |

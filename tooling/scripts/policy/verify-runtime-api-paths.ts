@@ -28,11 +28,17 @@ const SKIP_DIRS = new Set([
 const FILE_EXT = new Set([".ts", ".tsx"]);
 
 const FORBIDDEN_PATTERNS: { name: string; regex: RegExp }[] = [
-  { name: "runtime-records",                regex: /\/api\/runtime-records\b/ },
-  { name: "document-runtime",               regex: /\/api\/document-runtime\b/ },
-  { name: "runtime-options",                regex: /\/api\/runtime-options\b/ },
-  { name: "pricing-component/supersede",    regex: /\/api\/pricing-component\/supersede\b/ },
-  { name: "runtime/entities (legacy stub)", regex: /\/api\/runtime\/entities\b/ },
+  { name: "runtime-records", regex: /\/api\/runtime-records\b/ },
+  { name: "document-runtime", regex: /\/api\/document-runtime\b/ },
+  { name: "runtime-options", regex: /\/api\/runtime-options\b/ },
+  {
+    name: "pricing-component/supersede",
+    regex: /\/api\/pricing-component\/supersede\b/,
+  },
+  {
+    name: "runtime/entities (legacy stub)",
+    regex: /\/api\/runtime\/entities\b/,
+  },
 ];
 
 const ALLOW_FILES = new Set<string>([
@@ -42,13 +48,8 @@ const ALLOW_FILES = new Set<string>([
   "docs/runtime-api-v1.md",
 ]);
 
-// Deprecated package trees that we don't migrate. Legacy URL references
-// inside them are tolerated; the trees themselves will be deleted in a
-// future cleanup. Keep this list narrow so non-deprecated regressions
-// still surface.
-const ALLOW_PREFIXES: readonly string[] = [
-  "packages/product-deprecated/runtime-ui/",
-];
+// No retired package tree is exempt from runtime API path checks.
+const ALLOW_PREFIXES: readonly string[] = [];
 
 interface Hit {
   file: string;
@@ -80,7 +81,12 @@ async function scanFile(absPath: string, relPath: string): Promise<Hit[]> {
     const line = lines[i] ?? "";
     for (const { name, regex } of FORBIDDEN_PATTERNS) {
       if (regex.test(line)) {
-        hits.push({ file: relPath, line: i + 1, pattern: name, text: line.trim() });
+        hits.push({
+          file: relPath,
+          line: i + 1,
+          pattern: name,
+          text: line.trim(),
+        });
       }
     }
   }
@@ -114,16 +120,20 @@ async function main(): Promise<number> {
 
   const label = strict ? "ERROR" : "WARN ";
   for (const hit of hits) {
-    console.log(`[runtime-api-paths] ${label} ${hit.file}:${hit.line}  (${hit.pattern})  ${hit.text}`);
+    console.log(
+      `[runtime-api-paths] ${label} ${hit.file}:${hit.line}  (${hit.pattern})  ${hit.text}`,
+    );
   }
   console.log(
     `[runtime-api-paths] ${hits.length} occurrence(s) of legacy runtime API paths. ` +
-    `Use runtimePath.* from @athyper/api-contracts/runtime-paths instead.`,
+      `Use runtimePath.* from @athyper/api-contracts/runtime-paths instead.`,
   );
   return strict ? 1 : 0;
 }
 
-main().then((code) => process.exit(code)).catch((err: unknown) => {
-  console.error("[runtime-api-paths] fatal", err);
-  process.exit(2);
-});
+main()
+  .then((code) => process.exit(code))
+  .catch((err: unknown) => {
+    console.error("[runtime-api-paths] fatal", err);
+    process.exit(2);
+  });

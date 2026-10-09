@@ -39,13 +39,11 @@ export * from "./release-promotion.js";
 export * from "./kysely-publication-operations-repository.js";
 export * from "./entity-definition-service.js";
 export * from "./entity-definition-source.js";
-export * from "./entity-definition-routes.js";
 export * from "./entity-foundation-definition.js";
 export * from "./entity-definition-compiler.js";
 export * from "./entity-definition-consumer.js";
 
 export * from "./entity-case-contract-service.js";
-export * from "./entity-case-contract-routes.js";
 export * from "./entity-authorization-compiler.js";
 
 export * from "./entity-authorization-publication-review.js";

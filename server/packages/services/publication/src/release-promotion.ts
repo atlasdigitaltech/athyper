@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto";
+import {
+  assertLocalDevelopmentAuthority,
+  type LocalDevelopmentAuthority,
+  type PublicationEnvironmentIdentity,
+} from "@athyper/server-contract-publication";
 import type {
   PublicationAuthorityRepository,
   PublicationPlane,
@@ -43,6 +48,8 @@ export interface PromotionEvidence {
   readonly publisherKind: "human" | "workload";
   readonly publisherAuthorized: boolean;
   readonly approvedCandidate: boolean;
+  /** Loaded from installed authority by trusted adapters; never a client flag. */
+  readonly localAuthority?: LocalDevelopmentAuthority;
   readonly validationPassed: boolean;
   readonly signatureTrusted: boolean;
   readonly approval?: PromotionApproval;
@@ -59,6 +66,8 @@ export interface PromotionHostPolicy {
   readonly instance: string;
   readonly devfull: boolean;
   readonly automaticDevelopmentApproval: boolean;
+  /** Explicit installed local basis; absence preserves the existing policy. */
+  readonly localDevelopmentIdentity?: PublicationEnvironmentIdentity;
   readonly destinations: readonly {
     readonly plane: PublicationPlane;
     readonly instance: string;
@@ -156,7 +165,41 @@ export function evaluatePromotion(
     "PROMOTION_VALIDATED_TRUSTED_ARTIFACT_REQUIRED",
   );
   const automatic = policy.automaticDevelopmentApproval;
-  if (automatic) {
+  const local = policy.localDevelopmentIdentity !== undefined;
+  // A local-basis source must never become an approved promotion candidate by
+  // setting approvedCandidate=true or attaching an unrelated human receipt.
+  requirePolicy(
+    !evidence.localAuthority || local,
+    "PROMOTION_LOCAL_BASIS_NOT_ALLOWED",
+  );
+  if (local) {
+    requirePolicy(
+      !automatic &&
+        policy.environment === "dev" &&
+        policy.instance === "dev" &&
+        policy.devfull,
+      "PROMOTION_LOCAL_DEV_ONLY",
+    );
+    requirePolicy(
+      evidence.localAuthority &&
+        evidence.authorKind === "human" &&
+        evidence.publisherKind === "workload",
+      "PROMOTION_LOCAL_AUTHORITY_REQUIRED",
+    );
+    assertLocalDevelopmentAuthority(
+      evidence.localAuthority,
+      {
+        host: policy.localDevelopmentIdentity!,
+        developerPrincipalId: evidence.authorId,
+        authorWorkloadId: evidence.localAuthority.authorWorkloadId,
+        publisherWorkloadId: evidence.publisherId,
+        scope: coordinate.scope,
+        action: "publish",
+        targets: coordinate.targets,
+      },
+      now,
+    );
+  } else if (automatic) {
     requirePolicy(
       policy.environment === "dev" &&
         policy.instance === "dev" &&
@@ -222,13 +265,21 @@ export function evaluatePromotion(
     );
   }
   return {
-    mode: automatic
-      ? ("development_auto_approval" as const)
-      : ("governed_promotion" as const),
+    mode: local
+      ? ("local_development_authority" as const)
+      : automatic
+        ? ("development_auto_approval" as const)
+        : ("governed_promotion" as const),
     coordinateHash: promotionCoordinateHash(coordinate),
     authorId: evidence.authorId,
     publisherId: evidence.publisherId,
-    approvalReceiptId: evidence.approval?.receiptId ?? null,
+    approvalReceiptId: local ? null : (evidence.approval?.receiptId ?? null),
+    ...(local
+      ? {
+          standingAuthorityId: evidence.localAuthority!.id,
+          standingAuthorityHash: evidence.localAuthority!.hash,
+        }
+      : {}),
   };
 }
 
