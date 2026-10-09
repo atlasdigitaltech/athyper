@@ -53,14 +53,20 @@ export function publicationCompilerIdentity() {
     // Resolve these transitive compiler contracts through their declared owner,
     // not accidental workspace-root hoisting (which differs inside DEV hosts).
     const resolver =
-      name === "@athyper/contract-platform-ai"
-        ? createRequire(hostRequire.resolve("@athyper/server-contract-ai"))
-        : name === "@athyper/contract-platform-entity-runtime" ||
-            name === "@athyper/contract-platform-entity-list"
-          ? createRequire(
-              hostRequire.resolve("@athyper/server-platform-metadata"),
-            )
-          : hostRequire;
+      name === "@athyper/server-contract-meta-entity-authoring"
+        ? createRequire(
+            hostRequire.resolve(
+              "@athyper/server-plane-studio-meta-entity-authoring",
+            ),
+          )
+        : name === "@athyper/contract-platform-ai"
+          ? createRequire(hostRequire.resolve("@athyper/server-contract-ai"))
+          : name === "@athyper/contract-platform-entity-runtime" ||
+              name === "@athyper/contract-platform-entity-list"
+            ? createRequire(
+                hostRequire.resolve("@athyper/server-platform-metadata"),
+              )
+            : hostRequire;
     const entry = realpathSync(resolver.resolve(name));
     let root = dirname(entry);
     while (!existsSync(join(root, "package.json"))) {
