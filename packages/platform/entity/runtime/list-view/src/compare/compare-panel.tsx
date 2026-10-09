@@ -73,6 +73,9 @@ export function ComparePanel(props: ComparePanelProps) {
   const requested = location.records.join(",");
 
   useEffect(() => heading.current?.focus(), []);
+  // The narrow pair returns to the first two columns whenever the compared
+  // set or the baseline changes, instead of keeping a stale pair (audit 4).
+  useEffect(() => setPair([0, 1]), [requested, location.baseline]);
   useEffect(() => {
     const controller = new AbortController();
     setLoad({ status: "loading" });

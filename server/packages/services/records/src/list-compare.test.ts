@@ -54,6 +54,12 @@ describe("per-viewer Compare projection", () => {
     expect(resolveListCompare({ compare: { sections: [{ key: "basic", label: "Basic", fields: ["uom"] }] }, fields: listed, entityFields, masked: () => false, statusField: "status" })!.statusField).toBeUndefined();
   });
 
+  it("treats an unreadable currency field as restricted, so the money row's refusal is explained", () => {
+    const result = resolveListCompare({ compare: { sections: [{ key: "basic", label: "Basic", fields: ["cost"] }] }, fields: listed.filter((field) => field.key !== "cur"), entityFields, masked: () => false })!;
+    expect(result.sections[0]!.fields[0]).toEqual({ key: "cost", label: "Label cost", valueKind: "money" });
+    expect(result.fieldsRestricted).toBe(true);
+  });
+
   it("is absent when no declared field is readable", () => {
     expect(resolveListCompare({ compare: { sections: [{ key: "secret", label: "Restricted", fields: ["margin"] }] }, fields: listed, entityFields, masked: () => false })).toBeUndefined();
   });

@@ -244,6 +244,19 @@ test("narrow screens show a pair of columns, with the baseline fixed in the firs
     assert.equal(selects[0]!.value, "2");
     assert.equal(selects[0]!.disabled, true);
   });
+  await withPanel(async ({ container, requests, render }) => {
+    await render(location([id(1), id(2), id(3)]), true);
+    await act(async () => requests[0]!.resolve(result(rows)));
+    const second = () => container.querySelectorAll<HTMLSelectElement>(".a-entity-compare__pair select")[1]!;
+    await act(async () => {
+      second().value = "2";
+      second().dispatchEvent(new window.Event("change", { bubbles: true }));
+    });
+    assert.equal(second().value, "2");
+    // A change of baseline returns the pair to the first two columns.
+    await render(location([id(1), id(2), id(3)], { baseline: id(1) }), true);
+    assert.deepEqual([...container.querySelectorAll<HTMLSelectElement>(".a-entity-compare__pair select")].map((select) => select.value), ["0", "1"]);
+  });
 });
 
 test("in the list: Compare is offered for 2 to 4 selected records, opens from the URL, and Close goes back", async () => {
@@ -294,6 +307,33 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     assert.equal(new URL(dom.window.location.href).searchParams.get("compare"), null);
+    assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
+    // Opened, then Back by the browser: the marker went with its entry, so a
+    // later comparison opened from a link closes in place, not by going back.
+    await act(async () => boxes()[0]!.click());
+    await act(async () => boxes()[1]!.click());
+    await act(async () => compareButton()!.click());
+    await act(async () => {
+      dom.window.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
+    let backs = 0;
+    const back = dom.window.history.back.bind(dom.window.history);
+    dom.window.history.back = () => {
+      backs++;
+      back();
+    };
+    dom.window.history.pushState(null, "", `/app/material?compare=${id(1)},${id(2)}`);
+    dom.window.dispatchEvent(new dom.window.PopStateEvent("popstate"));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+    const closeLinked = [...dom.window.document.querySelectorAll<HTMLButtonElement>(".a-entity-compare button")].find((button) => button.textContent === "Close")!;
+    await act(async () => {
+      closeLinked.click();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    assert.equal(new URL(dom.window.location.href).searchParams.get("compare"), null);
+    assert.equal(backs, 0, "closing in place, not going back");
     assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
     // A shared link opens the comparison directly, with the baseline.
     await act(async () => root.unmount());

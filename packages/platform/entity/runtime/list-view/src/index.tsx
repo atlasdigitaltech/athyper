@@ -276,6 +276,8 @@ import {
   readListLocation,
   requestedLaneFieldUnavailable,
   requestedLayoutUnavailable,
+  currentEntryOpenedCompare,
+  markCompareEntry,
   writeListLocation,
 } from "./location";
 import { useListQueryState } from "./query-state";
@@ -781,8 +783,6 @@ function EntityCollectionRuntime({
   });
   // Result-set key captured when the reader changes the list; see revealListStart.
   const pendingResultsReveal = useRef<string | undefined>(undefined);
-  // Opening a comparison pushes one history entry; Close then goes back to it.
-  const comparePushed = useRef(false);
   const descriptor = useMemo(
     () =>
       sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl),
@@ -1880,10 +1880,10 @@ function EntityCollectionRuntime({
                 narrow={widthTier === "narrow"}
                 onChange={(next) => update({ ...state, compare: next }, "replace")}
                 onClose={() => {
-                  if (comparePushed.current) {
-                    comparePushed.current = false;
-                    window.history.back();
-                  } else update({ ...state, compare: undefined }, "replace");
+                  // Go back only through the entry that opening pushed; a
+                  // comparison opened from a link closes in place.
+                  if (currentEntryOpenedCompare()) window.history.back();
+                  else update({ ...state, compare: undefined }, "replace");
                 }}
                 {...(onOpenRecord || descriptor.entity.detailRouteTemplate
                   ? {
@@ -2178,8 +2178,8 @@ function EntityCollectionRuntime({
                         : undefined,
                     onCompare: () => {
                       // Column order is the selection order (section 7.1).
-                      comparePushed.current = true;
                       update({ ...state, compare: { records: [...selectedIds] } }, "push");
+                      markCompareEntry();
                     },
                   }
                 : {})}

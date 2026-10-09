@@ -32,6 +32,9 @@ export function resolveListCompare(input: {
       const masked = input.masked(key);
       const currencyKey = field.valueKind === "money" ? declared.get(key)?.list?.currencyField : undefined;
       const currency = currencyKey && listed.has(currencyKey) ? currencyKey : undefined;
+      // A declared currency the viewer cannot read is a restricted field too:
+      // the amount is then never compared, and the panel says why (audit 4).
+      if (currencyKey && !currency) restricted = true;
       return [
         Object.freeze({
           key,

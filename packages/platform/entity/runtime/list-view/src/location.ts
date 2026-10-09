@@ -31,7 +31,30 @@ export function writeListLocation(state: ListLocationStateV1, descriptor: Entity
   if (history === "replace") {
     removeCurrentSessionState();
     window.history.replaceState(window.history.state, "", href);
-  } else window.history.pushState(window.history.state, "", href);
+  } else window.history.pushState(withoutCompareEntry(window.history.state), "", href);
+}
+
+/** History-state key marking an entry created by opening a comparison
+ * (Compare blueprint section 5.4). It lives in the entry itself, so Back,
+ * navigation and other pushes can never leave it describing another entry. */
+const COMPARE_ENTRY = "athyperEntityCompareEntry";
+
+function withoutCompareEntry(state: unknown): unknown {
+  if (!state || typeof state !== "object" || !(COMPARE_ENTRY in state)) return state;
+  const { [COMPARE_ENTRY]: _marker, ...rest } = state as Record<string, unknown>;
+  return rest;
+}
+
+/** Marks the current entry as the one pushed to open a comparison. */
+export function markCompareEntry(): void {
+  const current = window.history.state;
+  window.history.replaceState({ ...(current && typeof current === "object" ? current : {}), [COMPARE_ENTRY]: true }, "", window.location.href);
+}
+
+/** The current entry was pushed by opening a comparison, so Close can go back to it. */
+export function currentEntryOpenedCompare(): boolean {
+  const current = window.history.state as Record<string, unknown> | null;
+  return Boolean(current && typeof current === "object" && current[COMPARE_ENTRY] === true);
 }
 
 /** Returns a portable URL with no device-local saved-view or session identifier. */
