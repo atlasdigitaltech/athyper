@@ -5,6 +5,7 @@ import { resolveListCalendar } from "./list-calendar.js";
 import { resolveListGantt } from "./list-gantt.js";
 import { lockedScope, resolveListTree } from "./list-tree.js";
 import { resolveListCompare } from "./list-compare.js";
+import { resolveCompareCollections } from "./list-compare-collections.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -748,17 +749,53 @@ export function createEntityListService(options: {
             }
           : field,
       );
+      const compiled = compileEntityListDescriptor(
+        context,
+        descriptor,
+        filterFields,
+        authorization.scope,
+        collectionScope,
+        dataOperations,
+        actions,
+        navigation,
+      );
+      // C4 line-item collections are resolved per viewer here, where other
+      // Entities' descriptors can be read (Compare blueprint 5.8 point 10a).
+      const surfaceCompare = compiled.surface.compare;
+      const declaredCollections = descriptor.listPresentation?.compare?.collections;
+      const withCollections =
+        surfaceCompare && declaredCollections?.length
+          ? await resolveCompareCollections({
+              descriptor,
+              listedParentKeys: new Set(compiled.fields.map((field) => field.key)),
+              load: (code) => descriptorFor(options.metadata, context, code),
+              listFor: async (target) => {
+                const readableTarget = await readableRecordFields(options.authorizer, context, target);
+                const list = compileEntityListDescriptor(context, target, queryableListFields(target, readableTarget));
+                return {
+                  fields: list.fields,
+                  identityField: list.entity.identityField,
+                  exactCounts: list.limits.countMode === "exact",
+                  searchable: target.fields.some((field) => field.searchable === true && readableTarget.some((readableField) => readableField.key === field.key)),
+                };
+              },
+              masked: (target, key) => maskedPresentationField(target, key),
+            })
+          : undefined;
       return {
-        ...compileEntityListDescriptor(
-          context,
-          descriptor,
-          filterFields,
-          authorization.scope,
-          collectionScope,
-          dataOperations,
-          actions,
-          navigation,
-        ),
+        ...compiled,
+        ...(withCollections && surfaceCompare
+          ? {
+              surface: Object.freeze({
+                ...compiled.surface,
+                compare: Object.freeze({
+                  ...surfaceCompare,
+                  collections: withCollections.collections,
+                  ...(withCollections.restricted ? { fieldsRestricted: true as const } : {}),
+                }),
+              }),
+            }
+          : {}),
         standardViews: await availableStandardViews(
           context,
           { ...descriptor, fields: readable },

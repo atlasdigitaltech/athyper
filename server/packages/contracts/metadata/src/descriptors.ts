@@ -145,6 +145,10 @@ export interface EntityFieldDescriptor {
   readonly compare?: {
     readonly better: "lower" | "higher";
     readonly summaryLabel?: string;
+    /** C4/Matrix: the field holding this measure's unit; units must match to show a rank. */
+    readonly unitField?: string;
+    /** C4/Matrix: this field is an evaluation amount (one currency, normalized). */
+    readonly evaluation?: true;
   };
 }
 
@@ -223,6 +227,30 @@ export interface EntityListCompareDescriptor {
     /** The section starts collapsed (revision 3, decision 12). */
     readonly collapsed?: true;
   }[];
+  /** C4 line-item collections (Compare blueprint 5.8). */
+  readonly collections?: readonly EntityListCompareCollectionDescriptor[];
+}
+
+export interface EntityListCompareCollectionDescriptor {
+  readonly key: string;
+  readonly label: string;
+  readonly localizedLabel?: import("@athyper/contract-platform-entity-list").EntityLocalizedTextV1;
+  /** A published entityRelationships key of this Entity, cardinality "many". */
+  readonly relationship: string;
+  /** 1–2 line fields; the first references the master Entity in master-list mode. */
+  readonly matchKey: readonly string[];
+  /** 1–12 line fields compared, in order. */
+  readonly fields: readonly string[];
+  /** Master-list mode: page by the master Entity under the compared records' common parent. */
+  readonly master?: {
+    readonly entity: string;
+    /** The master's reference to the common parent. */
+    readonly parentField: string;
+    /** The compared Entity's reference to the same parent. */
+    readonly recordParentField: string;
+  };
+  /** Authored wording for a missing line, e.g. "Not quoted". */
+  readonly absentLabel?: string;
 }
 
 /** Published Board projection compiled from the typed lane rows. Choices are

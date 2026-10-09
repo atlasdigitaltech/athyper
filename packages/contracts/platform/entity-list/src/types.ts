@@ -55,6 +55,8 @@ export const ENTITY_LIST_MAX_VISIBLE_COLUMNS = 100;
 /** Grouping levels (Tree blueprint decision 4). */
 export const ENTITY_LIST_MAX_GROUP_LEVELS = 3;
 export const ENTITY_LIST_MAX_FILTERS = 20;
+/** Values an `in` filter may name (Compare blueprint 5.8 point 8; Matrix section 3). */
+export const MAX_LIST_FILTER_VALUES = 100;
 export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
 export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
 /** Longest search term the records API accepts (route schema and query service). */

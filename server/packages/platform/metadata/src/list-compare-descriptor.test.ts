@@ -9,6 +9,25 @@ const valid = { sections: [{ key: "basic", label: "Basic data", fields: ["uom", 
 const check = (raw: unknown, extra: Partial<Parameters<typeof validatePublishedListCompare>[1]> = {}) =>
   validatePublishedListCompare(parsePublishedListCompare(raw), { byKey, identityField: "code", titleField: "name", storage: { idField: "id", versionField: "version" }, ...extra });
 
+describe("C4 collections", () => {
+  const collection = { key: "lines", label: "Line items", relationship: "allocations", matchKey: ["demand", "company"], fields: ["qty", "amount"], master: { entity: "demand", parentField: "event", recordParentField: "event" }, absentLabel: "Not allocated" };
+  const relationships = [{ key: "allocations", cardinality: "many" }, { key: "owner", cardinality: "zero_or_one" }];
+  const parentFields = new Map([...byKey, ["event", field("event", "reference")]]);
+  it("parses master-list collections and checks the relationship and the parent reference", () => {
+    const parsed = parsePublishedListCompare({ ...valid, collections: [collection] });
+    expect(parsed.collections).toEqual([collection]);
+    expect(() => validatePublishedListCompare(parsed, { byKey: parentFields, identityField: "code", storage: { idField: "id" }, relationships })).not.toThrow();
+    expect(() => validatePublishedListCompare(parsePublishedListCompare({ ...valid, collections: [{ ...collection, relationship: "owner" }] }), { byKey: parentFields, identityField: "code", storage: { idField: "id" }, relationships })).toThrow(/COMPARE_COLLECTION_RELATIONSHIP_INVALID/);
+    expect(() => validatePublishedListCompare(parsed, { byKey, identityField: "code", storage: { idField: "id" }, relationships })).toThrow(/COMPARE_MASTER_SCOPE_UNBOUND/);
+  });
+  it("refuses duplicate fields, oversized collections and bad match keys", () => {
+    expect(() => parsePublishedListCompare({ ...valid, collections: [{ ...collection, fields: ["demand"] }] })).toThrow(/COMPARE_FIELD_DUPLICATE/);
+    expect(() => parsePublishedListCompare({ ...valid, collections: [{ ...collection, matchKey: ["a", "b", "c"] }] })).toThrow(/1 or 2 distinct/);
+    expect(() => parsePublishedListCompare({ ...valid, collections: [collection, { ...collection, key: "b" }, { ...collection, key: "c" }] })).toThrow(/at most 2 collections/);
+    expect(() => parsePublishedListCompare({ ...valid, collections: [{ ...collection, key: "basic" }] })).toThrow(/unique key/);
+  });
+});
+
 describe("best value property (C3)", () => {
   it("parses an authored direction and summary label on number and date fields", () => {
     expect(parseFieldCompare({ better: "lower", summaryLabel: "Lowest total price" }, "money", "total")).toEqual({ better: "lower", summaryLabel: "Lowest total price" });

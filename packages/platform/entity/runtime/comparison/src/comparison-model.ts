@@ -275,6 +275,61 @@ export function comparisonBestColumns(
   return best.length === values.length ? none : { best, mixedCurrencies: false };
 }
 
+/** C4 line cells: a cell is `absent` when the record holds no line for the
+ * row's match key (decision 16). `absent` is a line-level state; the row
+ * functions above never see it. */
+export type ComparisonLineCell = ComparisonCell | { readonly state: "absent" };
+export type ComparisonLineMark = ComparisonOutcome | "not_in_baseline";
+
+const presentCells = (cells: readonly ComparisonLineCell[]) =>
+  cells.flatMap((cell, index) => (cell.state === "absent" ? [] : [index]));
+
+/** Decision 16: a line absent from any available column differs; otherwise
+ * `comparisonRowOutcome` is called unchanged on the cells. */
+export function comparisonLineOutcome(
+  kind: ComparisonValueKind,
+  cells: readonly ComparisonLineCell[],
+  money?: ComparisonCurrencyRule,
+): ComparisonOutcome {
+  const available = cells.filter((cell) => !(cell.state === "unavailable" && cell.reason === "record_unavailable"));
+  if (available.length < 2) return "not_comparable";
+  if (available.some((cell) => cell.state === "absent")) return available.every((cell) => cell.state === "absent") ? "same" : "differs";
+  return comparisonRowOutcome(kind, cells as readonly ComparisonCell[], money);
+}
+
+/** Section 5.7 baseline marks for lines: both absent is the same; absent only
+ * from the baseline is "not in baseline"; absent only here differs. */
+export function comparisonLineRelativeToBaseline(
+  kind: ComparisonValueKind,
+  cells: readonly ComparisonLineCell[],
+  baseline: number,
+  money?: ComparisonCurrencyRule,
+): readonly ComparisonLineMark[] {
+  const base = cells[baseline]!;
+  return cells.map((cell, index) => {
+    if (index === baseline) return "same";
+    if (cell.state === "absent" && base.state === "absent") return "same";
+    if (base.state === "absent") return cell.state === "unavailable" ? "not_comparable" : "not_in_baseline";
+    if (cell.state === "absent") return base.state === "unavailable" ? "not_comparable" : "differs";
+    const currencies = money?.currencies ? [money.currencies[baseline]!, money.currencies[index]!] : undefined;
+    return comparisonRowOutcome(kind, [base, cell], kind === "money" ? { currencies } : undefined);
+  });
+}
+
+/** C3 best value over the present lines only (absent lines never compete). */
+export function comparisonLineBestColumns(
+  kind: ComparisonValueKind,
+  cells: readonly ComparisonLineCell[],
+  better: "lower" | "higher",
+  money?: ComparisonCurrencyRule,
+): { readonly best: readonly number[]; readonly mixedCurrencies: boolean } {
+  const present = presentCells(cells);
+  const subset = present.map((index) => cells[index] as ComparisonCell);
+  const currencies = money?.currencies ? present.map((index) => money.currencies![index]!) : undefined;
+  const ranked = comparisonBestColumns(kind, subset, better, kind === "money" ? { currencies } : undefined);
+  return { best: ranked.best.map((position) => present[position]!), mixedCurrencies: ranked.mixedCurrencies };
+}
+
 /** Canonical JSON: object keys sorted, so key order never makes a difference. */
 function canonical(value: JsonValue): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;

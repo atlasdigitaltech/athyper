@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   comparisonBestColumns,
+  comparisonLineBestColumns,
+  comparisonLineOutcome,
+  comparisonLineRelativeToBaseline,
   comparisonRelativeToBaseline,
   comparisonRowOutcome,
   equalComparisonValues,
@@ -101,4 +104,16 @@ test("best value (C3): direction, ties, empty cells, unavailable columns, all eq
   assert.deepEqual(comparisonBestColumns("integer", [v(14), empty], "lower").best, []);
   assert.deepEqual(comparisonBestColumns("decimal", [v("2.50"), masked, v("1.5")], "higher").best, []);
   assert.deepEqual(comparisonBestColumns("datetime", [v("2026-10-02T09:14:00Z"), v("2026-10-01T11:05:00Z")], "lower").best, [1]);
+});
+
+test("C4 line outcomes: absent lines differ, both-absent is the same, baseline marks and best over present lines", () => {
+  const absent = { state: "absent" as const };
+  assert.equal(comparisonLineOutcome("decimal", [v("4.85"), absent, v("4.85")]), "differs");
+  assert.equal(comparisonLineOutcome("decimal", [absent, absent]), "same");
+  assert.equal(comparisonLineOutcome("decimal", [v("4.85"), v("4.850")]), "same");
+  assert.equal(comparisonLineOutcome("decimal", [v("4.85"), gone, absent]), "differs"); // the unavailable record is left out (decision 11)
+  assert.equal(comparisonLineOutcome("decimal", [v("4.85"), gone]), "not_comparable");
+  assert.deepEqual(comparisonLineRelativeToBaseline("decimal", [absent, v("1"), absent, gone], 0), ["same", "not_in_baseline", "same", "not_comparable"]);
+  assert.deepEqual(comparisonLineRelativeToBaseline("decimal", [v("1"), absent, v("2")], 0), ["same", "differs", "differs"]);
+  assert.deepEqual(comparisonLineBestColumns("decimal", [v("5.40"), absent, v("4.85"), v("4.85")], "lower").best, [2, 3]);
 });

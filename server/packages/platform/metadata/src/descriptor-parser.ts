@@ -296,6 +296,7 @@ export function parseEntityRuntimeDescriptor(
     ...(listPresentation?.identityField ? { identityField: listPresentation.identityField } : {}),
     ...(recordPresentation?.titleField ? { titleField: recordPresentation.titleField } : {}),
     storage,
+    ...(recordPresentation?.entityRelationships ? { relationships: recordPresentation.entityRelationships } : {}),
   });
   if (recordPresentation)
     validateRecordPresentationReferences(

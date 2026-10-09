@@ -33,6 +33,50 @@ export interface ListCompareFieldV1 {
   readonly better?: "lower" | "higher";
   /** C3: the summary chip's label, only with `better`. */
   readonly summaryLabel?: string;
+  /** C4: the field holding this measure's unit; a different unit hides the best mark. */
+  readonly unitField?: string;
+  /** C4: an evaluation amount (one currency, normalized), so units only gate the mark. */
+  readonly evaluation?: true;
+}
+
+/** Why a C4 collection cannot be compared for this viewer (Compare 5.8 point 10a). */
+export type ListCompareCollectionUnavailable =
+  | "RELATIONSHIP_UNAVAILABLE"
+  | "MATCH_KEY_UNAVAILABLE"
+  | "MATCH_KEY_NOT_SHARED"
+  | "MASTER_UNAVAILABLE"
+  | "NO_READABLE_FIELDS";
+
+/** A C4 line-item collection, resolved per viewer on the server (Compare 5.8). */
+export interface ListCompareCollectionV1 {
+  readonly key: string;
+  readonly label: string;
+  readonly localizedLabel?: EntityLocalizedTextV1;
+  readonly targetEntity: string;
+  readonly relationshipKey: string;
+  /** The parent's compiled hash, checked by the parent-scope resolver. */
+  readonly parentDescriptorHash: string;
+  readonly matchKey: readonly { readonly key: string; readonly label: string; readonly valueKind: string }[];
+  readonly fields: readonly ListCompareFieldV1[];
+  /** Master-list mode. */
+  readonly master?: {
+    readonly entity: string;
+    readonly parentField: string;
+    readonly recordParentField: string;
+    readonly identityField: string;
+    readonly titleField?: string;
+    readonly searchable: boolean;
+    /** Up to three bounded choice filters of the master list (for example category). */
+    readonly filters: readonly { readonly key: string; readonly label: string; readonly options: readonly { readonly value: string | number | boolean; readonly label: string }[] }[];
+    /** The master list publishes exact counts (coverage needs both). */
+    readonly exactCounts?: true;
+  };
+  /** The line Entity publishes exact counts. */
+  readonly exactCounts?: true;
+  readonly absentLabel?: string;
+  /** Line access does not follow the parent's: absence is never claimed. */
+  readonly accessIndependent?: true;
+  readonly unavailable?: ListCompareCollectionUnavailable;
 }
 
 export interface ListCompareSectionV1 {
@@ -48,6 +92,8 @@ export interface ListCompareSectionV1 {
  * at least one declared field is readable for this viewer (section 5.3). */
 export interface ListCompareV1 {
   readonly sections: readonly ListCompareSectionV1[];
+  /** C4 line-item collections (0–2). */
+  readonly collections?: readonly ListCompareCollectionV1[];
   /** Some declared fields are not shown to this viewer. No names, no count. */
   readonly fieldsRestricted?: true;
   /** The descriptor's declared status field, only when readable and compared (section 9.2). */
@@ -65,7 +111,7 @@ export function parseListCompare(
 ): ListCompareV1 {
   const root = "surface.compare";
   const value = record(raw, root);
-  allowKeys(value, ["sections", "fieldsRestricted", "statusField", "maxRecords"], root, "Compare");
+  allowKeys(value, ["sections", "collections", "fieldsRestricted", "statusField", "maxRecords"], root, "Compare");
   if (value.maxRecords !== COMPARE_MAX_RECORDS) fail(`${root}.maxRecords`, `must be ${COMPARE_MAX_RECORDS}`);
   if (value.fieldsRestricted !== undefined && value.fieldsRestricted !== true) fail(`${root}.fieldsRestricted`, "must be true when present");
   const sectionItems = list(value.sections, `${root}.sections`);
@@ -93,11 +139,89 @@ export function parseListCompare(
   if (fieldKeys.size > COMPARE_MAX_FIELDS) fail(`${root}.sections`, `must hold at most ${COMPARE_MAX_FIELDS} fields`);
   const statusField = value.statusField === undefined ? undefined : text(value.statusField, `${root}.statusField`);
   if (statusField !== undefined && !fieldKeys.has(statusField)) fail(`${root}.statusField`, "must be a compared field");
+  const collections = value.collections === undefined ? undefined : list(value.collections, `${root}.collections`).map((item, index) => parseCollection(item, `${root}.collections[${index}]`));
+  if (collections && collections.length > 2) fail(`${root}.collections`, "must hold at most 2 collections");
   return Object.freeze({
     sections: Object.freeze(sections),
+    ...(collections ? { collections: Object.freeze(collections) } : {}),
     ...(value.fieldsRestricted ? { fieldsRestricted: true as const } : {}),
     ...(statusField ? { statusField } : {}),
     maxRecords: COMPARE_MAX_RECORDS,
+  });
+}
+
+const UNAVAILABLE: readonly ListCompareCollectionUnavailable[] = ["RELATIONSHIP_UNAVAILABLE", "MATCH_KEY_UNAVAILABLE", "MATCH_KEY_NOT_SHARED", "MASTER_UNAVAILABLE", "NO_READABLE_FIELDS"];
+const HASH = /^[a-f0-9]{64}$/;
+
+function parseCollection(raw: unknown, at: string): ListCompareCollectionV1 {
+  const value = record(raw, at);
+  allowKeys(value, ["key", "label", "localizedLabel", "targetEntity", "relationshipKey", "parentDescriptorHash", "matchKey", "fields", "master", "exactCounts", "absentLabel", "accessIndependent", "unavailable"], at, "Compare collection");
+  const key = text(value.key, `${at}.key`);
+  if (!KEY.test(key)) fail(`${at}.key`, "must be a collection key");
+  const unavailable = value.unavailable === undefined ? undefined : (value.unavailable as ListCompareCollectionUnavailable);
+  if (unavailable !== undefined && !UNAVAILABLE.includes(unavailable)) fail(`${at}.unavailable`, "must be a published reason");
+  const parentDescriptorHash = text(value.parentDescriptorHash, `${at}.parentDescriptorHash`);
+  if (!HASH.test(parentDescriptorHash)) fail(`${at}.parentDescriptorHash`, "must be a 64-hex digest");
+  for (const flag of ["exactCounts", "accessIndependent"] as const)
+    if (value[flag] !== undefined && value[flag] !== true) fail(`${at}.${flag}`, "must be true when present");
+  const matchKey = list(value.matchKey, `${at}.matchKey`).map((entry, index) => {
+    const item = record(entry, `${at}.matchKey[${index}]`);
+    allowKeys(item, ["key", "label", "valueKind"], `${at}.matchKey[${index}]`, "match key");
+    return Object.freeze({ key: text(item.key, `${at}.matchKey[${index}].key`), label: text(item.label, `${at}.matchKey[${index}].label`), valueKind: text(item.valueKind, `${at}.matchKey[${index}].valueKind`) });
+  });
+  if (!unavailable && (matchKey.length < 1 || matchKey.length > 2)) fail(`${at}.matchKey`, "must hold 1 or 2 fields");
+  const seen = new Set<string>();
+  const lineFields = new Map<string, { valueKind: string }>(list(value.fields, `${at}.fields`).map((entry) => {
+    const item = record(entry, `${at}.fields`);
+    return [String(item.key), { valueKind: String(item.valueKind) }];
+  }));
+  for (const item of matchKey) lineFields.set(item.key, { valueKind: item.valueKind });
+  const fields = list(value.fields, `${at}.fields`).map((entry, index) => parseField(entry, `${at}.fields[${index}]`, lineFields, seen));
+  if (!unavailable && !fields.length) fail(`${at}.fields`, "must hold at least one field");
+  let master: ListCompareCollectionV1["master"];
+  if (value.master !== undefined) {
+    const item = record(value.master, `${at}.master`);
+    allowKeys(item, ["entity", "parentField", "recordParentField", "identityField", "titleField", "searchable", "filters", "exactCounts"], `${at}.master`, "master list");
+    if (typeof item.searchable !== "boolean") fail(`${at}.master.searchable`, "must be a boolean");
+    const filters = list(item.filters, `${at}.master.filters`).map((entry, index) => {
+      const filter = record(entry, `${at}.master.filters[${index}]`);
+      allowKeys(filter, ["key", "label", "options"], `${at}.master.filters[${index}]`, "master filter");
+      return Object.freeze({
+        key: text(filter.key, `${at}.master.filters[${index}].key`),
+        label: text(filter.label, `${at}.master.filters[${index}].label`),
+        options: Object.freeze(list(filter.options, `${at}.master.filters[${index}].options`).map((option) => {
+          const choice = record(option, `${at}.master.filters[${index}].options`);
+          return Object.freeze({ value: choice.value as string | number | boolean, label: text(choice.label, `${at}.master.filters[${index}].options.label`) });
+        })),
+      });
+    });
+    if (filters.length > 3) fail(`${at}.master.filters`, "must hold at most 3 filters");
+    if (item.exactCounts !== undefined && item.exactCounts !== true) fail(`${at}.master.exactCounts`, "must be true when present");
+    master = Object.freeze({
+      entity: text(item.entity, `${at}.master.entity`),
+      parentField: text(item.parentField, `${at}.master.parentField`),
+      recordParentField: text(item.recordParentField, `${at}.master.recordParentField`),
+      identityField: text(item.identityField, `${at}.master.identityField`),
+      ...(item.titleField === undefined ? {} : { titleField: text(item.titleField, `${at}.master.titleField`) }),
+      searchable: item.searchable,
+      filters: Object.freeze(filters),
+      ...(item.exactCounts ? { exactCounts: true as const } : {}),
+    });
+  }
+  return Object.freeze({
+    key,
+    label: text(value.label, `${at}.label`),
+    ...(value.localizedLabel === undefined ? {} : { localizedLabel: parseEntityLocalizedText(value.localizedLabel) }),
+    targetEntity: text(value.targetEntity, `${at}.targetEntity`),
+    relationshipKey: text(value.relationshipKey, `${at}.relationshipKey`),
+    parentDescriptorHash,
+    matchKey: Object.freeze(matchKey),
+    fields: Object.freeze(fields),
+    ...(master ? { master } : {}),
+    ...(value.exactCounts ? { exactCounts: true as const } : {}),
+    ...(value.absentLabel === undefined ? {} : { absentLabel: text(value.absentLabel, `${at}.absentLabel`) }),
+    ...(value.accessIndependent ? { accessIndependent: true as const } : {}),
+    ...(unavailable ? { unavailable } : {}),
   });
 }
 
@@ -108,7 +232,7 @@ function parseField(
   seen: Set<string>,
 ): ListCompareFieldV1 {
   const field = record(raw, at);
-  allowKeys(field, ["key", "label", "valueKind", "options", "masked", "currencyField", "currencyMasked", "better", "summaryLabel"], at, "Compare field");
+  allowKeys(field, ["key", "label", "valueKind", "options", "masked", "currencyField", "currencyMasked", "better", "summaryLabel", "unitField", "evaluation"], at, "Compare field");
   const key = text(field.key, `${at}.key`);
   if (seen.has(key)) fail(`${at}.key`, "must be compared once");
   seen.add(key);
@@ -124,6 +248,8 @@ function parseField(
     fail(`${at}.better`, "must be lower or higher on a number or date field");
   const summaryLabel = field.summaryLabel === undefined ? undefined : text(field.summaryLabel, `${at}.summaryLabel`);
   if (summaryLabel !== undefined && better === undefined) fail(`${at}.summaryLabel`, "needs better");
+  const unitField = field.unitField === undefined ? undefined : text(field.unitField, `${at}.unitField`);
+  if (field.evaluation !== undefined && field.evaluation !== true) fail(`${at}.evaluation`, "must be true when present");
   const options = field.options === undefined ? undefined : list(field.options, `${at}.options`).map((option, index) => {
     const item = record(option, `${at}.options[${index}]`);
     allowKeys(item, ["value", "label"], `${at}.options[${index}]`, "choice");
@@ -140,6 +266,8 @@ function parseField(
     ...(field.currencyMasked ? { currencyMasked: true as const } : {}),
     ...(better ? { better: better as "lower" | "higher" } : {}),
     ...(summaryLabel ? { summaryLabel } : {}),
+    ...(unitField ? { unitField } : {}),
+    ...(field.evaluation ? { evaluation: true as const } : {}),
   });
 }
 

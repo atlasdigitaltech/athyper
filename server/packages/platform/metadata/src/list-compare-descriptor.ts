@@ -22,7 +22,7 @@ function only(value: Record<string, unknown>, keys: readonly string[], path: str
 export function parsePublishedListCompare(raw: unknown): EntityListCompareDescriptor {
   const root = "listPresentation.compare";
   const value = record(raw, root);
-  only(value, ["sections"], root);
+  only(value, ["sections", "collections"], root);
   const items = list(value.sections, `${root}.sections`);
   if (!items.length) fail(`${root}.sections`, "COMPARE_SECTION_EMPTY: must declare at least one section");
   if (items.length > COMPARE_MAX_SECTIONS) fail(`${root}.sections`, `must declare at most ${COMPARE_MAX_SECTIONS} sections`);
@@ -61,7 +61,59 @@ export function parsePublishedListCompare(raw: unknown): EntityListCompareDescri
   });
   if (fields.size > COMPARE_MAX_FIELDS)
     fail(`${root}.sections`, `COMPARE_FIELDS_ABOVE_CAP: must compare at most ${COMPARE_MAX_FIELDS} fields`);
-  return Object.freeze({ sections: Object.freeze(sections) });
+  const collections = value.collections === undefined ? undefined : parseCollections(value.collections, `${root}.collections`, keys);
+  return Object.freeze({ sections: Object.freeze(sections), ...(collections ? { collections } : {}) });
+}
+
+/** C4 collections (section 5.8): 0–2, each 1–2 match-key fields and 1–12 compared fields. */
+export const COMPARE_MAX_COLLECTIONS = 2;
+export const COMPARE_MAX_COLLECTION_FIELDS = 12;
+
+function parseCollections(raw: unknown, root: string, sectionKeys: Set<string>): EntityListCompareDescriptor["collections"] {
+  const items = list(raw, root);
+  if (items.length > COMPARE_MAX_COLLECTIONS) fail(root, `COMPARE_FIELDS_ABOVE_CAP: at most ${COMPARE_MAX_COLLECTIONS} collections`);
+  const keys = new Set(sectionKeys);
+  return Object.freeze(
+    items.map((item, index) => {
+      const at = `${root}[${index}]`;
+      const entry = record(item, at);
+      only(entry, ["key", "label", "localizedLabel", "relationship", "matchKey", "fields", "master", "absentLabel"], at);
+      const key = text(entry.key, `${at}.key`);
+      if (!SECTION_KEY.test(key) || keys.has(key)) fail(`${at}.key`, "must be a unique key across sections and collections");
+      keys.add(key);
+      const matchKey = list(entry.matchKey, `${at}.matchKey`).map((field, position) => text(field, `${at}.matchKey[${position}]`));
+      if (matchKey.length < 1 || matchKey.length > 2 || new Set(matchKey).size !== matchKey.length) fail(`${at}.matchKey`, "must name 1 or 2 distinct line fields");
+      const fields = list(entry.fields, `${at}.fields`).map((field, position) => text(field, `${at}.fields[${position}]`));
+      if (!fields.length) fail(`${at}.fields`, "COMPARE_SECTION_EMPTY: must list at least one line field");
+      if (fields.length > COMPARE_MAX_COLLECTION_FIELDS) fail(`${at}.fields`, `COMPARE_FIELDS_ABOVE_CAP: at most ${COMPARE_MAX_COLLECTION_FIELDS} line fields`);
+      for (const field of fields)
+        if (matchKey.includes(field) || fields.indexOf(field) !== fields.lastIndexOf(field)) fail(`${at}.fields`, `COMPARE_FIELD_DUPLICATE: ${field} appears twice`);
+      let master: NonNullable<EntityListCompareDescriptor["collections"]>[number]["master"];
+      if (entry.master !== undefined) {
+        const value = record(entry.master, `${at}.master`);
+        only(value, ["entity", "parentField", "recordParentField"], `${at}.master`);
+        master = Object.freeze({ entity: text(value.entity, `${at}.master.entity`), parentField: text(value.parentField, `${at}.master.parentField`), recordParentField: text(value.recordParentField, `${at}.master.recordParentField`) });
+      }
+      let localizedLabel;
+      if (entry.localizedLabel !== undefined) {
+        try {
+          localizedLabel = parseEntityLocalizedText(entry.localizedLabel);
+        } catch (error) {
+          fail(`${at}.localizedLabel`, `must be localized text (${(error as Error).message})`);
+        }
+      }
+      return Object.freeze({
+        key,
+        label: text(entry.label, `${at}.label`),
+        ...(localizedLabel ? { localizedLabel } : {}),
+        relationship: text(entry.relationship, `${at}.relationship`),
+        matchKey: Object.freeze(matchKey),
+        fields: Object.freeze(fields),
+        ...(master ? { master } : {}),
+        ...(entry.absentLabel === undefined ? {} : { absentLabel: text(entry.absentLabel, `${at}.absentLabel`) }),
+      });
+    }),
+  );
 }
 
 /** Field types a best value may rank (section 5.6). */
@@ -71,7 +123,7 @@ export const COMPARE_BETTER_TYPES = ["integer", "decimal", "money", "date", "dat
 export function parseFieldCompare(raw: unknown, type: string, key: string): NonNullable<EntityFieldDescriptor["compare"]> {
   const path = `field.compare (${key})`;
   const value = record(raw, path);
-  only(value, ["better", "summaryLabel"], path);
+  only(value, ["better", "summaryLabel", "unitField", "evaluation"], path);
   if (value.better === undefined) {
     if (value.summaryLabel !== undefined) fail(path, "COMPARE_SUMMARY_WITHOUT_BETTER: a summary label needs a best-value direction");
     fail(path, "must declare better");
@@ -79,9 +131,12 @@ export function parseFieldCompare(raw: unknown, type: string, key: string): NonN
   if (value.better !== "lower" && value.better !== "higher") fail(`${path}.better`, "must be lower or higher");
   if (!(COMPARE_BETTER_TYPES as readonly string[]).includes(type))
     fail(path, `COMPARE_BETTER_INELIGIBLE: a ${type} field cannot rank a best value`);
+  if (value.evaluation !== undefined && value.evaluation !== true) fail(`${path}.evaluation`, "must be true when present");
   return Object.freeze({
     better: value.better,
     ...(value.summaryLabel === undefined ? {} : { summaryLabel: text(value.summaryLabel, `${path}.summaryLabel`) }),
+    ...(value.unitField === undefined ? {} : { unitField: text(value.unitField, `${path}.unitField`) }),
+    ...(value.evaluation ? { evaluation: true as const } : {}),
   });
 }
 
@@ -93,6 +148,7 @@ export function validatePublishedListCompare(
     readonly identityField?: string;
     readonly titleField?: string;
     readonly storage: { readonly idField?: unknown; readonly versionField?: unknown };
+    readonly relationships?: readonly { readonly key: string; readonly cardinality: string }[];
   },
 ): void {
   if (!compare) return;
@@ -112,4 +168,18 @@ export function validatePublishedListCompare(
     }
   if (requested.size > COMPARE_REQUEST_FIELD_LIMIT)
     fail(root, `COMPARE_FIELDS_ABOVE_CAP: a comparison request would name ${requested.size} fields; the limit is ${COMPARE_REQUEST_FIELD_LIMIT}`);
+  // C4: the relationship must be published on this Entity with cardinality
+  // "many"; the master's parent reference must exist on the compared Entity.
+  // The line Entity's own fields are checked where both Entities are known
+  // (the authoring compiler) and, per viewer, at runtime (section 5.8).
+  for (const collection of compare.collections ?? []) {
+    const relationship = input.relationships?.find((item) => item.key === collection.relationship);
+    if (!relationship || relationship.cardinality !== "many")
+      fail(root, `COMPARE_COLLECTION_RELATIONSHIP_INVALID: ${collection.relationship} is not a published "many" relationship of this Entity`);
+    if (collection.master) {
+      const parentReference = input.byKey.get(collection.master.recordParentField);
+      if (!parentReference || parentReference.type !== "reference")
+        fail(root, `COMPARE_MASTER_SCOPE_UNBOUND: ${collection.master.recordParentField} is not a reference field of the compared Entity`);
+    }
+  }
 }
