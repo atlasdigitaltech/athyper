@@ -3,6 +3,19 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261009_local_publication_request.sql",
+      "path": "migrations/20261009_local_publication_request.sql",
+      "sha256": "a327af9a6b73f818310e14fdef3a186b814186026b771456e0a43276fee4bdf0",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restricted exact local publication request admission and native worker source reads; no authority installation or release mutation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/41_local_publication_request.sql",
+        "ddl/planes/studio/publication/37_native_worker_source.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261009_native_publication_validation.sql",
       "path": "migrations/20261009_native_publication_validation.sql",
       "sha256": "dabd1ae0f9360c0f71a98210f978b51ac47cc3e6e09fb1e93430e980f077bb61",

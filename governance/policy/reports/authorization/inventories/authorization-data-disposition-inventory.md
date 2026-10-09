@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013`
 - Approval: **pending**
-- Cataloged database tables: 783
+- Cataloged database tables: 785
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 1
@@ -50,7 +50,7 @@ or multiply classified runtime objects.
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
-| published_definition_authority | 13 |
+| published_definition_authority | 15 |
 | secret | 1 |
 | session_token | 2 |
 | tenant_business_context_non_authorizing | 1 |
@@ -784,6 +784,8 @@ or multiply classified runtime objects.
 | `publication.entity_baseline_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.entity_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.entity_runtime_restoration_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.local_publication_host` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.local_publication_request` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.release` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `runtime_meta.applied_release` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.applied_release_payload` | derived_runtime_projection | rebuild_from_published_authority | schema_default |

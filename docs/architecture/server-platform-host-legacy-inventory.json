@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 261,
+    "configuration:new": 262,
     "database-commands:deferred": 76,
     "database-commands:migrated": 19,
     "database-commands:new": 102,
@@ -5582,6 +5582,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/composition/register-runtimes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:local_publication_postgres",
+      "category": "configuration",
+      "key": "local_publication_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

@@ -168,6 +168,7 @@
     "ops.acknowledge_record_transfer_cleanup(text, uuid, text, uuid, text, text, timestamp with time zone)",
     "ops.record_transfer_cleanup_candidates(text, timestamp with time zone, integer)",
     "ops.record_transfer_stuck_counts(timestamp with time zone, integer)",
+    "publication.admit_local_publication_request(jsonb)",
     "publication.fn_acknowledge_activation(uuid, text, text, uuid, jsonb)",
     "publication.fn_authorization_successor_compilation_source(uuid)",
     "publication.fn_collection_configuration_compilation_source(uuid)",
@@ -190,6 +191,7 @@
     "publication.fn_human_reviewed_entity_policy(jsonb, uuid, text)",
     "publication.fn_initial_baseline_compilation_source(uuid)",
     "publication.fn_link_system_entity_release(uuid)",
+    "publication.fn_local_publication_request_authority(jsonb, boolean)",
     "publication.fn_native_compilation_recovery_source(jsonb, boolean)",
     "publication.fn_prepare_authorization_successor(uuid, jsonb)",
     "publication.fn_prepare_collection_configuration_release(uuid, jsonb)",
@@ -208,6 +210,7 @@
     "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
     "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
     "publication.native_worker_entity_visible(uuid)",
+    "publication.read_local_publication_request(text)",
     "runtime_meta.fn_activate_release(uuid, jsonb)",
     "runtime_meta.fn_active_business_partner_definition(text)",
     "runtime_meta.fn_active_entity_descriptor(text, text)",
@@ -619,6 +622,24 @@
       "owner": "athyper_definer_product_publication",
       "rowSecurityOff": false,
       "reason": "Worker reference identity visibility derives from exact currently enrolled native human publication sources."
+    },
+    {
+      "signature": "publication.fn_local_publication_request_authority(jsonb, boolean)",
+      "owner": "athyper_definer_product_publication",
+      "rowSecurityOff": false,
+      "reason": "Exact local request admission/read under current enrolled authority; no public source graph or release writes."
+    },
+    {
+      "signature": "publication.admit_local_publication_request(jsonb)",
+      "owner": "athyper_definer_product_publication",
+      "rowSecurityOff": false,
+      "reason": "Exact local request admission/read under current enrolled authority; no public source graph or release writes."
+    },
+    {
+      "signature": "publication.read_local_publication_request(text)",
+      "owner": "athyper_definer_product_publication",
+      "rowSecurityOff": false,
+      "reason": "Exact local request admission/read under current enrolled authority; no public source graph or release writes."
     }
   ],
   "roles": [

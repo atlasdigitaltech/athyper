@@ -78,3 +78,4 @@
 20261009_native_identity_receipt_binding.sql
 20261009_successor_initial_target.sql
 20261009_native_base_guard_role_isolation.sql
+20261009_local_publication_request.sql

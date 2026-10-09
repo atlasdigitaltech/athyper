@@ -11,12 +11,19 @@ BEGIN
  THEN RAISE EXCEPTION 'NATIVE_WORKER_SOURCE_DENIED' USING ERRCODE='42501'; END IF;
  SELECT CASE WHEN status='published' THEN 'prepare' ELSE 'release' END INTO phase
  FROM metadata.entity_change_set WHERE id=p_draft;
- authority:=publication.fn_system_entity_authority(p_draft,phase);
- IF (authority->>'humanReview')::boolean IS DISTINCT FROM true
- THEN RAISE EXCEPTION 'NATIVE_WORKER_HUMAN_REVIEW_REQUIRED' USING ERRCODE='42501'; END IF;
+ IF nullif(current_setting('app.local_publication_request_hash',true),'') IS NOT NULL THEN
+   authority:=publication.read_local_publication_request(current_setting('app.local_publication_request_hash',true));
+   IF authority#>>'{changeSet,id}' IS DISTINCT FROM p_draft::text
+   THEN RAISE EXCEPTION 'NATIVE_WORKER_LOCAL_SOURCE_MISMATCH' USING ERRCODE='42501'; END IF;
+ ELSE
+   authority:=publication.fn_system_entity_authority(p_draft,phase);
+   IF (authority->>'humanReview')::boolean IS DISTINCT FROM true
+   THEN RAISE EXCEPTION 'NATIVE_WORKER_HUMAN_REVIEW_REQUIRED' USING ERRCODE='42501'; END IF;
+ END IF;
  SELECT cs.* INTO c FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id
  WHERE cs.id=p_draft AND cs.tenant_id IS NULL AND e.tenant_id IS NULL AND e.ownership_model='system'
- AND cs.source_kind='product' AND cs.native_core_layout_version=2 AND cs.status IN ('approved','published') FOR SHARE OF cs;
+ AND cs.source_kind='product' AND cs.native_core_layout_version=2
+ AND (cs.status IN ('approved','published') OR (authority->>'basis'='local_development_authority' AND cs.status IN ('draft','in_review'))) FOR SHARE OF cs;
  IF NOT FOUND THEN RAISE EXCEPTION 'NATIVE_REVIEW_SOURCE_UNAVAILABLE'; END IF;
  SELECT * INTO STRICT saved FROM snapshot.entity_draft_save s WHERE s.change_set_id=c.id AND s.tenant_id IS NULL AND s.lock_version=c.lock_version;
  SELECT coalesce(jsonb_agg(to_jsonb(o)||jsonb_build_object('export_max_records',o.export_max_records::text) ORDER BY o.id),'[]') INTO ops

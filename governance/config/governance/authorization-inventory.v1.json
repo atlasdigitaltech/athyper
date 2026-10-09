@@ -38,18 +38,18 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14632,
-    "authorizationFiles": 2047,
+    "filesScanned": 14637,
+    "authorizationFiles": 2050,
     "registeredObjects": 470,
-    "objectReferences": 1401,
-    "writerReferences": 146,
+    "objectReferences": 1406,
+    "writerReferences": 148,
     "securitySymbolReferences": 130,
-    "contractFieldReferences": 3182,
+    "contractFieldReferences": 3183,
     "permissionDefinitions": 89,
     "permissionUses": 2229,
     "routes": 30,
     "keycloakMappings": 145,
-    "derivedDatabaseObjects": 383,
+    "derivedDatabaseObjects": 385,
     "generatedArtifacts": 7,
     "captureSources": 0,
     "captureSourcesByPlane": {},
@@ -1108,9 +1108,9 @@
       ],
       "sourceOfTruth": true,
       "disposition": "keep",
-      "definitionCount": 5,
-      "readerCount": 344,
-      "writerCount": 54,
+      "definitionCount": 6,
+      "readerCount": 346,
+      "writerCount": 56,
       "executionCount": 0,
       "files": [
         "apps/docs-internal/public/assets/reports/common-ddl-consolidation-20261003.json",
@@ -1154,6 +1154,7 @@
         "server/apps/platform-host/src/composition/shared/publication/human-publication-activation.ts",
         "server/apps/platform-host/src/composition/shared/publication/human-publication-execution.ts",
         "server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts",
+        "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/native-compilation-recovery.postgres.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/native-publication-authority.postgres.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
@@ -1264,6 +1265,7 @@
         "server/db/ddl/planes/studio/publication/33_live_read_resource_review.sql",
         "server/db/ddl/planes/studio/publication/36_native_publication_authority.sql",
         "server/db/ddl/planes/studio/publication/39_native_compilation_recovery.sql",
+        "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
         "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
         "server/db/ddl/planes/studio/snapshot/05_constraints.sql",
         "server/db/ddl/planes/studio/trustiam/12_identity_replay_approval.sql",
@@ -1282,6 +1284,7 @@
         "server/db/migrations/20261003_product_human_review.sql",
         "server/db/migrations/20261003_product_publication_tenant_reads.sql",
         "server/db/migrations/20261003_publication_policy_replacement.sql",
+        "server/db/migrations/20261009_local_publication_request.sql",
         "server/db/migrations/20261009_native_compilation_recovery.sql",
         "server/db/migrations/20261009_native_product_review.sql",
         "server/db/migrations/20261009_native_publication_authority.sql",
@@ -12465,7 +12468,7 @@
     {
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
-      "sha256": "654dd46d765a3f10c701a5dff7d7ba9b88c2d941c7fe0c9c00d2b5bdc981a5b4"
+      "sha256": "9d29ab90b59f24a45642cec8381922fcef87c1f70e72341a924e0110897afb1b"
     },
     {
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
@@ -14513,6 +14516,11 @@
       "sha256": "ccb937da16d6981e0466dd9aaef3d2ac38f7bb000979bca1bb5f0776db6b8725"
     },
     {
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+      "artifactClass": "test",
+      "sha256": "de47c3918fb151db07ea405200d5089dcf973db54d8044ec4ffb337a2adb6136"
+    },
+    {
       "path": "server/apps/platform-host/src/composition/shared/publication/machine-policy.ts",
       "artifactClass": "runtime",
       "sha256": "0483b08caca1e0590b9d41458edf6ac3c17721b6e61a2084e6aa737b3ecd043e"
@@ -14715,7 +14723,7 @@
     {
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
-      "sha256": "a66bb657493cec5c1ea41f188c29047e09ac982549e5d2079b3f48fdeec2a9da"
+      "sha256": "a9a69f2661cbe389a02bbe20b4d45e266462bcd569ae8d630548460ee2e461c9"
     },
     {
       "path": "server/db/ddl/common/ai/05_constraints.sql",
@@ -15000,7 +15008,7 @@
     {
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
-      "sha256": "ea6805519e7320e0395f94803c7bf3fe52165db7fb6d9bdd7595d25396b8e5b1"
+      "sha256": "b1ac12be932379df4348255f3fcf27a90d43c548e8bf8a59df080df3e68d6a8a"
     },
     {
       "path": "server/db/ddl/common/snapshot/03_tables.sql",
@@ -15593,6 +15601,11 @@
       "sha256": "c358f62bc855cb185f7830471fcd0429f09328cd2536bf588760ceb0e7492530"
     },
     {
+      "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
+      "artifactClass": "ddl",
+      "sha256": "17a516751651d5c38a1929d253d6e5a89894761ea543c084c47026b01bdd09bf"
+    },
+    {
       "path": "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
       "artifactClass": "ddl",
       "sha256": "f787535a4ae05d6f95db334eefdc3e4f458c1c05fcac901aed7c1b296b58a762"
@@ -15723,6 +15736,11 @@
       "sha256": "63bbeee81f8ee86ab1157c59b493e88aa3237531ad6a8eb192ad49aef3e7ab55"
     },
     {
+      "path": "server/db/migrations/20261009_local_publication_request.sql",
+      "artifactClass": "runtime",
+      "sha256": "a327af9a6b73f818310e14fdef3a186b814186026b771456e0a43276fee4bdf0"
+    },
+    {
       "path": "server/db/migrations/20261009_native_compilation_recovery.sql",
       "artifactClass": "runtime",
       "sha256": "7dc4eb92ef0a0aab2f4d8273e5fe2de343370ed45ab92ec174f0d170378669a1"
@@ -15765,7 +15783,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "1eb4cfef4d44397ebd4f4b46d0f6671322be209badbf919fea542f919dd62083"
+      "sha256": "275a220236507ff05acee4bfcca003591901a4695588494eec7c35a85797aa79"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -21174,14 +21192,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 1528,
+      "line": 1549,
       "lines": [
-        1528,
-        1861,
-        2171,
-        2596,
-        3025,
-        3487
+        1549,
+        1882,
+        2192,
+        2617,
+        3046,
+        3508
       ]
     },
     {
@@ -22622,14 +22640,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 1548,
+      "line": 1569,
       "lines": [
-        1548,
-        1908,
-        2187,
-        2603,
-        3081,
-        3597
+        1569,
+        1929,
+        2208,
+        2624,
+        3102,
+        3618
       ]
     },
     {
@@ -25240,6 +25258,39 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+      "artifactClass": "test",
+      "access": "define",
+      "line": 128,
+      "lines": [
+        128
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+      "artifactClass": "test",
+      "access": "insert",
+      "line": 145,
+      "lines": [
+        145
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+      "artifactClass": "test",
+      "access": "update",
+      "line": 207,
+      "lines": [
+        207
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
       "path": "server/apps/platform-host/src/composition/shared/publication/native-compilation-recovery.postgres.test.ts",
       "artifactClass": "test",
       "access": "read",
@@ -25388,39 +25439,39 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 723,
+      "line": 744,
       "lines": [
-        723,
-        935,
-        999,
-        1006,
-        1012,
-        1085,
-        1353,
-        1360,
-        1366,
-        1564,
-        1929,
-        1936,
-        1942,
-        2199,
-        2617,
-        2624,
-        2630,
-        2689,
-        2739,
-        2746,
-        2752,
-        3117,
-        3666,
-        3673,
-        3679,
-        3996,
-        4109,
-        4620,
-        4634,
-        4653,
-        4747
+        744,
+        956,
+        1020,
+        1027,
+        1033,
+        1106,
+        1374,
+        1381,
+        1387,
+        1585,
+        1950,
+        1957,
+        1963,
+        2220,
+        2638,
+        2645,
+        2651,
+        2710,
+        2760,
+        2767,
+        2773,
+        3138,
+        3687,
+        3694,
+        3700,
+        4017,
+        4130,
+        4641,
+        4655,
+        4674,
+        4768
       ]
     },
     {
@@ -27799,6 +27850,19 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
+      "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
+      "artifactClass": "ddl",
+      "access": "read",
+      "line": 63,
+      "lines": [
+        63,
+        64,
+        65
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
       "path": "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
       "artifactClass": "ddl",
       "access": "reference",
@@ -28131,6 +28195,19 @@
       "line": 34,
       "lines": [
         34
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/db/migrations/20261009_local_publication_request.sql",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 64,
+      "lines": [
+        64,
+        65,
+        66
       ]
     },
     {
@@ -30882,14 +30959,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3121,
+      "line": 3142,
       "lines": [
-        3121,
-        3685,
-        4624,
-        4635,
-        4657,
-        4753
+        3142,
+        3706,
+        4645,
+        4656,
+        4678,
+        4774
       ]
     },
     {
@@ -32999,13 +33076,13 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 727,
+      "line": 748,
       "lines": [
-        727,
-        1089,
-        3137,
-        3775,
-        4000
+        748,
+        1110,
+        3158,
+        3796,
+        4021
       ]
     },
     {
@@ -36833,11 +36910,11 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 837,
+      "line": 858,
       "lines": [
-        837,
-        3819,
-        3963
+        858,
+        3840,
+        3984
       ]
     },
     {
@@ -37821,10 +37898,10 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 845,
+      "line": 866,
       "lines": [
-        845,
-        3835
+        866,
+        3856
       ]
     },
     {
@@ -39556,10 +39633,10 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 4186,
+      "line": 4207,
       "lines": [
-        4186,
-        4295
+        4207,
+        4316
       ]
     },
     {
@@ -39760,9 +39837,9 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 4190,
+      "line": 4211,
       "lines": [
-        4190
+        4211
       ]
     },
     {
@@ -39953,9 +40030,9 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "execute",
-      "line": 172,
+      "line": 173,
       "lines": [
-        172
+        173
       ]
     },
     {
@@ -39964,9 +40041,9 @@
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
       "access": "execute",
-      "line": 570,
+      "line": 589,
       "lines": [
-        570
+        589
       ]
     },
     {
@@ -40080,9 +40157,9 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "execute",
-      "line": 194,
+      "line": 196,
       "lines": [
-        194
+        196
       ]
     },
     {
@@ -40091,9 +40168,9 @@
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
       "access": "execute",
-      "line": 592,
+      "line": 612,
       "lines": [
-        592
+        612
       ]
     },
     {
@@ -68113,6 +68190,15 @@
       "artifactClass": "test",
       "lines": [
         59
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        191,
+        194
       ]
     },
     {
@@ -98411,8 +98497,8 @@
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
       "lines": [
-        1227,
-        1395
+        1240,
+        1408
       ]
     },
     {
@@ -148438,6 +148524,30 @@
       "dependencies": [
         "master.principal",
         "master.principal_identity_binding"
+      ],
+      "classification": "structural_dependency",
+      "owner": "platform-iam",
+      "disposition": "review_with_registered_dependency"
+    },
+    {
+      "qualifiedName": "publication.fn_local_publication_request_authority",
+      "kind": "function",
+      "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
+      "line": 22,
+      "dependencies": [
+        "master.principal"
+      ],
+      "classification": "structural_dependency",
+      "owner": "platform-iam",
+      "disposition": "review_with_registered_dependency"
+    },
+    {
+      "qualifiedName": "publication.fn_local_publication_request_authority",
+      "kind": "function",
+      "path": "server/db/migrations/20261009_local_publication_request.sql",
+      "line": 23,
+      "dependencies": [
+        "master.principal"
       ],
       "classification": "structural_dependency",
       "owner": "platform-iam",

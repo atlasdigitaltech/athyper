@@ -3,11 +3,11 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `ace2ad3d73ab81346c1c67363467b5aeda40319c49733cfb3fe8b643a819a9ef`
-Files scanned / authorization-bearing: 14632 / 2047
+Files scanned / authorization-bearing: 14637 / 2050
 Registered authorization objects: 470
-Aggregated object references: 1401
-Writer references: 146
-Contract/UI field references: 3182
+Aggregated object references: 1406
+Writer references: 148
+Contract/UI field references: 3183
 Permission definitions / uses: 89 / 2229
 Authorization-bearing routes: 30
 Keycloak mappers: 145
@@ -80,7 +80,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 5 | 344 | 54 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 6 | 346 | 56 |
 | identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 3 | 90 | 14 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 41 | 3 |
 | identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 4 | 187 | 27 |
@@ -866,6 +866,8 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `publication.fn_human_reviewed_entity_policy` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/36_native_publication_authority.sql:4 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `publication.fn_human_reviewed_entity_policy` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261003_human_reviewed_publication.sql:536 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `publication.fn_human_reviewed_entity_policy` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_native_publication_authority.sql:9 | `master.principal`<br>`master.principal_identity_binding` |
+| function | `publication.fn_local_publication_request_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/41_local_publication_request.sql:22 | `master.principal` |
+| function | `publication.fn_local_publication_request_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_local_publication_request.sql:23 | `master.principal` |
 | function | `publication.fn_native_compilation_recovery_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/39_native_compilation_recovery.sql:2 | `master.principal` |
 | function | `publication.fn_native_compilation_recovery_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_native_compilation_recovery.sql:3 | `master.principal` |
 | function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:41 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
@@ -1115,6 +1117,8 @@ Capture DDLs:
 | `master.principal` | update | test | server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts | 155, 158 |
 | `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/deployment-recovery-compiler.postgres.test.ts | 86 |
 | `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts | 105 |
+| `master.principal` | insert | test | server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts | 145 |
+| `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts | 207 |
 | `master.principal` | insert | test | server/apps/platform-host/src/composition/shared/publication/native-publication-authority.postgres.test.ts | 119 |
 | `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/native-publication-authority.postgres.test.ts | 164 |
 | `master.principal` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 46 |
@@ -2238,6 +2242,7 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/src/composition/shared/entity-runtime/revision-authorizer.test.ts | 11 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/identity/__tests__/contact-verification-registration.test.ts | 27 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts | 59 |
+| `denied` | test | server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts | 191, 194 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/publication/native-worker-entity-read.postgres.test.ts | 62, 63 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/verification/__tests__/routes.test.ts | 196 |
 | `denied` | test | server/apps/platform-host/src/composition/spaces/mesh/__tests__/mesh-exchange-readiness.postgres.test.ts | 33, 36 |
@@ -3544,7 +3549,7 @@ Capture DDLs:
 | `permissions` | runtime | server/db/migrations/20260928_entity_activity_permissions.sql | 25 |
 | `permissions` | runtime | server/db/migrations/20260929_entity_owner_access.sql | 82 |
 | `permissions` | runtime | server/db/migrations/20261001_principal_family_editing.sql | 74 |
-| `permissions` | runtime | server/db/migrations/inventory.json | 1227, 1395 |
+| `permissions` | runtime | server/db/migrations/inventory.json | 1240, 1408 |
 | `permissions` | test | server/db/scripts/__tests__/activity/activity-permissions.test.ts | 7, 9, 11, 12, 13, 14, 16, 17 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 37, 49, 54, 63 |

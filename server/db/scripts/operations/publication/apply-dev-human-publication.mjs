@@ -42,6 +42,8 @@ const migrations = {
     "20261003_product_publication_tenant_reads.sql",
   "--apply=DEV-NATIVE-PUBLICATION": "20261009_native_publication_authority.sql",
   "--apply=DEV-NATIVE-WORKER-SOURCE": "20261009_native_worker_source.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-REQUEST":
+    "20261009_local_publication_request.sql",
 };
 assert.ok(Object.hasOwn(migrations, process.argv[2]));
 const c = JSON.parse(
@@ -117,6 +119,7 @@ try {
       "20261009_native_worker_entity_read.sql",
       "20261009_native_compilation_recovery.sql",
       "20261009_native_publication_validation.sql",
+      "20261009_local_publication_request.sql",
     ].includes(name)
   ) {
     const dependency = JSON.parse(

@@ -1,3 +1,8 @@
+import {
+  createLocalPublicationRequest,
+  type LocalDevelopmentAuthority,
+  type LocalPublicationAdmission,
+} from "@athyper/server-contract-publication";
 import { mkdtempSync, writeFileSync, rmSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,6 +76,83 @@ it("production composition resolves through the workload reader under the caller
         loader: { ...loader, uiComponents: undefined },
       }),
     ).toThrow("COMPONENT_QUALIFICATION_REQUIRED");
+    const host = {
+      environment: "local",
+      instance: "dev",
+      domainSuffix: "dev.athyper.test",
+    };
+    const admission: LocalPublicationAdmission = {
+      host,
+      developerPrincipalId: "developer",
+      authorWorkloadId: "submitter",
+      publisherWorkloadId: "publisher",
+      scope: { kind: "product" },
+      action: "publish",
+      targets: [{ plane: "neon", instance: "dev" }],
+    };
+    const authority: LocalDevelopmentAuthority = {
+      schema: "athyper.local-development-authority/1",
+      id: "standing",
+      version: 1,
+      hash: "a".repeat(64),
+      active: true,
+      validFrom: new Date(Date.now() - 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+      enrollmentReceiptId: "fixture",
+      host,
+      scope: admission.scope,
+      developerPrincipalIds: ["developer"],
+      authorWorkloadId: "submitter",
+      publisherWorkloadId: "publisher",
+      actions: ["publish"],
+      destinations: admission.targets,
+    };
+    const inputs = {
+      changeSetId: "00000000-0000-4000-8000-000000000001",
+      revision: 1,
+      sourceHash: "b".repeat(64),
+      compilerHash: "c".repeat(64),
+      resourceHashes: [],
+      targets: [
+        {
+          plane: "neon" as const,
+          instance: "dev",
+          predecessorHash: null,
+          artifactHash: "d".repeat(64),
+        },
+      ],
+    };
+    const request = createLocalPublicationRequest(authority, admission, inputs);
+    query.mockImplementation(async (text: string) => ({
+      rows: (text.includes("read_local_publication_request")
+        ? [{ authority: { request } }]
+        : text.includes("current_setting")
+          ? [{ value: null }]
+          : []) as never[],
+    }));
+    const resolveCurrent = vi.fn(async () => ({ authority, inputs }));
+    const local = createNativePublicationStartup({
+      ...options,
+      localRequests: {
+        host,
+        resolveCurrent,
+        run: (work) => db.transaction().execute(work),
+      },
+    });
+    await expect(local.readLocalNativeSource!(request.hash)).rejects.toThrow(
+      "NATIVE_REVIEW_SOURCE_INVALID",
+    );
+    expect(resolveCurrent).toHaveBeenCalledOnce();
+    expect(
+      query.mock.calls.some(([text]) =>
+        text.includes("ROLLBACK TO SAVEPOINT local_publication_execution"),
+      ),
+    ).toBe(true);
+    expect(
+      query.mock.calls.some(([text]) =>
+        text.includes("publication.read_native_worker_source"),
+      ),
+    ).toBe(true);
     chmodSync(file, 0o644);
     expect(() => createNativePublicationStartup(options)).toThrow(
       "CONFIGURATION_INVALID",

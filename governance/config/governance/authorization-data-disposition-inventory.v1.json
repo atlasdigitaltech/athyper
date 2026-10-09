@@ -4,11 +4,11 @@
   "policyHash": "c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 783,
+    "discoveredTables": 785,
     "externalObjects": 12,
     "exactTableOverrides": 16,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 765,
+    "schemaDefaultedTables": 767,
     "byDataClass": {
       "ai_governance_and_runtime": 31,
       "audit_log": 17,
@@ -37,7 +37,7 @@
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
-      "published_definition_authority": 13,
+      "published_definition_authority": 15,
       "secret": 1,
       "session_token": 2,
       "tenant_business_context_non_authorizing": 1,
@@ -65,7 +65,7 @@
       "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 31,
-      "migrate_published_artifacts_and_release_history": 13,
+      "migrate_published_artifacts_and_release_history": 15,
       "migrate_published_authority_and_rebuild_projections": 63,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
@@ -13134,6 +13134,42 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/14_runtime_restoration.sql",
           "line": 14
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.local_publication_host",
+      "schema": "publication",
+      "table": "local_publication_host",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
+          "line": 4
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.local_publication_request",
+      "schema": "publication",
+      "table": "local_publication_request",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
+          "line": 9
         }
       ],
       "decisionSource": "schema_default",

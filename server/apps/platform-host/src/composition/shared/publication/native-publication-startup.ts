@@ -1,3 +1,4 @@
+import { withLocalPublicationRequest } from "./local-publication-database.js";
 import { readFileSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import type { Kysely } from "kysely";
@@ -14,9 +15,23 @@ export function createNativePublicationStartup(options: {
   targetDatabases?: Partial<
     Record<"neon" | "mesh", Kysely<Record<string, never>>>
   >;
+  localRequests?: {
+    host: Parameters<typeof withLocalPublicationRequest>[0]["host"];
+    resolveCurrent: Parameters<
+      typeof withLocalPublicationRequest
+    >[0]["resolveCurrent"];
+    run<T>(
+      work: (
+        tx: import("kysely").Transaction<Record<string, never>>,
+      ) => Promise<T>,
+    ): Promise<T>;
+  };
   run<T>(work: (tx: Kysely<Record<string, never>>) => Promise<T>): Promise<T>;
 }): Pick<AuthoringServiceOptions, "nativePublicationSource"> & {
   readNativeSource?: ReturnType<typeof createNativeReviewSource>;
+  readLocalNativeSource?: (
+    requestHash: string,
+  ) => ReturnType<ReturnType<typeof createNativeReviewSource>>;
 } {
   const path = options.environment.PUBLICATION_NATIVE_SOURCE_CONFIGURATION_FILE;
   if (path === undefined) return {};
@@ -34,6 +49,21 @@ export function createNativePublicationStartup(options: {
     targetDatabases: options.targetDatabases,
   });
   return {
+    ...(options.localRequests
+      ? {
+          readLocalNativeSource: (requestHash: string) =>
+            options.localRequests!.run((tx) =>
+              withLocalPublicationRequest({
+                transaction: tx,
+                host: options.localRequests!.host,
+                requestHash,
+                resolveCurrent: options.localRequests!.resolveCurrent,
+                execute: (request, transaction) =>
+                  source(transaction, request.inputs.changeSetId),
+              }),
+            ),
+        }
+      : {}),
     readNativeSource: source,
     nativePublicationSource: (id) => options.run((tx) => source(tx, id)),
   };
