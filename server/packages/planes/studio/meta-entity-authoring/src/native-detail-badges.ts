@@ -239,7 +239,7 @@ export function validateNativeBadgeDerivations(
       fail();
   }
 }
-export function createLegacyNativeDetailBadgesAdapter(input: {
+export function createHistoricalNativeDetailBadgesAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

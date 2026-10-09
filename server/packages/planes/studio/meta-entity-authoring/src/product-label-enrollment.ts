@@ -10,11 +10,11 @@ import {
 
 type Database = Kysely<Record<string, never>>;
 type Input = Parameters<
-  KyselyMetaEntityAuthoringRepository["executeLegacyLabelEnrollment"]
+  KyselyMetaEntityAuthoringRepository["executeHistoricalLabelNormalization"]
 >[0];
 type Result = Awaited<
   ReturnType<
-    KyselyMetaEntityAuthoringRepository["executeLegacyLabelEnrollment"]
+    KyselyMetaEntityAuthoringRepository["executeHistoricalLabelNormalization"]
   >
 >;
 /** Installed control-plane composition must supply the current governance
@@ -63,7 +63,8 @@ export function createProductLabelEnrollment(options: {
           undefined,
           options.host,
         );
-        const result = await repository.executeLegacyLabelEnrollment(captured);
+        const result =
+          await repository.executeHistoricalLabelNormalization(captured);
         await options.audit(tx, context, captured, result);
         return result;
       },

@@ -159,7 +159,7 @@ export function validateNativeEntityLabelDerivation(
 }
 /** Consumes repeated localization declarations only after exact owned-label
  * projection and explicit field/choice/surface/root owner enrollment. */
-export function createLegacyNativePresentationLocalizationAdapter(input: {
+export function createHistoricalNativePresentationLocalizationAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

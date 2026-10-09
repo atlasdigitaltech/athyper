@@ -4171,7 +4171,7 @@
         "entity.experience",
         "entity.governance",
         "entity.installed-authoring-descriptor/1",
-        "entity.legacy-identity-review/1",
+        "entity.historical-identity-review/1",
         "entity.persistence",
         "entity.record.export.v1",
         "entity.record.import.v1",

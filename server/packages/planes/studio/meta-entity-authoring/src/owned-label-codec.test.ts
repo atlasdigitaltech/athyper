@@ -10,7 +10,7 @@ import {
   decodeOwnedLabels,
   ownedLabelRows,
   loadOwnedLabelRows,
-  type LegacyLabelIdentity,
+  type HistoricalLabelIdentity,
 } from "./owned-label-codec.js";
 import { canonicalJson } from "./deterministic.js";
 const id = (n: number) =>
@@ -50,7 +50,7 @@ function selectedLabels(
 function identities(value: {
   defaultLocale: string;
   values: Record<string, Record<string, string>>;
-}): LegacyLabelIdentity[] {
+}): HistoricalLabelIdentity[] {
   let next = 10;
   return Object.entries(value.values).map(([labelKey, locales]) => ({
     labelKey,

@@ -59,7 +59,7 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
       )
         throw Error("PUBLICATION_RESOURCE_HASH_MISMATCH");
       if (
-        payload.schema === "entity.legacy-identity-review/1" &&
+        payload.schema === "entity.historical-identity-review/1" &&
         payload.proposerId !== input.actorId
       )
         throw Error("PUBLICATION_RESOURCE_AUTHOR_MISMATCH");

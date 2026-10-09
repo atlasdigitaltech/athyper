@@ -86,7 +86,7 @@ export function createAuthoringResourceReview<Context>(options: {
             source.payload,
           );
           if (
-            payload.schema === "entity.legacy-identity-review/1" &&
+            payload.schema === "entity.historical-identity-review/1" &&
             (payload.proposerId !== existing.authorId ||
               payload.reviewerId !== actor.actorId)
           )

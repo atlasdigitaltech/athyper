@@ -5,26 +5,26 @@ import {
   type NativeBootstrapPolicy,
 } from "./native-bootstrap-application.js";
 import {
-  applyLegacyIdentityInstallation,
-  type LegacyIdentityInstallationPolicy,
-} from "./legacy-identity-installation.js";
+  applyHistoricalIdentityInstallation,
+  type HistoricalIdentityInstallationPolicy,
+} from "./historical-identity-installation.js";
 import {
-  applyLegacyOwnershipInitialization,
-  type LegacyOwnershipInput,
-  type LegacyOwnershipPolicy,
-} from "./legacy-ownership-initialization.js";
-import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
+  applyHistoricalOwnershipInitialization,
+  type HistoricalOwnershipInput,
+  type HistoricalOwnershipPolicy,
+} from "./historical-ownership-initialization.js";
+import { prepareHistoricalLabelNormalization } from "./historical-label-normalization.js";
 import { validateNativeSnapshotReferences } from "./native-snapshot-validation.js";
 import {
-  applyLegacySourceEnrollment,
-  type LegacyEnrollmentApplicationInput,
-  type LegacyEnrollmentApplicationPolicy,
-} from "./legacy-enrollment-application.js";
+  applyHistoricalSourceNormalization,
+  type HistoricalNormalizationApplicationInput,
+  type HistoricalNormalizationApplicationPolicy,
+} from "./historical-normalization-application.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import {
-  prepareLegacySourceEnrollment,
-  type LegacySourceEnrollmentInput,
-} from "./legacy-source-enrollment.js";
+  prepareHistoricalSourceNormalization,
+  type HistoricalSourceNormalizationInput,
+} from "./historical-source-normalization.js";
 import { readNativeConversionHistory } from "./native-conversion-history.js";
 import {
   applyNativeGraphConversion,
@@ -159,7 +159,7 @@ interface ArtifactRow {
 
 /** Installed read-only enrollment proposal resolver. It supplies no writer or
  * publication authority; request DTOs cannot carry labels, identities or ports. */
-export interface LegacySourceEnrollmentPolicy {
+export interface HistoricalSourceNormalizationPolicy {
   readonly host: NativeAuthoringPolicy;
   resolve(
     database: Kysely<Database>,
@@ -169,7 +169,7 @@ export interface LegacySourceEnrollmentPolicy {
       expectedSourceHash: string;
     },
     source: MetaEntityGraph,
-  ): Promise<LegacySourceEnrollmentInput>;
+  ): Promise<HistoricalSourceNormalizationInput>;
 }
 
 export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringRepository {
@@ -187,10 +187,10 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     private readonly referencePolicy?: import("@athyper/server-contract-meta-entity-authoring").ReferenceCommandPolicy,
     private readonly nativePolicy?: NativeAuthoringPolicy,
     private readonly conversionPolicy?: NativeConversionApplicationPolicy,
-    private readonly enrollmentPolicy?: LegacySourceEnrollmentPolicy,
-    private readonly enrollmentApplicationPolicy?: LegacyEnrollmentApplicationPolicy,
-    private readonly ownershipPolicy?: LegacyOwnershipPolicy,
-    private readonly identityInstallationPolicy?: LegacyIdentityInstallationPolicy,
+    private readonly enrollmentPolicy?: HistoricalSourceNormalizationPolicy,
+    private readonly enrollmentApplicationPolicy?: HistoricalNormalizationApplicationPolicy,
+    private readonly ownershipPolicy?: HistoricalOwnershipPolicy,
+    private readonly identityInstallationPolicy?: HistoricalIdentityInstallationPolicy,
     private readonly bootstrapPolicy?: NativeBootstrapPolicy,
   ) {}
   async executeNativeBootstrap(input: NativeBootstrapInput) {
@@ -231,7 +231,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async executeLegacyIdentityInstallation(input: LegacyOwnershipInput) {
+  async executeHistoricalIdentityInstallation(input: HistoricalOwnershipInput) {
     const policy = this.identityInstallationPolicy;
     if (!policy)
       throw new AuthoringPolicyError(
@@ -244,7 +244,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         await sql`SAVEPOINT legacy_identity_installation`.execute(tx);
         try {
           const repository = new KyselyMetaEntityAuthoringRepository(tx);
-          const result = await applyLegacyIdentityInstallation(
+          const result = await applyHistoricalIdentityInstallation(
             tx,
             input,
             policy,
@@ -263,7 +263,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       true,
     );
   }
-  async executeLegacyOwnershipInitialization(input: LegacyOwnershipInput) {
+  async executeHistoricalOwnershipInitialization(
+    input: HistoricalOwnershipInput,
+  ) {
     const policy = this.ownershipPolicy;
     if (!policy)
       throw new AuthoringPolicyError(
@@ -274,7 +276,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       await sql`SAVEPOINT legacy_ownership_initialization`.execute(tx);
       try {
         const repository = new KyselyMetaEntityAuthoringRepository(tx);
-        const result = await applyLegacyOwnershipInitialization(
+        const result = await applyHistoricalOwnershipInitialization(
           tx,
           input,
           policy,
@@ -295,7 +297,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async executeLegacyEnrollment(input: LegacyEnrollmentApplicationInput) {
+  async executeHistoricalNormalization(
+    input: HistoricalNormalizationApplicationInput,
+  ) {
     const policy = this.enrollmentApplicationPolicy;
     if (!policy)
       throw new AuthoringPolicyError(
@@ -306,7 +310,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       await sql`SAVEPOINT legacy_source_enrollment`.execute(tx);
       try {
         const repository = new KyselyMetaEntityAuthoringRepository(tx);
-        const result = await applyLegacySourceEnrollment(
+        const result = await applyHistoricalSourceNormalization(
           tx,
           input,
           policy,
@@ -321,7 +325,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  async prepareLegacyEnrollment(
+  async prepareHistoricalNormalization(
     input: NormalizedSaveCoordinate & {
       actorId: string;
       expectedRevision: number;
@@ -398,7 +402,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           "LEGACY_ENROLLMENT_SOURCE_MISMATCH",
           "Resolver must bind the exact locked source.",
         );
-      return prepareLegacySourceEnrollment(source, resolved);
+      return prepareHistoricalSourceNormalization(source, resolved);
     });
   }
   async readNativeConversionHistory(
@@ -698,11 +702,11 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   /** Executes reviewed source-bound label enrollment through the existing writer.
    * Host admission and DB RLS are independent mandatory controls, never supplied
    * by the proposal. Replay reconstructs the batch from immutable source history. */
-  async executeLegacyLabelEnrollment(input: {
+  async executeHistoricalLabelNormalization(input: {
     changeSetId: string;
     actorId: string;
     tenantId: string | null;
-    proposal: Parameters<typeof prepareLegacyLabelEnrollment>[1];
+    proposal: Parameters<typeof prepareHistoricalLabelNormalization>[1];
   }) {
     if (!this.nativePolicy || !this.normalizedPolicy)
       throw new AuthoringPolicyError(
@@ -725,7 +729,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT legacy_label_enrollment`.execute(tx);
       try {
-        const root = await assertLegacyCommandSource(
+        const root = await assertHistoricalCommandSource(
           tx,
           request.changeSetId,
           request.tenantId,
@@ -764,7 +768,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           throw new AuthoringConflictError(
             "Enrollment source history unavailable.",
           );
-        const prepared = prepareLegacyLabelEnrollment(
+        const prepared = prepareHistoricalLabelNormalization(
           source,
           request.proposal,
           policy,
@@ -788,7 +792,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       }
     });
   }
-  private async admitLegacyProductCommand(
+  private async admitHistoricalProductCommand(
     tx: Transaction<Database>,
     input: {
       changeSetId: string;
@@ -797,7 +801,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       batch: unknown;
     },
   ) {
-    const source = await assertLegacyCommandSource(
+    const source = await assertHistoricalCommandSource(
       tx,
       input.changeSetId,
       input.tenantId,
@@ -835,7 +839,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT normalized_reference_batch`.execute(tx);
       try {
-        await this.admitLegacyProductCommand(tx, input);
+        await this.admitHistoricalProductCommand(tx, input);
         const result = await saveReferenceCommands(
           tx,
           input,
@@ -873,7 +877,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return atomic(this.database, async (tx) => {
       await sql`SAVEPOINT normalized_label_batch`.execute(tx);
       try {
-        await this.admitLegacyProductCommand(tx, input);
+        await this.admitHistoricalProductCommand(tx, input);
         const result = await saveLabelCommands(
           tx,
           input,
@@ -1921,7 +1925,7 @@ async function replaceGraphInTransaction(
     "saved",
   );
 }
-async function assertLegacyCommandSource(
+async function assertHistoricalCommandSource(
   db: Kysely<Database>,
   id: string,
   tenant: string | null,

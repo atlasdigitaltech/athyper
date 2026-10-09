@@ -295,7 +295,7 @@ export function convertLegacyDetailFieldSections(
 /** Graph enrollment for explicit inline field sections. Every existing detail
  * binding must have one declared membership: inert/technical legacy bindings
  * require a separate explicit retirement conversion, never implicit deletion. */
-export function createLegacyNativeDetailSectionsAdapter(input: {
+export function createHistoricalNativeDetailSectionsAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

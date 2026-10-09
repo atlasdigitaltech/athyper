@@ -339,7 +339,7 @@ export interface LegacyNativeListViewAdapterInput {
 /** Account for defaultState and explicit list-binding defaultVisible together.
  * Other display paths remain untouched for their own adapters. The inverse reads
  * current typed views, never a backup of legacy visibility or sort values. */
-export function createLegacyNativeListViewAdapter(
+export function createHistoricalNativeListViewAdapter(
   input: LegacyNativeListViewAdapterInput,
 ): NativeNestedConversionAdapter {
   validateConversionJsonData(input.source, "/source");

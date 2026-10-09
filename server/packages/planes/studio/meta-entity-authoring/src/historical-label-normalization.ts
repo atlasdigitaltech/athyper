@@ -9,7 +9,7 @@ import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 /** Proposal only: extracts explicit localization declarations, never invents keys,
  * translations, UUIDs or ownership. Existing label commands allocate after admission. */
-export function prepareLegacyLabelEnrollment(
+export function prepareHistoricalLabelNormalization(
   source: MetaEntityGraph,
   input: {
     sourceHash: string;

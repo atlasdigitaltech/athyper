@@ -1,7 +1,7 @@
 import { Kysely, PostgresDialect } from "kysely";
 import {
   KyselyMetaEntityAuthoringRepository,
-  type LegacySourceEnrollmentPolicy,
+  type HistoricalSourceNormalizationPolicy,
 } from "./kysely-authoring-repository.js";
 import type { NativeAuthoringPolicy } from "./native-core-layout-persistence.js";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
@@ -17,9 +17,9 @@ import {
 } from "./authoring/product.js";
 import { sha256, canonicalJson } from "./deterministic.js";
 import {
-  prepareLegacySourceEnrollment,
-  type LegacySourceEnrollmentInput,
-} from "./legacy-source-enrollment.js";
+  prepareHistoricalSourceNormalization,
+  type HistoricalSourceNormalizationInput,
+} from "./historical-source-normalization.js";
 const id = (n: number) =>
   "00000000-0000-4000-8000-" + String(n).padStart(12, "0");
 function fixture(
@@ -92,7 +92,7 @@ function fixture(
     createdAt: "2026-10-07T00:00:00.000Z",
     createdBy: id(3),
   }));
-  const input: LegacySourceEnrollmentInput = {
+  const input: HistoricalSourceNormalizationInput = {
     sourceHash: sha256(source),
     revision: 7,
     sourceKind: "product",
@@ -115,7 +115,7 @@ describe("legacy source enrollment preparation", () => {
       for (const plane of ["studio", "neon", "mesh"] as const) {
         const { source, input } = fixture(name, plane);
         const before = canonicalJson(source);
-        const proof = prepareLegacySourceEnrollment(source, input);
+        const proof = prepareHistoricalSourceNormalization(source, input);
         expect(canonicalJson(source)).toBe(before);
         expect(proof.candidate.contractSchema).toBe(
           "athyper.meta-entity-contract/2.3",
@@ -143,7 +143,7 @@ describe("legacy source enrollment preparation", () => {
       contractSchema: "athyper.meta-entity-contract/2.2" as const,
     };
     expect(
-      prepareLegacySourceEnrollment(labelled, {
+      prepareHistoricalSourceNormalization(labelled, {
         ...input,
         sourceHash: sha256(labelled),
       }).candidate.ownedLabels,
@@ -151,7 +151,7 @@ describe("legacy source enrollment preparation", () => {
     const changed = structuredClone(input);
     Reflect.set(changed.labels.labels[0]!, "defaultText", "Changed");
     expect(() =>
-      prepareLegacySourceEnrollment(labelled, {
+      prepareHistoricalSourceNormalization(labelled, {
         ...changed,
         sourceHash: sha256(labelled),
       }),
@@ -159,37 +159,41 @@ describe("legacy source enrollment preparation", () => {
   });
   it("rejects missing labels, wrong fallbacks and identity provenance", () => {
     for (const alter of [
-      (i: LegacySourceEnrollmentInput) => Reflect.set(i.labels, "labels", []),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
+        Reflect.set(i.labels, "labels", []),
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.labels.labels[0]!, "defaultText", "Changed"),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.identities[0]!, "entityId", id(9)),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.identities[0]!, "introducedChangeSetId", id(9)),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i, "identities", i.identities.slice(1)),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.identities[0]!, "identityStatus", "retired"),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.identities[0]!, "firstReleaseId", id(10)),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i.identities[0]!, "identityStatus", "active"),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i, "sourceKind", "tenant_entity"),
-      (i: LegacySourceEnrollmentInput) => Reflect.set(i, "maximumBytes", 1),
-      (i: LegacySourceEnrollmentInput) =>
+      (i: HistoricalSourceNormalizationInput) =>
+        Reflect.set(i, "maximumBytes", 1),
+      (i: HistoricalSourceNormalizationInput) =>
         Reflect.set(i, "sourceHash", "a".repeat(64)),
     ]) {
       const f = fixture();
       alter(f.input);
-      expect(() => prepareLegacySourceEnrollment(f.source, f.input)).toThrow();
+      expect(() =>
+        prepareHistoricalSourceNormalization(f.source, f.input),
+      ).toThrow();
     }
   });
   it("never adopts existing reference enrollment or an unsupported source version", () => {
     const f = fixture();
-    const proof = prepareLegacySourceEnrollment(f.source, f.input);
+    const proof = prepareHistoricalSourceNormalization(f.source, f.input);
     expect(() =>
-      prepareLegacySourceEnrollment(proof.candidate, {
+      prepareHistoricalSourceNormalization(proof.candidate, {
         ...f.input,
         sourceHash: proof.targetHash,
       }),
@@ -209,9 +213,9 @@ describe("shared repository enrollment proposal", () => {
   it("requires an installed resolver before querying the database", async () => {
     const db = {} as Kysely<Record<string, never>>;
     await expect(
-      new KyselyMetaEntityAuthoringRepository(db).prepareLegacyEnrollment(
-        request("a".repeat(64)),
-      ),
+      new KyselyMetaEntityAuthoringRepository(
+        db,
+      ).prepareHistoricalNormalization(request("a".repeat(64))),
     ).rejects.toMatchObject({ code: "LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED" });
   });
   it("uses current admission and the exact scoped locked source without member DML", async () => {
@@ -237,7 +241,7 @@ describe("shared repository enrollment proposal", () => {
     });
     Object.defineProperty(db, "isTransaction", { value: true });
     const admit = vi.fn(async () => {});
-    const policy: LegacySourceEnrollmentPolicy = {
+    const policy: HistoricalSourceNormalizationPolicy = {
       host: { admit } as unknown as NativeAuthoringPolicy,
       resolve: vi.fn(async () => f.input),
     };
@@ -259,7 +263,7 @@ describe("shared repository enrollment proposal", () => {
       policy,
     );
     try {
-      const proof = await repo.prepareLegacyEnrollment(
+      const proof = await repo.prepareHistoricalNormalization(
         request(f.input.sourceHash),
       );
       expect(proof.candidate.contractSchema).toBe(
@@ -286,15 +290,15 @@ describe("shared repository enrollment proposal", () => {
         ],
       });
       await expect(
-        repo.prepareLegacyEnrollment(request(f.input.sourceHash)),
+        repo.prepareHistoricalNormalization(request(f.input.sourceHash)),
       ).rejects.toThrow("Stale enrollment");
       policy.resolve = vi.fn(async () => ({ ...f.input, revision: 6 }));
       await expect(
-        repo.prepareLegacyEnrollment(request(f.input.sourceHash)),
+        repo.prepareHistoricalNormalization(request(f.input.sourceHash)),
       ).rejects.toMatchObject({ code: "LEGACY_ENROLLMENT_SOURCE_MISMATCH" });
       admit.mockRejectedValueOnce(Error("Admission revoked"));
       await expect(
-        repo.prepareLegacyEnrollment(request(f.input.sourceHash)),
+        repo.prepareHistoricalNormalization(request(f.input.sourceHash)),
       ).rejects.toThrow("Admission revoked");
       expect(query).toHaveBeenCalledTimes(3);
     } finally {

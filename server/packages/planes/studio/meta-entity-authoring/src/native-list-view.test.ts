@@ -16,7 +16,7 @@ import {
 } from "./authoring/product.js";
 import { sha256 } from "./deterministic.js";
 import {
-  createLegacyNativeListViewAdapter,
+  createHistoricalNativeListViewAdapter,
   convertLegacyDefaultListView,
   compileNativeDefaultListView,
   type LegacyDefaultListView,
@@ -287,7 +287,7 @@ async function adapterFixture(name = "country") {
     dependencies: [resource],
     mappings: { [f.context.surface.id]: { context: f.context, ...f.mapping } },
   };
-  const adapter = createLegacyNativeListViewAdapter(input);
+  const adapter = createHistoricalNativeListViewAdapter(input);
   const prepared = adapter.forward(graph);
   const target = {
     ...prepared,
@@ -356,7 +356,7 @@ it("preserves unaccounted display properties and rejects missing visibility, con
     ...binding.displayConfig,
     unsupported: "retain",
   };
-  const a = createLegacyNativeListViewAdapter({
+  const a = createHistoricalNativeListViewAdapter({
     ...f.input,
     source,
     sourceHash: sha256(source),
@@ -373,7 +373,7 @@ it("preserves unaccounted display properties and rejects missing visibility, con
   ).toEqual(source);
   delete (binding as { displayConfig?: object }).displayConfig;
   expect(() =>
-    createLegacyNativeListViewAdapter({
+    createHistoricalNativeListViewAdapter({
       ...f.input,
       source,
       sourceHash: sha256(source),
@@ -385,7 +385,7 @@ it("preserves unaccounted display properties and rejects missing visibility, con
   const bad = structuredClone(f.input);
   (Object.values(bad.mappings)[0]!.context.bindings[0] as { id: string }).id =
     coreFixtureId(8888);
-  expect(() => createLegacyNativeListViewAdapter(bad)).toThrow(
+  expect(() => createHistoricalNativeListViewAdapter(bad)).toThrow(
     "NATIVE_VIEW_BINDING_SCOPE_INVALID",
   );
 });
@@ -401,7 +401,7 @@ it("rejects missing typed members, prepared tampering and unrepresentable visibl
     },
   ];
   expect(() =>
-    createLegacyNativeListViewAdapter({
+    createHistoricalNativeListViewAdapter({
       ...f.input,
       source: duplicate,
       sourceHash: sha256(duplicate),

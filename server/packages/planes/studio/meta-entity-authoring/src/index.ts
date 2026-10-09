@@ -69,7 +69,7 @@ export {
   decodeOwnedLabels,
   ownedLabelRows,
   loadOwnedLabelRows,
-  type LegacyLabelIdentity,
+  type HistoricalLabelIdentity,
 } from "./owned-label-codec.js";
 
 export * from "./reference-member-codec.js";
@@ -134,9 +134,9 @@ export * from "./native-conversion-composition.js";
 
 export * from "./native-field-reference-compilation.js";
 
-export * from "./legacy-source-enrollment.js";
+export * from "./historical-source-normalization.js";
 
-export * from "./legacy-enrollment-application.js";
+export * from "./historical-normalization-application.js";
 
 export * from "./native-schema-qualification.js";
 export {
@@ -158,19 +158,19 @@ export {
 } from "./product-reference-enrollment.js";
 export { registerProductReferenceEnrollmentRoutes } from "./product-reference-enrollment-routes.js";
 export {
-  createLegacyIdentityReviewResolver,
-  type LegacyIdentityReviewStore,
-  type LegacyIdentityReviewReceipt,
-} from "./legacy-identity-review.js";
+  createHistoricalIdentityReviewResolver,
+  type HistoricalIdentityReviewStore,
+  type HistoricalIdentityReviewReceipt,
+} from "./historical-identity-review.js";
 export type {
-  LegacyOwnershipPolicy,
-  LegacyOwnershipInput,
-  LegacyOwnershipResult,
-} from "./legacy-ownership-initialization.js";
+  HistoricalOwnershipPolicy,
+  HistoricalOwnershipInput,
+  HistoricalOwnershipResult,
+} from "./historical-ownership-initialization.js";
 export type {
-  LegacyIdentityInstallationPolicy,
-  LegacyIdentityInstallationResult,
-} from "./legacy-identity-installation.js";
+  HistoricalIdentityInstallationPolicy,
+  HistoricalIdentityInstallationResult,
+} from "./historical-identity-installation.js";
 
 export {
   createInstalledReferenceResourceReader,
@@ -180,7 +180,7 @@ export {
 } from "./installed-reference-resources.js";
 export { createProductReferenceResourcePolicies } from "./product-reference-resource-policies.js";
 
-export { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
+export { validateHistoricalFieldIdentityPlan } from "./historical-field-correspondence.js";
 
 export {
   resolveNativeBootstrapIdentities,

@@ -4,14 +4,14 @@ import {
   coreFixtureRow,
 } from "../../../../contracts/meta-entity-authoring/src/normalized-core.fixtures.js";
 import {
-  convertLegacyFieldChoices,
+  convertHistoricalFieldChoices,
   compileNativeFieldChoices,
-  type LegacyFieldChoices,
+  type HistoricalFieldChoices,
   type NativeFieldChoiceContext,
 } from "./native-field-choices.js";
 import { sha256 } from "./deterministic.js";
 function fixture() {
-  const source: LegacyFieldChoices = {
+  const source: HistoricalFieldChoices = {
     options: [
       { value: "active", label: "Active" },
       { value: "pending", label: "Pending" },
@@ -50,7 +50,7 @@ function fixture() {
 }
 it("round-trips ordered choices and the distinction between an absent and explicit tone", () => {
   const f = fixture(),
-    rows = convertLegacyFieldChoices(f.source, f.context, f.mapping);
+    rows = convertHistoricalFieldChoices(f.source, f.context, f.mapping);
   expect(rows.map((r) => r.tone)).toEqual(["success", null]);
   expect(compileNativeFieldChoices([...rows].reverse(), f.context)).toEqual(
     f.source,
@@ -65,20 +65,20 @@ it("round-trips ordered choices and the distinction between an absent and explic
 it("rejects stale source, unknown properties, unsupported tones and label mismatch", () => {
   const f = fixture();
   expect(() =>
-    convertLegacyFieldChoices(f.source, f.context, {
+    convertHistoricalFieldChoices(f.source, f.context, {
       ...f.mapping,
       sourceHash: "a".repeat(64),
     }),
   ).toThrow("NATIVE_CHOICES_SOURCE_HASH_MISMATCH");
   expect(() =>
-    convertLegacyFieldChoices(
+    convertHistoricalFieldChoices(
       f.source,
       { ...f.context, domainValues: null },
       f.mapping,
     ),
   ).toThrow("NATIVE_CHOICES_DOMAIN_EVIDENCE_REQUIRED");
   expect(() =>
-    convertLegacyFieldChoices(
+    convertHistoricalFieldChoices(
       f.source,
       { ...f.context, domainValues: ["active"] },
       f.mapping,
@@ -86,13 +86,13 @@ it("rejects stale source, unknown properties, unsupported tones and label mismat
   ).toThrow("NATIVE_CHOICES_DOMAIN_VALUE_INVALID");
   const extra = { ...f.source, propertyBag: {} };
   expect(() =>
-    convertLegacyFieldChoices(extra, f.context, {
+    convertHistoricalFieldChoices(extra, f.context, {
       ...f.mapping,
       sourceHash: sha256(extra),
     }),
   ).toThrow("NATIVE_CHOICES_SOURCE_INVALID");
   expect(() =>
-    convertLegacyFieldChoices(
+    convertHistoricalFieldChoices(
       f.source,
       { ...f.context, labelText: () => "Incorrect" },
       f.mapping,
@@ -101,9 +101,9 @@ it("rejects stale source, unknown properties, unsupported tones and label mismat
   const tones = {
     ...f.source,
     tones: { active: "not-supported" },
-  } as unknown as LegacyFieldChoices;
+  } as unknown as HistoricalFieldChoices;
   expect(() =>
-    convertLegacyFieldChoices(tones, f.context, {
+    convertHistoricalFieldChoices(tones, f.context, {
       ...f.mapping,
       sourceHash: sha256(tones),
     }),
@@ -111,7 +111,7 @@ it("rejects stale source, unknown properties, unsupported tones and label mismat
 });
 it("rejects duplicate identities/values, gapped order and foreign fields", () => {
   const f = fixture(),
-    rows = convertLegacyFieldChoices(f.source, f.context, f.mapping);
+    rows = convertHistoricalFieldChoices(f.source, f.context, f.mapping);
   expect(() =>
     compileNativeFieldChoices([rows[0]!, rows[0]!], f.context),
   ).toThrow("NATIVE_CHOICES_SCOPE_ORDER_INVALID");
@@ -128,7 +128,7 @@ it("rejects duplicate identities/values, gapped order and foreign fields", () =>
     ),
   ).toThrow("NATIVE_CHOICES_SCOPE_ORDER_INVALID");
   expect(() =>
-    convertLegacyFieldChoices(f.source, f.context, {
+    convertHistoricalFieldChoices(f.source, f.context, {
       ...f.mapping,
       choices: {},
     }),
@@ -136,11 +136,11 @@ it("rejects duplicate identities/values, gapped order and foreign fields", () =>
 });
 it("handles prototype-like enum values as literal keys without changing object prototypes", () => {
   const f = fixture();
-  const source: LegacyFieldChoices = {
+  const source: HistoricalFieldChoices = {
     options: [{ value: "__proto__", label: "Active" }],
     tones: JSON.parse('{"__proto__":"warning"}'),
   };
-  const rows = convertLegacyFieldChoices(source, f.context, {
+  const rows = convertHistoricalFieldChoices(source, f.context, {
     sourceHash: sha256(source),
     choices: Object.fromEntries([["__proto__", f.mapping.choices.active]]),
   });
@@ -156,7 +156,7 @@ async function graphFixture(name = "country") {
     await import("@athyper/server-contract-meta-entity-authoring");
   const { parseSharedReferenceProduct, compileSharedReferenceProduct } =
     await import("./authoring/product.js");
-  const { createLegacyNativeFieldChoicesAdapter } =
+  const { createHistoricalNativeFieldChoicesAdapter } =
     await import("./native-field-choices.js");
   const { layoutFixtureRow } =
     await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
@@ -189,11 +189,11 @@ async function graphFixture(name = "country") {
   const selected = {
     options: (
       declaration.displayConfig!.lookup as {
-        options: LegacyFieldChoices["options"];
+        options: HistoricalFieldChoices["options"];
       }
     ).options,
     tones: declaration.displayConfig!.statusTones,
-  } as LegacyFieldChoices;
+  } as HistoricalFieldChoices;
   const context: NativeFieldChoiceContext = {
     ...fixture().context,
     field: {
@@ -228,7 +228,7 @@ async function graphFixture(name = "country") {
     dependencies: [],
     mappings: { [context.field.id]: { context: admittedContext, choices } },
   };
-  const adapter = createLegacyNativeFieldChoicesAdapter(input);
+  const adapter = createHistoricalNativeFieldChoicesAdapter(input);
   const prepared = adapter.forward(source);
   const target = {
     ...prepared,
@@ -286,7 +286,7 @@ for (const name of ["country", "state_region"])
     },
   );
 it("rejects conflicting declarations, overwritten members, unsupported lookups and target scope loss", async () => {
-  const { createLegacyNativeFieldChoicesAdapter } =
+  const { createHistoricalNativeFieldChoicesAdapter } =
     await import("./native-field-choices.js");
   const f = await graphFixture();
   const source = structuredClone(f.source);
@@ -298,7 +298,7 @@ it("rejects conflicting declarations, overwritten members, unsupported lookups a
     deprecated: "warning",
   };
   expect(() =>
-    createLegacyNativeFieldChoicesAdapter({
+    createHistoricalNativeFieldChoicesAdapter({
       ...f.input,
       source,
       sourceHash: sha256(source),
@@ -310,7 +310,7 @@ it("rejects conflicting declarations, overwritten members, unsupported lookups a
       .displayConfig!.lookup as Record<string, unknown>
   ).provider = "unknown";
   expect(() =>
-    createLegacyNativeFieldChoicesAdapter({
+    createHistoricalNativeFieldChoicesAdapter({
       ...f.input,
       source: lookup,
       sourceHash: sha256(lookup),
@@ -329,7 +329,7 @@ it("rejects conflicting declarations, overwritten members, unsupported lookups a
       },
     },
   };
-  expect(() => createLegacyNativeFieldChoicesAdapter(collision)).toThrow(
+  expect(() => createHistoricalNativeFieldChoicesAdapter(collision)).toThrow(
     "NATIVE_CHOICES_CORRELATED_SOURCE_CONFLICT",
   );
   expect(() =>
@@ -350,14 +350,14 @@ it("rejects conflicting declarations, overwritten members, unsupported lookups a
 });
 
 it("composes actual choice and semantic-role declarations from current typed values", async () => {
-  const { createLegacyNativeFieldSemanticsAdapter } =
+  const { createHistoricalNativeFieldSemanticsAdapter } =
     await import("./native-field-semantics.js");
   const { composeNativeNestedConversionAdapters } =
     await import("./native-graph-conversion.js");
   for (const name of ["country", "state_region"]) {
     const f = await graphFixture(name);
     const field = { ...f.context.field, semanticRole: "status" };
-    const semantics = createLegacyNativeFieldSemanticsAdapter({
+    const semantics = createHistoricalNativeFieldSemanticsAdapter({
       source: f.prepared,
       sourceHash: sha256(f.prepared),
       resource: { ...f.input.resource, key: "semantics" },
@@ -393,7 +393,7 @@ it("composes actual choice and semantic-role declarations from current typed val
   }
 });
 it("rejects unmatched semantic initialization, contradictory declarations, stale input and lost binding scope", async () => {
-  const { createLegacyNativeFieldSemanticsAdapter } =
+  const { createHistoricalNativeFieldSemanticsAdapter } =
     await import("./native-field-semantics.js");
   const f = await graphFixture();
   const input = {
@@ -404,7 +404,7 @@ it("rejects unmatched semantic initialization, contradictory declarations, stale
     fields: [{ ...f.context.field, semanticRole: "status" }],
   };
   expect(() =>
-    createLegacyNativeFieldSemanticsAdapter({
+    createHistoricalNativeFieldSemanticsAdapter({
       ...input,
       fields: [f.context.field],
     }),
@@ -416,13 +416,13 @@ it("rejects unmatched semantic initialization, contradictory declarations, stale
   (bindings[1]!.displayConfig as { semanticRole: string }).semanticRole =
     "other";
   expect(() =>
-    createLegacyNativeFieldSemanticsAdapter({
+    createHistoricalNativeFieldSemanticsAdapter({
       ...input,
       source,
       sourceHash: sha256(source),
     }),
   ).toThrow("NATIVE_SEMANTICS_CORRELATED_SOURCE_CONFLICT");
-  const adapter = createLegacyNativeFieldSemanticsAdapter(input),
+  const adapter = createHistoricalNativeFieldSemanticsAdapter(input),
     prepared = adapter.forward(input.source);
   expect(() => adapter.forward({ ...input.source, operations: [] })).toThrow(
     "NATIVE_SEMANTICS_SOURCE_HASH_MISMATCH",

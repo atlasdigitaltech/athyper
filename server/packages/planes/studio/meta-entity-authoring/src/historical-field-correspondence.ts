@@ -6,7 +6,7 @@ import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 /** Evidence candidates only. A legacy member UUID is not a stable identity, and
  * matching names never authorize a rebind or reuse of a retired identity. */
-export function compareLegacyFieldLineage(
+export function compareHistoricalFieldCorrespondence(
   current: MetaEntityGraph,
   previous: MetaEntityGraph,
 ) {
@@ -53,7 +53,7 @@ export function compareLegacyFieldLineage(
 /** Checks a supplied correspondence; callers still need independent review,
  * installed resource identity, revocation and canonical identity allocation.
  * No field-name join, UUID allocation or permission restoration occurs here. */
-export function validateLegacyFieldCorrespondence(
+export function validateHistoricalFieldCorrespondence(
   current: MetaEntityGraph,
   previous: MetaEntityGraph,
   input: {
@@ -67,7 +67,7 @@ export function validateLegacyFieldCorrespondence(
   };
   validateConversionJsonData(current, "/current");
   validateConversionJsonData(previous, "/previous");
-  const inventory = compareLegacyFieldLineage(current, previous);
+  const inventory = compareHistoricalFieldCorrespondence(current, previous);
   if (
     input.currentSourceHash !== inventory.currentSourceHash ||
     input.previousSourceHash !== inventory.previousSourceHash
@@ -111,13 +111,13 @@ export function validateLegacyFieldCorrespondence(
 /** Builds review candidates from complete field declarations, excluding only
  * the unstable legacy member ID. It never approves continuity or allocates a
  * stable identity. Same-name fields with changed declarations stay unresolved. */
-export function proposeLegacyFieldCorrespondence(
+export function proposeHistoricalFieldCorrespondence(
   current: MetaEntityGraph,
   previous: MetaEntityGraph,
 ) {
   validateConversionJsonData(current, "/current");
   validateConversionJsonData(previous, "/previous");
-  const inventory = compareLegacyFieldLineage(current, previous);
+  const inventory = compareHistoricalFieldCorrespondence(current, previous);
   const signature = (field: MetaEntityGraph["fields"][number]) => {
     const { id: _, ...declaration } = field;
     return canonicalJson(declaration);
@@ -171,7 +171,7 @@ export function proposeLegacyFieldCorrespondence(
     previousSourceHash: inventory.previousSourceHash,
     mappings,
   };
-  const validation = validateLegacyFieldCorrespondence(
+  const validation = validateHistoricalFieldCorrespondence(
     current,
     previous,
     input,
@@ -189,7 +189,7 @@ export function proposeLegacyFieldCorrespondence(
   };
 }
 
-export interface LegacyReleaseCorrespondence {
+export interface HistoricalReleaseCorrespondence {
   readonly releaseId: string;
   readonly previousSourceHash: string;
   readonly mappings: readonly {
@@ -202,19 +202,19 @@ export interface LegacyReleaseCorrespondence {
 /** Complete history coverage for an allocation/installation decision. The host
  * supplies the independently loaded release roster. This validates evidence;
  * it does not attest review, publication or installed runtime resolution. */
-export function validateLegacyFieldIdentityPlan(
+export function validateHistoricalFieldIdentityPlan(
   current: MetaEntityGraph,
   releases: readonly { releaseId: string; graph: MetaEntityGraph }[],
   input: {
     currentSourceHash: string;
-    releases: readonly LegacyReleaseCorrespondence[];
+    releases: readonly HistoricalReleaseCorrespondence[];
   },
 ) {
   const fail = (code: string): never => {
     throw new FoundationContractError(code, "/identityPlan");
   };
   validateConversionJsonData(input, "/identityPlan");
-  compareLegacyFieldLineage(current, current);
+  compareHistoricalFieldCorrespondence(current, current);
   if (sha256(current) !== input.currentSourceHash)
     fail("F9_SOURCE_HASH_MISMATCH");
   const roster = new Map(releases.map((r) => [r.releaseId, r.graph]));
@@ -226,11 +226,15 @@ export function validateLegacyFieldIdentityPlan(
     if (!previous || seen.has(decision.releaseId))
       fail("F9_RELEASE_COVERAGE_INVALID");
     seen.add(decision.releaseId);
-    const validation = validateLegacyFieldCorrespondence(current, previous!, {
-      currentSourceHash: input.currentSourceHash,
-      previousSourceHash: decision.previousSourceHash,
-      mappings: decision.mappings,
-    });
+    const validation = validateHistoricalFieldCorrespondence(
+      current,
+      previous!,
+      {
+        currentSourceHash: input.currentSourceHash,
+        previousSourceHash: decision.previousSourceHash,
+        mappings: decision.mappings,
+      },
+    );
     const rebind = new Set(decision.rebindRequiredPreviousFieldIds);
     if (
       rebind.size !== decision.rebindRequiredPreviousFieldIds.length ||
@@ -330,8 +334,8 @@ export function validateLegacyFieldIdentityPlan(
 /** Diagnostics for compile/install dependency checks. The caller supplies the
  * independently validated complete plan and exact dependent source pins.
  * Returning no finding is NOT an access decision or proof of installed mapping. */
-export function legacyFieldDependentFindings(
-  plan: ReturnType<typeof validateLegacyFieldIdentityPlan>,
+export function historicalFieldDependentFindings(
+  plan: ReturnType<typeof validateHistoricalFieldIdentityPlan>,
   dependencies: readonly {
     dependentKey: string;
     releaseId: string;

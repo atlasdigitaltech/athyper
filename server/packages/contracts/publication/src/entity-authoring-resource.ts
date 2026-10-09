@@ -28,7 +28,7 @@ export interface AuthoringDescriptorResource {
   readonly descriptor: Readonly<Record<string, unknown>>;
 }
 export interface IdentityReviewResource {
-  readonly schema: "entity.legacy-identity-review/1";
+  readonly schema: "entity.historical-identity-review/1";
   readonly reference: string;
   readonly entityId: string;
   readonly changeSetId: string;
@@ -134,7 +134,7 @@ export function parseEntityAuthoringResource(
         "reviewerId",
         "releases",
       ]) ||
-      value.schema !== "entity.legacy-identity-review/1" ||
+      value.schema !== "entity.historical-identity-review/1" ||
       typeof value.reference !== "string" ||
       !value.reference.trim() ||
       value.reference.length > 1024 ||

@@ -18,13 +18,13 @@ import {
   loadReferenceMembers,
 } from "./normalized-reference-storage.js";
 import {
-  prepareLegacySourceEnrollment,
-  type LegacySourceEnrollmentInput,
-} from "./legacy-source-enrollment.js";
+  prepareHistoricalSourceNormalization,
+  type HistoricalSourceNormalizationInput,
+} from "./historical-source-normalization.js";
 import type { NativeAuthoringPolicy } from "./native-core-layout-persistence.js";
 import type { NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
 type Tx = Transaction<Record<string, never>>;
-export interface LegacyEnrollmentApplicationInput extends NormalizedSaveCoordinate {
+export interface HistoricalNormalizationApplicationInput extends NormalizedSaveCoordinate {
   readonly actorId: string;
   readonly expectedRevision: number;
   readonly expectedSourceHash: string;
@@ -33,14 +33,17 @@ export interface LegacyEnrollmentApplicationInput extends NormalizedSaveCoordina
 /** Independently installed existing-host ports, never request callbacks. This
  * application enrolls existing canonical families only. Allocation of labels,
  * stable identities and source ownership remains with governed typed commands. */
-export interface LegacyEnrollmentApplicationPolicy {
+export interface HistoricalNormalizationApplicationPolicy {
   readonly host: NativeAuthoringPolicy;
-  qualify(tx: Tx, input: LegacyEnrollmentApplicationInput): Promise<void>;
+  qualify(
+    tx: Tx,
+    input: HistoricalNormalizationApplicationInput,
+  ): Promise<void>;
   resolve(
     tx: Tx,
-    input: LegacyEnrollmentApplicationInput,
+    input: HistoricalNormalizationApplicationInput,
     source: MetaEntityGraph,
-  ): Promise<LegacySourceEnrollmentInput>;
+  ): Promise<HistoricalSourceNormalizationInput>;
 }
 const fail = (code: string): never => {
   throw new AuthoringPolicyError(
@@ -50,7 +53,7 @@ const fail = (code: string): never => {
 };
 async function capture(
   tx: Tx,
-  input: LegacyEnrollmentApplicationInput,
+  input: HistoricalNormalizationApplicationInput,
   revision: number,
   graph: MetaEntityGraph,
   kind: "previous" | "saved",
@@ -75,10 +78,10 @@ async function capture(
 /** Caller owns the existing transaction/savepoint. History, marker, revision and
  * receipt commit together. No member identity, attribution or operation is
  * rewritten; fresh source allocation and native conversion are separate commands. */
-export async function applyLegacySourceEnrollment(
+export async function applyHistoricalSourceNormalization(
   tx: Tx,
-  input: LegacyEnrollmentApplicationInput,
-  policy: LegacyEnrollmentApplicationPolicy,
+  input: HistoricalNormalizationApplicationInput,
+  policy: HistoricalNormalizationApplicationPolicy,
   load: () => Promise<MetaEntityGraph>,
 ) {
   if (!tx.isTransaction) fail("NORMALIZED_SAVE_TRANSACTION_REQUIRED");
@@ -115,7 +118,7 @@ export async function applyLegacySourceEnrollment(
   if (!root) fail("AUTHORING_DRAFT_NOT_FOUND");
   await policy.qualify(tx, structuredClone(input));
   const requestHash = fingerprintCommand({
-    kind: "legacy-source-enrollment",
+    kind: "historical-source-normalization",
     ...input,
     authoringSchemaHash: schemaHash,
   });
@@ -143,7 +146,7 @@ export async function applyLegacySourceEnrollment(
         "Enrollment idempotency key conflicts with the original request.",
       );
     if (
-      receipt.identities.enrollmentKind !== "legacy-source-enrollment" ||
+      receipt.identities.enrollmentKind !== "historical-source-normalization" ||
       receipt.identities.sourceHash !== input.expectedSourceHash ||
       !/^[a-f0-9]{64}$/.test(receipt.identities.targetHash ?? "") ||
       Number(receipt.revision) !== input.expectedRevision + 1 ||
@@ -190,7 +193,10 @@ export async function applyLegacySourceEnrollment(
       resolved.sourceKind !== root!.source_kind
     )
       fail("LEGACY_ENROLLMENT_REPLAY_INVALID");
-    const proof = prepareLegacySourceEnrollment(histories[0]!.graph, resolved);
+    const proof = prepareHistoricalSourceNormalization(
+      histories[0]!.graph,
+      resolved,
+    );
     if (
       proof.targetHash !== receipt.identities.targetHash ||
       canonicalJson(proof.candidate) !== canonicalJson(histories[1]!.graph)
@@ -232,7 +238,7 @@ export async function applyLegacySourceEnrollment(
     resolved.sourceKind !== root!.source_kind
   )
     fail("LEGACY_ENROLLMENT_SOURCE_MISMATCH");
-  const proof = prepareLegacySourceEnrollment(source, resolved);
+  const proof = prepareHistoricalSourceNormalization(source, resolved);
   const labels = await loadNormalizedLabels(tx, input.changeSetId);
   if (
     !labels ||
@@ -278,7 +284,7 @@ export async function applyLegacySourceEnrollment(
   if (canonicalJson(stored) !== canonicalJson(proof.candidate))
     fail("LEGACY_ENROLLMENT_READBACK_MISMATCH");
   await capture(tx, input, revision, stored, "saved");
-  await sql`INSERT INTO metadata.entity_authoring_command_receipt(change_set_id,tenant_id,idempotency_key,actor_id,request_hash,expected_revision,revision,changed,identities) VALUES(${input.changeSetId}::uuid,${input.tenantId}::uuid,${input.idempotencyKey},${input.actorId}::uuid,${requestHash},${input.expectedRevision},${revision},true,${canonicalJson({ enrollmentKind: "legacy-source-enrollment", sourceHash: input.expectedSourceHash, targetHash: proof.targetHash })}::jsonb)`.execute(
+  await sql`INSERT INTO metadata.entity_authoring_command_receipt(change_set_id,tenant_id,idempotency_key,actor_id,request_hash,expected_revision,revision,changed,identities) VALUES(${input.changeSetId}::uuid,${input.tenantId}::uuid,${input.idempotencyKey},${input.actorId}::uuid,${requestHash},${input.expectedRevision},${revision},true,${canonicalJson({ enrollmentKind: "historical-source-normalization", sourceHash: input.expectedSourceHash, targetHash: proof.targetHash })}::jsonb)`.execute(
     tx,
   );
   return {

@@ -21,7 +21,7 @@ const document = {
 function fixture(value: Record<string, unknown> = document) {
   const payload = value;
   const kind =
-    payload.schema === "entity.legacy-identity-review/1"
+    payload.schema === "entity.historical-identity-review/1"
       ? "entity_identity_review"
       : "entity_authoring_descriptor";
   value = {
@@ -129,7 +129,7 @@ it("rejects missing/ambiguous installation and byte/hash/signature drift", async
 });
 it("binds identity review principals and source coordinates to the installed decision", async () => {
   const receipt = {
-    schema: "entity.legacy-identity-review/1",
+    schema: "entity.historical-identity-review/1",
     reference: "fixture-review",
     tenantId: null,
     authoringSchemaHash: "b".repeat(64),

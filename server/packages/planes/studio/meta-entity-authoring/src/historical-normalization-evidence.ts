@@ -1,9 +1,9 @@
 import {
-  compareLegacyFieldLineage,
-  proposeLegacyFieldCorrespondence,
-  validateLegacyFieldIdentityPlan,
-} from "./legacy-field-lineage.js";
-import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
+  compareHistoricalFieldCorrespondence,
+  proposeHistoricalFieldCorrespondence,
+  validateHistoricalFieldIdentityPlan,
+} from "./historical-field-correspondence.js";
+import { prepareHistoricalLabelNormalization } from "./historical-label-normalization.js";
 import { sql, type Transaction } from "kysely";
 import {
   AuthoringPolicyError,
@@ -15,7 +15,7 @@ import { KyselyMetaEntityAuthoringRepository } from "./kysely-authoring-reposito
 import { loadNormalizedLabels } from "./normalized-label-storage.js";
 import { loadFieldIdentities } from "./normalized-reference-storage.js";
 import { canonicalJson, sha256, validateGraph } from "./deterministic.js";
-import { prepareLegacySourceEnrollment } from "./legacy-source-enrollment.js";
+import { prepareHistoricalSourceNormalization } from "./historical-source-normalization.js";
 
 export interface EnrollmentHistoryRow {
   readonly revision: number;
@@ -67,13 +67,13 @@ export function assessEnrollmentHistory(
 /** Operational diagnostic for an independently admitted database operator. This
  * read-only entry point supplies no application admission and must not be exposed
  * as an unauthenticated request API. Caller selects exact draft IDs, not names. */
-export async function inspectLegacyEnrollmentEvidence(
+export async function inspectHistoricalNormalizationEvidence(
   tx: Transaction<Record<string, never>>,
   changeSetId: string,
   limits: { maximumBytes: number; maximumHistoryRows: number },
   labelPlan?: {
     declarations?: Parameters<
-      typeof prepareLegacyLabelEnrollment
+      typeof prepareHistoricalLabelNormalization
     >[1]["declarations"];
     defaultLocale: string;
     requiredLocales: readonly string[];
@@ -186,8 +186,8 @@ export async function inspectLegacyEnrollmentEvidence(
     integrity: r.integrity,
     ...(r.integrity
       ? {
-          comparison: compareLegacyFieldLineage(source, r.graph),
-          correspondenceProposal: proposeLegacyFieldCorrespondence(
+          comparison: compareHistoricalFieldCorrespondence(source, r.graph),
+          correspondenceProposal: proposeHistoricalFieldCorrespondence(
             source,
             r.graph,
           ),
@@ -208,7 +208,7 @@ export async function inspectLegacyEnrollmentEvidence(
   let targetHash: string | null = null;
   if (labels && blockers.length === 0) {
     try {
-      targetHash = prepareLegacySourceEnrollment(source, {
+      targetHash = prepareHistoricalSourceNormalization(source, {
         sourceHash: sha256(source),
         revision,
         sourceKind: root!.source_kind as "product" | "tenant_entity",
@@ -259,7 +259,7 @@ export async function inspectLegacyEnrollmentEvidence(
     try {
       return {
         status: "prepared" as const,
-        proposal: prepareLegacyLabelEnrollment(
+        proposal: prepareHistoricalLabelNormalization(
           source,
           {
             sourceHash: sha256(source),
@@ -285,13 +285,16 @@ export async function inspectLegacyEnrollmentEvidence(
     }
   }
   const identityPlanProposal = releases.every((r) => r.integrity)
-    ? validateLegacyFieldIdentityPlan(
+    ? validateHistoricalFieldIdentityPlan(
         source,
         releases.map((r) => ({ releaseId: r.releaseId, graph: r.graph })),
         {
           currentSourceHash: sha256(source),
           releases: releases.map((r) => {
-            const proposal = proposeLegacyFieldCorrespondence(source, r.graph);
+            const proposal = proposeHistoricalFieldCorrespondence(
+              source,
+              r.graph,
+            );
             return {
               releaseId: r.releaseId,
               previousSourceHash: proposal.previousSourceHash,
@@ -303,7 +306,7 @@ export async function inspectLegacyEnrollmentEvidence(
       )
     : null;
   return {
-    schema: "entity.legacy-enrollment-evidence/1",
+    schema: "entity.historical-normalization-evidence/1",
     identityPlanProposal,
     ...(labelPlan ? { labelProposal: labelProposal() } : {}),
     changeSetId,

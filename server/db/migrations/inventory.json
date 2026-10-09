@@ -2830,6 +2830,18 @@
         "ddl/common/shared/98_security_definer_privileges.sql",
         "ddl/common/shared/99_security_definer_hardening.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_entity_historical_compatibility_names.sql",
+      "path": "migrations/20261010_entity_historical_compatibility_names.sql",
+      "sha256": "749f98ff4fd04554c4ef4135b4846e256865dd4dc3da7d7cee4fc3fd78d6ddfa",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Rename active Entity compatibility objects to the historical-normalization contract after callers move, without changing rows, predicates, grants or trigger behavior.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/66_historical_compatibility_names.sql"
+      ]
     }
   ]
 }

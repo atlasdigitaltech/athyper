@@ -6,9 +6,9 @@ import {
 import { AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import type {
-  LegacyIdentityReviewReceipt,
-  LegacyIdentityReviewStore,
-} from "./legacy-identity-review.js";
+  HistoricalIdentityReviewReceipt,
+  HistoricalIdentityReviewStore,
+} from "./historical-identity-review.js";
 
 type Tx = Transaction<Record<string, never>>;
 export interface InstalledReferenceResourcePin {
@@ -134,14 +134,15 @@ export function createInstalledReferenceResourceReader(options: {
 export function createInstalledIdentityReviewStore(options: {
   read: ReturnType<typeof createInstalledReferenceResourceReader>;
   pin: InstalledReferenceResourcePin;
-}): LegacyIdentityReviewStore {
+}): HistoricalIdentityReviewStore {
   const pin = structuredClone(options.pin);
   if (pin.kind !== "entity_identity_review") denied();
   const load = async (tx: Tx) => {
     const resource = await options.read(tx, pin);
-    const receipt = resource.document as unknown as LegacyIdentityReviewReceipt;
+    const receipt =
+      resource.document as unknown as HistoricalIdentityReviewReceipt;
     if (
-      receipt.schema !== "entity.legacy-identity-review/1" ||
+      receipt.schema !== "entity.historical-identity-review/1" ||
       receipt.proposerId !== resource.authorId ||
       receipt.reviewerId !== resource.reviewerId
     )

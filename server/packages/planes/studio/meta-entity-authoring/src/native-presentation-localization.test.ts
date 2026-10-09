@@ -16,7 +16,7 @@ import {
   parseSharedReferenceProduct,
 } from "./authoring/product.js";
 import {
-  createLegacyNativePresentationLocalizationAdapter,
+  createHistoricalNativePresentationLocalizationAdapter,
   validateNativeEntityLabelDerivation,
   type NativeLocalizationOwners,
 } from "./native-presentation-localization.js";
@@ -196,7 +196,7 @@ it.each(["country", "state_region"])(
   "converts every %s localized owner with exact inverse",
   (name) => {
     const f = fixture(name),
-      a = createLegacyNativePresentationLocalizationAdapter(f.input),
+      a = createHistoricalNativePresentationLocalizationAdapter(f.input),
       p = a.forward(f.input.source);
     expect(p.entity.entityLabelId).toBe(f.target.entity.entityLabelId);
     expect(p.ownedLabels).toEqual(f.input.labels);
@@ -212,7 +212,7 @@ it.each(["country", "state_region"])(
 );
 it("rejects wrong owner FKs, repeated text conflicts, unmapped declarations and root rewrites", () => {
   const f = fixture(),
-    a = createLegacyNativePresentationLocalizationAdapter(f.input),
+    a = createHistoricalNativePresentationLocalizationAdapter(f.input),
     p = a.forward(f.input.source);
   expect(() =>
     a.reverse(p, {
@@ -227,7 +227,7 @@ it("rejects wrong owner FKs, repeated text conflicts, unmapped declarations and 
     }),
   ).toThrow();
   expect(() =>
-    createLegacyNativePresentationLocalizationAdapter({
+    createHistoricalNativePresentationLocalizationAdapter({
       ...f.input,
       owners: f.input.owners.slice(1),
     }),
@@ -248,17 +248,17 @@ it.each(["country", "state_region"])(
   "composes %s localization, choices and badge mappings over the same source",
   async (name) => {
     const f = fixture(name);
-    const { createLegacyNativeFieldChoicesAdapter } =
+    const { createHistoricalNativeFieldChoicesAdapter } =
       await import("./native-field-choices.js");
-    const { createLegacyNativeDetailBadgesAdapter } =
+    const { createHistoricalNativeDetailBadgesAdapter } =
       await import("./native-detail-badges.js");
     const { composeNativeNestedConversionAdapters } =
       await import("./native-graph-conversion.js");
     const { layoutFixtureRow } =
       await import("../../../../contracts/meta-entity-authoring/src/normalized-layout.fixtures.js");
-    const { convertLegacyFieldChoices } =
+    const { convertHistoricalFieldChoices } =
       await import("./native-field-choices.js");
-    const localized = createLegacyNativePresentationLocalizationAdapter(
+    const localized = createHistoricalNativePresentationLocalizationAdapter(
       f.input,
     );
     const first = localized.forward(f.input.source);
@@ -285,7 +285,7 @@ it.each(["country", "state_region"])(
         { id: binding.choiceId, labelId: binding.labelId },
       ]),
     );
-    const choices = createLegacyNativeFieldChoicesAdapter({
+    const choices = createHistoricalNativeFieldChoicesAdapter({
       source: first,
       sourceHash: sha256(first),
       resource: { ...f.input.resource, key: "choice-conversion" },
@@ -315,7 +315,7 @@ it.each(["country", "state_region"])(
       componentDisplayId: id(998),
     });
     const surface = f.target.surfaces.find((s) => s.id === detail.id)!;
-    const normalizedChoices = convertLegacyFieldChoices(
+    const normalizedChoices = convertHistoricalFieldChoices(
       {
         options: Object.entries(owner).map(([value, binding]) => ({
           value,
@@ -338,7 +338,7 @@ it.each(["country", "state_region"])(
     expect(second.referenceMembers!.members.fieldChoice).toEqual(
       normalizedChoices,
     );
-    const badge = createLegacyNativeDetailBadgesAdapter({
+    const badge = createHistoricalNativeDetailBadgesAdapter({
       source: second,
       sourceHash: sha256(second),
       resource: { ...f.input.resource, key: "badge-conversion" },

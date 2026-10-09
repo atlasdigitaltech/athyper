@@ -2,8 +2,8 @@ import { expect, it, vi } from "vitest";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import {
   assessEnrollmentHistory,
-  inspectLegacyEnrollmentEvidence,
-} from "./legacy-enrollment-evidence.js";
+  inspectHistoricalNormalizationEvidence,
+} from "./historical-normalization-evidence.js";
 import { sha256 } from "./deterministic.js";
 import { Kysely, PostgresDialect } from "kysely";
 const source = {
@@ -83,7 +83,7 @@ it("refuses a mutable diagnostic transaction before reading source data", async 
       db
         .transaction()
         .execute((tx) =>
-          inspectLegacyEnrollmentEvidence(
+          inspectHistoricalNormalizationEvidence(
             tx,
             "00000000-0000-4000-8000-000000000001",
             { maximumBytes: 10000, maximumHistoryRows: 10 },

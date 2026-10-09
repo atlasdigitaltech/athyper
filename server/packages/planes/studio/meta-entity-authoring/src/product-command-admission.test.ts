@@ -65,7 +65,7 @@ it.each(["label", "reference"] as const)(
           db,
           undefined,
           labels,
-        ).executeLegacyLabelEnrollment({
+        ).executeHistoricalLabelNormalization({
           changeSetId: id,
           actorId: id,
           tenantId: null,

@@ -9,7 +9,7 @@ import {
   parseSharedReferenceProduct,
 } from "./authoring/product.js";
 import {
-  createLegacyNativeReferenceRelationsAdapter,
+  createHistoricalNativeReferenceRelationsAdapter,
   validateNativeRelationDerivations,
   type NativeRelationDerivation,
 } from "./native-reference-relations.js";
@@ -98,7 +98,7 @@ it.each(["country", "state_region"])(
   "maps %s key references into exact canonical read-only relations",
   (name) => {
     const f = fixture(name),
-      adapter = createLegacyNativeReferenceRelationsAdapter(f.input),
+      adapter = createHistoricalNativeReferenceRelationsAdapter(f.input),
       prepared = adapter.forward(f.source);
     expect(prepared.relations ?? []).toHaveLength(f.derivations.length);
     expect(prepared.fields).toEqual(f.source.fields);
@@ -123,7 +123,10 @@ it("rejects missing, stale, duplicate, foreign and mutating relation evidence", 
   const f = fixture();
   const reject = (derivations: readonly NativeRelationDerivation[]) =>
     expect(() =>
-      createLegacyNativeReferenceRelationsAdapter({ ...f.input, derivations }),
+      createHistoricalNativeReferenceRelationsAdapter({
+        ...f.input,
+        derivations,
+      }),
     ).toThrow();
   reject([]);
   reject([...f.derivations, f.derivations[0]!]);
@@ -155,7 +158,7 @@ it("rejects missing, stale, duplicate, foreign and mutating relation evidence", 
 });
 it("rejects extra target rows, existing-member changes and non-lossless inverse", () => {
   const f = fixture(),
-    adapter = createLegacyNativeReferenceRelationsAdapter(f.input),
+    adapter = createHistoricalNativeReferenceRelationsAdapter(f.input),
     prepared = adapter.forward(f.source);
   expect(() =>
     validateNativeRelationDerivations(

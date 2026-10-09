@@ -34,7 +34,7 @@ const descriptor = {
   descriptorHash: hash({ fixture: true }),
 };
 const review = {
-  schema: "entity.legacy-identity-review/1",
+  schema: "entity.historical-identity-review/1",
   reference: "fixture/review",
   entityId: id(1),
   changeSetId: id(2),

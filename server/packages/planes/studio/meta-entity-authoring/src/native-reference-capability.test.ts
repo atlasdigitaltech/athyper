@@ -6,7 +6,7 @@ import {
   compileSharedReferenceProduct,
   parseSharedReferenceProduct,
 } from "./authoring/product.js";
-import { createLegacyNativeReferenceCapabilityAdapter } from "./native-reference-capability.js";
+import { createHistoricalNativeReferenceCapabilityAdapter } from "./native-reference-capability.js";
 import { sha256 } from "./deterministic.js";
 function fixture(name = "country") {
   const source = compileSharedReferenceProduct(
@@ -59,7 +59,7 @@ it.each(["country", "state_region"])(
   "converts %s marker to an exact typed runtime pin and back",
   (name) => {
     const f = fixture(name),
-      adapter = createLegacyNativeReferenceCapabilityAdapter(f.input),
+      adapter = createHistoricalNativeReferenceCapabilityAdapter(f.input),
       prepared = adapter.forward(f.source);
     expect(
       prepared.surfaces!.every(
@@ -75,18 +75,18 @@ it.each(["country", "state_region"])(
 it("rejects altered declarations, unavailable runtime identity, wrong resource pin and lossy target", () => {
   const f = fixture();
   expect(() =>
-    createLegacyNativeReferenceCapabilityAdapter({
+    createHistoricalNativeReferenceCapabilityAdapter({
       ...f.input,
       binding: { ...f.input.binding, runtimeId: "unavailable" },
     }),
   ).toThrow("NATIVE_REFERENCE_CAPABILITY_INVALID");
   expect(() =>
-    createLegacyNativeReferenceCapabilityAdapter({
+    createHistoricalNativeReferenceCapabilityAdapter({
       ...f.input,
       binding: { ...f.input.binding, version: 2 },
     }),
   ).toThrow("NATIVE_REFERENCE_CAPABILITY_INVALID");
-  const adapter = createLegacyNativeReferenceCapabilityAdapter(f.input),
+  const adapter = createHistoricalNativeReferenceCapabilityAdapter(f.input),
     prepared = adapter.forward(f.source);
   expect(() =>
     adapter.reverse(prepared, {

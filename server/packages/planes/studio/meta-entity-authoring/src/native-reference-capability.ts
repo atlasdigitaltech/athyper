@@ -8,7 +8,7 @@ import type {
   NativeConversionResource,
   NativeNestedConversionAdapter,
 } from "./native-graph-conversion.js";
-export function createLegacyNativeReferenceCapabilityAdapter(input: {
+export function createHistoricalNativeReferenceCapabilityAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

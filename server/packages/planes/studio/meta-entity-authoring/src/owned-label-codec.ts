@@ -10,7 +10,7 @@ import {
 } from "@athyper/server-contract-meta-entity-authoring";
 import { canonicalJson } from "./deterministic.js";
 
-export interface LegacyLabelIdentity {
+export interface HistoricalLabelIdentity {
   readonly labelKey: string;
   readonly id: string;
   readonly translations: Readonly<Record<string, string>>;
@@ -41,7 +41,7 @@ export function importOwnedLabelLocalization(
   value: unknown,
   input: OwnedLabelContext & {
     readonly sourceHash: string;
-    readonly identities: readonly LegacyLabelIdentity[];
+    readonly identities: readonly HistoricalLabelIdentity[];
   },
 ): OwnedLabelGraph {
   if (

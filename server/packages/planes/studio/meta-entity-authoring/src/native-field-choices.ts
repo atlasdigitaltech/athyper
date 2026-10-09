@@ -14,7 +14,7 @@ import type {
 } from "./native-graph-conversion.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
-export interface LegacyFieldChoices {
+export interface HistoricalFieldChoices {
   readonly options: readonly {
     readonly value: string;
     readonly label: string;
@@ -55,7 +55,7 @@ function context(c: NativeFieldChoiceContext) {
 export function compileNativeFieldChoices(
   rows: readonly ReferenceMember<"fieldChoice">[],
   c: NativeFieldChoiceContext,
-): LegacyFieldChoices {
+): HistoricalFieldChoices {
   validateConversionJsonData(rows, "/choices");
   if (!Array.isArray(rows))
     return fail("NATIVE_CHOICES_SOURCE_INVALID", "/choices");
@@ -100,8 +100,8 @@ export function compileNativeFieldChoices(
 }
 /** Selected lookup options and tones only. Unknown surrounding displayConfig
  * declarations still require separate accounted mappings. */
-export function convertLegacyFieldChoices(
-  source: LegacyFieldChoices,
+export function convertHistoricalFieldChoices(
+  source: HistoricalFieldChoices,
   c: NativeFieldChoiceContext,
   mapping: {
     readonly sourceHash: string;
@@ -201,7 +201,7 @@ export interface LegacyNativeFieldChoicesAdapterInput {
 }
 /** Correlate repeated binding declarations with one field-owned choice inventory.
  * Unaccounted display properties remain visible to subsequent adapters. */
-export function createLegacyNativeFieldChoicesAdapter(
+export function createHistoricalNativeFieldChoicesAdapter(
   input: LegacyNativeFieldChoicesAdapterInput,
 ): NativeNestedConversionAdapter {
   validateConversionJsonData(input.source, "/source");
@@ -261,7 +261,7 @@ export function createLegacyNativeFieldChoicesAdapter(
     if (sha256(graph) !== sourceHash)
       fail("NATIVE_CHOICES_SOURCE_HASH_MISMATCH", "/source");
     const result = structuredClone(graph);
-    const selected = new Map<string, LegacyFieldChoices>();
+    const selected = new Map<string, HistoricalFieldChoices>();
     const seenBindings = new Set<string>();
     for (const b of result.surfaceFieldBindings ?? []) {
       if (!declarations.some((d) => d.id === b.id)) continue;
@@ -293,7 +293,7 @@ export function createLegacyNativeFieldChoicesAdapter(
       const value = {
         options: lookup!.options,
         tones: Object.hasOwn(display, "statusTones") ? display.statusTones : {},
-      } as LegacyFieldChoices;
+      } as HistoricalFieldChoices;
       const previous = selected.get(b.entityFieldId!);
       if (previous && canonicalJson(previous) !== canonicalJson(value))
         fail(
@@ -314,7 +314,7 @@ export function createLegacyNativeFieldChoicesAdapter(
     }
     const additions = [...selected].flatMap(([fieldId, source]) => {
       const m = mappings[fieldId]!;
-      return convertLegacyFieldChoices(source, m.context, {
+      return convertHistoricalFieldChoices(source, m.context, {
         sourceHash: sha256(source),
         choices: m.choices,
       });
@@ -333,7 +333,7 @@ export function createLegacyNativeFieldChoicesAdapter(
         fail("NATIVE_CHOICES_SOURCE_HASH_MISMATCH", "/prepared");
       if (!target.referenceMembers)
         return fail("NATIVE_CHOICES_REFERENCE_MEMBERS_REQUIRED", "/target");
-      const projections = new Map<string, LegacyFieldChoices>();
+      const projections = new Map<string, HistoricalFieldChoices>();
       for (const [fieldId, m] of Object.entries(mappings)) {
         const fields = target.fields.filter((f) => f.id === fieldId);
         const rows = target.referenceMembers.members.fieldChoice.filter(

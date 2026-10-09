@@ -208,7 +208,7 @@ export function validateNativeRelationDerivations(
     fail("/prepared/relations");
 }
 
-export function createLegacyNativeReferenceRelationsAdapter(input: {
+export function createHistoricalNativeReferenceRelationsAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

@@ -14,7 +14,7 @@ import { validateConversionJsonData } from "./normalized-core-codec.js";
 /** Field-level semantic roles are shared across their binding declarations.
  * Initialization must be independently admitted and used by the core adapter;
  * this factory neither initializes fields nor derives authority from legacy JSON. */
-export function createLegacyNativeFieldSemanticsAdapter(input: {
+export function createHistoricalNativeFieldSemanticsAdapter(input: {
   readonly source: MetaEntityGraph;
   readonly sourceHash: string;
   readonly resource: NativeConversionResource;

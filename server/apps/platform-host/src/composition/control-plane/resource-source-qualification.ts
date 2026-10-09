@@ -8,7 +8,7 @@ import {
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import {
   compileNativeLiveReadResources,
-  validateLegacyFieldIdentityPlan,
+  validateHistoricalFieldIdentityPlan,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 export function createResourceSourceQualification(
   descriptorHash: string,
@@ -95,7 +95,7 @@ export function createResourceSourceQualification(
       canonical.canonicalBytes(releases).length > 4194304
     )
       throw Error("RESOURCE_IDENTITY_HISTORY_INVALID");
-    const plan = validateLegacyFieldIdentityPlan(graph, releases, {
+    const plan = validateHistoricalFieldIdentityPlan(graph, releases, {
       currentSourceHash: payload.sourceHash,
       releases: payload.releases,
     });

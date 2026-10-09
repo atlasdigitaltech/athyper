@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
-import { compareLegacyFieldLineage } from "./legacy-field-lineage.js";
+import { compareHistoricalFieldCorrespondence } from "./historical-field-correspondence.js";
 const field = {
   id: "00000000-0000-4000-8000-000000000001",
   fieldKey: "code",
@@ -12,7 +12,10 @@ const graph = (fields: unknown[]) =>
     fields,
   }) as MetaEntityGraph;
 it("records exact-member continuity without assigning a stable identity", () => {
-  const r = compareLegacyFieldLineage(graph([field]), graph([field]));
+  const r = compareHistoricalFieldCorrespondence(
+    graph([field]),
+    graph([field]),
+  );
   expect(r.fields[0]).toMatchObject({
     status: "exact-member-candidate",
     stableIdentityId: null,
@@ -20,7 +23,7 @@ it("records exact-member continuity without assigning a stable identity", () => 
   expect(r.qualification).toBe("not-established");
 });
 it("does not infer continuity from equal names or reassign removed identities", () => {
-  const r = compareLegacyFieldLineage(
+  const r = compareHistoricalFieldCorrespondence(
     graph([{ ...field, id: "00000000-0000-4000-8000-000000000002" }]),
     graph([field]),
   );
@@ -34,17 +37,19 @@ it("requires review for changed semantics or renamed keys", () => {
     { label: "New" },
   ])
     expect(
-      compareLegacyFieldLineage(graph([{ ...field, ...patch }]), graph([field]))
-        .fields[0]?.status,
+      compareHistoricalFieldCorrespondence(
+        graph([{ ...field, ...patch }]),
+        graph([field]),
+      ).fields[0]?.status,
     ).toBe("changed-member-review-required");
 });
 it("rejects ambiguous or absent historical member IDs", () => {
   for (const fields of [[field, field], [{ fieldKey: "code" }]])
     expect(() =>
-      compareLegacyFieldLineage(graph([field]), graph(fields)),
+      compareHistoricalFieldCorrespondence(graph([field]), graph(fields)),
     ).toThrow("F9_SOURCE_MEMBER_ID_AMBIGUOUS");
 });
-import { validateLegacyFieldCorrespondence } from "./legacy-field-lineage.js";
+import { validateHistoricalFieldCorrespondence } from "./historical-field-correspondence.js";
 import { sha256 } from "./deterministic.js";
 it("validates explicit hash-bound correspondence without granting identity authority", () => {
   const previous = graph([field]),
@@ -57,7 +62,7 @@ it("validates explicit hash-bound correspondence without granting identity autho
     ],
   };
   expect(
-    validateLegacyFieldCorrespondence(current, previous, input),
+    validateHistoricalFieldCorrespondence(current, previous, input),
   ).toMatchObject({
     mappedCount: 1,
     unmappedCurrentFieldIds: [],
@@ -65,26 +70,26 @@ it("validates explicit hash-bound correspondence without granting identity autho
     authority: "not-established",
   });
   expect(() =>
-    validateLegacyFieldCorrespondence(current, previous, {
+    validateHistoricalFieldCorrespondence(current, previous, {
       ...input,
       currentSourceHash: "0".repeat(64),
     }),
   ).toThrow("F9_SOURCE_HASH_MISMATCH");
   expect(() =>
-    validateLegacyFieldCorrespondence(current, previous, {
+    validateHistoricalFieldCorrespondence(current, previous, {
       ...input,
       mappings: [...input.mappings, ...input.mappings],
     }),
   ).toThrow("F9_MAPPING_AMBIGUOUS");
   const changed = graph([{ ...current.fields[0], dataType: "uuid" }]);
   expect(() =>
-    validateLegacyFieldCorrespondence(changed, previous, {
+    validateHistoricalFieldCorrespondence(changed, previous, {
       ...input,
       currentSourceHash: sha256(changed),
     }),
   ).toThrow("F9_MAPPING_SEMANTICS_CHANGED");
   expect(
-    validateLegacyFieldCorrespondence(current, previous, {
+    validateHistoricalFieldCorrespondence(current, previous, {
       ...input,
       mappings: [],
     }),
@@ -94,12 +99,12 @@ it("validates explicit hash-bound correspondence without granting identity autho
   });
 });
 
-import { proposeLegacyFieldCorrespondence } from "./legacy-field-lineage.js";
+import { proposeHistoricalFieldCorrespondence } from "./historical-field-correspondence.js";
 it("prepares exact declarations for review across recreated IDs without granting identity authority", () => {
   const current = graph([
     { ...field, id: "00000000-0000-4000-8000-000000000002" },
   ]);
-  const result = proposeLegacyFieldCorrespondence(current, graph([field]));
+  const result = proposeHistoricalFieldCorrespondence(current, graph([field]));
   expect(result.mappings).toEqual([
     { currentFieldId: current.fields[0]!.id, previousFieldId: field.id },
   ]);
@@ -114,7 +119,7 @@ it("never turns changed declarations, absent properties or duplicate candidates 
     { label: null },
     { fieldKey: "renamed" },
   ]) {
-    const result = proposeLegacyFieldCorrespondence(
+    const result = proposeHistoricalFieldCorrespondence(
       graph([{ ...field, ...patch }]),
       graph([field]),
     );
@@ -126,13 +131,13 @@ it("never turns changed declarations, absent properties or duplicate candidates 
     [graph([field]), graph([field, duplicate])],
     [graph([field, duplicate]), graph([field])],
   ]) {
-    const result = proposeLegacyFieldCorrespondence(current!, previous!);
+    const result = proposeHistoricalFieldCorrespondence(current!, previous!);
     expect(result.mappings).toEqual([]);
     expect(result.unresolved.every((x) => x.reason === "ambiguous")).toBe(true);
   }
 });
 
-import { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
+import { validateHistoricalFieldIdentityPlan } from "./historical-field-correspondence.js";
 
 it("requires complete release and previous-field dispositions and binds them to one immutable plan", () => {
   const current = graph([{ ...field, dataType: "uuid" }]);
@@ -149,7 +154,7 @@ it("requires complete release and previous-field dispositions and binds them to 
       },
     ],
   };
-  const result = validateLegacyFieldIdentityPlan(current, releases, input);
+  const result = validateHistoricalFieldIdentityPlan(current, releases, input);
   expect(result.rebindOccurrences).toBe(1);
   expect(result.mappedOccurrences).toBe(0);
   expect(result.authority).toBe("not-established");
@@ -159,14 +164,14 @@ it("requires complete release and previous-field dispositions and binds them to 
     [{ ...input.releases[0]!, releaseId: "unknown" }],
   ])
     expect(() =>
-      validateLegacyFieldIdentityPlan(current, releases, {
+      validateHistoricalFieldIdentityPlan(current, releases, {
         ...input,
         releases: decisions,
       }),
     ).toThrow("F9_RELEASE_COVERAGE_INVALID");
   for (const ids of [[], [field.id, field.id], ["other"]])
     expect(() =>
-      validateLegacyFieldIdentityPlan(current, releases, {
+      validateHistoricalFieldIdentityPlan(current, releases, {
         ...input,
         releases: [
           { ...input.releases[0]!, rebindRequiredPreviousFieldIds: ids },
@@ -174,13 +179,13 @@ it("requires complete release and previous-field dispositions and binds them to 
       }),
     ).toThrow("F9_LEGACY_DISPOSITION_INCOMPLETE");
   expect(() =>
-    validateLegacyFieldIdentityPlan(current, releases, {
+    validateHistoricalFieldIdentityPlan(current, releases, {
       ...input,
       currentSourceHash: "0".repeat(64),
     }),
   ).toThrow("F9_SOURCE_HASH_MISMATCH");
   expect(() =>
-    validateLegacyFieldIdentityPlan(current, releases, {
+    validateHistoricalFieldIdentityPlan(current, releases, {
       ...input,
       releases: [
         {
@@ -193,7 +198,7 @@ it("requires complete release and previous-field dispositions and binds them to 
   ).toThrow("F9_MAPPING_SEMANTICS_CHANGED");
 });
 
-import { legacyFieldDependentFindings } from "./legacy-field-lineage.js";
+import { historicalFieldDependentFindings } from "./historical-field-correspondence.js";
 it("classifies type/reference breaks and surfaces source-bound findings to dependents", () => {
   for (const [old, current, kind] of [
     [field, { ...field, dataType: "uuid" }, "semantic-type-change"],
@@ -212,7 +217,7 @@ it("classifies type/reference breaks and surfaces source-bound findings to depen
   ] as const) {
     const previous = graph([old]),
       next = graph([current]);
-    const plan = validateLegacyFieldIdentityPlan(
+    const plan = validateHistoricalFieldIdentityPlan(
       next,
       [{ releaseId: "release-a", graph: previous }],
       {
@@ -238,17 +243,19 @@ it("classifies type/reference breaks and surfaces source-bound findings to depen
       sourceHash: sha256(previous),
       fieldId: field.id,
     };
-    expect(legacyFieldDependentFindings(plan, [dependency])[0]).toMatchObject({
+    expect(
+      historicalFieldDependentFindings(plan, [dependency])[0],
+    ).toMatchObject({
       ...dependency,
       code: "F9_REBIND_REQUIRED",
     });
     expect(
-      legacyFieldDependentFindings(plan, [
+      historicalFieldDependentFindings(plan, [
         { ...dependency, sourceHash: "0".repeat(64) },
       ])[0]?.code,
     ).toBe("F9_DEPENDENCY_SOURCE_UNAVAILABLE");
     expect(
-      legacyFieldDependentFindings(plan, [
+      historicalFieldDependentFindings(plan, [
         { ...dependency, fieldId: "missing" },
       ])[0]?.code,
     ).toBe("F9_DEPENDENCY_FIELD_UNAVAILABLE");

@@ -14,7 +14,7 @@ import {
 import { canonicalJson, sha256, validateGraph } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 
-export interface LegacySourceEnrollmentInput {
+export interface HistoricalSourceNormalizationInput {
   readonly sourceHash: string;
   readonly revision: number;
   readonly sourceKind: "product" | "tenant_entity";
@@ -33,9 +33,9 @@ const fail = (code: string, path: string): never => {
  * state initialization, publication or claim of installed host qualification.
  * Original values are retained verbatim; only explicit normalized enrollment
  * families and the format marker are added. Native lowering follows separately. */
-export function prepareLegacySourceEnrollment(
+export function prepareHistoricalSourceNormalization(
   source: MetaEntityGraph,
-  input: LegacySourceEnrollmentInput,
+  input: HistoricalSourceNormalizationInput,
 ) {
   validateConversionJsonData(source, "/source");
   validateConversionJsonData(input, "/enrollment");
@@ -224,7 +224,7 @@ export function prepareLegacySourceEnrollment(
   if (sha256(reconstructed) !== input.sourceHash)
     fail("LEGACY_ENROLLMENT_SOURCE_LOSS", "/source");
   return {
-    schema: "entity.legacy-source-enrollment-proof/1" as const,
+    schema: "entity.historical-source-normalization-proof/1" as const,
     source: {
       entityId: input.context.entityId,
       changeSetId: input.context.changeSetId,

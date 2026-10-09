@@ -8,10 +8,10 @@ import {
   type createProductCommandAuthority,
 } from "./product-command-authority.js";
 import type {
-  LegacyOwnershipInput,
-  LegacyOwnershipPolicy,
-} from "./legacy-ownership-initialization.js";
-import type { LegacyIdentityInstallationPolicy } from "./legacy-identity-installation.js";
+  HistoricalOwnershipInput,
+  HistoricalOwnershipPolicy,
+} from "./historical-ownership-initialization.js";
+import type { HistoricalIdentityInstallationPolicy } from "./historical-identity-installation.js";
 
 import type {
   NativeConversionApplicationPolicy,
@@ -36,7 +36,7 @@ export type ProductNativeBootstrapCommand = Omit<
 type Database = Kysely<Record<string, never>>;
 type Tx = Transaction<Record<string, never>>;
 export type ProductReferenceCommand = Omit<
-  LegacyOwnershipInput,
+  HistoricalOwnershipInput,
   "actorId" | "tenantId"
 >;
 export interface ProductReferenceEnrollmentOptions {
@@ -77,10 +77,10 @@ export interface ProductReferenceEnrollmentOptions {
   resolvePolicies(
     tx: Tx,
     context: VerifiedRequestContext,
-    command: LegacyOwnershipInput,
+    command: HistoricalOwnershipInput,
   ): Promise<{
-    ownership: LegacyOwnershipPolicy;
-    identities: LegacyIdentityInstallationPolicy;
+    ownership: HistoricalOwnershipPolicy;
+    identities: HistoricalIdentityInstallationPolicy;
   }>;
 }
 /** Uses the same issuer/application separation and serializable command
@@ -113,7 +113,7 @@ export function createProductReferenceEnrollment(
         "PRODUCT_REFERENCE_INPUT_INVALID",
         "Only canonical command coordinates are accepted.",
       );
-    const command: LegacyOwnershipInput = {
+    const command: HistoricalOwnershipInput = {
       ...structuredClone(input),
       actorId: capturedContext.principalId,
       tenantId: null,
@@ -207,8 +207,8 @@ export function createProductReferenceEnrollment(
           policies.identities,
         );
         return admitted.kind === "ownership"
-          ? repository.executeLegacyOwnershipInitialization(admitted.input)
-          : repository.executeLegacyIdentityInstallation(admitted.input);
+          ? repository.executeHistoricalOwnershipInitialization(admitted.input)
+          : repository.executeHistoricalIdentityInstallation(admitted.input);
       },
     });
   }

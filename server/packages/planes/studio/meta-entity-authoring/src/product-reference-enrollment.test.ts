@@ -32,8 +32,8 @@ vi.mock("./kysely-authoring-repository.js", () => ({
     }
     executeNativeConversion = conversion;
     executeNativeBootstrap = bootstrap;
-    executeLegacyOwnershipInitialization = ownership;
-    executeLegacyIdentityInstallation = identities;
+    executeHistoricalOwnershipInitialization = ownership;
+    executeHistoricalIdentityInstallation = identities;
   },
 }));
 vi.mock("./native-schema-qualification.js", () => ({

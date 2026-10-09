@@ -77,7 +77,7 @@ export function createApprovedAuthoringResourcePublication(options: {
           source.payload,
         );
         if (
-          payload.schema !== "entity.legacy-identity-review/1" ||
+          payload.schema !== "entity.historical-identity-review/1" ||
           payload.proposerId !== row.author_id ||
           payload.reviewerId !== row.reviewer_id
         )

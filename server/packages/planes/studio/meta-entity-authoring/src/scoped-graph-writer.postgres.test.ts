@@ -1050,18 +1050,18 @@ it.skipIf(!enabled)(
             },
           };
           const enrolled =
-            await bootstrap.executeLegacyLabelEnrollment(request);
+            await bootstrap.executeHistoricalLabelNormalization(request);
           expect(enrolled.revision).toBe(3);
-          expect(await bootstrap.executeLegacyLabelEnrollment(request)).toEqual(
-            enrolled,
-          );
+          expect(
+            await bootstrap.executeHistoricalLabelNormalization(request),
+          ).toEqual(enrolled);
           expect(
             (await bootstrap.loadGraph(draftId)).ownedLabels?.labels.some(
               (l) => l.labelKey === "reference.bootstrap",
             ),
           ).toBe(true);
           await expect(
-            bootstrap.executeLegacyLabelEnrollment({
+            bootstrap.executeHistoricalLabelNormalization({
               ...request,
               proposal: { ...request.proposal, sourceHash: "0".repeat(64) },
             }),

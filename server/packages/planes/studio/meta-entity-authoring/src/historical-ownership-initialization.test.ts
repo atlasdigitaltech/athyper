@@ -1,13 +1,13 @@
 import { expect, it, vi } from "vitest";
 import type { Kysely, Transaction } from "kysely";
 import {
-  applyLegacyOwnershipInitialization,
-  type LegacyOwnershipPolicy,
-} from "./legacy-ownership-initialization.js";
+  applyHistoricalOwnershipInitialization,
+  type HistoricalOwnershipPolicy,
+} from "./historical-ownership-initialization.js";
 import {
-  applyLegacyIdentityInstallation,
-  type LegacyIdentityInstallationPolicy,
-} from "./legacy-identity-installation.js";
+  applyHistoricalIdentityInstallation,
+  type HistoricalIdentityInstallationPolicy,
+} from "./historical-identity-installation.js";
 import { KyselyMetaEntityAuthoringRepository } from "./kysely-authoring-repository.js";
 const id = "00000000-0000-4000-8000-000000000001";
 const input = {
@@ -24,10 +24,10 @@ it("requires independently installed command policies before acquiring database 
     {} as Kysely<Record<string, never>>,
   );
   await expect(
-    repo.executeLegacyOwnershipInitialization(input),
+    repo.executeHistoricalOwnershipInitialization(input),
   ).rejects.toMatchObject({ code: "LEGACY_OWNERSHIP_HOST_NOT_CONFIGURED" });
   await expect(
-    repo.executeLegacyIdentityInstallation(input),
+    repo.executeHistoricalIdentityInstallation(input),
   ).rejects.toMatchObject({ code: "LEGACY_IDENTITY_HOST_NOT_CONFIGURED" });
 });
 it("rejects scope, revision and injected authority before either command is admitted", async () => {
@@ -45,18 +45,18 @@ it("rejects scope, revision and injected authority before either command is admi
     { idempotencyKey: "short" },
   ]) {
     await expect(
-      applyLegacyOwnershipInitialization(
+      applyHistoricalOwnershipInitialization(
         tx,
         { ...input, ...patch },
-        { admit } as unknown as LegacyOwnershipPolicy,
+        { admit } as unknown as HistoricalOwnershipPolicy,
         load,
       ),
     ).rejects.toThrow();
     await expect(
-      applyLegacyIdentityInstallation(
+      applyHistoricalIdentityInstallation(
         tx,
         { ...input, ...patch },
-        { admit } as unknown as LegacyIdentityInstallationPolicy,
+        { admit } as unknown as HistoricalIdentityInstallationPolicy,
         load,
       ),
     ).rejects.toThrow();
@@ -67,18 +67,18 @@ it("rejects scope, revision and injected authority before either command is admi
 it("requires a caller-owned transaction and audit-capable policy", async () => {
   const load = vi.fn();
   await expect(
-    applyLegacyOwnershipInitialization(
+    applyHistoricalOwnershipInitialization(
       {} as Transaction<Record<string, never>>,
       input,
-      {} as LegacyOwnershipPolicy,
+      {} as HistoricalOwnershipPolicy,
       load,
     ),
   ).rejects.toMatchObject({ code: "NORMALIZED_SAVE_TRANSACTION_REQUIRED" });
   await expect(
-    applyLegacyIdentityInstallation(
+    applyHistoricalIdentityInstallation(
       {} as Transaction<Record<string, never>>,
       input,
-      {} as LegacyIdentityInstallationPolicy,
+      {} as HistoricalIdentityInstallationPolicy,
       load,
     ),
   ).rejects.toMatchObject({ code: "NORMALIZED_SAVE_TRANSACTION_REQUIRED" });
@@ -87,10 +87,10 @@ it("requires a caller-owned transaction and audit-capable policy", async () => {
     { schemaVersion: 1, authoringSchemaHash: "a".repeat(64), admit: vi.fn() },
   ])
     await expect(
-      applyLegacyOwnershipInitialization(
+      applyHistoricalOwnershipInitialization(
         { isTransaction: true } as Transaction<Record<string, never>>,
         input,
-        policy as LegacyOwnershipPolicy,
+        policy as HistoricalOwnershipPolicy,
         load,
       ),
     ).rejects.toMatchObject({ code: "LEGACY_OWNERSHIP_POLICY_REQUIRED" });

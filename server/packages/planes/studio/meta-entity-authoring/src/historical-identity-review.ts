@@ -6,16 +6,16 @@ import {
   type MetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { sha256 } from "./deterministic.js";
-import type { LegacyReleaseCorrespondence } from "./legacy-field-lineage.js";
-import type { LegacyIdentityInstallationPolicy } from "./legacy-identity-installation.js";
-import type { LegacyOwnershipInput } from "./legacy-ownership-initialization.js";
+import type { HistoricalReleaseCorrespondence } from "./historical-field-correspondence.js";
+import type { HistoricalIdentityInstallationPolicy } from "./historical-identity-installation.js";
+import type { HistoricalOwnershipInput } from "./historical-ownership-initialization.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 
 type Tx = Transaction<Record<string, never>>;
 /** An immutable identity decision, distinct from submit/approve publication
  * receipts. A content hash detects drift but never establishes review authority. */
-export interface LegacyIdentityReviewReceipt {
-  readonly schema: "entity.legacy-identity-review/1";
+export interface HistoricalIdentityReviewReceipt {
+  readonly schema: "entity.historical-identity-review/1";
   readonly reference: string;
   readonly entityId: string;
   readonly changeSetId: string;
@@ -25,21 +25,21 @@ export interface LegacyIdentityReviewReceipt {
   readonly reviewedPlanHash: string;
   readonly proposerId: string;
   readonly reviewerId: string;
-  readonly releases: readonly LegacyReleaseCorrespondence[];
+  readonly releases: readonly HistoricalReleaseCorrespondence[];
 }
-export interface LegacyIdentityReviewStore {
+export interface HistoricalIdentityReviewStore {
   /** Resolve an immutable receipt from trusted installed storage by exact scope.
    * Client-supplied JSON or a bare file hash cannot implement this contract. */
   load(
     tx: Tx,
-    input: LegacyOwnershipInput,
-  ): Promise<{ receipt: LegacyIdentityReviewReceipt; hash: string } | null>;
+    input: HistoricalOwnershipInput,
+  ): Promise<{ receipt: HistoricalIdentityReviewReceipt; hash: string } | null>;
   /** Check authenticated provenance, current reviewer eligibility, independent
    * review, revocation and resource trust while holding the applicable locks.
    * This must not return true just because the content hash is correct. */
   authorize(
     tx: Tx,
-    receipt: LegacyIdentityReviewReceipt,
+    receipt: HistoricalIdentityReviewReceipt,
     hash: string,
   ): Promise<void>;
 }
@@ -49,11 +49,11 @@ const denied = (): never => {
     "An exact, independently attributed current identity review is required.",
   );
 };
-export function createLegacyIdentityReviewResolver(options: {
-  store: LegacyIdentityReviewStore;
+export function createHistoricalIdentityReviewResolver(options: {
+  store: HistoricalIdentityReviewStore;
   authoringSchemaHash: string;
   maximumBytes: number;
-}): LegacyIdentityInstallationPolicy["resolveReview"] {
+}): HistoricalIdentityInstallationPolicy["resolveReview"] {
   if (
     !options.store?.load ||
     !options.store.authorize ||
@@ -66,7 +66,7 @@ export function createLegacyIdentityReviewResolver(options: {
     maximumBytes = options.maximumBytes;
   return async (
     tx: Tx,
-    request: LegacyOwnershipInput,
+    request: HistoricalOwnershipInput,
     source: MetaEntityGraph,
   ) => {
     const input = structuredClone(request);
@@ -78,7 +78,7 @@ export function createLegacyIdentityReviewResolver(options: {
     if (
       Object.keys(receipt).sort().join() !==
         "authoringSchemaHash,changeSetId,entityId,proposerId,reference,releases,reviewedPlanHash,reviewerId,schema,sourceHash,tenantId" ||
-      receipt.schema !== "entity.legacy-identity-review/1" ||
+      receipt.schema !== "entity.historical-identity-review/1" ||
       receipt.entityId !== input.entityId ||
       receipt.changeSetId !== input.changeSetId ||
       receipt.tenantId !== null ||

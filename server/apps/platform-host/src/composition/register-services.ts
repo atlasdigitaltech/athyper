@@ -6107,7 +6107,7 @@ function registerPublication(
                 const hash =
                   resource.schema === "entity.installed-authoring-descriptor/1"
                     ? resource.descriptorHash
-                    : resource.schema === "entity.legacy-identity-review/1"
+                    : resource.schema === "entity.historical-identity-review/1"
                       ? resource.authoringSchemaHash
                       : null;
                 if (hash !== resourceConfiguration.descriptorHash)

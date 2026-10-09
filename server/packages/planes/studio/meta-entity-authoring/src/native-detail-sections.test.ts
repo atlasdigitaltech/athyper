@@ -256,7 +256,7 @@ async function graphFixture(
   fullRoster = false,
   disposition = false,
 ) {
-  const { createLegacyNativeDetailSectionsAdapter } =
+  const { createHistoricalNativeDetailSectionsAdapter } =
     await import("./native-detail-sections.js");
   const { emptyReferenceMembers } =
     await import("@athyper/server-contract-meta-entity-authoring");
@@ -322,7 +322,7 @@ async function graphFixture(
       },
     },
   };
-  const adapter = createLegacyNativeDetailSectionsAdapter(input);
+  const adapter = createHistoricalNativeDetailSectionsAdapter(input);
   const prepared = adapter.forward(source);
   const converted = convertLegacyDetailFieldSections(f.source, f.c, f.mapping);
   const target = {
@@ -390,7 +390,7 @@ it("blocks actual unassigned technical rosters instead of deleting or inventing 
   );
 });
 it("rejects absent root inventory, conflicting visibility, lost target members and stale sources", async () => {
-  const { createLegacyNativeDetailSectionsAdapter } =
+  const { createHistoricalNativeDetailSectionsAdapter } =
     await import("./native-detail-sections.js");
   const f = await graphFixture();
   const wrongFields = {
@@ -405,13 +405,13 @@ it("rejects absent root inventory, conflicting visibility, lost target members a
       },
     },
   };
-  expect(() => createLegacyNativeDetailSectionsAdapter(wrongFields)).toThrow(
-    "NATIVE_DETAIL_SECTION_FIELD_CONTEXT_MISMATCH",
-  );
+  expect(() =>
+    createHistoricalNativeDetailSectionsAdapter(wrongFields),
+  ).toThrow("NATIVE_DETAIL_SECTION_FIELD_CONTEXT_MISMATCH");
   const noRows = { ...f.source, surfaceSections: undefined };
   delete noRows.surfaceSections;
   expect(() =>
-    createLegacyNativeDetailSectionsAdapter({
+    createHistoricalNativeDetailSectionsAdapter({
       ...f.input,
       source: noRows,
       sourceHash: sha256(noRows),
@@ -426,7 +426,7 @@ it("rejects absent root inventory, conflicting visibility, lost target members a
     defaultVisible: false,
   };
   expect(() =>
-    createLegacyNativeDetailSectionsAdapter({
+    createHistoricalNativeDetailSectionsAdapter({
       ...f.input,
       source,
       sourceHash: sha256(source),
@@ -494,7 +494,7 @@ it.each(["country", "state_region"])(
   },
 );
 it("rejects stale, non-UUID, placed, referenced and behavior-bearing binding dispositions", async () => {
-  const { createLegacyNativeDetailSectionsAdapter } =
+  const { createHistoricalNativeDetailSectionsAdapter } =
     await import("./native-detail-sections.js");
   const f = await graphFixture("country", true, true);
   const retirement = f.adapter.bindingRetirements!.find(
@@ -530,7 +530,7 @@ it("rejects stale, non-UUID, placed, referenced and behavior-bearing binding dis
       (b) => b.id === retirement.id,
     )!;
     expect(() =>
-      createLegacyNativeDetailSectionsAdapter({
+      createHistoricalNativeDetailSectionsAdapter({
         ...f.input,
         source,
         sourceHash: sha256(source),
@@ -539,7 +539,7 @@ it("rejects stale, non-UUID, placed, referenced and behavior-bearing binding dis
     ).toThrow("NATIVE_CONVERSION_RETIREMENT_INVALID");
   }
   expect(() =>
-    createLegacyNativeDetailSectionsAdapter({
+    createHistoricalNativeDetailSectionsAdapter({
       ...f.input,
       bindingRetirements: [{ ...retirement, sourceHash: "0".repeat(64) }],
     }),

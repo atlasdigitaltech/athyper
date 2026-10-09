@@ -4,7 +4,7 @@ import {
   canonicalBytes,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import { validateLegacyFieldIdentityPlan } from "@athyper/server-plane-studio-meta-entity-authoring";
+import { validateHistoricalFieldIdentityPlan } from "@athyper/server-plane-studio-meta-entity-authoring";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 const { query } = vi.hoisted(() => ({ query: vi.fn() }));
 vi.mock("kysely", () => ({ sql: () => ({ execute: query }) }));
@@ -58,7 +58,7 @@ it("checks descriptor content against the host pin", async () => {
   ).rejects.toThrow("DESCRIPTOR_CHANGED");
 });
 it("qualifies exact current saved source and complete historical plan, rejecting stale snapshots", async () => {
-  const plan = validateLegacyFieldIdentityPlan(graph, [], {
+  const plan = validateHistoricalFieldIdentityPlan(graph, [], {
     currentSourceHash: hash,
     releases: [],
   });
@@ -66,7 +66,7 @@ it("qualifies exact current saved source and complete historical plan, rejecting
     ...base,
     kind: "entity_identity_review" as const,
     payload: {
-      schema: "entity.legacy-identity-review/1",
+      schema: "entity.historical-identity-review/1",
       reference: "fixture",
       entityId: base.releaseId,
       changeSetId: base.releaseId,

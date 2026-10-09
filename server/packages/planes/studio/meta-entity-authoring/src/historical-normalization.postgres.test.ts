@@ -1,4 +1,4 @@
-import { validateLegacyFieldIdentityPlan } from "./legacy-field-lineage.js";
+import { validateHistoricalFieldIdentityPlan } from "./historical-field-correspondence.js";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -10,7 +10,7 @@ import { loadNormalizedLabels } from "./normalized-label-storage.js";
 import { loadFieldIdentities } from "./normalized-reference-storage.js";
 import { sha256 } from "./deterministic.js";
 import type { NativeAuthoringPolicy } from "./native-core-layout-persistence.js";
-import type { LegacyEnrollmentApplicationPolicy } from "./legacy-enrollment-application.js";
+import type { HistoricalNormalizationApplicationPolicy } from "./historical-normalization-application.js";
 const enabled = process.env.ATHYPER_LEGACY_ENROLLMENT_POSTGRES === "1";
 const read = (path: string) =>
   readFileSync(
@@ -233,7 +233,7 @@ it.skipIf(!enabled)(
               idempotencyKey: "ownership-fixture-command-001",
             };
             const result =
-              await ownerRepo.executeLegacyOwnershipInitialization(request);
+              await ownerRepo.executeHistoricalOwnershipInitialization(request);
             expect(result).toMatchObject({
               revision: 1,
               sourceKind: "product",
@@ -241,7 +241,7 @@ it.skipIf(!enabled)(
               replay: false,
             });
             expect(
-              await ownerRepo.executeLegacyOwnershipInitialization(request),
+              await ownerRepo.executeHistoricalOwnershipInitialization(request),
             ).toEqual({ ...result, replay: true });
             expect(audits).toBe(2);
             expect(sha256(await ownerRepo.loadGraph(ownerDraft))).toBe(
@@ -255,11 +255,11 @@ it.skipIf(!enabled)(
             expect(histories).toHaveLength(2);
             deny = true;
             await expect(
-              ownerRepo.executeLegacyOwnershipInitialization(request),
+              ownerRepo.executeHistoricalOwnershipInitialization(request),
             ).rejects.toThrow("OWNERSHIP_REVOKED");
             deny = false;
             await expect(
-              ownerRepo.executeLegacyOwnershipInitialization({
+              ownerRepo.executeHistoricalOwnershipInitialization({
                 ...request,
                 expectedSourceHash: "0".repeat(64),
               }),
@@ -278,7 +278,7 @@ it.skipIf(!enabled)(
             const failedSource = await ownerRepo.loadGraph(failedDraft);
             failAudit = true;
             await expect(
-              ownerRepo.executeLegacyOwnershipInitialization({
+              ownerRepo.executeHistoricalOwnershipInitialization({
                 ...request,
                 changeSetId: failedDraft,
                 expectedSourceHash: sha256(failedSource),
@@ -362,7 +362,7 @@ it.skipIf(!enabled)(
                 rebindRequiredPreviousFieldIds: [],
               },
             ];
-            const identityPlan = validateLegacyFieldIdentityPlan(
+            const identityPlan = validateHistoricalFieldIdentityPlan(
               identitySource,
               [{ releaseId: oldRelease, graph: historical }],
               {
@@ -413,7 +413,9 @@ it.skipIf(!enabled)(
             };
             identityAuditFails = true;
             await expect(
-              identityRepo.executeLegacyIdentityInstallation(identityRequest),
+              identityRepo.executeHistoricalIdentityInstallation(
+                identityRequest,
+              ),
             ).rejects.toThrow("IDENTITY_AUDIT_FAILED");
             expect(
               (
@@ -424,7 +426,7 @@ it.skipIf(!enabled)(
             ).toEqual([]);
             identityAuditFails = false;
             const identityResult =
-              await identityRepo.executeLegacyIdentityInstallation(
+              await identityRepo.executeHistoricalIdentityInstallation(
                 identityRequest,
               );
             expect(identityResult.revision).toBe(2);
@@ -434,18 +436,22 @@ it.skipIf(!enabled)(
               (await identityRepo.loadGraph(ownerDraft)).contractSchema,
             ).toBe("athyper.meta-entity-contract/2.3");
             expect(
-              await identityRepo.executeLegacyIdentityInstallation(
+              await identityRepo.executeHistoricalIdentityInstallation(
                 identityRequest,
               ),
             ).toEqual({ ...identityResult, replay: true });
             reviewRevoked = true;
             await expect(
-              identityRepo.executeLegacyIdentityInstallation(identityRequest),
+              identityRepo.executeHistoricalIdentityInstallation(
+                identityRequest,
+              ),
             ).rejects.toThrow("REVIEW_REVOKED");
             reviewRevoked = false;
             reviewer = ownerActor;
             await expect(
-              identityRepo.executeLegacyIdentityInstallation(identityRequest),
+              identityRepo.executeHistoricalIdentityInstallation(
+                identityRequest,
+              ),
             ).rejects.toMatchObject({
               code: "LEGACY_IDENTITY_INDEPENDENT_REVIEW_REQUIRED",
             });
@@ -579,7 +585,7 @@ it.skipIf(!enabled)(
       const changeSetId = await setup();
       let rejectAdmission = false,
         rejectQualification = false;
-      const policy: LegacyEnrollmentApplicationPolicy = {
+      const policy: HistoricalNormalizationApplicationPolicy = {
         host: {
           commands: { authoringSchemaHash: schemaHash },
           admit: async (tx: Transaction<Record<string, never>>) => {
@@ -632,7 +638,7 @@ it.skipIf(!enabled)(
           db,
         )
       ).rows;
-      const result = await repo.executeLegacyEnrollment(input);
+      const result = await repo.executeHistoricalNormalization(input);
       expect(result.revision).toBe(8);
       expect(result.replay).toBe(false);
       expect(
@@ -665,22 +671,22 @@ it.skipIf(!enabled)(
       expect(histories).toHaveLength(2);
       expect(histories[0]!.graph).toEqual(source);
       expect(histories[1]!.graph).toEqual(stored);
-      expect(await repo.executeLegacyEnrollment(input)).toEqual({
+      expect(await repo.executeHistoricalNormalization(input)).toEqual({
         ...result,
         replay: true,
       });
       rejectQualification = true;
-      await expect(repo.executeLegacyEnrollment(input)).rejects.toThrow(
+      await expect(repo.executeHistoricalNormalization(input)).rejects.toThrow(
         "Qualification revoked",
       );
       rejectQualification = false;
       rejectAdmission = true;
-      await expect(repo.executeLegacyEnrollment(input)).rejects.toThrow(
+      await expect(repo.executeHistoricalNormalization(input)).rejects.toThrow(
         "Admission revoked",
       );
       rejectAdmission = false;
       await expect(
-        repo.executeLegacyEnrollment({
+        repo.executeHistoricalNormalization({
           ...input,
           expectedSourceHash: "b".repeat(64),
         }),
@@ -790,7 +796,7 @@ it.skipIf(!enabled)(
           policy,
         );
         await expect(
-          transactional.executeLegacyEnrollment({
+          transactional.executeHistoricalNormalization({
             ...input,
             changeSetId: rollbackDraft,
             expectedSourceHash: sha256(rollbackSource),

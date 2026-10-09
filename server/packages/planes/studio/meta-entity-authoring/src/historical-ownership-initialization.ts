@@ -14,7 +14,7 @@ import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import type { NormalizedSaveCoordinate } from "./normalized-core-layout-storage.js";
 type Tx = Transaction<Record<string, never>>;
-export interface LegacyOwnershipInput extends NormalizedSaveCoordinate {
+export interface HistoricalOwnershipInput extends NormalizedSaveCoordinate {
   readonly actorId: string;
   readonly expectedRevision: number;
   readonly expectedSourceHash: string;
@@ -23,17 +23,17 @@ export interface LegacyOwnershipInput extends NormalizedSaveCoordinate {
 /** Installed server composition only. Admission must check current authoring
  * authority and installed descriptor trust/revocation on every call, including
  * replay. Neither a request body nor an identity review substitutes for it. */
-export interface LegacyOwnershipPolicy {
+export interface HistoricalOwnershipPolicy {
   readonly schemaVersion: number;
   readonly authoringSchemaHash: string;
-  admit(tx: Tx, input: LegacyOwnershipInput): Promise<void>;
+  admit(tx: Tx, input: HistoricalOwnershipInput): Promise<void>;
   audit(
     tx: Tx,
-    input: LegacyOwnershipInput,
-    result: LegacyOwnershipResult,
+    input: HistoricalOwnershipInput,
+    result: HistoricalOwnershipResult,
   ): Promise<void>;
 }
-export interface LegacyOwnershipResult {
+export interface HistoricalOwnershipResult {
   readonly changeSetId: string;
   readonly revision: number;
   readonly sourceHash: string;
@@ -51,12 +51,12 @@ const fail = (code: string): never => {
 };
 /** Caller owns transaction/savepoint. No operation, protected state, identity,
  * release, target or native format changes. Product scope is verified in SQL. */
-export async function applyLegacyOwnershipInitialization(
+export async function applyHistoricalOwnershipInitialization(
   tx: Tx,
-  request: LegacyOwnershipInput,
-  policy: LegacyOwnershipPolicy,
+  request: HistoricalOwnershipInput,
+  policy: HistoricalOwnershipPolicy,
   load: () => Promise<MetaEntityGraph>,
-): Promise<LegacyOwnershipResult> {
+): Promise<HistoricalOwnershipResult> {
   if (!tx.isTransaction) fail("NORMALIZED_SAVE_TRANSACTION_REQUIRED");
   validateConversionJsonData(request, "/ownership");
   const input = structuredClone(request);
@@ -96,7 +96,7 @@ export async function applyLegacyOwnershipInitialization(
   ).rows[0]?.source;
   if (!root) fail("LEGACY_OWNERSHIP_SOURCE_UNAVAILABLE");
   const hash = fingerprintCommand({
-    kind: "legacy-ownership-initialization",
+    kind: "historical-ownership-initialization",
     ...input,
     ...pin,
   });
@@ -112,13 +112,13 @@ export async function applyLegacyOwnershipInitialization(
   ).rows[0];
   const revision = input.expectedRevision + 1;
   const evidence = {
-    kind: "legacy-ownership-initialization",
+    kind: "historical-ownership-initialization",
     sourceHash: input.expectedSourceHash,
     sourceKind: "product",
     publicationOwner: "platform",
     ...pin,
   };
-  const result: LegacyOwnershipResult = {
+  const result: HistoricalOwnershipResult = {
     changeSetId: input.changeSetId,
     revision,
     sourceHash: input.expectedSourceHash,

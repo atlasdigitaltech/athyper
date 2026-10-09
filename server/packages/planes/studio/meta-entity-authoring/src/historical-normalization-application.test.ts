@@ -2,9 +2,9 @@ import { Kysely, PostgresDialect, type Transaction } from "kysely";
 import { expect, it, vi } from "vitest";
 import { KyselyMetaEntityAuthoringRepository } from "./kysely-authoring-repository.js";
 import {
-  applyLegacySourceEnrollment,
-  type LegacyEnrollmentApplicationPolicy,
-} from "./legacy-enrollment-application.js";
+  applyHistoricalSourceNormalization,
+  type HistoricalNormalizationApplicationPolicy,
+} from "./historical-normalization-application.js";
 import type { NativeAuthoringPolicy } from "./native-core-layout-persistence.js";
 const id = "00000000-0000-4000-8000-000000000001";
 const input = {
@@ -20,15 +20,15 @@ it("does not acquire database access without an installed enrollment writer", as
   await expect(
     new KyselyMetaEntityAuthoringRepository(
       {} as Kysely<Record<string, never>>,
-    ).executeLegacyEnrollment(input),
+    ).executeHistoricalNormalization(input),
   ).rejects.toMatchObject({ code: "LEGACY_ENROLLMENT_HOST_NOT_CONFIGURED" });
 });
 it("rejects application outside a transaction before admission or reads", async () => {
   await expect(
-    applyLegacySourceEnrollment(
+    applyHistoricalSourceNormalization(
       {} as Transaction<Record<string, never>>,
       input,
-      {} as LegacyEnrollmentApplicationPolicy,
+      {} as HistoricalNormalizationApplicationPolicy,
       async () => {
         throw Error("Must not load");
       },
@@ -39,7 +39,7 @@ it("rejects malformed input before host admission", async () => {
   const admit = vi.fn();
   const policy = {
     host: { admit },
-  } as unknown as LegacyEnrollmentApplicationPolicy;
+  } as unknown as HistoricalNormalizationApplicationPolicy;
   for (const patch of [
     { expectedRevision: Number.MAX_SAFE_INTEGER },
     { idempotencyKey: "short" },
@@ -47,7 +47,7 @@ it("rejects malformed input before host admission", async () => {
     { sourceHash: "injected" },
   ]) {
     await expect(
-      applyLegacySourceEnrollment(
+      applyHistoricalSourceNormalization(
         { isTransaction: true } as Transaction<Record<string, never>>,
         { ...input, ...patch },
         policy,
@@ -75,7 +75,7 @@ it("rolls back its repository savepoint when independent authority rejects", asy
   });
   Object.defineProperty(db, "isTransaction", { value: true });
   const resolve = vi.fn();
-  const policy: LegacyEnrollmentApplicationPolicy = {
+  const policy: HistoricalNormalizationApplicationPolicy = {
     host: {
       commands: { authoringSchemaHash: "a".repeat(64) },
       admit: async () => {},
@@ -96,7 +96,7 @@ it("rolls back its repository savepoint when independent authority rejects", asy
         undefined,
         undefined,
         policy,
-      ).executeLegacyEnrollment(input),
+      ).executeHistoricalNormalization(input),
     ).rejects.toThrow("Product write authority unavailable");
     const statements = query.mock.calls.map(([text]) => text);
     expect(statements[0]).toBe("SAVEPOINT legacy_source_enrollment");

@@ -3,9 +3,9 @@ import type { Transaction } from "kysely";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import { sha256 } from "./deterministic.js";
 import {
-  createLegacyIdentityReviewResolver,
-  type LegacyIdentityReviewReceipt,
-} from "./legacy-identity-review.js";
+  createHistoricalIdentityReviewResolver,
+  type HistoricalIdentityReviewReceipt,
+} from "./historical-identity-review.js";
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const source = {
@@ -21,8 +21,8 @@ const input = {
   expectedSourceHash: sha256(source),
   idempotencyKey: "identity-install-1",
 };
-const receipt: LegacyIdentityReviewReceipt = {
-  schema: "entity.legacy-identity-review/1",
+const receipt: HistoricalIdentityReviewReceipt = {
+  schema: "entity.historical-identity-review/1",
   reference: "review/fixture",
   entityId: input.entityId,
   changeSetId: input.changeSetId,
@@ -37,17 +37,17 @@ const receipt: LegacyIdentityReviewReceipt = {
 const tx = {} as Transaction<Record<string, never>>;
 function fixture(value: unknown = receipt) {
   const load = vi.fn(async () => ({
-    receipt: structuredClone(value) as LegacyIdentityReviewReceipt,
+    receipt: structuredClone(value) as HistoricalIdentityReviewReceipt,
     hash: sha256(value),
   }));
   const authorize = vi.fn(
     async (
       _tx: Transaction<Record<string, never>>,
-      _receipt: LegacyIdentityReviewReceipt,
+      _receipt: HistoricalIdentityReviewReceipt,
       _hash: string,
     ) => {},
   );
-  const resolve = createLegacyIdentityReviewResolver({
+  const resolve = createHistoricalIdentityReviewResolver({
     store: { load, authorize },
     maximumBytes: 4096,
     authoringSchemaHash: receipt.authoringSchemaHash,
@@ -93,7 +93,7 @@ it("does not treat a valid hash as human authority and rejects changed or missin
   await expect(f.resolve(tx, input, source)).rejects.toThrow(
     "independently attributed",
   );
-  const absent = createLegacyIdentityReviewResolver({
+  const absent = createHistoricalIdentityReviewResolver({
     store: { load: async () => null, authorize: f.authorize },
     maximumBytes: 4096,
     authoringSchemaHash: receipt.authoringSchemaHash,
@@ -108,7 +108,7 @@ it("freezes evidence across asynchronous authorization and enforces receipt size
   expect((await f.resolve(tx, input, source)).reviewerId).toBe(
     receipt.reviewerId,
   );
-  const small = createLegacyIdentityReviewResolver({
+  const small = createHistoricalIdentityReviewResolver({
     store: { load: f.load, authorize: f.authorize },
     maximumBytes: 5,
     authoringSchemaHash: receipt.authoringSchemaHash,

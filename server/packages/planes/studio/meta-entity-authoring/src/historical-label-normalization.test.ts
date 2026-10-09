@@ -4,7 +4,7 @@ import {
   compileSharedReferenceProduct,
   parseSharedReferenceProduct,
 } from "./authoring/product.js";
-import { prepareLegacyLabelEnrollment } from "./legacy-label-enrollment.js";
+import { prepareHistoricalLabelNormalization } from "./historical-label-normalization.js";
 import { applyLabelCommands } from "./label-command-reducer.js";
 import { canonicalJson, sha256 } from "./deterministic.js";
 const policy = {
@@ -36,7 +36,7 @@ function input(s: ReturnType<typeof source>) {
   return {
     sourceHash: sha256(s),
     revision: 1,
-    idempotencyKey: "legacy-label-enrollment-test",
+    idempotencyKey: "historical-label-normalization-test",
     defaultLocale: "en",
     requiredLocales: ["en"],
   };
@@ -46,7 +46,7 @@ it.each(["country", "state_region"])(
   (name) => {
     const s = source(name),
       before = sha256(s),
-      p = prepareLegacyLabelEnrollment(s, input(s), policy);
+      p = prepareHistoricalLabelNormalization(s, input(s), policy);
     let n = 10;
     const saved = applyLabelCommands(
       null,
@@ -66,27 +66,30 @@ it.each(["country", "state_region"])(
       expect(binding.sourcePaths.length).toBeGreaterThan(0);
     }
     expect(sha256(s)).toBe(before);
-    expect(prepareLegacyLabelEnrollment(s, input(s), policy)).toEqual(p);
+    expect(prepareHistoricalLabelNormalization(s, input(s), policy)).toEqual(p);
   },
 );
 it("rejects stale sources, unsupported locales and over-budget batches", () => {
   const s = source();
   expect(() =>
-    prepareLegacyLabelEnrollment(
+    prepareHistoricalLabelNormalization(
       s,
       { ...input(s), sourceHash: "0".repeat(64) },
       policy,
     ),
   ).toThrow("LEGACY_LABEL_SOURCE_MISMATCH");
   expect(() =>
-    prepareLegacyLabelEnrollment(
+    prepareHistoricalLabelNormalization(
       s,
       { ...input(s), requiredLocales: ["en", "de"] },
       policy,
     ),
   ).toThrow("LEGACY_LABEL_LOCALE_INVALID");
   expect(() =>
-    prepareLegacyLabelEnrollment(s, input(s), { ...policy, maxCommands: 1 }),
+    prepareHistoricalLabelNormalization(s, input(s), {
+      ...policy,
+      maxCommands: 1,
+    }),
   ).toThrow("AUTHORING_COMMAND_LIMIT");
 });
 it("rejects conflicting repeated keys and preserves supplied translations", () => {
@@ -99,7 +102,7 @@ it("rejects conflicting repeated keys and preserves supplied translations", () =
   };
   // Existing JSON declaration location, not a new writable storage bag.
   s.surfaces![0]!.layoutConfig = { a, b: { ...a } };
-  const p = prepareLegacyLabelEnrollment(s, input(s), policy);
+  const p = prepareHistoricalLabelNormalization(s, input(s), policy);
   expect(
     p.batch.commands.some(
       (c) =>
@@ -112,9 +115,9 @@ it("rejects conflicting repeated keys and preserves supplied translations", () =
     a,
     b: { ...a, defaultText: "Other", values: { en: "Other", fr: "Nom" } },
   };
-  expect(() => prepareLegacyLabelEnrollment(s, input(s), policy)).toThrow(
-    "LEGACY_LABEL_KEY_CONFLICT",
-  );
+  expect(() =>
+    prepareHistoricalLabelNormalization(s, input(s), policy),
+  ).toThrow("LEGACY_LABEL_KEY_CONFLICT");
 });
 it("requires explicit mappings for unlocalized legacy text and rejects stale mappings", () => {
   const s = source();
@@ -125,7 +128,7 @@ it("requires explicit mappings for unlocalized legacy text and rejects stale map
     fields: [{ label: "Country" }],
   } as unknown as ReturnType<typeof source>;
   expect(() =>
-    prepareLegacyLabelEnrollment(plain, input(plain), policy),
+    prepareHistoricalLabelNormalization(plain, input(plain), policy),
   ).toThrow("LEGACY_LABEL_DECLARATIONS_REQUIRED");
   const declarations = [
     {
@@ -134,7 +137,7 @@ it("requires explicit mappings for unlocalized legacy text and rejects stale map
       defaultText: "Country",
     },
   ];
-  const result = prepareLegacyLabelEnrollment(
+  const result = prepareHistoricalLabelNormalization(
     plain,
     { ...input(plain), declarations },
     policy,
@@ -151,14 +154,14 @@ it("requires explicit mappings for unlocalized legacy text and rejects stale map
     { ...declarations[0]!, sourcePath: "/fields/1/label" },
   ])
     expect(() =>
-      prepareLegacyLabelEnrollment(
+      prepareHistoricalLabelNormalization(
         plain,
         { ...input(plain), declarations: [changed] },
         policy,
       ),
     ).toThrow();
   expect(() =>
-    prepareLegacyLabelEnrollment(
+    prepareHistoricalLabelNormalization(
       plain,
       { ...input(plain), declarations: [...declarations, ...declarations] },
       policy,
@@ -190,11 +193,11 @@ it("replays explicit member references across canonical history ordering without
     defaultText: "Last",
   };
   const request = { ...input(graph), declarations: [declaration] };
-  expect(prepareLegacyLabelEnrollment(history, request, policy)).toEqual(
-    prepareLegacyLabelEnrollment(graph, request, policy),
+  expect(prepareHistoricalLabelNormalization(history, request, policy)).toEqual(
+    prepareHistoricalLabelNormalization(graph, request, policy),
   );
   expect(() =>
-    prepareLegacyLabelEnrollment(
+    prepareHistoricalLabelNormalization(
       history,
       {
         ...request,
@@ -212,7 +215,7 @@ it("replays explicit member references across canonical history ordering without
     "invalid",
   ]) {
     expect(() =>
-      prepareLegacyLabelEnrollment(
+      prepareHistoricalLabelNormalization(
         history,
         { ...request, declarations: [{ ...declaration, sourceMemberId }] },
         policy,

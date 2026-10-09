@@ -1204,7 +1204,7 @@
       "key": "athyper_legacy_enrollment_postgres",
       "legacyLocations": [],
       "currentLocations": [
-        "server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment.postgres.test.ts"
+        "server/packages/planes/studio/meta-entity-authoring/src/historical-normalization.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -1807,7 +1807,7 @@
         "server/packages/contracts/meta-entity-authoring/src/native-operation.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-root.postgres.test.ts",
         "server/packages/contracts/meta-entity-authoring/src/native-row-guards.test.ts",
-        "server/packages/planes/studio/meta-entity-authoring/src/legacy-enrollment.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/historical-normalization.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-ai-reconciliation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-component-installation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-constraint-compatibility.postgres.test.ts",

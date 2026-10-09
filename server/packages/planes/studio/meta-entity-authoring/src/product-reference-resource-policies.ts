@@ -7,13 +7,13 @@ import {
   resolveInstalledAuthoringDescriptor,
   type InstalledReferenceResourcePin,
 } from "./installed-reference-resources.js";
-import { createLegacyIdentityReviewResolver } from "./legacy-identity-review.js";
+import { createHistoricalIdentityReviewResolver } from "./historical-identity-review.js";
 import type { ProductReferenceEnrollmentOptions } from "./product-reference-enrollment.js";
 import type {
-  LegacyOwnershipInput,
-  LegacyOwnershipResult,
-} from "./legacy-ownership-initialization.js";
-import type { LegacyIdentityInstallationResult } from "./legacy-identity-installation.js";
+  HistoricalOwnershipInput,
+  HistoricalOwnershipResult,
+} from "./historical-ownership-initialization.js";
+import type { HistoricalIdentityInstallationResult } from "./historical-identity-installation.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 type Tx = Transaction<Record<string, never>>;
 /** Trusted host composition. Resource pins are installed configuration; review
@@ -32,8 +32,8 @@ export function createProductReferenceResourcePolicies(options: {
   audit(
     tx: Tx,
     context: VerifiedRequestContext,
-    input: LegacyOwnershipInput,
-    result: LegacyOwnershipResult | LegacyIdentityInstallationResult,
+    input: HistoricalOwnershipInput,
+    result: HistoricalOwnershipResult | HistoricalIdentityInstallationResult,
   ): Promise<void>;
 }): ProductReferenceEnrollmentOptions["resolvePolicies"] {
   const config = structuredClone({
@@ -63,7 +63,10 @@ export function createProductReferenceResourcePolicies(options: {
       read,
       config.descriptorHash,
     );
-    const admit = async (transaction: Tx, command: LegacyOwnershipInput) => {
+    const admit = async (
+      transaction: Tx,
+      command: HistoricalOwnershipInput,
+    ) => {
       if (
         context.tenantId !== config.authorityTenantId ||
         context.principalId !== command.actorId ||
@@ -83,8 +86,8 @@ export function createProductReferenceResourcePolicies(options: {
     };
     const audit = (
       transaction: Tx,
-      command: LegacyOwnershipInput,
-      result: LegacyOwnershipResult | LegacyIdentityInstallationResult,
+      command: HistoricalOwnershipInput,
+      result: HistoricalOwnershipResult | HistoricalIdentityInstallationResult,
     ) => options.audit(transaction, context, command, result);
     return {
       ownership: {
@@ -111,7 +114,7 @@ export function createProductReferenceResourcePolicies(options: {
               "LEGACY_IDENTITY_REVIEW_UNAVAILABLE",
               "One exact installed identity review is required.",
             );
-          return createLegacyIdentityReviewResolver({
+          return createHistoricalIdentityReviewResolver({
             store: createInstalledIdentityReviewStore({ read, pin: pins[0]! }),
             authoringSchemaHash: descriptor.authoringSchemaHash,
             maximumBytes: config.maximumBytes,

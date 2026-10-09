@@ -14,7 +14,7 @@ import {
   parseSharedReferenceProduct,
 } from "./authoring/product.js";
 import {
-  createLegacyNativeDetailBadgesAdapter,
+  createHistoricalNativeDetailBadgesAdapter,
   compileNativeDetailBadges,
   validateNativeBadgeDerivations,
   type LegacyDetailBadge,
@@ -134,7 +134,7 @@ it.each(["country", "state_region"])(
   "accounts for %s badges through typed membership and tones",
   (name) => {
     const f = fixture(name),
-      a = createLegacyNativeDetailBadgesAdapter(f.input),
+      a = createHistoricalNativeDetailBadgesAdapter(f.input),
       prepared = a.forward(f.input.source);
     const detail = prepared.surfaces!.find((s) => s.surfaceKind === "detail")!;
     expect(
@@ -166,12 +166,12 @@ it.each(["masked", "omitted"] as const)(
 it("rejects stale provenance, unknown source options, lossy rows and changed native tone/field identity", () => {
   const f = fixture();
   expect(() =>
-    createLegacyNativeDetailBadgesAdapter({
+    createHistoricalNativeDetailBadgesAdapter({
       ...f.input,
       sourceHash: "b".repeat(64),
     }),
   ).toThrow();
-  const a = createLegacyNativeDetailBadgesAdapter(f.input),
+  const a = createHistoricalNativeDetailBadgesAdapter(f.input),
     p = a.forward(f.input.source);
   expect(() =>
     validateNativeBadgeDerivations(f.input.source, p, [
@@ -215,7 +215,7 @@ it("rejects stale provenance, unknown source options, lossy rows and changed nat
     "salary > 100000",
   );
   expect(() =>
-    createLegacyNativeDetailBadgesAdapter({
+    createHistoricalNativeDetailBadgesAdapter({
       ...f.input,
       source: extra,
       sourceHash: sha256(extra),

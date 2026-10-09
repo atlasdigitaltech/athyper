@@ -13,41 +13,41 @@ import {
 import { canonicalJson, sha256 } from "./deterministic.js";
 import { validateConversionJsonData } from "./normalized-core-codec.js";
 import {
-  validateLegacyFieldIdentityPlan,
-  type LegacyReleaseCorrespondence,
-} from "./legacy-field-lineage.js";
+  validateHistoricalFieldIdentityPlan,
+  type HistoricalReleaseCorrespondence,
+} from "./historical-field-correspondence.js";
 import { loadNormalizedLabels } from "./normalized-label-storage.js";
 import { loadFieldIdentities } from "./normalized-reference-storage.js";
-import { prepareLegacySourceEnrollment } from "./legacy-source-enrollment.js";
-import type { LegacyOwnershipInput } from "./legacy-ownership-initialization.js";
+import { prepareHistoricalSourceNormalization } from "./historical-source-normalization.js";
+import type { HistoricalOwnershipInput } from "./historical-ownership-initialization.js";
 type Tx = Transaction<Record<string, never>>;
-export interface LegacyIdentityInstallationPolicy {
+export interface HistoricalIdentityInstallationPolicy {
   readonly maximumBytes: number;
   readonly maximumReleases: number;
   readonly supportedLocales: readonly string[];
   readonly authoringSchemaHash: string;
-  admit(tx: Tx, input: LegacyOwnershipInput): Promise<void>;
+  admit(tx: Tx, input: HistoricalOwnershipInput): Promise<void>;
   /** Independently load an immutable named review and check current trust,
    * reviewer eligibility/independence and revocation. Never accept a request
    * DTO as this evidence. Declaration equality supplies no security authority. */
   resolveReview(
     tx: Tx,
-    input: LegacyOwnershipInput,
+    input: HistoricalOwnershipInput,
     source: MetaEntityGraph,
   ): Promise<{
     reviewerId: string;
     reviewReference: string;
     reviewHash: string;
     reviewedPlanHash: string;
-    releases: readonly LegacyReleaseCorrespondence[];
+    releases: readonly HistoricalReleaseCorrespondence[];
   }>;
   audit(
     tx: Tx,
-    input: LegacyOwnershipInput,
-    result: LegacyIdentityInstallationResult,
+    input: HistoricalOwnershipInput,
+    result: HistoricalIdentityInstallationResult,
   ): Promise<void>;
 }
-export interface LegacyIdentityInstallationResult {
+export interface HistoricalIdentityInstallationResult {
   readonly changeSetId: string;
   readonly revision: number;
   readonly planHash: string;
@@ -55,7 +55,7 @@ export interface LegacyIdentityInstallationResult {
   readonly targetHash: string;
   readonly reviewerId: string;
   readonly findings: ReturnType<
-    typeof validateLegacyFieldIdentityPlan
+    typeof validateHistoricalFieldIdentityPlan
   >["findings"];
   readonly bindings: readonly { fieldId: string; identityId: string }[];
   readonly replay: boolean;
@@ -66,12 +66,12 @@ const fail = (code: string): never => {
     "Reviewed identity installation evidence is unavailable or inconsistent.",
   );
 };
-export async function applyLegacyIdentityInstallation(
+export async function applyHistoricalIdentityInstallation(
   tx: Tx,
-  request: LegacyOwnershipInput,
-  policy: LegacyIdentityInstallationPolicy,
+  request: HistoricalOwnershipInput,
+  policy: HistoricalIdentityInstallationPolicy,
   load: () => Promise<MetaEntityGraph>,
-): Promise<LegacyIdentityInstallationResult> {
+): Promise<HistoricalIdentityInstallationResult> {
   if (!tx.isTransaction) fail("NORMALIZED_SAVE_TRANSACTION_REQUIRED");
   validateConversionJsonData(request, "/identityInstallation");
   const input = structuredClone(request);
@@ -194,7 +194,7 @@ export async function applyLegacyIdentityInstallation(
     ) > policy.maximumBytes
   )
     fail("LEGACY_IDENTITY_RELEASE_EVIDENCE_INVALID");
-  const plan = validateLegacyFieldIdentityPlan(source, releases, {
+  const plan = validateHistoricalFieldIdentityPlan(source, releases, {
     currentSourceHash: input.expectedSourceHash,
     releases: review.releases,
   });
@@ -204,7 +204,7 @@ export async function applyLegacyIdentityInstallation(
   )
     fail("LEGACY_IDENTITY_REVIEW_PLAN_MISMATCH");
   const requestHash = fingerprintCommand({
-    kind: "legacy-identity-installation",
+    kind: "historical-identity-installation",
     ...input,
     authoringSchemaHash: policy.authoringSchemaHash,
     planHash: plan.planHash,
@@ -226,7 +226,7 @@ export async function applyLegacyIdentityInstallation(
     const saved = receipt.identities;
     if (
       root!.reference_contract_version !== 1 ||
-      saved.kind !== "legacy-identity-installation" ||
+      saved.kind !== "historical-identity-installation" ||
       saved.planHash !== plan.planHash ||
       saved.sourceHash !== input.expectedSourceHash ||
       saved.targetHash !== target.graph_hash ||
@@ -248,7 +248,7 @@ export async function applyLegacyIdentityInstallation(
       .sort((a, b) => a.fieldId.localeCompare(b.fieldId));
     if (canonicalJson(saved.bindings) !== canonicalJson(expectedBindings))
       fail("LEGACY_IDENTITY_REPLAY_INVALID");
-    const result: LegacyIdentityInstallationResult = {
+    const result: HistoricalIdentityInstallationResult = {
       changeSetId: input.changeSetId,
       revision,
       sourceHash: input.expectedSourceHash,
@@ -334,7 +334,7 @@ export async function applyLegacyIdentityInstallation(
   }
   const labels = await loadNormalizedLabels(tx, input.changeSetId);
   if (!labels) fail("LEGACY_IDENTITY_LABELS_REQUIRED");
-  const proof = prepareLegacySourceEnrollment(source, {
+  const proof = prepareHistoricalSourceNormalization(source, {
     sourceHash: input.expectedSourceHash,
     revision: input.expectedRevision,
     sourceKind: "product",
@@ -358,7 +358,7 @@ export async function applyLegacyIdentityInstallation(
     tx,
   );
   await capture(revision, target, "saved");
-  const result: LegacyIdentityInstallationResult = {
+  const result: HistoricalIdentityInstallationResult = {
     changeSetId: input.changeSetId,
     revision,
     sourceHash: input.expectedSourceHash,
@@ -370,7 +370,7 @@ export async function applyLegacyIdentityInstallation(
     replay: false,
   };
   const evidence = {
-    kind: "legacy-identity-installation",
+    kind: "historical-identity-installation",
     ...result,
     reviewReference: review.reviewReference,
     reviewHash: review.reviewHash,

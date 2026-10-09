@@ -746,7 +746,7 @@ it("rejects malformed supplemental output with a named diagnostic", async () => 
   }
 });
 it("binds source-derived relation additions to version 5 and rejects undeclared or stale structural changes", async () => {
-  const { createLegacyNativeReferenceRelationsAdapter } =
+  const { createHistoricalNativeReferenceRelationsAdapter } =
     await import("./native-reference-relations.js");
   const f = fixture();
   const field = f.source.fields[1]!;
@@ -830,7 +830,7 @@ it("binds source-derived relation additions to version 5 and rejects undeclared 
       ],
     },
   ];
-  const nested = createLegacyNativeReferenceRelationsAdapter({
+  const nested = createHistoricalNativeReferenceRelationsAdapter({
     source,
     sourceHash: sha256(source),
     resource,
