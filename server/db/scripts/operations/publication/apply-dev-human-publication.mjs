@@ -15,6 +15,16 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-PREDECESSOR-SCOPE":
+    "20261009_local_publication_predecessor_scope.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-PREDECESSOR-DEPENDENCY":
+    "20261009_local_publication_predecessor_dependency.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-PREDECESSOR-READ":
+    "20261009_local_publication_predecessor_read.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-HEAD-VISIBILITY":
+    "20261009_local_publication_head_visibility.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-HEAD-READS":
+    "20261009_local_publication_head_reads.sql",
   "--apply=DEV-LOCAL-PUBLICATION-IDENTITIES":
     "20261009_local_publication_identity_status.sql",
   "--apply=DEV-LOCAL-PUBLICATION-RELEASE":

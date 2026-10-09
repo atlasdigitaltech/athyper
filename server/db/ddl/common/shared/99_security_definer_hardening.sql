@@ -463,6 +463,12 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Tenant-scoped boolean eligibility for standing-policy developers, enrollment reviewers and distinct internal workloads; no principal-row disclosure, IAM mutation or approval fabrication."
+  },
+  {
+    "signature": "publication.read_local_publication_predecessor(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact predecessor coordinates after authenticated native draft admission; no generic applied rows, manifests or payload access."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -708,7 +714,8 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)",
+  "publication.read_local_publication_predecessor(uuid)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;

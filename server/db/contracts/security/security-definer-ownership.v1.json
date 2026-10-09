@@ -238,7 +238,8 @@
     "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
     "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
     "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-    "trustiam.lock_identity_replay_projection(uuid, uuid)"
+    "trustiam.lock_identity_replay_projection(uuid, uuid)",
+    "publication.read_local_publication_predecessor(uuid)"
   ],
   "ordinaryOwners": {
     "ai": "athyper_definer_ai",
@@ -703,6 +704,12 @@
       "owner": "athyper_definer_product_publication",
       "rowSecurityOff": false,
       "reason": "Tenant-scoped boolean eligibility for standing-policy developers, enrollment reviewers and distinct internal workloads; no principal-row disclosure, IAM mutation or approval fabrication."
+    },
+    {
+      "signature": "publication.read_local_publication_predecessor(uuid)",
+      "owner": "athyper_definer_product_publication",
+      "rowSecurityOff": false,
+      "reason": "Exact predecessor coordinates after authenticated native draft admission; no generic applied rows, manifests or payload access."
     }
   ],
   "roles": [
@@ -4730,7 +4737,8 @@
         "publication",
         "shared",
         "ops",
-        "public"
+        "public",
+        "runtime_meta"
       ],
       "tables": [
         {
@@ -4824,7 +4832,8 @@
         "snapshot.fn_compute_entity_contract_hash(jsonb)",
         "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
         "public.digest(bytea, text)",
-        "public.digest(text, text)"
+        "public.digest(text, text)",
+        "publication.read_native_product_review_source(uuid,integer)"
       ],
       "policies": [
         {

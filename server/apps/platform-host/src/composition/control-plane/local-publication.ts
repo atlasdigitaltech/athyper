@@ -176,6 +176,7 @@ export function createLocalPublicationAdmission(options: Options) {
         const source = await options.source(tx, id);
         const inputs = await resolveLocalPublicationInputs({
           database: tx,
+          authority: "control",
           targetDatabases: options.targetDatabases,
           source,
           changeSetId: id,

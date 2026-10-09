@@ -12,6 +12,7 @@ import { publicationCompilerIdentity } from "./compiler-build.js";
  * Request bodies supply neither artifacts nor compiler/resource/head pins. */
 export async function resolveLocalPublicationInputs(options: {
   database: Kysely<Record<string, never>>;
+  authority?: "control";
   targetDatabases?: Partial<
     Record<"neon" | "mesh", Kysely<Record<string, never>>>
   >;
@@ -36,14 +37,20 @@ export async function resolveLocalPublicationInputs(options: {
         ? options.database
         : options.targetDatabases?.[target.targetPlane];
     if (!db) throw Error("LOCAL_PUBLICATION_TARGET_DATABASE_REQUIRED");
-    const head = await sql<{
+    type Head = {
       artifact_hash: string;
       applied_release_id: string;
       source_release_id: string;
       source_release_no: string | number;
       row_version: string | number;
       valid: boolean;
-    }>`SELECT h.artifact_hash,h.applied_release_id,a.source_release_id,h.source_release_no,h.row_version,
+    };
+    const head =
+      options.authority === "control" && target.targetPlane === "studio"
+        ? await sql<Head>`SELECT artifact_hash,applied_release_id,source_release_id,source_release_no,row_version,valid FROM publication.read_local_publication_predecessor(${options.changeSetId}::uuid) WHERE publication_key=${key}`.execute(
+            db,
+          )
+        : await sql<Head>`SELECT h.artifact_hash,h.applied_release_id,a.source_release_id,h.source_release_no,h.row_version,
  (a.status='active' AND a.publication_key=h.publication_key AND a.artifact_hash=h.artifact_hash AND a.source_release_no=h.source_release_no) AS valid
  FROM runtime_meta.release_activation_head h LEFT JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
  WHERE h.publication_key=${key}`.execute(db);

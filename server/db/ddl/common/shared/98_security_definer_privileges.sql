@@ -4980,7 +4980,8 @@ BEGIN
       "publication",
       "shared",
       "ops",
-      "public"
+      "public",
+      "runtime_meta"
     ],
     "tables": [
       {
@@ -5121,7 +5122,8 @@ BEGIN
       "snapshot.fn_compute_entity_contract_hash(jsonb)",
       "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
       "public.digest(bytea, text)",
-      "public.digest(text, text)"
+      "public.digest(text, text)",
+      "publication.read_native_product_review_source(uuid,integer)"
     ],
     "policies": [
       {

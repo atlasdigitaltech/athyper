@@ -2575,6 +2575,66 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/45_local_publication_identity_status.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_head_reads.sql",
+      "path": "migrations/20261009_local_publication_head_reads.sql",
+      "sha256": "0f7054008dfc8e144d2acd3d2030bf6f74bd301a4c304ffb697180899acc4c01",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restricted current-head coordinate reads for authenticated local publication admission; no payload or historical row access.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/46_local_publication_head_reads.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_head_visibility.sql",
+      "path": "migrations/20261009_local_publication_head_visibility.sql",
+      "sha256": "58d7a46c8ff7b8a186870e6e0d8866b1b84ac173c352fa3c37008084c2f4ec3f",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Control role current Entity head visibility follows existing active descriptor tenant scope.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/47_local_publication_head_visibility.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_predecessor_read.sql",
+      "path": "migrations/20261009_local_publication_predecessor_read.sql",
+      "sha256": "2617b27d7df0368841849baba1063bf0d2ef20774b3f7dcb1d67d8092e489a73",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Exact native draft predecessor read, replacing ineffective direct control-role head access.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/48_local_publication_predecessor_read.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_predecessor_dependency.sql",
+      "path": "migrations/20261009_local_publication_predecessor_dependency.sql",
+      "sha256": "9f252a3e6908c15147c05d83bb0e503af81e8d42a53d64f68e626a5f05ebc4b0",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Allow bounded predecessor reader to invoke existing authenticated source guard under its restricted owner.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/49_local_publication_predecessor_dependency.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_predecessor_scope.sql",
+      "path": "migrations/20261009_local_publication_predecessor_scope.sql",
+      "sha256": "519856b023a1e2d79bb2cc056a6ad6e710aacf5362f1522be0b74b1bc5267c82",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Narrow lifecycle-coordinate privileges for non-login bounded predecessor reader owner.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/50_local_publication_predecessor_scope.sql"
+      ]
     }
   ]
 }
