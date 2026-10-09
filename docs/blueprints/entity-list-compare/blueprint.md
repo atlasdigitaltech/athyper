@@ -639,6 +639,24 @@ Styles stay on the breakpoint scale and use design-system tokens.
     - no browser spec, and no check in a real browser;
     - no real Entity declares a comparison (that needs the authoring storage in section 12 and a pilot);
     - Studio authoring storage is not built.
+- **C2 review fixes (`3bcb4ca22`, audit 4):**
+  1. Whether Close goes back is now decided by a marker in the history entry pushed to open the comparison. Other pushes strip it and replaces keep it, so Back, navigation or a comparison opened from a link never make Close pop an entry it did not create. A test covers browser Back followed by a link-opened comparison closing in place.
+  2. A declared currency field the viewer cannot read now sets `fieldsRestricted`, so "Currency not compared" is explained.
+  3. The narrow pair returns to the first two columns when the compared set or the baseline changes.
+- **C1b, built (10 October 2026).** Owner approval: "C1b approved for build...", after audit 4.
+  - `a474ddab4`, the implementation:
+    - the snapshot comparison renders through the shared `ComparisonTable`: sections with counts, the "Not compared" group, differences only with a summary, previous and next difference, collapse and expand;
+    - the earlier snapshot is the fixed baseline, with no column menu;
+    - marks read "Same as / Differs from the earlier snapshot";
+    - the server leaves the storage identity, the version field and UUID-typed fields out of snapshot comparisons, and marks captured references (`ActivityComparisonField.reference`), shown as "Linked record";
+    - exact decimals are formatted by kind;
+    - the provider test proves the exclusions and the reference mark (17 of 17).
+  - `598591107` updates the pinned rendering test deliberately, in its own commit, with the new output reviewed. It asserts that no record identifier appears in the markup and that the difference wording never says "changed", and it passes in UTC and Asia/Kuala_Lumpur.
+  - **One deviation from section 9.6, recorded here:** the headers do not say "captured by". The snapshot contract's `capturedBy` is the capturing principal's identifier (`snapshot.*.captured_by` is a UUID), and no published name is available, so the approved rule ("never a principal identifier") leaves it out. Showing a name needs an actor-label contract on the snapshot read, which is a separate decision.
+- **Identifier exposures found next to C1b, not changed (outside its approved scope; need a decision):**
+  - The saved-snapshot list in the activity workspace prints "Captured by: {capturedBy}", which is the principal UUID (`activity-workspace.tsx`, the capture-actor line).
+  - The single-snapshot view (one snapshot, not a comparison) still builds its fields from every readable field (`activity-provider.ts` `load`), so the storage identity and UUID-typed fields can appear there.
+  - The same exclusions and the same "no captured-by identifier" rule would close both. Found by reading the code; not reproduced on a live page.
 
 ## 15. Decisions (project owner)
 
@@ -715,6 +733,10 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 | Audit 3, finding 2 | The masked-currency rule is already built in C1 | Recorded, no action: `comparisonRowOutcome` requires every currency cell to be a `value` cell, so a masked currency is `not_comparable` |
 | Audit 3, finding 3 | Name the status field the chip uses | `storage.statusField` with its own `statusTones`; omitted, never substituted, when undeclared, unreadable or not among the comparison's fields; carried in the projection (sections 3, 5.3 and 9.2) |
 | Audit 3, finding 4 | The label service cannot return a readable identity | Recorded as a fact in section 3; "Different record" is the shipped behaviour; widening the service needs its own approval (section 8.6) |
+| Audit 4, finding 1 | The pushed-history flag was a ref the URL did not agree with | Fixed (`3bcb4ca22`): the marker lives in the history entry itself |
+| Audit 4, finding 2 | An unreadable currency field gave "Currency not compared" without the restricted statement | Fixed: `fieldsRestricted` is set when a declared currency field is dropped |
+| Audit 4, finding 3 | The narrow pair was not reset when membership or the baseline changed | Fixed: the pair resets on either change |
+| Audit 4, shared-tree commit | Say in that commit that the work was not the author's and was verified first | Already stated in `8dfb17ec3`'s message ("Uncommitted layout work found in the shared worktree and committed at the owner's request. Verified before commit: …") |
 | Owner's prototype review, revision 3 (10 October 2026) | The Neon Compare Prototype was read in code, not only in screenshots, and checked against the shipped snapshot comparison and the server | Two findings from the code: identifiers can appear in snapshot comparisons (section 3; decision 17), and one unavailable record would blank every row (section 3; decision 11). Prototype features: within C2 presentation (9.2), or proposed as decisions 12–16. The prototype's own "Current" view is not the shipped view: the shipped view already groups by sections and tabs, defaults to changes only, and shows labels, choice labels and formatted dates (pinned in `activity-comparison-view.test.tsx`). Any before-and-after review should use the shipped view |
 
 ## 18. AGENTS.md entry
