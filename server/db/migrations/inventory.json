@@ -2489,6 +2489,30 @@
         "ddl/planes/studio/metadata/07_functions.sql",
         "ddl/planes/studio/metadata/21_entity_learning_ancestry.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_enrollment.sql",
+      "path": "migrations/20261009_local_publication_enrollment.sql",
+      "sha256": "93d7ca2aeaea5a56f86fadb8bcae699e4257a776e9ffe99fbc6f8da32d10fe47",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Resolve standing local authority through the existing tested and independently activated policy enrollment format.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/41_local_publication_request.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_entity_reads.sql",
+      "path": "migrations/20261009_local_publication_entity_reads.sql",
+      "sha256": "d72104e0e6290c0f4b176d46dbf008fca75b961fbdbe6601339d05f33d4a4310",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Extend existing native entity reference visibility to exact local request sources without broadening table grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/40_native_worker_entity_read.sql"
+      ]
     }
   ]
 }

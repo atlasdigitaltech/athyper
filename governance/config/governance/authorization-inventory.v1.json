@@ -38,10 +38,10 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14637,
-    "authorizationFiles": 2050,
+    "filesScanned": 14641,
+    "authorizationFiles": 2053,
     "registeredObjects": 470,
-    "objectReferences": 1406,
+    "objectReferences": 1409,
     "writerReferences": 148,
     "securitySymbolReferences": 130,
     "contractFieldReferences": 3183,
@@ -49,7 +49,7 @@
     "permissionUses": 2229,
     "routes": 30,
     "keycloakMappings": 145,
-    "derivedDatabaseObjects": 385,
+    "derivedDatabaseObjects": 386,
     "generatedArtifacts": 7,
     "captureSources": 0,
     "captureSourcesByPlane": {},
@@ -1109,7 +1109,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 6,
-      "readerCount": 346,
+      "readerCount": 349,
       "writerCount": 56,
       "executionCount": 0,
       "files": [
@@ -1155,8 +1155,10 @@
         "server/apps/platform-host/src/composition/shared/publication/human-publication-execution.ts",
         "server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
+        "server/apps/platform-host/src/composition/shared/publication/local-publication-policy.ts",
         "server/apps/platform-host/src/composition/shared/publication/native-compilation-recovery.postgres.test.ts",
         "server/apps/platform-host/src/composition/shared/publication/native-publication-authority.postgres.test.ts",
+        "server/apps/platform-host/src/composition/shared/publication/native-publication-startup.ts",
         "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
         "server/apps/platform-host/src/development/publication-workload.test.ts",
         "server/apps/platform-host/src/development/publication-workload.ts",
@@ -1284,6 +1286,7 @@
         "server/db/migrations/20261003_product_human_review.sql",
         "server/db/migrations/20261003_product_publication_tenant_reads.sql",
         "server/db/migrations/20261003_publication_policy_replacement.sql",
+        "server/db/migrations/20261009_local_publication_enrollment.sql",
         "server/db/migrations/20261009_local_publication_request.sql",
         "server/db/migrations/20261009_native_compilation_recovery.sql",
         "server/db/migrations/20261009_native_product_review.sql",
@@ -13858,7 +13861,7 @@
     {
       "path": "packages/platform/foundation/i18n/src/catalogs/entity-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "4efa743a467e66232b621c76615b8e7f1bdbdc1858920b8a0596f97c747a481f"
+      "sha256": "23b64be66f913f4aba0adf013ab7fc8b38a8cc5997f3a4abf643563d0c26c6f2"
     },
     {
       "path": "packages/platform/foundation/i18n/src/entity-errors.ts",
@@ -14233,7 +14236,7 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "055b151830df6996b22c467c9bd16672258b268d5fe56239035b3d23a38b49f8"
+      "sha256": "d0ebb1479f7f27e33c5fc1b35604a6d91423ee499b7feff16b57856e950f34b7"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
@@ -14423,7 +14426,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
       "artifactClass": "test",
-      "sha256": "0f35f57193b2fc8907ee7dfe7e4c6b9f7c1ac34b07bfc7cbe849fb26c8fe819b"
+      "sha256": "fabf6b08f7e05424f12c5e4a64245da7b2162eb4113049143a9a1bfdf921f87b"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/runtime-qualification.test.ts",
@@ -14518,7 +14521,12 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
-      "sha256": "de47c3918fb151db07ea405200d5089dcf973db54d8044ec4ffb337a2adb6136"
+      "sha256": "51719e956e2fef82cb326aa6902e05ee5d59d4b7241348f0a8afc79a51cbab98"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-policy.ts",
+      "artifactClass": "runtime",
+      "sha256": "181f28937d0850365c63acdce1fde911d1bd7617ab98c8d2d38f742b41521124"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/machine-policy.ts",
@@ -14551,6 +14559,11 @@
       "sha256": "8ed276e7c8079a9773cf7d96f204468d37221e18959d057021d858d28dbf7008"
     },
     {
+      "path": "server/apps/platform-host/src/composition/shared/publication/native-publication-startup.ts",
+      "artifactClass": "runtime",
+      "sha256": "55908d05f6f821f39576a73023327b310db1d9247bcc9b94af25c320e710adf2"
+    },
+    {
       "path": "server/apps/platform-host/src/composition/shared/publication/native-worker-entity-read.postgres.test.ts",
       "artifactClass": "test",
       "sha256": "a9d7c2367b42f184228c52012d173d07756f6bdfa9ea431ecf71d89cc5cb3fd3"
@@ -14558,7 +14571,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
       "artifactClass": "runtime",
-      "sha256": "d2550f161a4d4f58fd239fa3e4d88069433ec6133269c2c641de47f3a04ca5f7"
+      "sha256": "723ed294d4b60e9482bdb67df49c714ef264f1342f4955a298f91c6f66b8c524"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/provenance-recovery.test.ts",
@@ -14583,7 +14596,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/workload-routes.ts",
       "artifactClass": "route",
-      "sha256": "64f969be7aa52f62850b524ca2beec414acfd61f4c9745e918ff87509ca04beb"
+      "sha256": "9fd3e07b7d70448d490074992ca322860f6c7c38bc1f8094b49d63b45d29007d"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/verification-permissions.test.ts",
@@ -15603,7 +15616,7 @@
     {
       "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
       "artifactClass": "ddl",
-      "sha256": "17a516751651d5c38a1929d253d6e5a89894761ea543c084c47026b01bdd09bf"
+      "sha256": "e6413dc7d111f48a882f53c07d5ab5df9e26060523cf8bce3e158df0ab6e2a6b"
     },
     {
       "path": "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
@@ -15736,6 +15749,11 @@
       "sha256": "63bbeee81f8ee86ab1157c59b493e88aa3237531ad6a8eb192ad49aef3e7ab55"
     },
     {
+      "path": "server/db/migrations/20261009_local_publication_enrollment.sql",
+      "artifactClass": "runtime",
+      "sha256": "93d7ca2aeaea5a56f86fadb8bcae699e4257a776e9ffe99fbc6f8da32d10fe47"
+    },
+    {
       "path": "server/db/migrations/20261009_local_publication_request.sql",
       "artifactClass": "runtime",
       "sha256": "a327af9a6b73f818310e14fdef3a186b814186026b771456e0a43276fee4bdf0"
@@ -15783,7 +15801,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "275a220236507ff05acee4bfcca003591901a4695588494eec7c35a85797aa79"
+      "sha256": "e859130d0d9767c7554cbf53a36c6a39b49f31afb6b176d537b01581e2f24036"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -25094,11 +25112,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3404,
+      "line": 3405,
       "lines": [
-        3404,
-        6264,
-        6461
+        3405,
+        6265,
+        6462
       ]
     },
     {
@@ -25129,9 +25147,10 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
       "artifactClass": "test",
       "access": "read",
-      "line": 45,
+      "line": 46,
       "lines": [
-        45
+        46,
+        48
       ]
     },
     {
@@ -25261,9 +25280,9 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
       "access": "define",
-      "line": 128,
+      "line": 154,
       "lines": [
-        128
+        154
       ]
     },
     {
@@ -25272,9 +25291,9 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
       "access": "insert",
-      "line": 145,
+      "line": 171,
       "lines": [
-        145
+        171
       ]
     },
     {
@@ -25283,9 +25302,21 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
       "access": "update",
-      "line": 207,
+      "line": 247,
       "lines": [
-        207
+        247
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-policy.ts",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 129,
+      "lines": [
+        129,
+        203
       ]
     },
     {
@@ -25346,12 +25377,23 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
+      "path": "server/apps/platform-host/src/composition/shared/publication/native-publication-startup.ts",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 88,
+      "lines": [
+        88
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
       "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 106,
+      "line": 107,
       "lines": [
-        106
+        107
       ]
     },
     {
@@ -27853,11 +27895,11 @@
       "path": "server/db/ddl/planes/studio/publication/41_local_publication_request.sql",
       "artifactClass": "ddl",
       "access": "read",
-      "line": 63,
+      "line": 76,
       "lines": [
-        63,
-        64,
-        65
+        76,
+        77,
+        78
       ]
     },
     {
@@ -28195,6 +28237,19 @@
       "line": 34,
       "lines": [
         34
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/db/migrations/20261009_local_publication_enrollment.sql",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 57,
+      "lines": [
+        57,
+        58,
+        59
       ]
     },
     {
@@ -40597,8 +40652,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6139,
-        6405
+        6140,
+        6406
       ]
     },
     {
@@ -40646,7 +40701,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4799
+        4800
       ]
     },
     {
@@ -40683,7 +40738,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        5087
+        5088
       ]
     },
     {
@@ -40754,13 +40809,13 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2351,
-        2644,
-        2663,
-        2726,
-        4297,
-        4540,
-        4563
+        2352,
+        2645,
+        2664,
+        2727,
+        4298,
+        4541,
+        4564
       ]
     },
     {
@@ -40780,9 +40835,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3025,
-        4540,
-        4563
+        3026,
+        4541,
+        4564
       ]
     },
     {
@@ -40906,10 +40961,10 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2150,
-        2216,
-        2231,
-        2274
+        2151,
+        2217,
+        2232,
+        2275
       ]
     },
     {
@@ -40948,7 +41003,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3732
+        3733
       ]
     },
     {
@@ -41032,7 +41087,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6404
+        6405
       ]
     },
     {
@@ -41061,7 +41116,7 @@
       "artifactClass": "runtime",
       "classification": "unclassified",
       "lines": [
-        5227
+        5228
       ]
     },
     {
@@ -41200,7 +41255,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4278
+        4279
       ]
     },
     {
@@ -41323,9 +41378,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3426,
-        3504,
-        3606
+        3427,
+        3505,
+        3607
       ]
     },
     {
@@ -41334,7 +41389,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2374
+        2375
       ]
     },
     {
@@ -41379,9 +41434,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2231,
-        2311,
-        5208
+        2232,
+        2312,
+        5209
       ]
     },
     {
@@ -41506,7 +41561,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3602
+        3603
       ]
     },
     {
@@ -41682,7 +41737,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6516
+        6517
       ]
     },
     {
@@ -50998,14 +51053,14 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1335,
-        3204,
-        4800,
-        4803,
+        1336,
+        3205,
+        4801,
         4804,
-        4961,
-        4974,
-        5096
+        4805,
+        4962,
+        4975,
+        5097
       ]
     },
     {
@@ -51250,7 +51305,7 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
       "artifactClass": "test",
       "lines": [
-        204
+        216
       ]
     },
     {
@@ -67839,9 +67894,9 @@
       "path": "packages/platform/foundation/i18n/src/catalogs/entity-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        1345,
-        1346,
-        1350
+        1535,
+        1536,
+        1540
       ]
     },
     {
@@ -68053,7 +68108,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4964
+        4965
       ]
     },
     {
@@ -68197,8 +68252,8 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
       "lines": [
-        191,
-        194
+        231,
+        234
       ]
     },
     {
@@ -89068,11 +89123,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        3202,
-        3253,
-        5025,
-        5093,
-        5231
+        3203,
+        3254,
+        5026,
+        5094,
+        5232
       ]
     },
     {
@@ -89487,11 +89542,11 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
       "artifactClass": "runtime",
       "lines": [
-        86,
-        285,
-        360,
-        472,
-        607
+        87,
+        290,
+        365,
+        481,
+        616
       ]
     },
     {
@@ -94163,7 +94218,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1335
+        1336
       ]
     },
     {
@@ -97860,24 +97915,24 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1232,
-        1261,
-        1269,
-        1281,
-        1335,
-        2209,
-        2212,
+        1233,
+        1262,
+        1270,
+        1282,
+        1336,
+        2210,
         2213,
-        3418,
-        3421,
+        2214,
+        3419,
         3422,
-        4800,
-        4803,
+        3423,
+        4801,
         4804,
-        4961,
-        4964,
-        4967,
-        4970
+        4805,
+        4962,
+        4965,
+        4968,
+        4971
       ]
     },
     {
@@ -98087,7 +98142,7 @@
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
       "artifactClass": "test",
       "lines": [
-        270
+        282
       ]
     },
     {
@@ -102747,7 +102802,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4970
+        4971
       ]
     },
     {
@@ -103423,7 +103478,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4967
+        4968
       ]
     },
     {
@@ -110616,9 +110671,9 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        2213,
-        3422,
-        5058
+        2214,
+        3423,
+        5059
       ]
     },
     {
@@ -137643,9 +137698,9 @@
       "riskLevel": "critical",
       "path": "server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts",
       "artifactClass": "test",
-      "line": 272,
+      "line": 284,
       "lines": [
-        272
+        284
       ]
     },
     {
@@ -139693,9 +139748,9 @@
       "riskLevel": "critical",
       "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
       "artifactClass": "runtime",
-      "line": 51,
+      "line": 52,
       "lines": [
-        51
+        52
       ]
     },
     {
@@ -139806,9 +139861,9 @@
       "riskLevel": "critical",
       "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
       "artifactClass": "runtime",
-      "line": 50,
+      "line": 51,
       "lines": [
-        50
+        51
       ]
     },
     {
@@ -140162,9 +140217,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4801,
+      "line": 4802,
       "lines": [
-        4801
+        4802
       ]
     },
     {
@@ -148544,6 +148599,18 @@
     {
       "qualifiedName": "publication.fn_local_publication_request_authority",
       "kind": "function",
+      "path": "server/db/migrations/20261009_local_publication_enrollment.sql",
+      "line": 3,
+      "dependencies": [
+        "master.principal"
+      ],
+      "classification": "structural_dependency",
+      "owner": "platform-iam",
+      "disposition": "review_with_registered_dependency"
+    },
+    {
+      "qualifiedName": "publication.fn_local_publication_request_authority",
+      "kind": "function",
       "path": "server/db/migrations/20261009_local_publication_request.sql",
       "line": 23,
       "dependencies": [
@@ -149045,7 +149112,7 @@
         "symbol": "authorizeEntityOperation",
         "path": "server/apps/platform-host/src/composition/register-services.ts",
         "lines": [
-          5227
+          5228
         ]
       },
       {

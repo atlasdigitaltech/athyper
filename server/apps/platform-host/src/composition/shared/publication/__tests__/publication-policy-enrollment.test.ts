@@ -1,3 +1,4 @@
+import { resolveLocalPublicationAuthority } from "../local-publication-policy.js";
 import { readFileSync } from "node:fs";
 import { Kysely, PostgresDialect } from "kysely";
 import ts from "typescript";
@@ -44,6 +45,15 @@ function fixture() {
     if (text.includes("set_config")) currentActor = values[1];
     if (text.includes("FROM master.principal"))
       rows = revoked ? [] : [{ id: currentActor }];
+    if (text.includes("SELECT id,principal_type FROM master.principal"))
+      rows = revoked
+        ? []
+        : values[1].map((idValue: string) => ({
+            id: idValue,
+            principal_type: [id(3), id(4)].includes(idValue)
+              ? "service_account"
+              : "user",
+          }));
     if (text.includes("FROM metadata.entity_change_set"))
       rows = [{ id: id(2) }];
     if (text.includes("INSERT INTO control.policy_definition"))
@@ -77,6 +87,8 @@ function fixture() {
         input_payload: JSON.parse(values[4]),
         expected_outcome: JSON.parse(values[5]),
       });
+    if (text.includes("SELECT d.created_by<>d.updated_by"))
+      rows = [{ valid: !revoked }];
     if (text.includes("SELECT *,effective_from"))
       rows = definition ? [definition] : [];
     if (text.includes("SELECT * FROM control.policy_rule")) rows = rules;
@@ -278,6 +290,7 @@ it("keeps enrollment permissions distinct and enforces explicit import ownership
     true,
   );
   const allowed = new Set([
+    "./local-publication-policy.js",
     "./native-compilation-recovery-policy.js",
     "./native-compilation-recovery-source.js",
     "./deployment-recovery-compiler.js",
@@ -557,6 +570,74 @@ it("requires independent activation and rechecks human source admission for coor
     expect(f.signer.sign).not.toHaveBeenCalled();
   } finally {
     check.mockRestore();
+    await f.database.destroy();
+  }
+});
+
+it("enrolls standing authority through the same maker/checker service without draft enrollment", async () => {
+  const f = fixture();
+  const local = {
+    schema: "athyper.local-publication-policy/1",
+    policyId: "local.test",
+    revision: 1,
+    authorPrincipalId: id(3),
+    publisherPrincipalId: id(4),
+    authority: {
+      host: {
+        environment: "local",
+        instance: "dev",
+        domainSuffix: "dev.athyper.test",
+      },
+      scope: { kind: "product" },
+      validFrom: "2026-01-01T00:00:00Z",
+      expiresAt: "2099-01-01T00:00:00Z",
+      developerPrincipalIds: [id(7)],
+      actions: ["publish", "retry", "recover", "rollback"],
+      destinations: [{ plane: "studio", instance: "dev" }],
+    },
+  };
+  try {
+    const service = createPublicationPolicyEnrollment(f.options);
+    const pending = await service.propose(f.context, local);
+    await expect(
+      service.activate(f.context, pending.id, pending.hash),
+    ).rejects.toThrow();
+    const active = await service.activate(
+      { ...f.context, principalId: id(8) },
+      pending.id,
+      pending.hash,
+    );
+    expect(active.status).toBe("active");
+    const resolved = await f.database.transaction().execute((tx) =>
+      resolveLocalPublicationAuthority({
+        transaction: tx,
+        context: f.context,
+        pin: active,
+      }),
+    );
+    expect(resolved.id).toBe(active.id);
+    expect(resolved.enrollmentReceiptId).toBe(active.id);
+    expect(resolved.developerPrincipalIds).toEqual([id(7)]);
+    f.revoke();
+    await expect(
+      f.database.transaction().execute((tx) =>
+        resolveLocalPublicationAuthority({
+          transaction: tx,
+          context: f.context,
+          pin: active,
+        }),
+      ),
+    ).rejects.toThrow("REVOKED");
+    expect(
+      f.query.mock.calls.some(([q]) =>
+        q.includes("FROM metadata.entity_change_set"),
+      ),
+    ).toBe(false);
+    expect(f.record.mock.calls.map(([e]) => e.actor.principalId)).toEqual([
+      id(7),
+      id(8),
+    ]);
+  } finally {
     await f.database.destroy();
   }
 });

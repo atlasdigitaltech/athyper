@@ -153,6 +153,47 @@ it("production composition resolves through the workload reader under the caller
         text.includes("publication.read_native_worker_source"),
       ),
     ).toBe(true);
+    const localConfiguration = {
+      environment: "local",
+      instance: "dev",
+      domainSuffix: "dev.athyper.test",
+      tenantId: "tenant",
+      realmKey: "platform-control",
+      author: {
+        principalId: "author",
+        code: "dev.metadata.author",
+        authEpoch: 0,
+        credentialSha256: "a".repeat(64),
+      },
+      publisher: {
+        principalId: "publisher",
+        code: "dev.metadata.publisher",
+        authEpoch: 0,
+        credentialSha256: "b".repeat(64),
+      },
+      localAuthority: { id: "standing", version: 1, hash: "a".repeat(64) },
+    };
+    const installed = createNativePublicationStartup({
+      ...options,
+      localConfiguration,
+    });
+    expect(installed.readLocalNativeSource).toBeTypeOf("function");
+    await expect(
+      installed.readLocalNativeSource!(request.hash),
+    ).rejects.toThrow("WORKLOAD_REVOKED");
+    expect(() =>
+      createNativePublicationStartup({
+        ...options,
+        environment: {},
+        localConfiguration,
+      }),
+    ).toThrow("NATIVE_CONFIGURATION_REQUIRED");
+    expect(() =>
+      createNativePublicationStartup({
+        ...options,
+        localConfiguration: { ...localConfiguration, instance: "qa" },
+      }),
+    ).toThrow("DEV_ONLY");
     chmodSync(file, 0o644);
     expect(() => createNativePublicationStartup(options)).toThrow(
       "CONFIGURATION_INVALID",

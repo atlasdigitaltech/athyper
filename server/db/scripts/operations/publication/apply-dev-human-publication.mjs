@@ -14,6 +14,10 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-ENTITY-READS":
+    "20261009_local_publication_entity_reads.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-ENROLLMENT":
+    "20261009_local_publication_enrollment.sql",
   "--apply=DEV-NATIVE-BASE-ROLE-ISOLATION":
     "20261009_native_base_guard_role_isolation.sql",
   "--apply=DEV-SUCCESSOR-INITIAL-TARGET":
@@ -115,11 +119,32 @@ try {
   const before = (await state()).rows[0];
   if (
     [
+      "20261009_local_publication_enrollment.sql",
+      "20261009_local_publication_entity_reads.sql",
+    ].includes(name)
+  ) {
+    const prior = JSON.parse(
+      readFileSync(new URL("migrations/inventory.json", root), "utf8"),
+    ).entries.find(
+      (e) => e.path === "migrations/20261009_local_publication_request.sql",
+    );
+    const installed = (
+      await db.query(
+        "SELECT sha256,status FROM public.athyper_schema_migration_v1 WHERE migration_name='20261009_local_publication_request.sql'",
+      )
+    ).rows[0];
+    assert.equal(installed?.status, "applied");
+    assert.equal(installed?.sha256, prior.sha256);
+  }
+
+  if (
+    [
       "20261009_native_worker_source.sql",
       "20261009_native_worker_entity_read.sql",
       "20261009_native_compilation_recovery.sql",
       "20261009_native_publication_validation.sql",
       "20261009_local_publication_request.sql",
+      "20261009_local_publication_enrollment.sql",
     ].includes(name)
   ) {
     const dependency = JSON.parse(

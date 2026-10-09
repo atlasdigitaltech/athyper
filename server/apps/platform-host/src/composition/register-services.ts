@@ -1142,6 +1142,7 @@ export function registerServices(
           );
           const native = createNativePublicationStartup({
             environment: process.env,
+            localConfiguration: configuration,
             targetDatabases: metadataDatabases,
             run: (work) =>
               container.adapters.athyperDatabase!.withTenantTransaction((tx) =>

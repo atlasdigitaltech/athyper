@@ -1,3 +1,4 @@
+import { assertLocalPublicationEnrollment } from "./local-publication-policy.js";
 import { nativeRecoveryScope } from "./native-compilation-recovery-policy.js";
 import { assertNativeRecoverySource } from "./native-compilation-recovery-source.js";
 import {
@@ -180,7 +181,11 @@ export function createPublicationPolicyEnrollment(options: {
         ).rows;
         if (existing.length)
           throw Error("PUBLICATION_POLICY_ENROLLMENT_ALREADY_EXISTS");
-        if (policy.schema === "athyper.dev-native-compilation-recovery/1") {
+        if (policy.schema === "athyper.local-publication-policy/1") {
+          await assertLocalPublicationEnrollment(tx, policy, context.tenantId);
+        } else if (
+          policy.schema === "athyper.dev-native-compilation-recovery/1"
+        ) {
           await assertNativeRecoverySource(tx, policy, true);
         } else if (
           policy.schema === "athyper.dev-deployment-recovery-compiler/1"
@@ -374,7 +379,11 @@ export function createPublicationPolicyEnrollment(options: {
           policy.schema !== "athyper.dev-native-compilation-recovery/1"
         )
           throw Error("PUBLICATION_REPLACEMENT_SCOPE_MISMATCH");
-        if (policy.schema === "athyper.dev-native-compilation-recovery/1") {
+        if (policy.schema === "athyper.local-publication-policy/1") {
+          await assertLocalPublicationEnrollment(tx, policy, context.tenantId);
+        } else if (
+          policy.schema === "athyper.dev-native-compilation-recovery/1"
+        ) {
           await assertNativeRecoverySource(tx, policy, true);
           const active = (
             await sql<{

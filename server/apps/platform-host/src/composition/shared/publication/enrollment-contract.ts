@@ -1,4 +1,8 @@
 import {
+  parseLocalPublicationPolicy,
+  type LocalPublicationPolicy,
+} from "./local-publication-policy.js";
+import {
   parseNativeCompilationRecoveryPolicy,
   type NativeCompilationRecoveryPolicy,
 } from "./native-compilation-recovery-policy.js";
@@ -39,7 +43,15 @@ export function parsePublicationPolicyProposal(
   | HumanReviewedExecutionPolicy
   | DeploymentRecoveryPolicy
   | DeploymentRecoveryCompilerPolicy
-  | NativeCompilationRecoveryPolicy {
+  | NativeCompilationRecoveryPolicy
+  | LocalPublicationPolicy {
+  if (
+    value &&
+    typeof value === "object" &&
+    (value as { schema?: unknown }).schema ===
+      "athyper.local-publication-policy/1"
+  )
+    return parseLocalPublicationPolicy(value);
   if (
     value &&
     typeof value === "object" &&

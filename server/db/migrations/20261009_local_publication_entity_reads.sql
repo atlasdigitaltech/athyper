@@ -1,3 +1,5 @@
+-- Native local source entity/reference visibility under checked request scope.
+BEGIN;
 -- Relation-target identity checks for native activation under the worker role.
 -- Current exact human execution context supplies the source; no entity allowlist.
 CREATE OR REPLACE FUNCTION publication.native_worker_entity_visible(p_entity uuid)
@@ -29,6 +31,5 @@ END $$;
 REVOKE ALL ON FUNCTION publication.native_worker_entity_visible(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION publication.native_worker_entity_visible(uuid) TO athyper_worker;
 ALTER FUNCTION publication.native_worker_entity_visible(uuid) OWNER TO athyper_definer_product_publication;
-GRANT SELECT(id,entity_code,tenant_id,ownership_model) ON metadata.entity TO athyper_worker;
-CREATE POLICY native_worker_entity_reference_read ON metadata.entity FOR SELECT TO athyper_worker
- USING(tenant_id IS NULL AND ownership_model='system' AND publication.native_worker_entity_visible(id));
+
+COMMIT;

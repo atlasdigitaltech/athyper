@@ -82,13 +82,6 @@ export async function withLocalPublicationRequest<T>(options: {
     request.hash !== options.requestHash
   )
     throw Error("LOCAL_PUBLICATION_REQUEST_UNAVAILABLE");
-  const current = await options.resolveCurrent(request, tx);
-  assertLocalPublicationRequest(
-    request,
-    current.authority,
-    { ...request.admission, host: options.host },
-    current.inputs,
-  );
   const prior = await sql<{
     value: string | null;
   }>`SELECT current_setting('app.local_publication_request_hash',true) AS value`.execute(
@@ -101,6 +94,14 @@ export async function withLocalPublicationRequest<T>(options: {
     await sql`SELECT set_config('app.local_publication_request_hash',${request.hash},true)`.execute(
       tx,
     );
+    const current = await options.resolveCurrent(request, tx);
+    assertLocalPublicationRequest(
+      request,
+      current.authority,
+      { ...request.admission, host: options.host },
+      current.inputs,
+    );
+
     const value = await options.execute(request, tx);
     await sql`SELECT set_config('app.local_publication_request_hash','',true)`.execute(
       tx,

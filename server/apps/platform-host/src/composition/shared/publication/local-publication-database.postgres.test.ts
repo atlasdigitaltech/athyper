@@ -1,3 +1,4 @@
+import { canonicalJson } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID, createHash } from "node:crypto";
@@ -75,6 +76,31 @@ it.skipIf(process.env.LOCAL_PUBLICATION_POSTGRES !== "1")(
       actions: ["publish", "retry", "recover", "rollback"],
       destinations: [{ plane: "neon", instance: "dev" }],
     };
+    const policy = {
+      schema: "athyper.local-publication-policy/1",
+      policyId: "local-test",
+      revision: 1,
+      authorPrincipalId: author,
+      publisherPrincipalId: publisher,
+      authority: {
+        host,
+        scope: authority.scope,
+        validFrom: authority.validFrom,
+        expiresAt: authority.expiresAt,
+        developerPrincipalIds: [developer],
+        actions: authority.actions,
+        destinations: authority.destinations,
+      },
+    };
+    const condition = {
+      and: Object.entries({
+        environment: "dev",
+        tenantId: tenant,
+        policyHash: createHash("sha256")
+          .update(canonicalJson(policy))
+          .digest("hex"),
+      }).map(([key, value]) => ({ "===": [{ var: key }, value] })),
+    };
     const admission: LocalPublicationAdmission = {
       host,
       developerPrincipalId: developer,
@@ -137,14 +163,14 @@ CREATE TABLE metadata.entity_field(change_set_id uuid,field_identity_id uuid);
 CREATE FUNCTION metadata.native_identity_available(uuid,uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE FUNCTION publication.fn_system_entity_authority(uuid,text) RETURNS jsonb LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'HUMAN_PATH_UNCHANGED'; END $$;
 CREATE FUNCTION publication.fn_successor_canonical_json(v jsonb) RETURNS text LANGUAGE plpgsql IMMUTABLE AS $$ DECLARE result text; BEGIN
- CASE jsonb_typeof(v) WHEN 'object' THEN SELECT '{'||coalesce(string_agg(to_jsonb(key)::text||':'||publication.fn_successor_canonical_json(value),',' ORDER BY key),'')||'}' INTO result FROM jsonb_each(v);
+ CASE jsonb_typeof(v) WHEN 'object' THEN SELECT '{'||coalesce(string_agg(to_jsonb(key)::text||':'||publication.fn_successor_canonical_json(value),',' ORDER BY key COLLATE "C"),'')||'}' INTO result FROM jsonb_each(v);
  WHEN 'array' THEN SELECT '['||coalesce(string_agg(publication.fn_successor_canonical_json(value),',' ORDER BY ord),'')||']' INTO result FROM jsonb_array_elements(v) WITH ORDINALITY a(value,ord);
  ELSE result:=v::text; END CASE; RETURN result; END $$;
 GRANT USAGE ON SCHEMA publication,metadata,snapshot,control,master,shared TO athyper_definer_product_publication,athyper_worker,athyper_control_api,athyper_runtime;
 GRANT SELECT,UPDATE ON ALL TABLES IN SCHEMA metadata,snapshot,control,master TO athyper_definer_product_publication;
 INSERT INTO master.principal VALUES('${developer}','${tenant}','user','active'),('${owner}','${tenant}','user','active'),('${author}','${tenant}','service_account','active'),('${publisher}','${tenant}','service_account','active');
 INSERT INTO control.policy_definition VALUES('${authorityId}','${tenant}','metadata.publication','active','${authority.hash}',1,'${developer}','${owner}',CURRENT_DATE-1,NULL,'local-test');
-INSERT INTO control.policy_rule VALUES('${authorityId}','allow','true',${literal({ schema: "athyper.local-publication-enrollment/1", standingAuthority: authority })});
+INSERT INTO control.policy_rule VALUES('${authorityId}','allow',${literal(condition)},${literal({ schema: "athyper.machine-publication-enrollment/1", environment: "dev", tenantId: tenant, policy })});
 INSERT INTO metadata.entity VALUES('${entity}',NULL,'system');
 INSERT INTO metadata.entity_change_set VALUES('${draft}','${entity}',NULL,'product',2,'${developer}',1,'draft');
 INSERT INTO snapshot.entity_draft_save VALUES('${draft}',NULL,1,${literal(graph)},'${sourceHash}');`);
@@ -171,12 +197,26 @@ INSERT INTO snapshot.entity_draft_save VALUES('${draft}',NULL,1,${literal(graph)
       q(
         `INSERT INTO publication.local_publication_host VALUES(true,${literal(host)});`,
       );
+      q(
+        readFileSync(
+          new URL(
+            "../../../../../../db/ddl/planes/studio/publication/40_native_worker_entity_read.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ).split("GRANT SELECT")[0]!,
+      );
       const admit = `SELECT publication.admit_local_publication_request(${literal(request)});`;
       expect(
         q(
           `BEGIN; ${context("athyper_control_api", developer)} ${admit} ${admit} COMMIT;`,
         ),
       ).toContain(request.hash);
+      expect(
+        q(`BEGIN; ${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true);
+        SELECT publication.native_worker_entity_visible('${entity}'),publication.native_worker_entity_visible('${owner}'); ROLLBACK;`),
+      ).toContain("t|f");
+
       expect(
         q("SELECT count(*) FROM publication.local_publication_request;").trim(),
       ).toBe("1");

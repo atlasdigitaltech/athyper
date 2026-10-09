@@ -190,6 +190,12 @@ export function registerPublicationWorkloadRoutes(
             "The enrolled policy does not authorize this workload",
           );
         const policy = parsePublicationPolicyProposal(enrollment.policy);
+        if (policy.schema === "athyper.local-publication-policy/1")
+          throw new HttpError(
+            422,
+            "LOCAL_PUBLICATION_EXACT_REQUEST_REQUIRED",
+            "Standing authority requires a developer-initiated exact execution request",
+          );
         if (policy.schema === "athyper.dev-native-compilation-recovery/1") {
           res.json(
             await executeNativeCompilationRecovery(
