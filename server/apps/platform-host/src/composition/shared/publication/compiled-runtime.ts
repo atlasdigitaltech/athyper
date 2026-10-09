@@ -609,8 +609,8 @@ export function createCompiledRuntimePublication(options: {
         source.revisionId !== input.sourceRevisionId ||
         source.sourceContractHash !== input.sourceContractHash ||
         source.sourceDescriptorHash !== input.sourceDescriptorHash ||
-        JSON.stringify(source.expectedPredecessor ?? null) !==
-          JSON.stringify(input.expectedPredecessor ?? null) ||
+        sha256(source.expectedPredecessor ?? null) !==
+          sha256(input.expectedPredecessor ?? null) ||
         source.coordinationHash !== input.coordinationHash
       )
         throw Error("COMPILED_PUBLICATION_SOURCE_PIN_MISMATCH");

@@ -307,7 +307,15 @@ it.each([
     };
     const query = vi.fn(async (text: string) => ({
       rows: text.includes("local_publication_execution_context")
-        ? [{ value: { request } }]
+        ? [
+            {
+              value: {
+                request: JSON.parse(
+                  Buffer.from(canonicalBytes(request)).toString("utf8"),
+                ),
+              },
+            },
+          ]
         : text.includes("approvalBasis")
           ? [{ local }]
           : text.includes("information_schema.tables")
