@@ -1,6 +1,6 @@
 # Entity list Compare — blueprint
 
-**Status:** approved, revision 3 (10 October 2026).
+**Status:** approved, revision 3 (10 October 2026). **Revision 4 (10 October 2026) proposes the C4 design (section 5.8) for audit; it is not approved.**
 
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
 - **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
@@ -300,7 +300,62 @@ collections?: readonly {
 
     Relative to a baseline, it gives "Same as baseline" when both are absent, "Not in baseline" when only the baseline is absent, and "Differs from baseline" when only this column is absent; otherwise it calls `comparisonRelativeToBaseline` unchanged. `comparisonRowOutcome` never sees `absent`.
   - Counts read "6 of 8 lines differ", next to the field summary.
-- **Server contract.** The list response carries no child collections. C4 needs either one record-scoped list request per compared record (at most four, each under the section's locked scope) or a new bounded collection read. Choosing between them is part of C4's own design.
+- **Server contract.** The list response carries no child collections. C4 needs either one record-scoped list request per compared record (at most four, each under the section's locked scope) or a new bounded collection read. Choosing between them is part of C4's own design (section 5.8).
+
+### 5.8 C4 design (revision 4, proposed for audit; not approved)
+
+The project owner approved the C4 phase on 10 October 2026: "also c3 and c4 approved". Section 14 also requires C4's own design and approval before its build, and section 5.7 left the server read open. This section is that design. Its choices are decisions 18–22 in section 15, proposed and not approved. Nothing in this section is built.
+
+**Facts it relies on** (verified in the code on 10 October 2026):
+- Record sections already read related lines through the existing list operation, with a parent scope coordinate (`parentEntityCode`, `parentRecordId`, `relationshipKey`, `parentDescriptorHash`; `EntityListScopeCoordinateV1`). The server resolves and authorizes that scope on every request (`resolveCollectionScope`); the browser builds it with `bindEntityRelationship`.
+- Relationships are published on the parent's record presentation (`entityRelationships`: `key`, `targetEntity`, `cardinality`, field mappings, `readOperation`).
+- The list operation returns at most `MAX_LIST_PAGE_SIZE` = 100 rows per request.
+
+**1. Declaration** (amends the 5.7 shape: `relation` becomes `relationship`):
+
+```ts
+collections?: readonly {          // 0–2 per comparison
+  key: string;
+  label: string;
+  relationship: string;           // a published entityRelationships key of this Entity, cardinality "many"
+  matchKey: readonly string[];    // 1–2 fields of the target (line) Entity
+  fields: readonly string[];      // 1–12 line fields to compare, in order
+}[];
+```
+
+- **Publication checks:**
+  - an unknown relationship, or one that is not `many`, is `COMPARE_COLLECTION_RELATIONSHIP_INVALID`;
+  - a field listed both as match key and as compared field is `COMPARE_FIELD_DUPLICATE`;
+  - more than 2 collections or 12 fields is `COMPARE_FIELDS_ABOVE_CAP`.
+
+  That match-key and line fields exist on the target Entity is checked by the authoring compiler, which sees both Entities (after the metadata cleanup). The parent's publication cannot see the target's fields, and the runtime fails closed (point 3).
+- **Uniqueness (`COMPARE_MATCH_KEY_NOT_UNIQUE`) is a DDL fact.** A finding function, `compareMatchKeyFinding({ matchKeyColumns, parentKeyColumns, uniqueKeys })`, is built and tested now and wired into the onboarding DDL rehearsal after the cleanup, exactly as the Tree blueprint did with `hierarchyParentKeyFinding`. Until it is wired, the runtime check in point 5 is the guard.
+
+**2. Server read (decision 18): one record-scoped list request per compared record.**
+- For each available compared record, at most four, the browser sends the existing list operation on the target Entity. It carries the parent scope coordinate (the same as a record section uses), fields set to the match key plus the line fields, `limit` 100 and `countMode` none.
+- No new endpoint and no new provider path: parent-scope authorization, tenant isolation, field readability and masking are the existing ones.
+- **Rejected: a new bounded collection read.** It would be a second, parallel path for parent-scoped reads with its own authorization, which AGENTS.md forbids.
+- **Request budget:** the headers request (C2), the target Entity's list descriptor (once), and one line request per available record, in parallel, all aborted when the comparison changes.
+
+**3. Per-viewer line fields.**
+- The parent's `surface.compare` projection carries, per collection: `key`, `label`, `targetEntity` and `relationshipKey`. It does not carry the line fields, which belong to the target Entity.
+- The browser loads the target Entity's list descriptor under the first record's scope coordinate. A declared line field that this viewer cannot read is left out, with the panel's single restricted statement.
+- If the match key is unreadable or masked, the collection is unavailable: "Line items aren't available with your access", and no line rows. A line field that is not listed for the viewer is left out, never guessed.
+
+**4. Bound (decision 19): at most 100 lines per record, fail closed.**
+- If any compared record has more lines than one page (`hasNext`), the collection shows "Too many lines to compare: {record} has more than 100" and no line rows.
+- A partial read would label lines beyond the page as "Not in this record", which would be false.
+
+**5. Alignment.**
+- Lines are aligned by the stored values of the match key: canonical JSON of the tuple, never a label or a position (section 5.7).
+- **Duplicate key, fail closed (decision 20):** if one record holds two lines with the same match-key value, the collection shows "Lines can't be aligned: {match key} repeats in {record}" and no line rows.
+- **Line order (decision 21):** by the match key's display label (reference labels through the authorized label service, never an identifier), with numeric collation, for example "4.1" before "12.1". The label is taken from the first record that has the line.
+
+**6. Outcomes.** `comparisonLineOutcome` (decision 16) handles `absent`, then calls `comparisonRowOutcome` unchanged. Baseline marks follow section 5.7. Counts read "6 of 8 lines differ". "Differences only" hides lines whose every field is the same.
+
+**7. Best value on lines (decision 22): deferred.**
+- The line Entity's own `field.compare.better` (C3) is not in the target Entity's list descriptor, and the parent cannot publish it.
+- Offering it needs either an optional `compare` on the list field descriptor or a `compare` declaration on the line Entity's list surface. Both widen a contract, so C4 is built without best marks on lines, and this is a separate decision.
 
 ## 6. Validation, availability and finding codes
 
@@ -653,7 +708,24 @@ Styles stay on the breakpoint scale and use design-system tokens.
     - the provider test proves the exclusions and the reference mark (17 of 17).
   - `598591107` updates the pinned rendering test deliberately, in its own commit, with the new output reviewed. It asserts that no record identifier appears in the markup and that the difference wording never says "changed", and it passes in UTC and Asia/Kuala_Lumpur.
   - **One deviation from section 9.6, recorded here:** the headers do not say "captured by". The snapshot contract's `capturedBy` is the capturing principal's identifier (`snapshot.*.captured_by` is a UUID), and no published name is available, so the approved rule ("never a principal identifier") leaves it out. Showing a name needs an actor-label contract on the snapshot read, which is a separate decision.
-- **Identifier exposures found next to C1b, not changed (outside its approved scope; need a decision):**
+- **Identifier follow-up (`82296f274`), on the owner's instruction "review audit comments" after audit 5 approved its scope technically:**
+  - One rule, `technicalFieldKeys` (server metadata contract), now decides which fields are technical identities. It is used by Compare publication validation, the per-viewer projection and the activity provider (audit 5's consolidation).
+  - The single-snapshot view applies the same exclusions, because they are applied in the provider's `load`, and shows captured references as "Linked record".
+  - The event list (line and table), the versions list and the saved-snapshot list no longer render the acting or capturing principal's identifier. A recorded principal reads "Name not available"; no principal reads "System".
+  - Tests: provider 17 of 17 (single snapshot and comparison), `activity-actor.test.tsx` 2 of 2 (no identifier in the event list or its table), metadata 225, records 634.
+  - **Deliberate gap, recorded:** "Name not available" stands in for the acting or capturing principal's display name on four surfaces. Resolving that name once on the server, as an authorized label lookup like the reference label service with the raw identity never leaving the server, is the next decision (audit 5). Until it is decided, the gap is intended, not silent.
+- **C3, built (`7ca939381`), on synthetic fixtures.** Owner approval: "also c3 and c4 approved".
+  - `field.compare { better, summaryLabel? }` is parsed at publication (`COMPARE_BETTER_INELIGIBLE`, `COMPARE_SUMMARY_WITHOUT_BETTER`) and carried by the projection and the browser contract.
+  - `comparisonBestColumns` in the shared core:
+    - ranks only comparable rows and leaves unavailable columns out;
+    - never ranks empty cells, and marks every tie;
+    - ranks nothing when all values are equal (a clarification of section 8.5, matching the summary-chip rule in 5.6);
+    - ranks no money with more than one currency (row note "Mixed currencies").
+  - The panel marks "Best" in text and shows up to six summary chips, with ties named.
+  - Tests: core 8, panel and model 10, contract 4, metadata 227, records 635; foundation 80 files pass and the same 7 pre-existing failures.
+  - Authoring storage waits for the cleanup.
+- **Not verified in a real browser:** C2, C1b, C3 and the identifier follow-up are all synthetic-only so far. Their evidence is the test suites above.
+- **Identifier exposures found next to C1b (since fixed by the follow-up above):**
   - The saved-snapshot list in the activity workspace prints "Captured by: {capturedBy}", which is the principal UUID (`activity-workspace.tsx`, the capture-actor line).
   - The single-snapshot view (one snapshot, not a comparison) still builds its fields from every readable field (`activity-provider.ts` `load`), so the storage identity and UUID-typed fields can appear there.
   - The same exclusions and the same "no captured-by identifier" rule would close both. Found by reading the code; not reproduced on a live page.
@@ -682,6 +754,14 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 15. **Approved 10 October 2026.** **C3 summary chips** (section 5.6): authored `summaryLabel` on fields with `better`; ties shown; at most six; storage `compare_summary_label_id`. Part of C3, which still needs its own approval.
 16. **Approved 10 October 2026, with audit 3 finding 1 resolved.** **C4 line states** (sections 5.7 and 8.1): `absent` ("Not in this record") as a line-level state; "Not in baseline", match-key line labels and line counts; C4 wraps `comparisonRowOutcome` unchanged through `comparisonLineOutcome`. Part of C4, which still needs its own design and approval.
 17. **Approved 10 October 2026.** **C1b scope** (section 9.6): shared table view, fixed earlier-snapshot baseline with relative wording, published names in headers, and no identifiers (storage identity, version and UUID-typed fields left out on the server; captured references shown as "Linked record"). C1b still needs its own approval to build; this decision fixes its scope.
+
+**Revision 4, proposed for audit (10 October 2026); none approved.** The C4 design (section 5.8). The owner approved the C4 phase ("also c3 and c4 approved"); these choices remain to be approved before C4 is built.
+
+18. **Server read:** one record-scoped list request per compared record, on the existing list operation with the parent scope coordinate. No new collection read.
+19. **Bound:** at most 100 lines per record. More than that fails closed, with no partial alignment.
+20. **Duplicate match key:** fails closed at runtime. The DDL finding `compareMatchKeyFinding` is built now and wired into the onboarding rehearsal after the cleanup.
+21. **Line order:** by the match key's display label, with numeric collation.
+22. **Best value on lines:** deferred, because it needs a contract widening of its own.
 
 ## 16. Rejected and out-of-scope options
 
