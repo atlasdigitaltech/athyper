@@ -114,6 +114,8 @@ Use a short working classification: `keep-shared`, `keep-native/recovery`, `gene
 
 Root handoffs/rebuild notes are historical or redundant only after content review; preserve unique requirements and unrelated work. Keep this blueprint as design authority and the existing runbook as the sole current execution status. Do not create a competing cleanup plan.
 
+The local application rebuild uses a commit-pinned `LocalApplicationImageSet` for runtime, three web apps and IAM. It is not a promotable full-infrastructure `ImageSet`; promotion validation remains separate. Local rebuilds replace application images while preserving IAM data, business data and current release heads.
+
 Provide two maintained operations (names/commands to be selected during implementation):
 
 - **Rebuild/start:** nondestructive, repeatable build/image selection, schema installation and startup. No implicit reset, duplicate releases or reissued approvals.

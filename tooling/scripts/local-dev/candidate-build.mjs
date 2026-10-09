@@ -8,6 +8,15 @@ const run = (args, options = {}) =>
 
 /** Local loopback registry gives production-Dockerfile builds real repository digests. */
 export function buildCandidate(checkout, output) {
+  return buildImages(checkout, output, false);
+}
+
+/** Local application rebuild is not a complete promotable infrastructure release. */
+export function buildLocalApplications(checkout, output) {
+  return buildImages(checkout, output, true);
+}
+
+function buildImages(checkout, output, localApplications) {
   output = resolve(output);
   if (existsSync(output))
     throw new Error("Candidate ImageSet output already exists");
@@ -83,11 +92,14 @@ export function buildCandidate(checkout, output) {
   });
   const document = {
     apiVersion: "athyper.io/v1alpha1",
-    kind: "ImageSet",
-    metadata: { id: tag, channel: "candidate" },
+    kind: localApplications ? "LocalApplicationImageSet" : "ImageSet",
+    metadata: {
+      id: tag,
+      channel: localApplications ? "development" : "candidate",
+    },
     spec: { sourceRevision, images },
   };
-  promoteImageSet(document);
+  if (!localApplications) promoteImageSet(document);
   writeFileSync(output, JSON.stringify(document, null, 2) + "\n", {
     mode: 0o600,
     flag: "wx",
