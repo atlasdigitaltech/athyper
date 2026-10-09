@@ -3309,6 +3309,38 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_context_reader.sql",
+      "path": "migrations/20261010_local_publication_context_reader.sql",
+      "sha256": "223187f78ae8be2ff1c9891dab1b562948c58fe92b0095c708860917a3bdc835",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt"
+      ],
+      "reason": "Exact local authority context read for the installed runtime compilation/activation source adapter.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/61_local_publication_context_reader.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_identity_reader.sql",
+      "path": "migrations/20261010_local_publication_identity_reader.sql",
+      "sha256": "a4aeddfd4592c1209016ca8abff041b95d905ede46962a9a21a25dda07abcb15",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt"
+      ],
+      "reason": "Bounded tenant-scoped actor eligibility for the installed runtime source adapter.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/62_local_publication_identity_reader.sql"
+      ]
     }
   ]
 }

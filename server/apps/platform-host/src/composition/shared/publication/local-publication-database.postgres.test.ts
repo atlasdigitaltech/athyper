@@ -724,6 +724,39 @@ GRANT SELECT ON publication.artifact_compilation TO athyper_definer_product_publ
           `SELECT request_json=${literal(request)} FROM publication.local_publication_request WHERE request_hash='${request.hash}';`,
         ).trim(),
       ).toBe("t");
+      q(ddl("publication/61_local_publication_context_reader.sql"));
+      expect(
+        q(
+          `BEGIN; ${context("athyper_runtime", publisher)} SELECT publication.local_publication_execution_context('${releaseId}')#>>'{request,hash}'; ROLLBACK;`,
+        ),
+      ).toContain(recovery.hash);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_runtime", developer)} SELECT publication.local_publication_execution_context('${releaseId}'); ROLLBACK;`,
+        ),
+      ).toThrow();
+      expect(() =>
+        q(
+          `BEGIN; UPDATE control.policy_definition SET status='revoked'; ${context("athyper_runtime", publisher)} SELECT publication.local_publication_execution_context('${releaseId}'); ROLLBACK;`,
+        ),
+      ).toThrow();
+      q(ddl("publication/62_local_publication_identity_reader.sql"));
+      expect(
+        q(
+          `BEGIN; ${context("athyper_runtime", publisher)} SELECT publication.local_publication_identity_status(ARRAY['${developer}']::uuid[],'${author}','${publisher}'); ROLLBACK;`,
+        )
+          .trim()
+          .split("\n")
+          .at(-1),
+      ).toBe("t");
+      expect(
+        q(
+          `BEGIN; ${context("athyper_runtime", publisher)} SELECT publication.local_publication_identity_status(ARRAY['${developer}']::uuid[],'${publisher}','${publisher}'); ROLLBACK;`,
+        )
+          .trim()
+          .split("\n")
+          .at(-1),
+      ).toBe("f");
     } finally {
       try {
         docker("rm", "-f", name);
