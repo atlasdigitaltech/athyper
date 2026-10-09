@@ -42,7 +42,7 @@ const job: JobEnvelope<
   enqueuedAt: new Date().toISOString(),
   execution: {
     planeKey: "studio",
-    scope: "plane",
+    scope: "tenant",
     tenantId: "tenant",
     principalId: "publisher",
   },

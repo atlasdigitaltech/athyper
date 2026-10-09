@@ -28,7 +28,7 @@ export function createLocalPublicationDispatchHandler(options: {
         job.payloadSchema?.name !== DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB ||
         job.payloadSchema.version !== 1 ||
         job.execution?.planeKey !== "studio" ||
-        job.execution.scope !== "plane" ||
+        job.execution.scope !== "tenant" ||
         job.execution.tenantId !== c.tenantId ||
         job.execution.principalId !== c.publisher.principalId ||
         !job.data ||

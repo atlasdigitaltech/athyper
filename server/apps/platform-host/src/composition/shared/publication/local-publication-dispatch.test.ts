@@ -62,7 +62,7 @@ it("durable admission survives queue failure and rediscovery uses the same enque
     enqueuedAt: new Date().toISOString(),
     execution: {
       planeKey: "studio" as const,
-      scope: "plane" as const,
+      scope: "tenant" as const,
       tenantId: "tenant",
       principalId: "publisher",
     },

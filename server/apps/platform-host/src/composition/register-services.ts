@@ -6394,7 +6394,7 @@ function registerPublication(
       owner: "@athyper/server-platform-host",
       queue: PUBLICATION_AUTHORITY_QUEUE,
       name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
-      scope: "plane",
+      scope: "tenant",
       payloadSchema: {
         name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
         version: 1,
@@ -6419,7 +6419,7 @@ function registerPublication(
           },
           execution: {
             planeKey: "studio",
-            scope: "plane",
+            scope: "tenant",
             tenantId: coordinatedWorkload.tenantId,
             principalId: coordinatedWorkload.publisher.principalId,
           },
@@ -6533,7 +6533,7 @@ function registerPublication(
         owner: "@athyper/server-platform-host",
         queue: PUBLICATION_AUTHORITY_QUEUE,
         name: PREPARE_LOCAL_PUBLICATION_JOB,
-        scope: "plane",
+        scope: "tenant",
         payloadSchema: { name: PREPARE_LOCAL_PUBLICATION_JOB, version: 1 },
         timeoutMs: 120_000,
         maxAttempts: 5,

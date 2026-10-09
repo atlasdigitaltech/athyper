@@ -45,7 +45,7 @@ export async function enqueueLocalPublicationPreparation(options: {
       enqueueKey: `${PREPARE_LOCAL_PUBLICATION_JOB}:${hash}`,
       execution: {
         planeKey: "studio",
-        scope: "plane",
+        scope: "tenant",
         tenantId: options.configuration.tenantId,
         principalId: options.configuration.publisher.principalId,
       },
@@ -80,7 +80,7 @@ export function createLocalPublicationPreparationHandler(options: {
         job.payloadSchema?.name !== payloadSchema.name ||
         job.payloadSchema.version !== payloadSchema.version ||
         execution?.planeKey !== "studio" ||
-        execution.scope !== "plane" ||
+        execution.scope !== "tenant" ||
         execution.tenantId !== options.configuration.tenantId ||
         execution.principalId !== options.configuration.publisher.principalId
       )
