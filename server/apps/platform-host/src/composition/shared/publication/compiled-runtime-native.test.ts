@@ -404,6 +404,16 @@ it.each([
         changeSetId,
       );
       expect(qualify).toHaveBeenCalledOnce();
+      expect(qualify.mock.calls[0]![2]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ targetPlane: plane }),
+        ]),
+      );
+      expect(
+        (qualify.mock.calls[0]![2] as { targetPlane: string }[]).every(
+          (candidate) => candidate.targetPlane === plane,
+        ),
+      ).toBe(true);
       await expect(
         adapter.lower({
           ...source,
@@ -430,6 +440,16 @@ it.each([
       nativeSource.mockRejectedValueOnce(Error("authority revoked"));
       await expect(adapter.lower(source)).rejects.toThrow("authority revoked");
       expect(qualify).toHaveBeenCalledOnce();
+      expect(qualify.mock.calls[0]![2]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ targetPlane: plane }),
+        ]),
+      );
+      expect(
+        (qualify.mock.calls[0]![2] as { targetPlane: string }[]).every(
+          (candidate) => candidate.targetPlane === plane,
+        ),
+      ).toBe(true);
       const canonical = { canonicalBytes, sha256: hashBytes };
       const document = await compileRuntimePublication(
         source,

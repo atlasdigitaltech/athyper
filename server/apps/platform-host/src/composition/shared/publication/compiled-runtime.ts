@@ -519,7 +519,9 @@ export function createCompiledRuntimePublication(options: {
       await qualifyNativeReferencePublicationTarget(
         target,
         options.targets(),
-        saved.humanTargets,
+        saved.humanTargets.filter(
+          (candidate) => candidate.targetPlane === saved.plane,
+        ),
       );
       const profile = (
         target.artifact.descriptor.runtimeProfiles as {
