@@ -106,11 +106,12 @@ export function parseDateRangeFields(
   );
 }
 
-/** True for a layout anchor value (`YYYY-MM-DD`). */
+/** True for a layout anchor value (`YYYY-MM-DD`) naming a real calendar day.
+ * `Date` rolls an impossible day such as 30 February into March, so the
+ * parsed day must read back unchanged. */
 export function isListDateAnchor(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
-  );
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
+  const time = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === value;
 }

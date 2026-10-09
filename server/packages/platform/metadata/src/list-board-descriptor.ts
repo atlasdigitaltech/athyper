@@ -1,6 +1,7 @@
 import {
   LIST_BOARD_MAX_LANE_FIELDS,
   LIST_BOARD_MAX_LANES,
+  LIST_LAYOUT_TONES,
   parseEntityLocalizedText,
   type ListBoardTone,
 } from "@athyper/contract-platform-entity-list";
@@ -10,38 +11,19 @@ import type {
   EntityListCardContentDescriptor,
   EntityListViewMode,
 } from "@athyper/server-contract-metadata";
+import { fail, flag, list, only as layoutOnly, record, text } from "./list-date-range-descriptor.js";
 
 /** Published choices per lane field. Matches the Studio choice bound. */
 export const LIST_BOARD_MAX_CHOICES = 50;
 
-const TONES: readonly ListBoardTone[] = ["neutral", "success", "warning", "danger"];
 const LANE_KEY = /^[a-z][a-z0-9_]{0,62}$/;
 const RENDERER_KEY = /^[a-z][a-z0-9_.-]{0,126}$/;
 
-function fail(path: string, reason: string): never {
-  throw new Error(`${path} ${reason}`);
-}
-function record(value: unknown, path: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be an object");
-  return value as Record<string, unknown>;
-}
-function list(value: unknown, path: string): readonly unknown[] {
-  if (!Array.isArray(value)) fail(path, "must be an array");
-  return value;
-}
 function only(value: Record<string, unknown>, keys: readonly string[], path: string): void {
-  for (const key of Object.keys(value)) if (!keys.includes(key)) fail(`${path}.${key}`, "is not a published board property");
-}
-function text(value: unknown, path: string): string {
-  if (typeof value !== "string" || !value.trim() || value.length > 200) fail(path, "must be readable text");
-  return value;
-}
-function flag(value: unknown, path: string): boolean {
-  if (typeof value !== "boolean") fail(path, "must be a boolean");
-  return value;
+  layoutOnly(value, keys, path, "board");
 }
 function tone(value: unknown, path: string): ListBoardTone {
-  if (typeof value !== "string" || !(TONES as readonly string[]).includes(value)) fail(path, "must be a published tone");
+  if (typeof value !== "string" || !(LIST_LAYOUT_TONES as readonly string[]).includes(value)) fail(path, "must be a published tone");
   return value as ListBoardTone;
 }
 function localized(value: unknown, path: string) {

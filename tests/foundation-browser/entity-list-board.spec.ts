@@ -128,6 +128,10 @@ test("pages a lane with Load more and keeps collapsed lanes in the link", async 
   await expect(open.getByRole("button", { name: "Expand Open" })).toHaveAttribute("aria-expanded", "false");
   await expect(open.locator(".a-entity-list__card")).toHaveCount(0);
   await expect.poll(() => new URL(page.url()).searchParams.get("lanes.collapsed")).toBe("open");
+  // Expanding again shows the loaded cards once: no page is fetched twice.
+  await open.getByRole("button", { name: "Expand Open" }).click();
+  await expect(open.locator(".a-entity-list__card")).toHaveCount(12);
+  await expect(open.getByRole("button", { name: /^Load more/ })).toHaveCount(0);
 });
 
 test("a second entity offers its declared lane fields and switches lanes by field", async ({ page }) => {

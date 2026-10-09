@@ -1,6 +1,17 @@
 "use client";
-import React, { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { entityListOperation, entityListQuery, type HttpClient } from "@athyper/platform-api-client";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  entityListOperation,
+  entityListQuery,
+  type HttpClient,
+} from "@athyper/platform-api-client";
 import type {
   EntityListDescriptorV1,
   EntityListResultV1,
@@ -12,9 +23,18 @@ import type {
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { useDateRangePages } from "../date-range/date-range-data";
+import { useListPages } from "../list-pages";
 import { formatFieldValue } from "../field-format";
-import { GROUP_HEADING_LIMIT, groupChoices, groupHeadings, groupLevel, headingFilters, type GroupHeading, type GroupLevel } from "./grouped-tree-model";
+import {
+  GROUP_HEADING_LIMIT,
+  groupChoices,
+  groupHeadings,
+  groupLevel,
+  headingFilters,
+  limitHeadings,
+  type GroupHeading,
+  type GroupLevel,
+} from "./grouped-tree-model";
 import { TreeIndent, TreeToggle } from "./tree-parts";
 
 type EntityIntl = ReturnType<typeof useEntityI18n>;
@@ -50,8 +70,14 @@ interface TreeContext {
   readonly columnCount: number;
   readonly intl: EntityIntl;
   readonly command?: TreeCommand;
-  readonly renderRecords: (rows: readonly EntityListRowV1[], level: number) => ReactNode;
-  readonly onGroupRows?: (key: string, rows: readonly EntityListRowV1[]) => void;
+  readonly renderRecords: (
+    rows: readonly EntityListRowV1[],
+    level: number,
+  ) => ReactNode;
+  readonly onGroupRows?: (
+    key: string,
+    rows: readonly EntityListRowV1[],
+  ) => void;
 }
 const Context = createContext<TreeContext | undefined>(undefined);
 
@@ -63,8 +89,25 @@ function useGroupBuckets(input: {
   readonly filters: readonly ListFilterV1[];
 }) {
   const { ctx, group, filters } = input;
-  const [state, setState] = useState<{ readonly buckets?: NonNullable<EntityListResultV1["groups"]>; readonly truncated?: boolean; readonly failed?: boolean }>({});
-  const key = group ? JSON.stringify([ctx.descriptor.revision.descriptorHash, group, filters, ctx.source.query.query ?? null, ctx.source.query.standardViewKey ?? null, ctx.source.query.filters, ctx.source.refreshKey]) : undefined;
+  const [state, setState] = useState<{
+    readonly buckets?: NonNullable<EntityListResultV1["groups"]>;
+    readonly truncated?: boolean;
+    readonly failed?: boolean;
+  }>({});
+  const key = group
+    ? JSON.stringify([
+        ctx.descriptor.revision.descriptorHash,
+        ctx.descriptor.scope.fingerprint,
+        group,
+        filters,
+        ctx.source.query.query ?? null,
+        ctx.source.query.standardViewKey ?? null,
+        ctx.source.query.filters,
+        ctx.source.aggregates ?? null,
+        ctx.source.timeZone ?? null,
+        ctx.source.refreshKey,
+      ])
+    : undefined;
   const latest = useRef(input);
   latest.current = input;
   useEffect(() => {
@@ -82,8 +125,12 @@ function useGroupBuckets(input: {
             group,
             groupsOnly: true,
             cursor: undefined,
-            ...(ctx.source.aggregates?.length ? { aggregates: ctx.source.aggregates } : {}),
-            ...(groupLevel(group).unit && ctx.source.timeZone ? { timeZone: ctx.source.timeZone } : {}),
+            ...(ctx.source.aggregates?.length
+              ? { aggregates: ctx.source.aggregates }
+              : {}),
+            ...(groupLevel(group).unit && ctx.source.timeZone
+              ? { timeZone: ctx.source.timeZone }
+              : {}),
           },
           ctx.descriptor,
           ctx.source.scope,
@@ -92,8 +139,17 @@ function useGroupBuckets(input: {
       })
       .then((page) => {
         if (controller.signal.aborted) return;
-        if (page.descriptorHash !== ctx.descriptor.revision.descriptorHash) throw new TypeError("Group response authority no longer matches its descriptor");
-        setState({ buckets: page.groups ?? [], ...(page.groupsTruncated ? { truncated: true } : {}) });
+        if (
+          page.descriptorHash !== ctx.descriptor.revision.descriptorHash ||
+          page.scopeFingerprint !== ctx.descriptor.scope.fingerprint
+        )
+          throw new TypeError(
+            "Group response authority no longer matches its descriptor",
+          );
+        setState({
+          buckets: page.groups ?? [],
+          ...(page.groupsTruncated ? { truncated: true } : {}),
+        });
       })
       .catch(() => {
         if (!controller.signal.aborted) setState({ failed: true });
@@ -104,15 +160,27 @@ function useGroupBuckets(input: {
   return state;
 }
 
-function headingLabel(heading: GroupHeading, intl: EntityIntl, unit?: GroupLevel["unit"]): string {
+function headingLabel(
+  heading: GroupHeading,
+  intl: EntityIntl,
+  unit?: GroupLevel["unit"],
+): string {
   if (heading.kind === "none") return intl.message("list.board.noValue");
   if (heading.kind === "unmapped") return intl.message("list.gantt.unmapped");
   if (unit) {
     // A date bucket (A3): "October 2026" or "Q4 2026".
     const bucket = String(heading.value ?? "");
     const quarter = /^(\d{4})-Q([1-4])$/.exec(bucket);
-    if (quarter) return intl.message("list.gantt.quarterTitle", { quarter: Number(quarter[2]), year: quarter[1]! });
-    return intl.date(`${bucket}-01T00:00:00Z`, { month: "long", year: "numeric", timeZone: "UTC" });
+    if (quarter)
+      return intl.message("list.gantt.quarterTitle", {
+        quarter: Number(quarter[2]),
+        year: quarter[1]!,
+      });
+    return intl.date(`${bucket}-01T00:00:00Z`, {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
   }
   return heading.label ?? "";
 }
@@ -121,7 +189,11 @@ function headingLabel(heading: GroupHeading, intl: EntityIntl, unit?: GroupLevel
  * formatted like the field and without a floating-point round trip: decimal
  * text stays text. A money total shows its currency, or says the group spans
  * currencies instead of showing a meaningless sum. */
-function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDescriptorV1[], intl: EntityIntl): ReactNode {
+function headingAggregates(
+  heading: GroupHeading,
+  fields: readonly ListFieldDescriptorV1[],
+  intl: EntityIntl,
+): ReactNode {
   const entries = Object.entries(heading.aggregates ?? {});
   if (!entries.length) return null;
   return entries.map(([key, value]) => {
@@ -133,7 +205,11 @@ function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDesc
     const currency = heading.aggregateCurrencies?.[key];
     return (
       <span key={key} className="a-entity-tree__aggregate">
-        <span className="a-entity-tree__aggregate-label">{intl.message(`list.group.aggregate.${aggregate}`, { field: field.label })}</span>{" "}
+        <span className="a-entity-tree__aggregate-label">
+          {intl.message(`list.group.aggregate.${aggregate}`, {
+            field: field.label,
+          })}
+        </span>{" "}
         <span className="a-entity-tree__aggregate-value">
           {mixed
             ? intl.message("list.group.mixedCurrencies")
@@ -147,13 +223,28 @@ function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDesc
 }
 
 function choicesFor(field: ListFieldDescriptorV1, intl: EntityIntl) {
-  return groupChoices(field, { yes: intl.message("entity.value.yes"), no: intl.message("entity.value.no") });
+  return groupChoices(field, {
+    yes: intl.message("entity.value.yes"),
+    no: intl.message("entity.value.no"),
+  });
 }
 
 /** Records grouped under headings for up to three grouping fields, each group
  * loading its own content (Tree blueprint section 7.1). Table renders rows
  * inside the list's table body; Cards renders nested sections. */
-export function GroupedTree({ descriptor, groups, levelOne, levelOneTruncated, source, variant, columnCount, intl, command, renderRecords, onGroupRows }: {
+export function GroupedTree({
+  descriptor,
+  groups,
+  levelOne,
+  levelOneTruncated,
+  source,
+  variant,
+  columnCount,
+  intl,
+  command,
+  renderRecords,
+  onGroupRows,
+}: {
   readonly descriptor: EntityListDescriptorV1;
   readonly groups: readonly string[];
   /** Level-1 buckets from the list's own groups-only page, under exact counts. */
@@ -165,28 +256,81 @@ export function GroupedTree({ descriptor, groups, levelOne, levelOneTruncated, s
   readonly columnCount: number;
   readonly intl: EntityIntl;
   readonly command?: TreeCommand;
-  readonly renderRecords: (rows: readonly EntityListRowV1[], level: number) => ReactNode;
+  readonly renderRecords: (
+    rows: readonly EntityListRowV1[],
+    level: number,
+  ) => ReactNode;
   /** Each last-level group's loaded records (empty when it unmounts), so
    * selection can cover every loaded record. Must be stable. */
-  readonly onGroupRows?: (key: string, rows: readonly EntityListRowV1[]) => void;
+  readonly onGroupRows?: (
+    key: string,
+    rows: readonly EntityListRowV1[],
+  ) => void;
 }) {
-  const levels = groups.map(groupLevel).filter((level) => descriptor.fields.some((field) => field.key === level.field));
-  const fields = levels.map((level) => descriptor.fields.find((field) => field.key === level.field)!);
+  const levels = groups
+    .map(groupLevel)
+    .filter((level) =>
+      descriptor.fields.some((field) => field.key === level.field),
+    );
+  const fields = levels.map((level) =>
+    descriptor.fields.find((field) => field.key === level.field)!,
+  );
   if (!fields.length) return null;
-  const ctx: TreeContext = { descriptor, fields, levels, source, variant, columnCount, intl, ...(command ? { command } : {}), renderRecords, ...(onGroupRows ? { onGroupRows } : {}) };
-  const all = groupHeadings(fields[0]!, choicesFor(fields[0]!, intl), source.exact ? (levelOne ?? []) : undefined, levels[0]!.unit);
-  const headings = all.slice(0, GROUP_HEADING_LIMIT);
+  const ctx: TreeContext = {
+    descriptor,
+    fields,
+    levels,
+    source,
+    variant,
+    columnCount,
+    intl,
+    ...(command ? { command } : {}),
+    renderRecords,
+    ...(onGroupRows ? { onGroupRows } : {}),
+  };
+  const all = groupHeadings(
+    fields[0]!,
+    choicesFor(fields[0]!, intl),
+    source.exact ? (levelOne ?? []) : undefined,
+    levels[0]!.unit,
+  );
+  const { headings, more } = limitHeadings(all);
   return (
     <Context.Provider value={ctx}>
       {headings.map((heading, index) => (
-        <GroupNode key={heading.key} heading={heading} fieldIndex={0} level={1} path="" filters={[]} defaultExpanded={index === 0} first={index === 0} />
+        <GroupNode
+          key={heading.key}
+          heading={heading}
+          fieldIndex={0}
+          level={1}
+          path=""
+          filters={[]}
+          defaultExpanded={index === 0}
+          first={index === 0}
+        />
       ))}
-      {levelOneTruncated || all.length > headings.length ? <Message level={1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
+      {levelOneTruncated || more ? (
+        <Message
+          level={1}
+          text={intl.message("list.group.moreGroups", {
+            count: GROUP_HEADING_LIMIT,
+          })}
+        />
+      ) : null}
     </Context.Provider>
   );
 }
 
-function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded, first, visible = true }: {
+function GroupNode({
+  heading,
+  fieldIndex,
+  level,
+  path,
+  filters,
+  defaultExpanded,
+  first,
+  visible = true,
+}: {
   readonly heading: GroupHeading;
   readonly fieldIndex: number;
   readonly level: number;
@@ -214,8 +358,9 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     // Commands act on loaded nodes only: expanding never fans out into one
     // request per unloaded group (Tree blueprint section 8).
     if (command.kind === "collapseAll") setExpanded(false);
-    else if (command.kind === "expandAll") { if (loadedOnce.current) setExpanded(true); }
-    else setExpanded(level < command.level && loadedOnce.current);
+    else if (command.kind === "expandAll") {
+      if (loadedOnce.current) setExpanded(true);
+    } else setExpanded(level < command.level && loadedOnce.current);
   }, [ctx.command, level]);
   const filter = headingFilters(field, heading, unit, source.timeZone);
   const own = filter ? [...filters, ...filter] : filters;
@@ -223,14 +368,33 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
   const label = headingLabel(heading, intl, unit);
   const nextField = last ? undefined : ctx.fields[fieldIndex + 1];
   const nextLevel = last ? undefined : ctx.levels[fieldIndex + 1];
-  const nextEntry = nextLevel ? (nextLevel.unit ? `${nextLevel.field}:${nextLevel.unit}` : nextLevel.field) : undefined;
-  const wantsBuckets = loadedOnce.current && heading.kind !== "unmapped" && nextField && source.exact;
-  const buckets = useGroupBuckets({ ctx, group: wantsBuckets ? nextEntry : undefined, filters: own });
-  const wantsRecords = loadedOnce.current && heading.kind !== "unmapped" && last;
-  const records = useDateRangePages({
+  const nextEntry = nextLevel
+    ? nextLevel.unit
+      ? `${nextLevel.field}:${nextLevel.unit}`
+      : nextLevel.field
+    : undefined;
+  const wantsBuckets =
+    loadedOnce.current &&
+    heading.kind !== "unmapped" &&
+    nextField &&
+    source.exact;
+  const buckets = useGroupBuckets({
+    ctx,
+    group: wantsBuckets ? nextEntry : undefined,
+    filters: own,
+  });
+  const wantsRecords =
+    loadedOnce.current && heading.kind !== "unmapped" && last;
+  const records = useListPages({
     client: source.client,
     descriptor: ctx.descriptor,
-    query: wantsRecords ? { ...source.query, filters: [...source.query.filters, ...own], cursor: undefined, pageIndex: undefined } : undefined,
+    query: wantsRecords
+      ? {
+          ...source.query,
+          filters: [...source.query.filters, ...own],
+          cursor: undefined,
+        }
+      : undefined,
     scope: source.scope,
     refreshKey: source.refreshKey,
   });
@@ -240,47 +404,118 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     reportRows(key, records.rows);
     return () => reportRows(key, []);
   }, [reportRows, last, key, records.rows]);
-  const count = source.exact && heading.count !== undefined ? heading.count : undefined;
+  const count =
+    source.exact && heading.count !== undefined ? heading.count : undefined;
   const shown = visible && expanded;
   let children: ReactNode = null;
   if (loadedOnce.current) {
     if (heading.kind === "unmapped") {
       children = (heading.values ?? []).map((value) => (
-        <GroupNode key={JSON.stringify(value)} heading={{ key: JSON.stringify([field.key, "choice", value]), kind: "choice", value, label: formatFieldValue(value, field, intl) }}
-          fieldIndex={fieldIndex} level={level + 1} path={key} filters={filters} defaultExpanded={false} visible={shown} />
+        <GroupNode
+          key={JSON.stringify(value)}
+          heading={{
+            key: JSON.stringify([field.key, "choice", value]),
+            kind: "choice",
+            value,
+            label: formatFieldValue(value, field, intl),
+          }}
+          fieldIndex={fieldIndex}
+          level={level + 1}
+          path={key}
+          filters={filters}
+          defaultExpanded={false}
+          visible={shown}
+        />
       ));
     } else if (nextField) {
       const allSubheadings = source.exact
-        ? buckets.buckets ? groupHeadings(nextField, choicesFor(nextField, intl), buckets.buckets, nextLevel?.unit) : undefined
-        : groupHeadings(nextField, choicesFor(nextField, intl), undefined, nextLevel?.unit);
-      const subheadings = allSubheadings?.slice(0, GROUP_HEADING_LIMIT);
-      children = subheadings?.length
-        ? (
-          <>
-            {subheadings.map((sub) => <GroupNode key={sub.key} heading={sub} fieldIndex={fieldIndex + 1} level={level + 1} path={key} filters={own} defaultExpanded={false} visible={shown} />)}
-            {shown && (buckets.truncated || allSubheadings!.length > subheadings.length) ? <Message level={level + 1} text={intl.message("list.group.moreGroups", { count: GROUP_HEADING_LIMIT })} /> : null}
-          </>
-        )
-        : !shown
-          ? null
-          : buckets.failed
-            ? <Message level={level + 1} text={intl.message("list.tree.failed")} />
-            : !subheadings
-              ? <Message level={level + 1} text={intl.message("list.tree.loading")} />
-              : <Message level={level + 1} text={intl.message("list.tree.noRecords")} />;
+        ? buckets.buckets
+          ? groupHeadings(
+              nextField,
+              choicesFor(nextField, intl),
+              buckets.buckets,
+              nextLevel?.unit,
+            )
+          : undefined
+        : groupHeadings(
+            nextField,
+            choicesFor(nextField, intl),
+            undefined,
+            nextLevel?.unit,
+          );
+      const limited = allSubheadings && limitHeadings(allSubheadings);
+      const subheadings = limited?.headings;
+      children = subheadings?.length ? (
+        <>
+          {subheadings.map((sub) => (
+            <GroupNode
+              key={sub.key}
+              heading={sub}
+              fieldIndex={fieldIndex + 1}
+              level={level + 1}
+              path={key}
+              filters={own}
+              defaultExpanded={false}
+              visible={shown}
+            />
+          ))}
+          {shown &&
+          (buckets.truncated || limited!.more) ? (
+            <Message
+              level={level + 1}
+              text={intl.message("list.group.moreGroups", {
+                count: GROUP_HEADING_LIMIT,
+              })}
+            />
+          ) : null}
+        </>
+      ) : !shown ? null : buckets.failed ? (
+        <Message level={level + 1} text={intl.message("list.tree.failed")} />
+      ) : !subheadings ? (
+        <Message level={level + 1} text={intl.message("list.tree.loading")} />
+      ) : (
+        <Message level={level + 1} text={intl.message("list.tree.noRecords")} />
+      );
     } else {
       const loading = records.loading && !records.rows.length;
-      const remaining = records.total !== undefined ? records.total - records.rows.length : undefined;
+      const remaining =
+        records.total !== undefined
+          ? records.total - records.rows.length
+          : undefined;
       children = !shown ? null : (
         <>
-          {records.failed ? <Message level={level + 1} text={intl.message("list.tree.failed")} /> : null}
-          {loading ? <Message level={level + 1} text={intl.message("list.tree.loading")} /> : null}
-          {!loading && !records.failed && !records.rows.length ? <Message level={level + 1} text={intl.message("list.tree.noRecords")} /> : null}
-          {records.rows.length ? ctx.renderRecords(records.rows, level + 1) : null}
+          {records.failed ? (
+            <Message
+              level={level + 1}
+              text={intl.message("list.tree.failed")}
+            />
+          ) : null}
+          {loading ? (
+            <Message
+              level={level + 1}
+              text={intl.message("list.tree.loading")}
+            />
+          ) : null}
+          {!loading && !records.failed && !records.rows.length ? (
+            <Message
+              level={level + 1}
+              text={intl.message("list.tree.noRecords")}
+            />
+          ) : null}
+          {records.rows.length
+            ? ctx.renderRecords(records.rows, level + 1)
+            : null}
           {records.hasNext ? (
             <Message level={level + 1}>
-              <button type="button" className="a-entity-tree__more" disabled={records.loading} onClick={records.loadMore}>
-                {remaining !== undefined ? intl.message("list.tree.loadMoreLeft", { count: remaining }) : intl.message("list.tree.loadMore")}
+              <button
+                type="button"
+                className="a-entity-tree__more"
+                disabled={records.loading}
+                onClick={records.loadMore}
+              >
+                {remaining !== undefined
+                  ? intl.message("list.tree.loadMoreLeft", { count: remaining })
+                  : intl.message("list.tree.loadMore")}
               </button>
             </Message>
           ) : null}
@@ -289,15 +524,27 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     }
   }
   const toggle = (
-    <TreeToggle expandable expanded={expanded} label={intl.message(expanded ? "list.group.collapse" : "list.group.expand", { group: label })} onToggle={() => setExpanded((value) => !value)} />
+    <TreeToggle
+      expandable
+      expanded={expanded}
+      label={intl.message(
+        expanded ? "list.group.collapse" : "list.group.expand",
+        { group: label },
+      )}
+      onToggle={() => setExpanded((value) => !value)}
+    />
   );
   const heading_ = (
     <>
       <TreeIndent level={level} />
       {toggle}
       <strong>{label}</strong>
-      {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
-      {source.exact ? headingAggregates(heading, ctx.descriptor.fields, intl) : null}
+      {count !== undefined ? (
+        <span className="a-entity-tree__count">{intl.number(count)}</span>
+      ) : null}
+      {source.exact
+        ? headingAggregates(heading, ctx.descriptor.fields, intl)
+        : null}
     </>
   );
   if (!visible) return <>{children}</>;
@@ -310,8 +557,19 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
     );
   return (
     <>
-      <tr className="a-entity-list__group-row a-entity-tree__group-row" role="row" data-tree-key={key} aria-level={level} aria-expanded={expanded} tabIndex={first ? 0 : -1}
-        aria-label={count !== undefined ? intl.message("list.gantt.toggleGroup", { group: label, count }) : label}>
+      <tr
+        className="a-entity-list__group-row a-entity-tree__group-row"
+        role="row"
+        data-tree-key={key}
+        aria-level={level}
+        aria-expanded={expanded}
+        tabIndex={first ? 0 : -1}
+        aria-label={
+          count !== undefined
+            ? intl.message("list.gantt.toggleGroup", { group: label, count })
+            : label
+        }
+      >
         <th colSpan={ctx.columnCount} scope="rowgroup">
           <span className="a-entity-tree__heading">{heading_}</span>
         </th>
@@ -321,16 +579,28 @@ function GroupNode({ heading, fieldIndex, level, path, filters, defaultExpanded,
   );
 }
 
-function Message({ level, text, children }: { readonly level: number; readonly text?: string; readonly children?: ReactNode }) {
+function Message({
+  level,
+  text,
+  children,
+}: {
+  readonly level: number;
+  readonly text?: string;
+  readonly children?: ReactNode;
+}) {
   const ctx = useContext(Context)!;
   const content = (
     <span className="a-entity-tree__heading">
       <TreeIndent level={level} />
-      <span className="a-entity-tree__toggle a-entity-tree__toggle--spacer" aria-hidden="true" />
+      <span
+        className="a-entity-tree__toggle a-entity-tree__toggle--spacer"
+        aria-hidden="true"
+      />
       {text ? <span className="a-entity-tree__message">{text}</span> : children}
     </span>
   );
-  if (ctx.variant === "cards") return <div className="a-entity-tree__section-message">{content}</div>;
+  if (ctx.variant === "cards")
+    return <div className="a-entity-tree__section-message">{content}</div>;
   return (
     <tr className="a-entity-tree__message-row">
       <td colSpan={ctx.columnCount}>{content}</td>

@@ -8,7 +8,8 @@ import type {
   EntityListDateRangeDescriptor,
 } from "@athyper/server-contract-metadata";
 
-// Published date ranges shared by the date layouts (Calendar, Gantt).
+// Published date ranges shared by the date layouts (Calendar, Gantt), and
+// the parse helpers every list layout descriptor uses (Board, Tree too).
 
 export function fail(path: string, reason: string): never {
   throw new Error(`${path} ${reason}`);
@@ -31,6 +32,14 @@ export function only(
 export function text(value: unknown, path: string): string {
   if (typeof value !== "string" || !value.trim() || value.length > 200)
     fail(path, "must be readable text");
+  return value;
+}
+export function list(value: unknown, path: string): readonly unknown[] {
+  if (!Array.isArray(value)) fail(path, "must be an array");
+  return value;
+}
+export function flag(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") fail(path, "must be a boolean");
   return value;
 }
 

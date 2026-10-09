@@ -13,8 +13,8 @@ import type {
  * it is admissible for this viewer: the start field is listed, unmasked,
  * sortable and filterable with `gte` and `lt` (and `is_null` when nullable,
  * for the Unscheduled tray); an end field, when declared, is listed, unmasked
- * and filterable with `gte` (date) or `gt` (datetime), plus `is_null` and
- * `is_not_null` when nullable. An unreadable tone field degrades to the
+ * and filterable with `gte` (date) or `gt` and `eq` (datetime; `eq` for the
+ * window-start point query), plus `is_null` and `is_not_null` when nullable. An unreadable tone field degrades to the
  * neutral tone. */
 export function resolveDateRanges(input: {
   readonly dateFields: readonly EntityListDateRangeDescriptor[];
@@ -58,7 +58,7 @@ export function resolveDateRanges(input: {
       if (item.end !== undefined) {
         const end = listed.get(item.end);
         const endOperators = [
-          kind === "date" ? "gte" : "gt",
+          ...(kind === "date" ? ["gte"] : ["gt", "eq"]),
           ...(nullable(item.end) ? ["is_null", "is_not_null"] : []),
         ];
         if (!end || end.valueKind !== kind || !usable(item.end, endOperators))

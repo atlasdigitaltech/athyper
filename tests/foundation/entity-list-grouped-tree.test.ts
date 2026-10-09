@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { bucketDays, combineAggregates, groupAggregates, groupChoices, groupHeadings, groupLevel, groupedPageState, headingFilters } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
+import { bucketDays, combineAggregates, groupAggregates, groupChoices, groupHeadings, groupLevel, groupedPageState, headingFilters, limitHeadings } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
 
 const status = {
   key: "status", label: "Status", valueKind: "enum", defaultVisible: true, defaultOrder: 0, sortable: false, groupable: true, aggregations: [],
@@ -36,6 +36,20 @@ describe("grouped tree headings", () => {
     assert.deepEqual(headingFilters(status, active!), [{ field: "status", operator: "eq", value: "active" }]);
     assert.deepEqual(headingFilters(status, none!), [{ field: "status", operator: "is_null" }]);
     assert.equal(headingFilters(status, { key: "u", kind: "unmapped", values: ["legacy"] }), undefined);
+  });
+
+  it("caps value headings at the group limit but keeps No value and Unmapped values, which the server returns beside its cap", () => {
+    const choices = Array.from({ length: 51 }, (_, index) => ({ value: `v${index}`, label: `V${index}` }));
+    const field = { ...status, filterOptions: choices } as unknown as ListFieldDescriptorV1;
+    const buckets = [...choices.slice(0, 50).map((choice) => ({ value: choice.value, count: 1 })), { value: null, count: 2 }];
+    const exact = limitHeadings(groupHeadings(field, groupChoices(field, labels), buckets));
+    assert.equal(exact.more, false);
+    assert.equal(exact.headings.length, 51);
+    assert.equal(exact.headings.at(-1)!.kind, "none");
+    const all = limitHeadings(groupHeadings(field, groupChoices(field, labels), undefined));
+    assert.equal(all.more, true);
+    assert.deepEqual(all.headings.filter((heading) => heading.kind === "choice").length, 50);
+    assert.equal(all.headings.at(-1)!.kind, "none");
   });
 
   it("turns the list's own page into a groups-only request under exact counts only", () => {

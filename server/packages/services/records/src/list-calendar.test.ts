@@ -48,6 +48,18 @@ describe("per-viewer calendar resolution", () => {
     expect("calendar" in result && result.calendar.dateFields[0]?.endNullable).toBe(false);
   });
 
+  it("needs eq on a datetime end field, for the window-start point query, and not on a date end", () => {
+    const instants = {
+      calendar: { defaultView: "month" as const, dateFields: [{ start: "starts_on", end: "ends_on" }] },
+      entityFields: [entityField("starts_on", "datetime", false), entityField("ends_on", "datetime", false), entityFields[2]!],
+    };
+    const startField = listField("starts_on", "datetime");
+    expect("calendar" in resolve({ ...instants, fields: [startField, listField("ends_on", "datetime"), fields[2]!] })).toBe(true);
+    expect(resolve({ ...instants, fields: [startField, listField("ends_on", "datetime", { filterOperators: ["gt", "is_null", "is_not_null"] }), fields[2]!] }))
+      .toEqual({ unavailable: LIST_CALENDAR_DATE_FIELD_UNAVAILABLE });
+    expect("calendar" in resolve({ fields: [fields[0]!, listField("ends_on", "date", { filterOperators: ["gte", "is_null", "is_not_null"] }), fields[2]!] })).toBe(true);
+  });
+
   it("requires no count mode", () => {
     expect("calendar" in resolve()).toBe(true);
   });

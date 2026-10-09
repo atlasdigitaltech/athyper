@@ -11,8 +11,12 @@ import {
   expandLoaded,
   loadedDepth,
   nodePath,
+  nodePlaces,
+  placesDepth,
+  placesPath,
   orphansQuery,
   recordQuery,
+  scopeLookupQuery,
   rootsQuery,
   branchByKind,
   treeColumns,
@@ -71,6 +75,22 @@ describe("tree queries", () => {
     assert.deepEqual(unfiltered.filters, []);
     assert.equal(unfiltered.query, undefined);
   });
+
+  it("a deep link into a scoped hierarchy keeps the scope filter the server requires, and drops a parent filter", () => {
+    const scoped = { ...tree, scopeField: "chart" };
+    const filters = [
+      { field: "chart", operator: "eq", value: "chart-b" },
+      { field: "parent", operator: "eq", value: "p" },
+      { field: "status", operator: "eq", value: "active" },
+    ] as const;
+    const withScope = { ...state, filters, query: "cash" } as typeof state;
+    assert.deepEqual(recordQuery(withScope, descriptor, scoped, "x", false).filters, [filters[0]]);
+    assert.deepEqual(recordQuery(withScope, descriptor, scoped, "x", true).filters, [filters[0], filters[2]]);
+    const lookup = scopeLookupQuery(withScope, descriptor, scoped, "x");
+    assert.equal("hierarchy" in lookup, false);
+    assert.deepEqual(lookup.filters, []);
+    assert.deepEqual(lookup.recordIds, ["x"]);
+  });
 });
 
 describe("tree levels", () => {
@@ -111,6 +131,9 @@ describe("tree levels", () => {
     assert.deepEqual([...expandLoaded(loaded, tree, 2)], ["a"]);
     assert.equal(loadedDepth(loaded), 3);
     assert.deepEqual(nodePath(loaded, "a2").map((item) => item.id), ["a", "a1", "a2"]);
+    const places = nodePlaces(loaded);
+    assert.equal(placesDepth(places), 3);
+    assert.deepEqual(placesPath(places, "a2").map((item) => item.id), ["a", "a1", "a2"]);
   });
 
   it("the node ceiling cuts a page off and marks the level truncated", () => {

@@ -1,5 +1,7 @@
+import { LIST_LAYOUT_TONES } from "./date-range";
 import type { EntityLocalizedTextV1 } from "./experience";
 import { parseEntityLocalizedText } from "./experience";
+import { allowKeys as allowLayoutKeys, fail, flag, list, member, record, text as label } from "./layout-parse";
 
 /** Tone vocabulary shared with record badges and list status cells. */
 export type ListBoardTone = "neutral" | "success" | "warning" | "danger";
@@ -42,31 +44,11 @@ export interface ListBoardStateV1 {
   readonly collapsed: readonly string[];
 }
 
-const TONES = ["neutral", "success", "warning", "danger"] as const;
 const LANE_KEY = /^[a-z][a-z0-9_]{0,62}$/;
 const RENDERER_KEY = /^[a-z][a-z0-9_.-]{0,126}$/;
 
-function fail(path: string, reason: string): never {
-  throw new TypeError(`${path} ${reason}`);
-}
-function record(value: unknown, path: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be an object");
-  return value as Record<string, unknown>;
-}
-function list(value: unknown, path: string): readonly unknown[] {
-  if (!Array.isArray(value)) fail(path, "must be an array");
-  return value;
-}
 function allowKeys(value: Record<string, unknown>, keys: readonly string[], path: string): void {
-  for (const key of Object.keys(value)) if (!keys.includes(key)) fail(`${path}.${key}`, "is not a board property");
-}
-function label(value: unknown, path: string): string {
-  if (typeof value !== "string" || !value.trim() || value.length > 200) fail(path, "must be readable text");
-  return value;
-}
-function flag(value: unknown, path: string): boolean {
-  if (typeof value !== "boolean") fail(path, "must be a boolean");
-  return value;
+  allowLayoutKeys(value, keys, path, "board");
 }
 
 /** Parses the browser board projection. Lanes reference only fields this
@@ -115,14 +97,13 @@ function parseLane(raw: unknown, path: string, keys: Set<string>, values: Set<st
     return choice;
   });
   if (!laneValues.length) fail(`${path}.values`, "must name at least one published choice");
-  const tone = lane.tone;
-  if (typeof tone !== "string" || !(TONES as readonly string[]).includes(tone)) fail(`${path}.tone`, "must be a published tone");
+  const tone = member(lane.tone, LIST_LAYOUT_TONES, `${path}.tone`, "must be a published tone");
   return Object.freeze({
     key,
     label: label(lane.label, `${path}.label`),
     ...(lane.localizedLabel === undefined ? {} : { localizedLabel: parseEntityLocalizedText(lane.localizedLabel) }),
     values: Object.freeze(laneValues),
-    tone: tone as ListBoardTone,
+    tone,
     collapsed: flag(lane.collapsed, `${path}.collapsed`),
     terminal: flag(lane.terminal, `${path}.terminal`),
   });

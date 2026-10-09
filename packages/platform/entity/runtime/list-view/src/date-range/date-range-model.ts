@@ -1,5 +1,6 @@
 import type {
   EntityListDescriptorV1,
+  EntityListResultV1,
   EntityListRowV1,
   ListDateRangeFieldV1,
   ListFilterV1,
@@ -116,6 +117,35 @@ export function openEndedFilters(
       value: windowEdge(window.end, field, timeZone),
     },
     { field: field.end, operator: "is_null" },
+  ];
+}
+
+/** The window-start point query's filters: zero-length `datetime` ranges
+ * (milestones) exactly at the window start. The window query's `end gt
+ * windowStart` cannot match them and no earlier window's `start lt` its end
+ * can either, so without this query they appear in no window. `end eq
+ * windowStart` names only this window's own start instant, never its end, so
+ * each point belongs to exactly one window. Disjoint from the window query
+ * (end equal, not after) and the open-ended query (end set). Sent only for a
+ * `datetime` range with an end field; a `date` range has no such gap. */
+export function windowStartPointFilters(
+  field: ListDateRangeFieldV1,
+  window: CalendarWindow,
+  timeZone: string,
+): readonly ListFilterV1[] | undefined {
+  if (field.kind !== "datetime" || field.end === undefined) return undefined;
+  const start = windowEdge(window.start, field, timeZone);
+  return [
+    { field: field.start, operator: "gte", value: start },
+    {
+      field: field.start,
+      operator: "lt",
+      value: windowEdge(window.end, field, timeZone),
+    },
+    { field: field.end, operator: "eq", value: start },
+    ...(field.endNullable === false
+      ? []
+      : [{ field: field.end, operator: "is_not_null" } as const]),
   ];
 }
 
@@ -250,4 +280,22 @@ export function mergeRows(
   return pages
     .flat()
     .filter((row) => (seen.has(row.id) ? false : (seen.add(row.id), true)));
+}
+
+/** The "of M" in "Showing N of M": every record the shown rows come from,
+ * so the window query's total plus each other stream that is sent (the
+ * open-ended and window-start point queries; `undefined` when not sent). The
+ * streams are disjoint. Only under exact counts, and only once every total
+ * is known. */
+export function shownTotal(
+  page: EntityListResultV1 | undefined,
+  streams: readonly ({ readonly total?: number } | undefined)[],
+): number | undefined {
+  let total =
+    page?.pagination.countMode === "exact" ? page.pagination.total : undefined;
+  for (const stream of streams) {
+    if (total === undefined || !stream) continue;
+    total = stream.total === undefined ? undefined : total + stream.total;
+  }
+  return total;
 }

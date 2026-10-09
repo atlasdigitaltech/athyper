@@ -109,7 +109,7 @@ import {
   groupedPageState,
 } from "./tree/grouped-tree-model";
 import {
-  recordQuery,
+  scopeLookupQuery,
   treeOrdered,
   treePageState,
   treeScopeSatisfied,
@@ -866,6 +866,8 @@ function EntityCollectionRuntime({
                   state.calendarAnchor ?? null,
                   localization.timeZone,
                   localization.weekStart,
+                  // The narrow width shows Agenda, a different window.
+                  widthTier === "narrow",
                 ]
               : null,
         }
@@ -1177,7 +1179,12 @@ function EntityCollectionRuntime({
             ? dateRangePageState(
                 boardSummaryState(state, descriptor),
                 descriptor,
-                calendarRange(state, descriptor, localization) ??
+                calendarRange(
+                  state,
+                  descriptor,
+                  localization,
+                  widthTier === "narrow",
+                ) ??
                   ganttRange(state, descriptor, localization),
                 localization.timeZone,
               )
@@ -4493,7 +4500,7 @@ function EntityRows({
       .request(entityListOperation, {
         params: { entityCode: descriptor.entity.code },
         query: entityListQuery(
-          recordQuery(source.query, descriptor, tree, scopeReveal, false),
+          scopeLookupQuery(source.query, descriptor, tree, scopeReveal),
           descriptor,
           source.scope,
         ),
@@ -4642,7 +4649,6 @@ function EntityRows({
         <HierarchyTreeChrome
           hierarchy={hierarchy}
           descriptor={descriptor}
-          filtered
           intl={intl}
         />
       ) : null}
@@ -4764,7 +4770,6 @@ function EntityRows({
     <HierarchyTreeChrome
       hierarchy={hierarchy}
       descriptor={descriptor}
-      filtered={Boolean(query?.trim()) || filtered}
       selecting={selectedIds.size > 0}
       intl={intl}
     />

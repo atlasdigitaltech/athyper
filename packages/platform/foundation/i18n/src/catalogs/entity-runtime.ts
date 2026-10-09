@@ -967,10 +967,11 @@ export const entityRuntimeMessages = {
     "لا توجد سجلات في هذا المسار.",
   ],
   "list.board.laneFailed": [
-    "This lane couldn't be loaded. Refresh the list to try again.",
-    "Lorong ini tidak dapat dimuatkan. Muat semula senarai untuk mencuba lagi.",
-    "تعذر تحميل هذا المسار. حدّث القائمة للمحاولة مرة أخرى.",
+    "This lane couldn't be loaded.",
+    "Lorong ini tidak dapat dimuatkan.",
+    "تعذر تحميل هذا المسار.",
   ],
+  "list.retry": ["Try again", "Cuba lagi", "حاول مجددًا"],
   "list.board.unmapped": [
     "{count, plural, one {# record has} other {# records have}} a {field} value outside the published choices, so {count, plural, one {it isn't} other {they aren't}} shown in a lane.",
     "{count, plural, other {# rekod mempunyai}} nilai {field} di luar pilihan yang diterbitkan, jadi tidak dipaparkan dalam lorong.",
@@ -1137,6 +1138,16 @@ export const entityRuntimeMessages = {
     "Setiap rekod mempunyai tarikh.",
     "كل سجل له تاريخ.",
   ],
+  "list.calendar.trayFailed": [
+    "Records without a date couldn't be loaded.",
+    "Rekod tanpa tarikh tidak dapat dimuatkan.",
+    "تعذر تحميل السجلات التي ليس لها تاريخ.",
+  ],
+  "list.calendar.streamFailed": [
+    "Some records in this period couldn't be loaded.",
+    "Sesetengah rekod dalam tempoh ini tidak dapat dimuatkan.",
+    "تعذر تحميل بعض السجلات في هذه الفترة.",
+  ],
   "list.calendar.endsOn": ["Ends {date}", "Tamat {date}", "ينتهي {date}"],
   "list.calendar.loadMore": ["Load more", "Muat lagi", "تحميل المزيد"],
   "list.calendar.more": [
@@ -1246,7 +1257,6 @@ export const entityRuntimeMessages = {
   "list.tree.noChildren": ["No children you can see", "Tiada anak yang boleh anda lihat", "لا توجد فروع يمكنك رؤيتها"],
   "list.tree.noRoots": ["No records at the top level", "Tiada rekod di tahap teratas", "لا توجد سجلات في المستوى الأعلى"],
   "list.tree.noRootsFiltered": ["No records at the top level for the current search and filters", "Tiada rekod di tahap teratas untuk carian dan penapis semasa", "لا توجد سجلات في المستوى الأعلى للبحث وعوامل التصفية الحالية"],
-  "list.tree.filtered": ["Search and filters apply at each level: a matching record under a parent that does not match is not shown.", "Carian dan penapis digunakan pada setiap tahap: rekod yang sepadan di bawah induk yang tidak sepadan tidak dipaparkan.", "يُطبَّق البحث وعوامل التصفية على كل مستوى: لا يظهر السجل المطابق الذي يقع تحت أصل غير مطابق."],
   "list.tree.selectionLoaded": ["Selection includes loaded records only.", "Pilihan merangkumi rekod yang dimuatkan sahaja.", "يشمل التحديد السجلات المحمّلة فقط."],
   "list.tree.ceiling": ["Showing the first {count, number} records of this tree. Records after these are not shown here; add filters or open Table.", "Memaparkan {count, number} rekod pertama pokok ini. Rekod selepasnya tidak dipaparkan di sini; tambah penapis atau buka Jadual.", "يُعرض أول {count, number} سجل من هذه الشجرة. السجلات التالية لا تظهر هنا؛ أضف عوامل تصفية أو افتح الجدول."],
   "list.tree.ceilingNode": ["Not loaded: this tree already shows {count, number} records.", "Tidak dimuatkan: pokok ini sudah memaparkan {count, number} rekod.", "لم يُحمَّل: تعرض هذه الشجرة {count, number} سجل بالفعل."],

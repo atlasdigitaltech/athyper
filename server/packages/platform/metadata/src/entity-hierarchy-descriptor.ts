@@ -3,22 +3,17 @@ import type {
   EntityHierarchyDescriptor,
   EntityListViewMode,
 } from "@athyper/server-contract-metadata";
+import { LIST_TREE_MAX_DEPTH } from "@athyper/contract-platform-entity-list";
+import { fail, only as layoutOnly, record } from "./list-date-range-descriptor.js";
 
 // The published record hierarchy (Entity list Tree blueprint sections 2.2,
 // 5.2 and 6): parsed for structure, then checked against the Entity.
 
-export const ENTITY_HIERARCHY_MAX_DEPTH = 16;
+export const ENTITY_HIERARCHY_MAX_DEPTH = LIST_TREE_MAX_DEPTH;
 export const ENTITY_HIERARCHY_MAX_ROLLUPS = 5;
 
-function fail(path: string, reason: string): never {
-  throw new Error(`${path} ${reason}`);
-}
-function record(value: unknown, path: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(path, "must be an object");
-  return value as Record<string, unknown>;
-}
 function only(value: Record<string, unknown>, keys: readonly string[], path: string): void {
-  for (const key of Object.keys(value)) if (!keys.includes(key)) fail(`${path}.${key}`, "is not a published hierarchy property");
+  layoutOnly(value, keys, path, "hierarchy");
 }
 function code(value: unknown, path: string): string {
   if (typeof value !== "string" || !/^[a-z][a-z0-9_]{0,127}$/.test(value)) fail(path, "must be a field key");

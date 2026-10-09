@@ -37,7 +37,8 @@ import {
 import { resolveCardLayout } from "../card-content";
 import type { ListWidthTier } from "../presentation-tier";
 import { EntityRecordCard } from "../record-card";
-import { useDateRangePages } from "../date-range/date-range-data";
+import { useListPages } from "../list-pages";
+import { StreamFailure } from "../stream-failure";
 import {
   DatedAgenda,
   DatedEntryNote,
@@ -53,6 +54,8 @@ import {
   dateRangeQueryState,
   mergeRows,
   openEndedFilters,
+  shownTotal,
+  windowStartPointFilters,
   placeEntries,
   trayFilters,
   windowFilters,
@@ -61,6 +64,7 @@ import {
 import {
   calendarPeriod,
   calendarSelection,
+  calendarShownView,
   entriesByDay,
   CALENDAR_LANES_PER_WEEK,
   weekLayout,
@@ -113,7 +117,7 @@ export function EntityCalendar({
     today,
   });
   const narrow = widthTier === "narrow";
-  const view = narrow ? "agenda" : selection.view;
+  const view = calendarShownView(selection.view, narrow);
   const { field, anchor } = selection;
   const window = periodWindow(anchor, calendarPeriod(view), weekStart);
   const windowQuery = dateRangeQueryState(
@@ -123,8 +127,9 @@ export function EntityCalendar({
     windowFilters(field, window, timeZone),
   );
   const openEnded = openEndedFilters(field, window, timeZone);
+  const startPoints = windowStartPointFilters(field, window, timeZone);
   const tray = trayFilters(field);
-  const more = useDateRangePages({
+  const more = useListPages({
     client,
     descriptor,
     query: windowQuery,
@@ -135,7 +140,7 @@ export function EntityCalendar({
         ? (page.pagination.nextCursor ?? null)
         : null,
   });
-  const open = useDateRangePages({
+  const open = useListPages({
     client,
     descriptor,
     query: openEnded
@@ -144,7 +149,16 @@ export function EntityCalendar({
     scope,
     refreshKey,
   });
-  const unscheduled = useDateRangePages({
+  const points = useListPages({
+    client,
+    descriptor,
+    query: startPoints
+      ? dateRangeQueryState(state, descriptor, field, startPoints)
+      : undefined,
+    scope,
+    refreshKey,
+  });
+  const unscheduled = useListPages({
     client,
     descriptor,
     query: tray
@@ -154,7 +168,7 @@ export function EntityCalendar({
     refreshKey,
   });
   const rows =
-    pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows) : [];
+    pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows, points.rows) : [];
   // Cheap pure derivations over at most one page per stream; recomputed per render.
   const entries = placeEntries(rows, field, window, timeZone);
   const byDay = entriesByDay(entries, window);
@@ -162,12 +176,15 @@ export function EntityCalendar({
   const overflow =
     (pageCurrent && page?.pagination.hasNext && !more.rows.length) ||
     more.hasNext ||
-    open.hasNext;
+    open.hasNext ||
+    points.hasNext;
   // Per-day counts are shown only when every record of the window is loaded,
   // so a count is never a partial number (foundation section 5).
   const complete = Boolean(pageCurrent && page) && !overflow;
-  const total =
-    page?.pagination.countMode === "exact" ? page.pagination.total : undefined;
+  const total = shownTotal(page, [
+    openEnded ? open : undefined,
+    startPoints ? points : undefined,
+  ]);
   const [openDay, setOpenDay] = useState<string>();
   const label = (row: EntityListRowV1) => datedRowLabel(row, descriptor);
   const navigate = (next: string) => onCalendarChange({ calendarAnchor: next });
@@ -289,6 +306,18 @@ export function EntityCalendar({
           ) : null}
         </div>
       ) : null}
+      {more.failed || open.failed || points.failed ? (
+        <StreamFailure
+          message={intl.message("list.calendar.streamFailed")}
+          error={(more.failed ? more : open.failed ? open : points).error}
+          onRetry={() => {
+            if (more.failed) more.retry();
+            if (open.failed) open.retry();
+            if (points.failed) points.retry();
+          }}
+          intl={intl}
+        />
+      ) : null}
       {pageCurrent && page && !entries.length ? (
         <NothingScheduled
           period={period}
@@ -321,14 +350,15 @@ export function EntityCalendar({
           intl={intl}
           card={entryCard}
           loadMore={
-            more.hasNext || open.hasNext
+            more.hasNext || open.hasNext || points.hasNext
               ? () => {
                   more.loadMore();
                   open.loadMore();
+                  points.loadMore();
                 }
               : undefined
           }
-          loading={more.loading || open.loading}
+          loading={more.loading || open.loading || points.loading}
         />
       )}
       {tray ? (

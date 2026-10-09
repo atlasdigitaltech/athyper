@@ -11,6 +11,7 @@ import { ChevronDownIcon } from "@athyper/platform-icons";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Button, Skeleton } from "@athyper/platform-ui";
 import { EntityRecordCard } from "../record-card";
+import { StreamFailure } from "../stream-failure";
 import type { RecordCardLayout } from "../record-card-layout";
 import { useBoardLanePage, useInView } from "./board-data";
 import type { BoardLane } from "./board-model";
@@ -108,8 +109,15 @@ export function BoardLaneColumn({
           {!page.loading && !page.failed && !page.rows.length ? (
             <p className="a-entity-board__empty">{intl.message("list.board.emptyLane")}</p>
           ) : null}
-          {page.failed ? <p className="a-entity-board__empty" role="status">{intl.message("list.board.laneFailed")}</p> : null}
-          {page.hasNext ? (
+          {page.failed ? (
+            <StreamFailure
+              className="a-entity-board__failure"
+              message={intl.message("list.board.laneFailed")}
+              error={page.error}
+              onRetry={page.retry}
+              intl={intl}
+            />
+          ) : page.hasNext ? (
             <Button variant="secondary" size="small" className="a-entity-board__more" loading={page.loading} onClick={page.loadMore}>
               {remaining ? intl.message("list.board.loadMoreCount", { count: remaining }) : intl.message("list.board.loadMore")}
             </Button>

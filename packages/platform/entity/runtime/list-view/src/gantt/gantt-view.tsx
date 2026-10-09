@@ -35,12 +35,15 @@ import { resolveCardLayout } from "../card-content";
 import type { ListWidthTier } from "../presentation-tier";
 import { progressPercent } from "../progress-value";
 import { EntityRecordCard } from "../record-card";
-import { useDateRangePages } from "../date-range/date-range-data";
+import { useListPages } from "../list-pages";
+import { StreamFailure } from "../stream-failure";
 import {
   agendaByDay,
   dateRangeQueryState,
   mergeRows,
   openEndedFilters,
+  shownTotal,
+  windowStartPointFilters,
   trayFilters,
   windowFilters,
   type DatedEntry,
@@ -127,8 +130,9 @@ export function EntityGantt({
     windowFilters(field, window, timeZone),
   );
   const openEnded = openEndedFilters(field, window, timeZone);
+  const startPoints = windowStartPointFilters(field, window, timeZone);
   const tray = trayFilters(field);
-  const more = useDateRangePages({
+  const more = useListPages({
     client,
     descriptor,
     query: windowQuery,
@@ -139,7 +143,7 @@ export function EntityGantt({
         ? (page.pagination.nextCursor ?? null)
         : null,
   });
-  const open = useDateRangePages({
+  const open = useListPages({
     client,
     descriptor,
     query: openEnded
@@ -148,7 +152,16 @@ export function EntityGantt({
     scope,
     refreshKey,
   });
-  const unscheduled = useDateRangePages({
+  const points = useListPages({
+    client,
+    descriptor,
+    query: startPoints
+      ? dateRangeQueryState(state, descriptor, field, startPoints)
+      : undefined,
+    scope,
+    refreshKey,
+  });
+  const unscheduled = useListPages({
     client,
     descriptor,
     query: tray
@@ -158,7 +171,7 @@ export function EntityGantt({
     refreshKey,
   });
   const rows =
-    pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows) : [];
+    pageCurrent && page ? mergeRows(page.rows, more.rows, open.rows, points.rows) : [];
   const { entries, reached, truncated } = ganttEntries(
     rows,
     field,
@@ -168,13 +181,17 @@ export function EntityGantt({
   const hasNext = Boolean(
     (pageCurrent && page?.pagination.hasNext && !more.rows.length) ||
     more.hasNext ||
-    open.hasNext,
+    open.hasNext ||
+    points.hasNext,
   );
   // The ceiling notice claims records exist past the ceiling, so it shows
   // only when rows were cut off or more pages remain once the ceiling is reached.
   const capped = truncated || (reached && hasNext);
   const exact = page?.pagination.countMode === "exact";
-  const total = exact ? page?.pagination.total : undefined;
+  const total = shownTotal(page, [
+    openEnded ? open : undefined,
+    startPoints ? points : undefined,
+  ]);
   // Counts only under exact counts and only when every row of the window is loaded.
   const complete = Boolean(pageCurrent && page) && !hasNext && !capped;
   const layout = resolveCardLayout(descriptor, fields);
@@ -191,6 +208,7 @@ export function EntityGantt({
   const loadMore = () => {
     more.loadMore();
     open.loadMore();
+    points.loadMore();
   };
   const card = (row: EntityListRowV1, note?: ReactNode) => (
     <EntityRecordCard
@@ -287,12 +305,24 @@ export function EntityGantt({
           <Button
             variant="secondary"
             size="small"
-            loading={more.loading || open.loading}
+            loading={more.loading || open.loading || points.loading}
             onClick={loadMore}
           >
             {intl.message("list.gantt.loadMoreRows")}
           </Button>
         </div>
+      ) : null}
+      {more.failed || open.failed || points.failed ? (
+        <StreamFailure
+          message={intl.message("list.calendar.streamFailed")}
+          error={(more.failed ? more : open.failed ? open : points).error}
+          onRetry={() => {
+            if (more.failed) more.retry();
+            if (open.failed) open.retry();
+            if (points.failed) points.retry();
+          }}
+          intl={intl}
+        />
       ) : null}
       {pageCurrent && page && !entries.length ? (
         <NothingScheduled
@@ -320,7 +350,7 @@ export function EntityGantt({
             )
           }
           loadMore={hasNext && !capped ? loadMore : undefined}
-          loading={more.loading || open.loading}
+          loading={more.loading || open.loading || points.loading}
         />
       ) : (
         <GanttChart

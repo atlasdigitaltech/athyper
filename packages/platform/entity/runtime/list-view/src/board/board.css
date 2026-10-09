@@ -40,6 +40,7 @@
 .a-entity-board__card:focus-visible .a-entity-list__card{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:2px}
 .a-entity-board__lane[data-terminal] .a-entity-list__card{opacity:.88}
 .a-entity-board__empty{margin:0;padding:var(--a-space-4) var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);text-align:center}
+.a-entity-board__failure{display:grid;justify-items:center;gap:var(--a-space-2);padding:var(--a-space-4) var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);text-align:center}
 .a-entity-board__placeholder{min-height:6rem;border-radius:var(--a-radius-lg)}
 .a-entity-board__more{justify-self:stretch}
 

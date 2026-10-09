@@ -605,6 +605,17 @@ describe("entity list browser contract", () => {
         .calendarAnchor,
       undefined,
     );
+    // Date rolls 30 February into March; an impossible day is no anchor.
+    assert.equal(
+      decodeListLocationState("?view=calendar&cal=2026-02-30", descriptor)
+        .calendarAnchor,
+      undefined,
+    );
+    assert.equal(
+      decodeListLocationState("?view=calendar&cal=2028-02-29", descriptor)
+        .calendarAnchor,
+      "2028-02-29",
+    );
 
     assert.throws(
       () =>

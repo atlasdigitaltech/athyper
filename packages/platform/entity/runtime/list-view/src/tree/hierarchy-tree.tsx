@@ -1,6 +1,20 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useRef, useState, type FocusEvent, type ReactNode } from "react";
-import { ApiTransportError, entityListOperation, entityListQuery, entityRecordPatchOperation, type HttpClient } from "@athyper/platform-api-client";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type ReactNode,
+} from "react";
+import {
+  ApiTransportError,
+  entityListOperation,
+  entityListQuery,
+  entityRecordPatchOperation,
+  type HttpClient,
+} from "@athyper/platform-api-client";
 import {
   LIST_TREE_NODE_CEILING,
   type EntityListDescriptorV1,
@@ -24,9 +38,10 @@ import {
   childLevel,
   childrenQuery,
   expandLoaded,
-  loadedDepth,
-  nodePath,
   nodePlaces,
+  type NodePlaces,
+  placesDepth,
+  placesPath,
   orphansQuery,
   parentIdOf,
   recordQuery,
@@ -70,6 +85,8 @@ export interface HierarchyTree {
   readonly capped: boolean;
   readonly notice?: TreeNotice;
   readonly selected?: string;
+  /** Each loaded node's parent and depth, computed once per load. */
+  readonly places: NodePlaces;
   readonly loadedRows: readonly EntityListRowV1[];
   readonly toggle: (id: string) => void;
   readonly toggleOrphans: () => void;
@@ -116,15 +133,33 @@ export function useHierarchyTree(input: {
   const resetKey = JSON.stringify([
     descriptor.revision.descriptorHash,
     descriptor.scope.fingerprint,
-    source ? [source.refreshKey, source.query.standardViewKey ?? null, source.query.query ?? null, source.query.filters, source.query.sort, source.query.columns, source.query.pageSize ?? null] : null,
+    source
+      ? [
+          source.refreshKey,
+          source.query.standardViewKey ?? null,
+          source.query.query ?? null,
+          source.query.filters,
+          source.query.sort,
+          source.query.columns,
+          source.query.pageSize ?? null,
+        ]
+      : null,
   ]);
   const [levels, setLevels] = useState<TreeLevels>(() => new Map());
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [orphansOpen, setOrphansOpen] = useState(true);
   const [notice, setNotice] = useState<TreeNotice>();
   const [selected, setSelected] = useState<string>();
-  const [focusRequest, setFocusRequest] = useState<{ readonly id: string; readonly seq: number }>();
-  const [moving, setMoving] = useState<{ readonly row: EntityListRowV1; readonly busy: boolean }>();
+  const [focusRequest, setFocusRequest] = useState<{
+    readonly id: string;
+    readonly seq: number;
+  }>();
+  const [moving, setMoving] = useState<{
+    readonly row: EntityListRowV1;
+    readonly busy: boolean;
+  }>();
   const [moveError, setMoveError] = useState<string>();
   const levelsRef = useRef<TreeLevels>(levels);
   const inflight = useRef(new Map<string, Promise<TreeLevel | undefined>>());
@@ -148,45 +183,70 @@ export function useHierarchyTree(input: {
     setNotice(undefined);
     setMoving(undefined);
   }
-  useEffect(() => () => {
-    for (const controller of controllers.current) controller.abort();
-  }, []);
+  useEffect(
+    () => () => {
+      for (const controller of controllers.current) controller.abort();
+    },
+    [],
+  );
   const commit = useCallback((change: (current: TreeLevels) => TreeLevels) => {
     levelsRef.current = change(levelsRef.current);
     setLevels(levelsRef.current);
   }, []);
 
-  const fetchPage = useCallback(async (query: TreeQueryState, cursor?: string): Promise<EntityListResultV1> => {
-    const { descriptor: current, source: from } = latest.current;
-    const controller = new AbortController();
-    controllers.current.add(controller);
-    try {
-      const page = await from!.client.request(entityListOperation, {
-        params: { entityCode: current.entity.code },
-        query: entityListQuery({ ...query, cursor }, current, from!.scope),
-        signal: controller.signal,
-      });
-      if (page.descriptorHash !== current.revision.descriptorHash || page.scopeFingerprint !== current.scope.fingerprint)
-        throw new TypeError("Tree response authority no longer matches its descriptor");
-      return page;
-    } finally {
-      controllers.current.delete(controller);
-    }
-  }, []);
+  const fetchPage = useCallback(
+    async (
+      query: TreeQueryState,
+      cursor?: string,
+    ): Promise<EntityListResultV1> => {
+      const { descriptor: current, source: from } = latest.current;
+      const controller = new AbortController();
+      controllers.current.add(controller);
+      try {
+        const page = await from!.client.request(entityListOperation, {
+          params: { entityCode: current.entity.code },
+          query: entityListQuery({ ...query, cursor }, current, from!.scope),
+          signal: controller.signal,
+        });
+        if (
+          page.descriptorHash !== current.revision.descriptorHash ||
+          page.scopeFingerprint !== current.scope.fingerprint
+        )
+          throw new TypeError(
+            "Tree response authority no longer matches its descriptor",
+          );
+        return page;
+      } finally {
+        controllers.current.delete(controller);
+      }
+    },
+    [],
+  );
 
   /** Loads a level's first page (once) or its next page. Resolves to the
    * level as loaded, or undefined when the ceiling blocks it or the list
    * state moved on. */
   const loadLevel = useCallback(
-    (key: string, query: TreeQueryState, append: boolean): Promise<TreeLevel | undefined> => {
+    (
+      key: string,
+      query: TreeQueryState,
+      append: boolean,
+    ): Promise<TreeLevel | undefined> => {
       const pending = inflight.current.get(key);
       if (pending) return pending;
       const current = levelsRef.current.get(key);
-      if (!append && current && current.status !== "failed") return Promise.resolve(current);
+      if (!append && current && current.status !== "failed")
+        return Promise.resolve(current);
       if (append && !current?.nextCursor) return Promise.resolve(current);
-      if (ceilingState(levelsRef.current, LIST_TREE_NODE_CEILING).reached) return Promise.resolve(current);
+      if (ceilingState(levelsRef.current, LIST_TREE_NODE_CEILING).reached)
+        return Promise.resolve(current);
       const at = epoch.current;
-      commit((levels) => new Map(levels).set(key, { ...(current ?? { rows: [] }), status: "loading" }));
+      commit((levels) =>
+        new Map(levels).set(key, {
+          ...(current ?? { rows: [] }),
+          status: "loading",
+        }),
+      );
       const run = fetchPage(query, append ? current!.nextCursor : undefined)
         .then((page) => {
           if (at !== epoch.current) return undefined;
@@ -196,8 +256,13 @@ export function useHierarchyTree(input: {
               key,
               {
                 rows: page.rows,
-                ...(page.pagination.hasNext && page.pagination.nextCursor ? { nextCursor: page.pagination.nextCursor } : {}),
-                ...(page.pagination.countMode === "exact" && page.pagination.total !== undefined ? { total: page.pagination.total } : {}),
+                ...(page.pagination.hasNext && page.pagination.nextCursor
+                  ? { nextCursor: page.pagination.nextCursor }
+                  : {}),
+                ...(page.pagination.countMode === "exact" &&
+                page.pagination.total !== undefined
+                  ? { total: page.pagination.total }
+                  : {}),
               },
               append,
               LIST_TREE_NODE_CEILING,
@@ -207,7 +272,12 @@ export function useHierarchyTree(input: {
         })
         .catch(() => {
           if (at !== epoch.current) return undefined;
-          commit((levels) => new Map(levels).set(key, { ...(levels.get(key) ?? { rows: [] }), status: "failed" }));
+          commit((levels) =>
+            new Map(levels).set(key, {
+              ...(levels.get(key) ?? { rows: [] }),
+              status: "failed",
+            }),
+          );
           return levelsRef.current.get(key);
         })
         .finally(() => {
@@ -224,7 +294,8 @@ export function useHierarchyTree(input: {
     const declared = current.surface.tree;
     if (!declared || !from) return undefined;
     if (key === TREE_ROOTS) return rootsQuery(from.query, current, declared);
-    if (key === TREE_ORPHANS) return orphansQuery(from.query, current, declared);
+    if (key === TREE_ORPHANS)
+      return orphansQuery(from.query, current, declared);
     return childrenQuery(from.query, current, declared, key.slice(2));
   }, []);
 
@@ -232,12 +303,17 @@ export function useHierarchyTree(input: {
   // With a search or filter the page is the matches response (B2): every
   // level it needs comes with it, so no orphans request is sent.
   const rootsCurrent = enabled && rootsPage ? rootsPage : undefined;
-  const matching = Boolean(tree && source && treeConstrained(source.query, descriptor, tree));
+  const matching = Boolean(
+    tree && source && treeConstrained(source.query, descriptor, tree),
+  );
   useEffect(() => {
     if (!rootsCurrent || levelsRef.current.has(TREE_ROOTS)) return;
     const declared = latest.current.descriptor.surface.tree;
     if (matching && declared) {
-      const { levels: placed, expanded: open } = levelsFromMatches(rootsCurrent.rows, declared);
+      const { levels: placed, expanded: open } = levelsFromMatches(
+        rootsCurrent.rows,
+        declared,
+      );
       commit(() => placed);
       setExpanded(open);
       return;
@@ -248,8 +324,14 @@ export function useHierarchyTree(input: {
         TREE_ROOTS,
         {
           rows: rootsCurrent.rows,
-          ...(rootsCurrent.pagination.hasNext && rootsCurrent.pagination.nextCursor ? { nextCursor: rootsCurrent.pagination.nextCursor } : {}),
-          ...(rootsCurrent.pagination.countMode === "exact" && rootsCurrent.pagination.total !== undefined ? { total: rootsCurrent.pagination.total } : {}),
+          ...(rootsCurrent.pagination.hasNext &&
+          rootsCurrent.pagination.nextCursor
+            ? { nextCursor: rootsCurrent.pagination.nextCursor }
+            : {}),
+          ...(rootsCurrent.pagination.countMode === "exact" &&
+          rootsCurrent.pagination.total !== undefined
+            ? { total: rootsCurrent.pagination.total }
+            : {}),
         },
         false,
         LIST_TREE_NODE_CEILING,
@@ -282,7 +364,8 @@ export function useHierarchyTree(input: {
   // next node on the path is loaded, expanding as it goes.
   useEffect(() => {
     const { revealId } = latest.current;
-    if (!rootsCurrent || !revealId || revealed.current || !tree || !source) return;
+    if (!rootsCurrent || !revealId || revealed.current || !tree || !source)
+      return;
     revealed.current = true;
     const at = epoch.current;
     const finish = (result?: TreeNotice) => {
@@ -293,7 +376,10 @@ export function useHierarchyTree(input: {
     if (matching) {
       if (nodePlaces(levelsRef.current).has(revealId)) {
         setSelected(revealId);
-        setFocusRequest((previous) => ({ id: revealId, seq: (previous?.seq ?? 0) + 1 }));
+        setFocusRequest((previous) => ({
+          id: revealId,
+          seq: (previous?.seq ?? 0) + 1,
+        }));
       } else finish("revealMissing");
       return;
     }
@@ -302,20 +388,17 @@ export function useHierarchyTree(input: {
       const path: EntityListRowV1[] = [];
       let base = TREE_ROOTS;
       try {
-        for (let next: string | undefined = revealId; next; ) {
+        for (let next: string | undefined = revealId; next;) {
           if (path.length >= tree.maxDepth) return finish("revealTooDeep");
-          const page = await fetchPage(recordQuery(state, descriptor, tree, next, true));
+          const page = await fetchPage(
+            recordQuery(state, descriptor, tree, next, true),
+          );
           const row = page.rows[0];
           if (!row) {
             if (!path.length) return finish("revealMissing");
-            // The parent is not in the tree as shown. If it exists without the
-            // search and filters, they hide it (filters apply level by level);
-            // otherwise the viewer cannot read it and the path starts among the
-            // orphans.
-            if (state.query?.trim() || state.filters.length) {
-              const unfiltered = await fetchPage(recordQuery(state, descriptor, tree, next, false));
-              if (unfiltered.rows.length) return finish("revealMissing");
-            }
+            // Browsing applies no filter of the list's own (any search or
+            // filter shows matches instead, B2), so a parent missing here is
+            // one the viewer cannot read: the path starts among the orphans.
             base = TREE_ORPHANS;
             break;
           }
@@ -327,9 +410,15 @@ export function useHierarchyTree(input: {
           if (at !== epoch.current) return;
           const query = queryFor(levelKey)!;
           let level = await loadLevel(levelKey, query, false);
-          while (level && !level.rows.some((row) => row.id === node.id) && level.nextCursor && at === epoch.current)
+          while (
+            level &&
+            !level.rows.some((row) => row.id === node.id) &&
+            level.nextCursor &&
+            at === epoch.current
+          )
             level = await loadLevel(levelKey, query, true);
-          if (!level?.rows.some((row) => row.id === node.id)) return finish("revealMissing");
+          if (!level?.rows.some((row) => row.id === node.id))
+            return finish("revealMissing");
           if (levelKey === TREE_ORPHANS) setOrphansOpen(true);
           if (index < path.length - 1) {
             setExpanded((current) => new Set(current).add(node.id));
@@ -338,19 +427,36 @@ export function useHierarchyTree(input: {
         }
         if (at !== epoch.current) return;
         setSelected(revealId);
-        setFocusRequest((previous) => ({ id: revealId, seq: (previous?.seq ?? 0) + 1 }));
+        setFocusRequest((previous) => ({
+          id: revealId,
+          seq: (previous?.seq ?? 0) + 1,
+        }));
         finish();
       } catch {
         finish("revealMissing");
       }
     })();
-  }, [rootsCurrent, matching, tree, source, descriptor, fetchPage, loadLevel, queryFor]);
+  }, [
+    rootsCurrent,
+    matching,
+    tree,
+    source,
+    descriptor,
+    fetchPage,
+    loadLevel,
+    queryFor,
+  ]);
 
   useEffect(() => {
     if (!focusRequest) return;
-    const element = gridRef.current?.querySelector<HTMLElement>(`[data-tree-key="${CSS.escape(focusRequest.id)}"]`);
+    const element = gridRef.current?.querySelector<HTMLElement>(
+      `[data-tree-key="${CSS.escape(focusRequest.id)}"]`,
+    );
     if (!element) return;
-    for (const other of gridRef.current!.querySelectorAll<HTMLElement>("[data-tree-key]")) other.tabIndex = -1;
+    for (const other of gridRef.current!.querySelectorAll<HTMLElement>(
+      "[data-tree-key]",
+    ))
+      other.tabIndex = -1;
     element.tabIndex = 0;
     element.focus();
     element.scrollIntoView?.({ block: "nearest" });
@@ -359,9 +465,15 @@ export function useHierarchyTree(input: {
   }, [focusRequest, levels, expanded]);
 
   const places = useMemo(() => nodePlaces(levels), [levels]);
-  const loadedRows = useMemo(() => [...places.values()].map((place) => place.row), [places]);
+  const loadedRows = useMemo(
+    () => [...places.values()].map((place) => place.row),
+    [places],
+  );
   if (!enabled || !tree) return undefined;
-  const { reached, capped: browseCapped } = ceilingState(levels, LIST_TREE_NODE_CEILING);
+  const { reached, capped: browseCapped } = ceilingState(
+    levels,
+    LIST_TREE_NODE_CEILING,
+  );
   // Matches are capped by the server at 500 matches and say so themselves.
   const capped = browseCapped && !matching;
   const entries = treeEntries(levels, expanded, orphansOpen, tree, reached);
@@ -373,13 +485,24 @@ export function useHierarchyTree(input: {
     entries,
     ready: Boolean(roots),
     matching,
-    ...(matching && rootsCurrent?.matchesTruncated ? { matchesTruncated: true } : {}),
-    ...(matching && rootsCurrent?.matchesBeyondDepth ? { matchesBeyondDepth: rootsCurrent.matchesBeyondDepth } : {}),
-    empty: Boolean(roots && !roots.rows.length && orphans && orphans.status !== "loading" && !orphans.rows.length),
+    ...(matching && rootsCurrent?.matchesTruncated
+      ? { matchesTruncated: true }
+      : {}),
+    ...(matching && rootsCurrent?.matchesBeyondDepth
+      ? { matchesBeyondDepth: rootsCurrent.matchesBeyondDepth }
+      : {}),
+    empty: Boolean(
+      roots &&
+      !roots.rows.length &&
+      orphans &&
+      orphans.status !== "loading" &&
+      !orphans.rows.length,
+    ),
     reached,
     capped,
     ...(notice ? { notice } : {}),
     ...(selected && places.has(selected) ? { selected } : {}),
+    places,
     loadedRows,
     toggle,
     toggleOrphans: () => setOrphansOpen((open) => !open),
@@ -391,10 +514,13 @@ export function useHierarchyTree(input: {
     collapseAll: () => setExpanded(new Set()),
     showToLevel: (level) => setExpanded(expandLoaded(levels, tree, level)),
     onFocus: (event) => {
-      const key = (event.target as HTMLElement).closest<HTMLElement>("[data-tree-key]")?.dataset.treeKey;
+      const key = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-tree-key]",
+      )?.dataset.treeKey;
       if (key && places.has(key)) setSelected(key);
     },
-    focusNode: (id) => setFocusRequest((previous) => ({ id, seq: (previous?.seq ?? 0) + 1 })),
+    focusNode: (id) =>
+      setFocusRequest((previous) => ({ id, seq: (previous?.seq ?? 0) + 1 })),
     gridRef,
     ...(moving ? { moving } : {}),
     ...(moveError ? { moveError } : {}),
@@ -413,9 +539,15 @@ export function useHierarchyTree(input: {
       // server checks authorization, version, scope, node kind and depth.
       from.client
         .request(entityRecordPatchOperation, {
-          params: { entityCode: descriptor.entity.code, recordId: current.row.id },
+          params: {
+            entityCode: descriptor.entity.code,
+            recordId: current.row.id,
+          },
           body: { [tree.parentField]: parentId },
-          headers: current.row.version !== undefined ? { "If-Match": String(current.row.version) } : {},
+          headers:
+            current.row.version !== undefined
+              ? { "If-Match": String(current.row.version) }
+              : {},
           idempotencyKey: `tree-move-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
         })
         .then(() => {
@@ -424,39 +556,67 @@ export function useHierarchyTree(input: {
         })
         .catch((error: unknown) => {
           setMoving({ ...current, busy: false });
-          setMoveError(error instanceof ApiTransportError && error.problem?.code ? error.problem.code : "HIERARCHY_MOVE_FAILED");
+          setMoveError(
+            error instanceof ApiTransportError && error.problem?.code
+              ? error.problem.code
+              : "HIERARCHY_MOVE_FAILED",
+          );
         });
     },
     canReceive: (entry) => {
       if (!moving || entry.row.id === moving.row.id) return false;
       // Not inside the moved subtree, as far as it is loaded.
-      if (nodePath(levels, entry.row.id).some((row) => row.id === moving.row.id)) return false;
+      if (
+        placesPath(places, entry.row.id).some((row) => row.id === moving.row.id)
+      )
+        return false;
       if (branchByKind(entry.row, tree) === false) return false;
       // Already its parent: nothing to do.
-      return parentIdOf(moving.row, tree) !== entry.row.id && entry.depth < tree.maxDepth;
+      return (
+        parentIdOf(moving.row, tree) !== entry.row.id &&
+        entry.depth < tree.maxDepth
+      );
     },
   };
 }
 
 /** A node's readable label: identity, then title (Tree blueprint section 8).
  * Never the record ID. */
-export function treeNodeLabel(row: EntityListRowV1, descriptor: EntityListDescriptorV1): { readonly identity?: string; readonly title?: string; readonly text: string } {
+export function treeNodeLabel(
+  row: EntityListRowV1,
+  descriptor: EntityListDescriptorV1,
+): {
+  readonly identity?: string;
+  readonly title?: string;
+  readonly text: string;
+} {
   const parts = datedRowParts(row, descriptor);
-  return { ...parts, text: [parts.identity, parts.title].filter(Boolean).join(" ") };
+  return {
+    ...parts,
+    text: [parts.identity, parts.title].filter(Boolean).join(" "),
+  };
 }
 
 /** The tree controls, the path of the selected node and the notices. */
-export function HierarchyTreeChrome({ hierarchy, descriptor, filtered, selecting = false, intl }: {
+export function HierarchyTreeChrome({
+  hierarchy,
+  descriptor,
+  selecting = false,
+  intl,
+}: {
   readonly hierarchy: HierarchyTree;
   readonly descriptor: EntityListDescriptorV1;
-  /** Search or filters are active: they apply level by level in Phase B1. */
-  readonly filtered: boolean;
   /** Records are selected: selection covers loaded records only. */
   readonly selecting?: boolean;
   readonly intl: EntityIntl;
 }) {
-  const depth = Math.min(hierarchy.tree.maxDepth, loadedDepth(hierarchy.levels));
-  const path = hierarchy.selected ? nodePath(hierarchy.levels, hierarchy.selected) : [];
+  const depth = Math.min(
+    hierarchy.tree.maxDepth,
+    placesDepth(hierarchy.places),
+  );
+  const path = hierarchy.selected
+    ? placesPath(hierarchy.places, hierarchy.selected)
+    : [];
   return (
     <div className="a-entity-tree">
       <TreeStrip
@@ -471,42 +631,80 @@ export function HierarchyTreeChrome({ hierarchy, descriptor, filtered, selecting
       <TreePath
         label={intl.message("list.tree.path")}
         hint={intl.message("list.tree.pathHint")}
-        path={path.map((row) => ({ key: row.id, label: treeNodeLabel(row, descriptor).text }))}
+        path={path.map((row) => ({
+          key: row.id,
+          label: treeNodeLabel(row, descriptor).text,
+        }))}
         onSelect={hierarchy.focusNode}
       />
       {hierarchy.matching ? (
-        <p className="a-entity-tree__caption">{intl.message("list.tree.matchesCaption")}</p>
-      ) : filtered ? (
-        <p className="a-entity-tree__caption">{intl.message("list.tree.filtered")}</p>
+        <p className="a-entity-tree__caption">
+          {intl.message("list.tree.matchesCaption")}
+        </p>
       ) : null}
       {hierarchy.matchesTruncated ? (
-        <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.matchesTruncated", { count: 500 })}</p>
+        <p className="a-entity-tree__notice" role="status">
+          {intl.message("list.tree.matchesTruncated", { count: 500 })}
+        </p>
       ) : null}
       {hierarchy.matchesBeyondDepth ? (
-        <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.matchesBeyondDepth", { count: hierarchy.matchesBeyondDepth, depth: hierarchy.tree.maxDepth })}</p>
+        <p className="a-entity-tree__notice" role="status">
+          {intl.message("list.tree.matchesBeyondDepth", {
+            count: hierarchy.matchesBeyondDepth,
+            depth: hierarchy.tree.maxDepth,
+          })}
+        </p>
       ) : null}
-      {selecting ? <p className="a-entity-tree__caption">{intl.message("list.tree.selectionLoaded")}</p> : null}
+      {selecting ? (
+        <p className="a-entity-tree__caption">
+          {intl.message("list.tree.selectionLoaded")}
+        </p>
+      ) : null}
       {hierarchy.capped ? (
-        <p className="a-entity-tree__notice" role="status">{intl.message("list.tree.ceiling", { count: LIST_TREE_NODE_CEILING })}</p>
+        <p className="a-entity-tree__notice" role="status">
+          {intl.message("list.tree.ceiling", { count: LIST_TREE_NODE_CEILING })}
+        </p>
       ) : null}
       {hierarchy.moving ? (
         <div className="a-entity-tree__move" role="status">
-          <span>{intl.message("list.tree.moving", { record: treeNodeLabel(hierarchy.moving.row, descriptor).text })}</span>
+          <span>
+            {intl.message("list.tree.moving", {
+              record: treeNodeLabel(hierarchy.moving.row, descriptor).text,
+            })}
+          </span>
           {parentIdOf(hierarchy.moving.row, hierarchy.tree) ? (
-            <Button variant="secondary" size="small" disabled={hierarchy.moving.busy} onClick={() => hierarchy.moveTo(null)}>
+            <Button
+              variant="secondary"
+              size="small"
+              disabled={hierarchy.moving.busy}
+              onClick={() => hierarchy.moveTo(null)}
+            >
               {intl.message("list.tree.moveToTop")}
             </Button>
           ) : null}
-          <Button variant="ghost" size="small" disabled={hierarchy.moving.busy} onClick={hierarchy.cancelMove}>
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={hierarchy.moving.busy}
+            onClick={hierarchy.cancelMove}
+          >
             {intl.message("list.tree.moveCancel")}
           </Button>
         </div>
       ) : null}
       {hierarchy.moveError ? (
-        <p className="a-entity-tree__notice" role="alert">{intl.message(moveErrorKey(hierarchy.moveError), { depth: hierarchy.tree.maxDepth })}</p>
+        <p className="a-entity-tree__notice" role="alert">
+          {intl.message(moveErrorKey(hierarchy.moveError), {
+            depth: hierarchy.tree.maxDepth,
+          })}
+        </p>
       ) : null}
       {hierarchy.notice ? (
-        <p className="a-entity-tree__notice" role="status">{intl.message(`list.tree.${hierarchy.notice}`, { depth: hierarchy.tree.maxDepth })}</p>
+        <p className="a-entity-tree__notice" role="status">
+          {intl.message(`list.tree.${hierarchy.notice}`, {
+            depth: hierarchy.tree.maxDepth,
+          })}
+        </p>
       ) : null}
     </div>
   );
@@ -515,7 +713,14 @@ export function HierarchyTreeChrome({ hierarchy, descriptor, filtered, selecting
 /** The leading cell content of a node: indentation, the expand control, the
  * node-kind dot (round for a branch kind, a diamond for a leaf kind, with the
  * kind as hidden text), the label link and its markers. */
-export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen }: {
+export function TreeNodeLabel({
+  entry,
+  hierarchy,
+  descriptor,
+  intl,
+  href,
+  onOpen,
+}: {
   readonly entry: NodeEntry;
   readonly hierarchy: HierarchyTree;
   readonly descriptor: EntityListDescriptorV1;
@@ -531,21 +736,36 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
   // kind is hidden text: the choice label, or the field label and yes or no.
   const nodeKind = tree.nodeKind;
   const branch = branchByKind(row, tree);
-  const kindField = nodeKind ? descriptor.fields.find((field) => field.key === nodeKind.field) : undefined;
+  const kindField = nodeKind
+    ? descriptor.fields.find((field) => field.key === nodeKind.field)
+    : undefined;
   const kindValue = nodeKind ? row.values[nodeKind.field] : undefined;
   const kindText =
     branch === undefined || !nodeKind
       ? undefined
       : nodeKind.kind === "boolean"
         ? `${kindField?.label ?? ""}: ${formatFieldValue(kindValue as boolean, kindField, intl)}`
-        : String(row.displayValues?.[nodeKind.field] ?? formatFieldValue(kindValue as string, kindField, intl));
-  const tone = nodeKind?.kind === "choice" && typeof kindValue === "string" ? (nodeKind.tones?.[kindValue] ?? "neutral") : "neutral";
+        : String(
+            row.displayValues?.[nodeKind.field] ??
+              formatFieldValue(kindValue as string, kindField, intl),
+          );
+  const tone =
+    nodeKind?.kind === "choice" && typeof kindValue === "string"
+      ? (nodeKind.tones?.[kindValue] ?? "neutral")
+      : "neutral";
   const children = hierarchy.levels.get(childLevel(row.id));
-  const count = entry.expanded && children?.total !== undefined ? children.total : undefined;
+  const count =
+    entry.expanded && children?.total !== undefined
+      ? children.total
+      : undefined;
   const content = (
     <>
-      {label.identity ? <span className="a-entity-tree__identity">{label.identity}</span> : null}
-      {label.title ? <span className="a-entity-tree__title">{label.title}</span> : null}
+      {label.identity ? (
+        <span className="a-entity-tree__identity">{label.identity}</span>
+      ) : null}
+      {label.title ? (
+        <span className="a-entity-tree__title">{label.title}</span>
+      ) : null}
     </>
   );
   return (
@@ -554,34 +774,74 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
       <TreeToggle
         expandable={entry.state === "expandable"}
         expanded={entry.expanded}
-        label={intl.message(entry.expanded ? "list.tree.collapseNode" : "list.tree.expandNode", { record: label.text })}
+        label={intl.message(
+          entry.expanded ? "list.tree.collapseNode" : "list.tree.expandNode",
+          { record: label.text },
+        )}
         onToggle={() => hierarchy.toggle(row.id)}
       />
       {kindText !== undefined ? (
-        <span className="a-entity-tree__kind" data-tone={tone} data-shape={branch ? "branch" : "leaf"}>
+        <span
+          className="a-entity-tree__kind"
+          data-tone={tone}
+          data-shape={branch ? "branch" : "leaf"}
+        >
           <span className="a-visually-hidden">{kindText}</span>
         </span>
       ) : null}
       {href ? (
-        <a className="a-entity-tree__label" href={href} onClick={onOpen} tabIndex={-1} data-tree-open="" title={label.text}>{content}</a>
+        <a
+          className="a-entity-tree__label"
+          href={href}
+          onClick={onOpen}
+          tabIndex={-1}
+          data-tree-open=""
+          title={label.text}
+        >
+          {content}
+        </a>
       ) : (
-        <span className="a-entity-tree__label" title={label.text}>{content}</span>
+        <span className="a-entity-tree__label" title={label.text}>
+          {content}
+        </span>
       )}
-      {count !== undefined ? <span className="a-entity-tree__count">{intl.number(count)}</span> : null}
+      {count !== undefined ? (
+        <span className="a-entity-tree__count">{intl.number(count)}</span>
+      ) : null}
       {entry.orphan && entry.depth === 1 ? (
-        <span className="a-entity-tree__marker" title={intl.message("list.tree.parentOutsideHint")}>{intl.message("list.tree.parentOutside")}</span>
+        <span
+          className="a-entity-tree__marker"
+          title={intl.message("list.tree.parentOutsideHint")}
+        >
+          {intl.message("list.tree.parentOutside")}
+        </span>
       ) : null}
       {hierarchy.moving && hierarchy.canReceive(entry) ? (
-        <Button variant="secondary" size="small" className="a-entity-tree__move-here" disabled={hierarchy.moving.busy}
-          aria-label={intl.message("list.tree.moveHereNamed", { record: label.text })} onClick={() => hierarchy.moveTo(row.id)}>
+        <Button
+          variant="secondary"
+          size="small"
+          className="a-entity-tree__move-here"
+          disabled={hierarchy.moving.busy}
+          aria-label={intl.message("list.tree.moveHereNamed", {
+            record: label.text,
+          })}
+          onClick={() => hierarchy.moveTo(row.id)}
+        >
           {intl.message("list.tree.moveHere")}
         </Button>
       ) : null}
       {row.treeRole === "context" ? (
-        <span className="a-entity-tree__marker a-entity-tree__marker--context">{intl.message("list.tree.context")}</span>
+        <span className="a-entity-tree__marker a-entity-tree__marker--context">
+          {intl.message("list.tree.context")}
+        </span>
       ) : null}
       {entry.state === "limit" ? (
-        <span className="a-entity-tree__marker a-entity-tree__marker--limit" title={intl.message("list.tree.depthLimitHint", { depth: tree.maxDepth })}>
+        <span
+          className="a-entity-tree__marker a-entity-tree__marker--limit"
+          title={intl.message("list.tree.depthLimitHint", {
+            depth: tree.maxDepth,
+          })}
+        >
           {intl.message("list.tree.depthLimit")}
         </span>
       ) : null}
@@ -592,15 +852,28 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
 /** Every visible line of the tree: node lines come from `renderNode` (a table
  * row or a narrow list item); the orphans heading, messages and "Load more"
  * are drawn here. */
-export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, renderNode }: {
+export function HierarchyTreeLines({
+  hierarchy,
+  variant,
+  columnCount,
+  intl,
+  renderNode,
+}: {
   readonly hierarchy: HierarchyTree;
   readonly variant: "table" | "list";
   readonly columnCount: number;
   readonly intl: EntityIntl;
   readonly renderNode: (entry: NodeEntry, focusable: boolean) => ReactNode;
 }) {
-  const first = hierarchy.entries.find((entry) => entry.kind === "node" || entry.kind === "orphans")?.key;
-  const line = (key: string, level: number, content: ReactNode, attributes: Record<string, unknown> = {}) =>
+  const first = hierarchy.entries.find(
+    (entry) => entry.kind === "node" || entry.kind === "orphans",
+  )?.key;
+  const line = (
+    key: string,
+    level: number,
+    content: ReactNode,
+    attributes: Record<string, unknown> = {},
+  ) =>
     variant === "table" ? (
       <tr key={key} {...attributes}>
         <td colSpan={columnCount}>
@@ -621,15 +894,34 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
   return (
     <>
       {hierarchy.entries.map((entry) => {
-        if (entry.kind === "node") return <React.Fragment key={entry.key}>{renderNode(entry, entry.key === first)}</React.Fragment>;
+        if (entry.kind === "node")
+          return (
+            <React.Fragment key={entry.key}>
+              {renderNode(entry, entry.key === first)}
+            </React.Fragment>
+          );
         if (entry.kind === "orphans") {
           const label = intl.message("list.tree.orphans");
           const heading = (
             <>
-              <TreeToggle expandable expanded={entry.expanded} label={intl.message(entry.expanded ? "list.group.collapse" : "list.group.expand", { group: label })} onToggle={hierarchy.toggleOrphans} />
+              <TreeToggle
+                expandable
+                expanded={entry.expanded}
+                label={intl.message(
+                  entry.expanded ? "list.group.collapse" : "list.group.expand",
+                  { group: label },
+                )}
+                onToggle={hierarchy.toggleOrphans}
+              />
               <strong>{label}</strong>
-              {entry.count !== undefined ? <span className="a-entity-tree__count">{intl.number(entry.count)}</span> : null}
-              <span className="a-entity-tree__message">{intl.message("list.tree.orphansHint")}</span>
+              {entry.count !== undefined ? (
+                <span className="a-entity-tree__count">
+                  {intl.number(entry.count)}
+                </span>
+              ) : null}
+              <span className="a-entity-tree__message">
+                {intl.message("list.tree.orphansHint")}
+              </span>
             </>
           );
           const attributes = {
@@ -638,7 +930,13 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
             "data-tree-key": entry.key,
             "aria-level": 1,
             "aria-expanded": entry.expanded,
-            "aria-label": entry.count !== undefined ? intl.message("list.gantt.toggleGroup", { group: label, count: entry.count }) : label,
+            "aria-label":
+              entry.count !== undefined
+                ? intl.message("list.gantt.toggleGroup", {
+                    group: label,
+                    count: entry.count,
+                  })
+                : label,
             tabIndex: entry.key === first ? 0 : -1,
           };
           return variant === "table" ? (
@@ -649,7 +947,9 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
             </tr>
           ) : (
             <div key={entry.key} {...attributes}>
-              <div role="gridcell" className="a-entity-tree__heading">{heading}</div>
+              <div role="gridcell" className="a-entity-tree__heading">
+                {heading}
+              </div>
             </div>
           );
         }
@@ -658,14 +958,24 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
             entry.key,
             entry.level,
             <>
-              <span className="a-entity-tree__toggle a-entity-tree__toggle--spacer" aria-hidden="true" />
+              <span
+                className="a-entity-tree__toggle a-entity-tree__toggle--spacer"
+                aria-hidden="true"
+              />
               <span className="a-entity-tree__message">
                 {entry.message === "ceiling"
-                  ? intl.message("list.tree.ceilingNode", { count: LIST_TREE_NODE_CEILING })
-                  : intl.message(`list.tree.${entry.message === "noChildren" ? "noChildren" : entry.message}`)}
+                  ? intl.message("list.tree.ceilingNode", {
+                      count: LIST_TREE_NODE_CEILING,
+                    })
+                  : intl.message(
+                      `list.tree.${entry.message === "noChildren" ? "noChildren" : entry.message}`,
+                    )}
               </span>
             </>,
-            { className: "a-entity-tree__message-row", ...(variant === "list" ? { role: "row" } : {}) },
+            {
+              className: "a-entity-tree__message-row",
+              ...(variant === "list" ? { role: "row" } : {}),
+            },
           );
         if (hierarchy.reached) return null;
         const level = hierarchy.levels.get(entry.levelKey);
@@ -673,12 +983,27 @@ export function HierarchyTreeLines({ hierarchy, variant, columnCount, intl, rend
           entry.key,
           entry.level,
           <>
-            <span className="a-entity-tree__toggle a-entity-tree__toggle--spacer" aria-hidden="true" />
-            <button type="button" className="a-entity-tree__more" disabled={level?.status === "loading"} onClick={() => hierarchy.loadMore(entry.levelKey)}>
-              {entry.remaining !== undefined ? intl.message("list.tree.loadMoreLeft", { count: entry.remaining }) : intl.message("list.tree.loadMore")}
+            <span
+              className="a-entity-tree__toggle a-entity-tree__toggle--spacer"
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              className="a-entity-tree__more"
+              disabled={level?.status === "loading"}
+              onClick={() => hierarchy.loadMore(entry.levelKey)}
+            >
+              {entry.remaining !== undefined
+                ? intl.message("list.tree.loadMoreLeft", {
+                    count: entry.remaining,
+                  })
+                : intl.message("list.tree.loadMore")}
             </button>
           </>,
-          { className: "a-entity-tree__message-row", ...(variant === "list" ? { role: "row" } : {}) },
+          {
+            className: "a-entity-tree__message-row",
+            ...(variant === "list" ? { role: "row" } : {}),
+          },
         );
       })}
     </>
@@ -707,7 +1032,9 @@ export function treeNodeAttributes(entry: NodeEntry, focusable: boolean) {
     "aria-posinset": entry.posinset,
     "aria-setsize": entry.setsize,
     ...(entry.row.treeRole ? { "data-tree-role": entry.row.treeRole } : {}),
-    ...(entry.state === "expandable" ? { "aria-expanded": entry.expanded } : {}),
+    ...(entry.state === "expandable"
+      ? { "aria-expanded": entry.expanded }
+      : {}),
     tabIndex: focusable ? 0 : -1,
   } as const;
 }

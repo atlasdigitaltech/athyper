@@ -6,7 +6,8 @@ import type {
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Button } from "@athyper/platform-ui";
-import type { DateRangePages } from "./date-range-data";
+import type { ListPages } from "../list-pages";
+import { StreamFailure } from "../stream-failure";
 import type { DatedEntry } from "./date-range-model";
 
 // Presentation parts shared by the date layouts (Calendar, Gantt).
@@ -261,7 +262,7 @@ export function UnscheduledTray({
   intl,
 }: {
   readonly field: ListDateRangeFieldV1;
-  readonly pages: DateRangePages;
+  readonly pages: ListPages;
   readonly card: (row: EntityListRowV1, note: ReactNode) => ReactNode;
   readonly intl: EntityIntl;
 }) {
@@ -295,12 +296,19 @@ export function UnscheduledTray({
             ),
           )}
         </div>
-      ) : (
+      ) : pages.failed ? null : (
         <p className="a-entity-dated__caption">
           {intl.message("list.calendar.trayEmpty")}
         </p>
       )}
-      {pages.hasNext ? (
+      {pages.failed ? (
+        <StreamFailure
+          message={intl.message("list.calendar.trayFailed")}
+          error={pages.error}
+          onRetry={pages.retry}
+          intl={intl}
+        />
+      ) : pages.hasNext ? (
         <Button
           variant="secondary"
           size="small"

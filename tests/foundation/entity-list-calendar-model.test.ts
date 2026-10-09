@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import { periodWindow } from "@athyper/platform-temporal";
 import type {
   EntityListDescriptorV1,
+  EntityListResultV1,
+  ListFilterV1,
   EntityListRowV1,
   ListCalendarDateFieldV1,
   ListLocationStateV1,
@@ -13,8 +15,10 @@ import {
   mergeRows,
   openEndedFilters,
   placeEntries,
+  shownTotal,
   trayFilters,
   windowFilters,
+  windowStartPointFilters,
 } from "../../packages/platform/entity/runtime/list-view/src/date-range/date-range-model";
 import {
   calendarPeriod,
@@ -103,6 +107,58 @@ describe("calendar windows and wire format", () => {
     assert.equal(trayFilters(instantField), undefined);
   });
 
+  it("places a zero-length datetime milestone at a window edge in exactly one window, through one query", () => {
+    const range: ListCalendarDateFieldV1 = {
+      start: "starts_at",
+      end: "ends_at",
+      label: "Starts",
+      kind: "datetime",
+      unscheduled: false,
+      endNullable: true,
+    };
+    const zone = "Asia/Kuala_Lumpur";
+    // Local midnight on 1 October in the viewer's zone.
+    const edge = "2026-09-30T16:00:00.000Z";
+    const matches = (filters: readonly ListFilterV1[] | undefined, values: Record<string, string | null>) =>
+      Boolean(filters) &&
+      filters!.every((filter) => {
+        const value = values[filter.field] ?? null;
+        if (filter.operator === "is_null") return value === null;
+        if (filter.operator === "is_not_null") return value !== null;
+        if (value === null) return false;
+        const left = Date.parse(value), right = Date.parse(String(filter.value));
+        return filter.operator === "eq" ? left === right
+          : filter.operator === "gt" ? left > right
+          : filter.operator === "gte" ? left >= right
+          : filter.operator === "lt" ? left < right
+          : assert.fail(`unexpected ${filter.operator}`);
+      });
+    const hits = (values: Record<string, string | null>) =>
+      ["2026-09-08", "2026-10-08"].flatMap((anchor) => {
+        const window = periodWindow(anchor, calendarPeriod("agenda"), 1);
+        return [
+          ["window", windowFilters(range, window, zone)],
+          ["open", openEndedFilters(range, window, zone)],
+          ["points", windowStartPointFilters(range, window, zone)],
+        ].flatMap(([name, filters]) =>
+          matches(filters as readonly ListFilterV1[] | undefined, values) ? [`${anchor}:${name}`] : [],
+        );
+      });
+    assert.deepEqual(hits({ starts_at: edge, ends_at: edge }), ["2026-10-08:points"]);
+    // A range ending exactly at the edge stays in September only (the end is exclusive).
+    assert.deepEqual(hits({ starts_at: "2026-09-30T10:00:00Z", ends_at: edge }), ["2026-09-08:window"]);
+    // A range starting at the edge is October's, through the window query.
+    assert.deepEqual(hits({ starts_at: edge, ends_at: "2026-10-01T05:00:00Z" }), ["2026-10-08:window"]);
+    // Date ranges have no such gap, and no point query is sent for them.
+    const window = periodWindow("2026-10-08", calendarPeriod("agenda"), 1);
+    assert.equal(windowStartPointFilters(dateField, window, "UTC"), undefined);
+    assert.equal(windowStartPointFilters(instantField, window, "UTC"), undefined);
+    assert.deepEqual(
+      windowStartPointFilters({ ...range, endNullable: false }, window, zone)!.map((filter) => filter.operator),
+      ["gte", "lt", "eq"],
+    );
+  });
+
   it("turns the page query into the window query with an explicit sort and the largest page", () => {
     const descriptor = {
       surface: { calendar: { defaultView: "month", dateFields: [dateField] } },
@@ -136,6 +192,16 @@ describe("calendar windows and wire format", () => {
     assert.equal(page.filters.length, 4);
     const table = { ...state, mode: "table" } as ListLocationStateV1;
     assert.equal(calendarRange(table, descriptor, context), undefined);
+    // The narrow width draws Agenda: the page query must use Agenda's month
+    // window, not Month's whole weeks, so later pages share its cursor.
+    assert.deepEqual(calendarRange(state, descriptor, context, true)?.window, {
+      start: "2026-10-01",
+      end: "2026-11-01",
+    });
+    assert.notDeepEqual(
+      calendarRange(state, descriptor, context)?.window,
+      calendarRange(state, descriptor, context, true)?.window,
+    );
     assert.equal(
       dateRangePageState(table, descriptor, undefined, "UTC"),
       table,
@@ -280,5 +346,23 @@ describe("calendar placement", () => {
       ),
       ["a", "b", "c"],
     );
+  });
+});
+
+describe("calendar and gantt shown totals", () => {
+  const page = (total: number | undefined, countMode: "exact" | "estimated") =>
+    ({ pagination: { countMode, total } }) as unknown as EntityListResultV1;
+
+  it("adds the open-ended and point queries' totals to the window's, so N never exceeds M", () => {
+    assert.equal(shownTotal(page(10, "exact"), [{ total: 120 }]), 130);
+    assert.equal(shownTotal(page(10, "exact"), [undefined]), 10);
+    assert.equal(shownTotal(page(10, "exact"), [{ total: 120 }, { total: 2 }]), 132);
+  });
+
+  it("shows no total until both are known, and none outside exact counts", () => {
+    assert.equal(shownTotal(page(10, "exact"), [{}]), undefined);
+    assert.equal(shownTotal(page(10, "exact"), [{ total: 1 }, {}]), undefined);
+    assert.equal(shownTotal(page(10, "estimated"), [{ total: 3 }]), undefined);
+    assert.equal(shownTotal(undefined, [{ total: 3 }]), undefined);
   });
 });

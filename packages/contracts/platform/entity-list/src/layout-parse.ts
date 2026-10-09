@@ -1,4 +1,4 @@
-// Parsing helpers shared by the layout contracts (Calendar, Gantt). Internal:
+// Parsing helpers shared by the layout contracts (Board, Calendar, Gantt, Tree). Internal:
 // not re-exported from the package index.
 
 export function fail(path: string, reason: string): never {
@@ -8,6 +8,10 @@ export function record(value: unknown, path: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
     fail(path, "must be an object");
   return value as Record<string, unknown>;
+}
+export function list(value: unknown, path: string): readonly unknown[] {
+  if (!Array.isArray(value)) fail(path, "must be an array");
+  return value;
 }
 export function allowKeys(
   value: Record<string, unknown>,

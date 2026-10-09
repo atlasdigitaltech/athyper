@@ -106,6 +106,8 @@ Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now a
 
 `tree` was registered with all four traits on 9 October 2026 (Tree blueprint B1, `c3cbd5d9f`); the column above records it.
 
+**Secondary query paging (implementation note, 9 October 2026).** Every query a layout pages beside the list's own page query (a Board lane, Calendar and Gantt continuation, open-ended, window-start point and Unscheduled streams, a grouped-tree group's records) goes through one hook, `useListPages` (`list-view/src/list-pages.ts`). It replaces `useDateRangePages` and the Board lane's own copy. A query's identity is the request it builds, so any change to that request starts again with nothing shown and nothing loading; loaded pages are stored with that identity, so the reset needs no write during render. A disabled stream (a collapsed lane) keeps its pages and never repeats one. A failed request is reported with its localized reason (`StreamFailure`, the same safe categories as the list's own error state) and a retry when the failure is retryable, so a layout never hides records silently. Pinned by `tests/foundation/entity-list-pages.test.tsx`, also under StrictMode. This adds no contract property.
+
 ## 8. Record-scoped layouts (approved 9 October 2026)
 
 **Approval.** The project owner (nchandravel-atlas) approved this rule as T3 of the [Entity list Tree blueprint](../entity-list-tree/blueprint.md) revision 3, to be decided once for every layout: "pilot 1, T1, T2, T3 and the B2 design entry as per recommendation... approved all five with with T2 and B4 amend below".

@@ -45,18 +45,33 @@ export function calendarSelection(
   };
 }
 
-/** Calendar's field and window when the list is in Calendar mode. */
+/** The view Calendar draws: Agenda at the narrow width, whatever is chosen. */
+export function calendarShownView(
+  view: ListCalendarView,
+  narrow: boolean,
+): ListCalendarView {
+  return narrow ? "agenda" : view;
+}
+
+/** Calendar's field and window when the list is in Calendar mode. `narrow`
+ * must match the renderer's, so the list's first page and the renderer's
+ * later pages share one window (the server binds the cursor to its filters). */
 export function calendarRange(
   state: ListLocationStateV1,
   descriptor: EntityListDescriptorV1,
   context: DateRangeContext,
+  narrow = false,
 ): DateRangeView | undefined {
   if (state.mode !== "calendar" || !descriptor.surface.calendar)
     return undefined;
   const { anchor, field, view } = calendarSelection(state, descriptor, context);
   return {
     field,
-    window: periodWindow(anchor, calendarPeriod(view), context.weekStart),
+    window: periodWindow(
+      anchor,
+      calendarPeriod(calendarShownView(view, narrow)),
+      context.weekStart,
+    ),
   };
 }
 
