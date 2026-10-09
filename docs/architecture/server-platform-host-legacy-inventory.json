@@ -115,6 +115,7 @@
       "legacyLocations": [],
       "currentLocations": [
         "deploy/compose/instance/compose.component-review.yaml",
+        "deploy/compose/instance/compose.control-api-source.yaml",
         "deploy/compose/instance/compose.control-api.yaml",
         "deploy/compose/instance/compose.native-bootstrap.yaml",
         "deploy/compose/instance/compose.product-command.yaml",
