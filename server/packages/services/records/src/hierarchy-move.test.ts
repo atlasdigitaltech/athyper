@@ -101,6 +101,19 @@ describe("moving a node", () => {
     await expect(fixture(descriptor(), undefined, { commit: () => { throw otherKey; } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
   });
 
+  it("resolves a redacted deferred refusal through the constraint's catalog columns", async () => {
+    // PostgreSQL withholds the key columns from roles without full column
+    // privileges: the application role sees only the table and constraint.
+    const redacted = (constraint: string) => Object.assign(new Error("database text"), { code: "23503", schema: "app", table: "gl_account", constraint, detail: `Key is not present in table "gl_account".` });
+    const catalog = (repository: RecordRepository<unknown>) => ({ ...repository, selfReferenceKeyColumns: async (_: unknown, constraint: string) => (constraint === "gl_account_parent_fk" ? ["tenant_id", "chart_id", "parent_id"] : undefined) }) as RecordRepository<unknown>;
+    await expect(fixture(descriptor(), catalog, { commit: () => { throw redacted("gl_account_parent_fk"); } }).move(3, 4)).rejects.toMatchObject({ code: "HIERARCHY_PARENT_OUTSIDE_SCOPE" });
+    // Another key on the same table, or no catalog lookup, keeps the raw error.
+    await expect(fixture(descriptor(), catalog, { commit: () => { throw redacted("gl_account_cost_center_fk"); } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
+    await expect(fixture(descriptor(), undefined, { commit: () => { throw redacted("gl_account_parent_fk"); } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
+    // Another schema's table of the same name is not this Entity's table.
+    await expect(fixture(descriptor(), catalog, { commit: () => { throw Object.assign(redacted("gl_account_parent_fk"), { schema: "other" }); } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
+  });
+
   it("maps the database's own refusals without its message text", async () => {
     const failing = (code: string) => (repository: RecordRepository<unknown>) => ({ ...repository, patch: async () => { throw Object.assign(new Error("database text"), { code }); } }) as RecordRepository<unknown>;
     await expect(fixture(descriptor(), failing("23514")).move(3, 4)).rejects.toMatchObject({ code: "HIERARCHY_REJECTED", message: "This move breaks the hierarchy's rules." });

@@ -36,7 +36,7 @@ function lists(described = descriptor) {
     { id: id(4), tenant_id: tenantId, code: "2100", name: "Hidden parent", parent_id: null, deleted_at: "2026-10-01T00:00:00Z" },
     { id: id(5), tenant_id: tenantId, code: "2110", name: "Orphan", parent_id: id(4) },
   ]);
-  const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true }) } };
+  const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true as const }) } };
   const listExecutor = createRecordListExecutor(options);
   return createEntityListService({ ...options, listExecutor, queries: createRecordQueryService(options, listExecutor) });
 }

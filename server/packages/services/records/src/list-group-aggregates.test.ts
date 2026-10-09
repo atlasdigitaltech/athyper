@@ -44,7 +44,7 @@ function lists(described = descriptor(), extra: Record<string, unknown>[] = []) 
     { id: id(4), tenant_id: tenantId, code: "INV-4", status: "paid", due: null, posted: "2026-12-31T10:00:00Z", amount: 10, currency: "USD", rate: null },
     ...extra,
   ]);
-  const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true }) } };
+  const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true as const }) } };
   const listExecutor = createRecordListExecutor(options);
   return createEntityListService({ ...options, listExecutor, queries: createRecordQueryService(options, listExecutor) });
 }

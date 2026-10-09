@@ -34,6 +34,19 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
     return database;
   };
   return {
+    async selfReferenceKeyColumns(descriptor, constraint) {
+      // Read after the failed commit, outside any transaction.
+      const result = await sql<{ columns: string[] | null }>`
+        SELECT array_agg(attribute.attname::text ORDER BY key.position) AS columns
+          FROM pg_catalog.pg_constraint AS foreign_key
+          CROSS JOIN LATERAL unnest(foreign_key.conkey) WITH ORDINALITY AS key(attnum, position)
+          JOIN pg_catalog.pg_attribute AS attribute ON attribute.attrelid = foreign_key.conrelid AND attribute.attnum = key.attnum
+         WHERE foreign_key.contype = 'f' AND foreign_key.conname = ${constraint}
+           AND foreign_key.conrelid = to_regclass(${`${descriptor.storage.schema}.${descriptor.storage.object}`})
+           AND foreign_key.confrelid = foreign_key.conrelid
+      `.execute(databaseFor(descriptor));
+      return result.rows[0]?.columns ?? undefined;
+    },
     async measureHierarchy(input, transaction) {
       // Two bounded recursive statements over the stored hierarchy (tenant and
       // soft delete only): hidden records still occupy depth.

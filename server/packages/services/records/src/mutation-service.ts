@@ -153,10 +153,10 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
       await appendRecordSideEffects(options, command, transaction, "patch", command.recordId, result.record);
       return { kind: "Committed", action: "patch", entityCode: command.entityCode, recordId: command.recordId, record: result.record, version: versionOf(descriptor, result.record), replayed: false };
     }, descriptor);
-  }).catch((error: unknown) => {
+  }).catch(async (error: unknown) => {
     // A deferred parent foreign key is checked at commit: map it only when the
-    // refusal names this table's parent column, never another column's error.
-    if (moving && deferredParentRefusal(error, descriptor)) throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
+    // refusal is this table's parent key, never another column's error.
+    if (moving && (await deferredParentRefusal(error, descriptor, options.repository))) throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
     throw error;
   });
 }
@@ -193,14 +193,24 @@ async function guardHierarchyMove<Transaction>(options: RecordMutationServiceOpt
   if (measured.parentDepth + measured.subtreeHeight > hierarchy.maxDepth) throw new RecordServiceError(409, "HIERARCHY_DEPTH_EXCEEDED", `This move would go deeper than ${hierarchy.maxDepth} levels.`);
 }
 
-/** Whether a commit-time foreign-key refusal concerns this table's parent key:
- * PostgreSQL names the table and the key columns ("Key (…, parent_id)=…"). */
-function deferredParentRefusal(error: unknown, descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor): boolean {
+/** Whether a commit-time foreign-key refusal concerns this table's parent key.
+ * PostgreSQL names the table and constraint; it names the key columns
+ * ("Key (…, parent_id)=…") only to roles with full column privileges, so a
+ * redacted detail is resolved through the constraint's catalog entry. */
+export async function deferredParentRefusal(error: unknown, descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor, repository: Pick<import("@athyper/server-contract-records").RecordRepository<unknown>, "selfReferenceKeyColumns">): Promise<boolean> {
   if (!error || typeof error !== "object" || Reflect.get(error, "code") !== "23503") return false;
+  if (Reflect.get(error, "table") !== descriptor.storage.object) return false;
+  const schema = Reflect.get(error, "schema");
+  if (schema !== undefined && schema !== descriptor.storage.schema) return false;
   const parentPath = descriptor.fields.find((field) => field.key === descriptor.hierarchy?.parentField)?.storagePath;
+  if (!parentPath) return false;
   const detail = String(Reflect.get(error, "detail") ?? "");
-  const keys = /^Key \(([^)]*)\)/.exec(detail)?.[1]?.split(",").map((column) => column.trim().replace(/^"|"$/g, "")) ?? [];
-  return Reflect.get(error, "table") === descriptor.storage.object && Boolean(parentPath && keys.includes(parentPath));
+  const named = /^Key \(([^)]*)\)/.exec(detail)?.[1]?.split(",").map((column) => column.trim().replace(/^"|"$/g, ""));
+  if (named) return named.includes(parentPath);
+  const constraint = Reflect.get(error, "constraint");
+  if (typeof constraint !== "string" || !constraint || !repository.selfReferenceKeyColumns) return false;
+  const columns = await repository.selfReferenceKeyColumns(descriptor, constraint).catch(() => undefined);
+  return Boolean(columns?.includes(parentPath));
 }
 
 /** The database is the final authority (section 7.5): refusals of the parent

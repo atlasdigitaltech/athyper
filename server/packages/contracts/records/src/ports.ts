@@ -241,6 +241,14 @@ export interface RecordHierarchyMeasureInput {
 }
 
 export interface RecordRepository<Transaction = unknown> {
+  /** The columns of a foreign key on the Entity's own table that references
+   * that same table, read from the catalog by constraint name; undefined when
+   * the constraint is not such a key. PostgreSQL withholds the key columns
+   * from a refusal's detail for roles without full column privileges. */
+  selfReferenceKeyColumns?(
+    descriptor: EntityRuntimeDescriptor,
+    constraint: string,
+  ): Promise<readonly string[] | undefined>;
   measureHierarchy?(
     input: RecordHierarchyMeasureInput,
     transaction?: Transaction,
