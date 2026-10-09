@@ -91,3 +91,4 @@
 20261009_local_publication_predecessor_read.sql
 20261009_local_publication_predecessor_dependency.sql
 20261009_local_publication_predecessor_scope.sql
+20261010_local_publication_admission_audit.sql

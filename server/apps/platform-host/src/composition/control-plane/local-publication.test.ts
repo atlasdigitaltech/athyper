@@ -174,6 +174,16 @@ it("admission commits one server-built request, replays exactly and rejects call
       replayed: true,
     });
     expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventCode: "metadata.entity.local.admission",
+        actor: { kind: "user", principalId: context.principalId },
+        metadata: expect.objectContaining({
+          basis: "local_development_authority",
+        }),
+      }),
+      expect.anything(),
+    );
     const gate = ports.gate.mock.calls[0]![0];
     expect(
       await gate.evaluate({

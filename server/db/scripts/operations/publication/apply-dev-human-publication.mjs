@@ -15,6 +15,8 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-ADMISSION-AUDIT":
+    "20261010_local_publication_admission_audit.sql",
   "--apply=DEV-LOCAL-PUBLICATION-PREDECESSOR-SCOPE":
     "20261009_local_publication_predecessor_scope.sql",
   "--apply=DEV-LOCAL-PUBLICATION-PREDECESSOR-DEPENDENCY":

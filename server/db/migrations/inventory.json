@@ -2635,6 +2635,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/50_local_publication_predecessor_scope.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_admission_audit.sql",
+      "path": "migrations/20261010_local_publication_admission_audit.sql",
+      "sha256": "2d0775c9ac21e5c2910f211d19af0e346db500eb52662324369b85ef86f0a566",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Distinct real developer audit event for standing local publication admission; existing review and workload contracts unchanged.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/51_local_publication_admission_audit.sql"
+      ]
     }
   ]
 }

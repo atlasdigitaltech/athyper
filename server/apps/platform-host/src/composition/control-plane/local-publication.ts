@@ -215,7 +215,7 @@ export function createLocalPublicationAdmission(options: Options) {
           throw Error("LOCAL_PUBLICATION_ADMISSION_RECEIPT_INVALID");
         const audit = await options.audit.record(
           {
-            eventCode: "metadata.entity.product.publication",
+            eventCode: "metadata.entity.local.admission",
             action: "local_publication_admission",
             outcome: "success",
             severity: "critical",
