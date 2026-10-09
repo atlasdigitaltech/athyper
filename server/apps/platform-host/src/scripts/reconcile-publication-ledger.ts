@@ -21,12 +21,12 @@ const config = loadPublicationWorkloadConfiguration(
   process.env,
   process.env.ATHYPER_ENV!,
 );
-if (!config?.localAuthority || !process.env.STUDIO_DATABASE_URL)
+if (!config?.localAuthority || !process.env.STUDIO_WORKER_DATABASE_URL)
   throw Error("Installed local publication configuration required");
 const db = new Kysely<Record<string, never>>({
   dialect: new PostgresDialect({
     pool: new Pool({
-      connectionString: process.env.STUDIO_DATABASE_URL,
+      connectionString: process.env.STUDIO_WORKER_DATABASE_URL,
       max: 1,
     }),
   }),
