@@ -1,6 +1,6 @@
 # Entity list Compare — blueprint
 
-**Status:** approved, revision 5 (10 October 2026). Revision 5 sets C4's design (sections 5.8 and 5.9). C4 is built after the prototype review.
+**Status:** approved, revision 6 (10 October 2026). Revision 5 sets C4's design (sections 5.8 and 5.9). Revision 6 records the build authority and the build-time specifics (section 5.8, point 10a).
 
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
 - **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
@@ -311,7 +311,7 @@ collections?: readonly {
 4. The pilot sequence (point 10 below).
 5. This revision 5, with the audit 7 corrections.
 
-Revision 5 replaces revision 4's decisions 18–22 with decisions 23–30 (section 15). The owner asked for the C4 view to be prototyped next ("prepare two view"). The prototype is `docs/prototypes/Neon Bid Evaluation Prototype.html`. C4 is built after the prototype is reviewed.
+Revision 5 replaces revision 4's decisions 18–22 with decisions 23–30 (section 15). The owner asked for the C4 view to be prototyped next ("prepare two view"). The prototype is `docs/prototypes/Neon Bid Evaluation Prototype.html`. **Build authority (10 October 2026):** after the revised prototype (`docs/prototypes/Neon Matrix Prototype.html`), the owner instructed: "Go ahead with the build ... build based on revised prototype with your recommendation".
 
 **Facts it relies on** (verified in the code and the Neon DDL on 10 October 2026):
 - **Existing related-record path.** Record sections read related lines through the existing list operation with a parent scope coordinate (`parentEntityCode`, `parentRecordId`, `relationshipKey`, `parentDescriptorHash`). The server resolves and authorizes it on every request (`resolveCollectionScope`).
@@ -368,6 +368,8 @@ collections?: readonly {                // 0–2 per comparison
 - **"Differences only"** applies to line rows within the loaded pages and is worded for what is loaded: "3 items differ among items 1–150". No server-side differences count is built.
 - **"Not quoted by at least one" is not a list filter today.** List filters act on an Entity's own fields, and this is an existence test against another Entity. It needs either a new framework existence filter or a maintained count on the master row. Recorded as a later decision, not part of C4.
 
+**Key coverage is the same rule as the Matrix's** ([Entity list Matrix blueprint](../entity-list-matrix/blueprint.md) section 2.1), so it has one home. A line Entity's unique key may hold extra dimensions beyond the parent and the match key's first field, for example the company code in `sourcing_event_award_allocation_uq`. They are covered by including them in `matchKey`, which allows two fields, or by the read scope pinning them to one value at request time.
+
 **5. Keys and duplicates.**
 - In master-list mode, the match key's first field must be a reference to the master Entity (`COMPARE_MATCH_KEY_NOT_SHARED` otherwise). In small mode it must be a reference or a declared business code, never a per-parent sequence such as a line number.
 - Uniqueness per parent is checked against the DDL by `compareMatchKeyFinding`, wired into the onboarding DDL rehearsal after the metadata cleanup.
@@ -385,6 +387,13 @@ collections?: readonly {                // 0–2 per comparison
 **8. The `in` filter limit.** `MAX_LIST_FILTER_VALUES` = 100 is published in the shared list contract and enforced by the server (`INVALID_FILTER`). It lands with C4.
 
 **9. Outcomes and baseline.** `comparisonLineOutcome` (decision 16) handles absence and then calls `comparisonRowOutcome` unchanged. Baseline marks follow section 5.7. Line rows are labelled by the master row's readable label (reference labels through the authorized label service, never an identifier).
+
+**10a. Build-time specifics (revision 6).**
+- **Server-resolved collections.** The parent's per-viewer projection resolves each collection on the server, inside the existing list-descriptor call: the relationship, the target Entity, and the target's readable fields for this viewer (labels, value kinds, best value, unit field). The browser therefore reads no separate line descriptor.
+  - Each projected collection carries `relationshipKey`, `targetEntity`, `parentDescriptorHash` (the parent's compiled hash, which the parent-scope resolver checks), `matchKey` and readable `fields`.
+  - When unavailable, it carries a reason instead: `LINE_ACCESS_INDEPENDENT`, `MATCH_KEY_UNAVAILABLE`, `RELATIONSHIP_UNAVAILABLE` or `NO_READABLE_FIELDS`.
+- **Line access, from published metadata.** The parent's authorization profile publishes each relationship's `ownership: "inherited" | "independent"`. An `independent` relationship, or a target that declares its own `recordPredicates`, `ownerAccess` or a non-tenant `directoryScope` mode, makes the collection `LINE_ACCESS_INDEPENDENT`: offered without absence claims ("—" instead of "Not quoted"), never as "Not quoted".
+- **Compare panel note.** "Best is among the responses you chose; the bid tabulation ranks every visible participant" (Matrix 5.3).
 
 **10. Pilot and prerequisites.**
 - **Pilot on existing tables:** compare 2–4 awards of one sourcing event (`sourcing_event_award`) by their allocation lines (`sourcing_event_award_allocation`). The match key is (`sourcing_event_demand_id`, `company_code_id`), and the master list is `sourcing_event_demand` under the event.

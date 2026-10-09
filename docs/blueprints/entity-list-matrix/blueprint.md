@@ -1,6 +1,13 @@
 # Entity list Matrix — blueprint
 
-**Status:** proposed, revision 2 (10 October 2026). The direction is approved. Revision 2 folds in audit 8, and the audit recommends approving all five decisions in section 14. The project owner has not yet approved the contract properties, and none may be implemented until the owner does.
+**Status:** approved, revision 3 (10 October 2026).
+- **Section 14 approval.** The project owner approved section 14 in these words: "Matrix section 14 approved".
+- **Build authority.** The owner authorized the build: "Go ahead with the build ... build based on revised prototype with your recommendation".
+- **What revision 3 adds:**
+  - audit 9's two conditions (section 2.1, and M3's rehearsal work), with the code facts corrected in section 16;
+  - the revised prototype, `docs/prototypes/Neon Matrix Prototype.html`;
+  - the author's recommendations on the items that prototype raised (section 5.3).
+- **Phases now authorized:** M1 and M2. M3 needs the metadata cleanup.
 
 - **Direction approved (10 October 2026).** The owner reviewed a reference screenshot of a bid-award grid (items as rows, every participant as a column, price, rank, % above lowest and allocation per cell) and the recommendation to build it as a list Layout. The owner approved in these words: "totally agreeed". The recommendation was:
   - Matrix as a new list Layout with its own blueprint, not a stretched Compare;
@@ -73,11 +80,15 @@ The question is not "is there a unique key on the two pivot fields?". It is: **g
 
 1. Take the database unique key that contains both pivot columns. If none does: `MATRIX_KEY_NOT_UNIQUE`.
 2. Subtract the pivot columns and the tenant column. What remains are the key's **extra dimensions**. For `sourcing_event_award_allocation_uq` (tenant, award, demand, company code), the extra dimension is `company_code_id`, found from the key with no literal in the framework.
-3. Every extra dimension must be **covered** in one of two ways:
-   - **Pinned to exactly one value** for the surface: a locked record or parent scope predicate, a single-valued scope coordinate (the published operation scope binding's `scopeKind`, for example `company_code`, resolving to one value), or a declared `eq` filter.
-   - **Declared as a pivot dimension** (`pivotDimensions`, section 5.1). It then becomes part of the column identity: a column is (column field × dimension), for example "award × company".
-4. An uncovered dimension is refused at publication with `MATRIX_KEY_DIMENSION_UNCOVERED`, naming the field: "company_code_id is not covered by this surface's scope". The author decides whether to pin it in the scope or declare it as a pivot dimension. Both are authored decisions; neither is hardcoded.
-5. The same rule runs **at request time** on the applied filters and scope (section 7). Publication proves uniqueness for the declared scope, but a viewer filtering to two company codes could otherwise make one (demand, award) cell hold two allocations.
+3. Every extra dimension must be **covered**. The two checkpoints prove different things (audit 9, condition 1); the check is not symmetric:
+   - **Publication proves bindability.** It refuses with `MATRIX_KEY_DIMENSION_UNCOVERED`, naming the field, unless each extra dimension is either:
+     - **declared** in `pivotDimensions`. It then becomes part of the column identity, for example "award × company"; or
+     - **bound** by the read operation's published scope resolver. The runtime descriptor's authorization operations carry a resolver key with named coordinates, for example `company.record.v1` → `companyCodeId` (`entityScopeResolvers`). A locked parent predicate or a declared `eq` filter also binds it.
+
+     Publication cannot see whether a request will resolve the binding to one value, so it does not claim to.
+   - **Request time proves pinning.** Before the cell request, the runtime checks that the applied scope and filters resolve every bound dimension to exactly one value. `EntityListScopeCoordinateV1.companyCodeIds` can hold several. If a dimension is not pinned, the grid shows "Choose one company code to compare allocations", using the field's label, and never sums or picks an amount.
+4. **Coverage is checked per request, not per link.** The same shared link can be covered for a viewer whose session pins one company and uncovered for a viewer whose session pins four. The "choose one" prompt is a state a shared link can produce, and that is correct.
+5. Publication's finding comes from `matrixKeyFinding({ rowKey, columnKey, pivotDimensions, boundDimensions, uniqueKeys, tenantColumn })`. It returns `undefined`, `MATRIX_KEY_NOT_UNIQUE`, or `MATRIX_KEY_DIMENSION_UNCOVERED` with the field named, the same shape as `hierarchyParentKeyFinding`. Wiring it into the onboarding DDL rehearsal is part of M3's work (audit 9, condition 2).
 
 ## 3. Current-state facts this design relies on
 
@@ -95,6 +106,8 @@ Verified on 10 October 2026.
 | The scope vocabulary already exists | the operation scope binding's `scopeKind` (`tenant`, `company_code`, `legal_entity`, `operating_organization`, …; `operation-projection.ts`) and `EntityListScopeCoordinateV1` (`companyCodeIds`, `legalEntityId`, parent coordinates) | Coverage consumes the published scope; no new concept |
 | Evaluation amounts exist on demand lines | `sourcing_event_demand.evaluation_amount`, `evaluation_currency_code`, `fx_rate_snapshot` | The evaluation-amount pattern is already in the data model |
 | No supplier response or response-line Entity exists | Neon DDL | The bid-tabulation use case needs those Entities onboarded first |
+| The real-PostgreSQL readiness suite already reads each unique index's columns | `entity-hierarchy-readiness.postgres.test.ts` joins `index.indkey` to `pg_attribute` (`AS columns`) | `matrixKeyFinding` can be fed today; what remains is the function and its wiring into the onboarding DDL rehearsal (M3) |
+| Scope bindings are on the runtime descriptor | `EntityAuthorizationProfileV1.operations[].scope` with `entityScopeResolvers` coordinates | Publication can see which dimensions a read binds (section 2.1) |
 
 ## 4. Placement: why a Layout
 
@@ -127,6 +140,10 @@ matrix?: {
     unitField?: string;            // rank only when units are equal
   }[];
   absentLabel?: string;            // a row with no record for a column, e.g. "Not quoted"
+  /** Revision 3 (section 5.3): */
+  rankEligibility?: { field: string; values: readonly string[] };  // column Entity state that may be ranked
+  basisLabel?: string;             // authored, e.g. "normalized for unit and quantity"; shown with the evaluation currency
+  columnOrder?: readonly { field: string; direction: "asc" | "desc" }[];  // column Entity sort, e.g. items quoted desc, total asc
 };
 ```
 
@@ -136,7 +153,23 @@ matrix?: {
 - a masked or unreadable measure is dropped, with the list's single restricted statement;
 - an unreadable row or column key makes Matrix unavailable for this viewer (`LIST_MATRIX_KEY_UNAVAILABLE`).
 
-### 5.3 URL and saved state
+### 5.3 Items the revised prototype raised (revision 3; author's recommendations, adopted under the owner's build instruction)
+
+| Item | Recommendation adopted | Phase |
+| --- | --- | --- |
+| **A disqualified bid ranks first.** A technically disqualified bidder would be "Lowest" on every item and push every real bidder down a rank | `rankEligibility`: an authored state on the column Entity, part of `rankWithin`'s canonical predicate. Ineligible records are not ranked and do not count in "of N"; their cells read "Not ranked · not eligible" and the column header shows "Not eligible" | M2 |
+| **A partial bid looks cheapest.** A total over 11 of 12 items understates the price | Each column header shows coverage ("11 of 12 items quoted") from exact counts, and a "Partial bid" chip when coverage is short. `columnOrder` lets the author order full bids first, through the column Entity's own sort (no new capability) | M1 |
+| **Ranks can shift while the person pages.** Two pages could be ranked from different data | `rankWithin` returns a data revision (a digest of the partition's latest change and count). The banner shows it, and a later page with a different revision shows "A bid changed. Refresh to see current ranks" | M2 |
+| **Publish the evaluation basis** so a rank can be defended | The banner reads "Basis: {evaluation currency} · {basisLabel}", and the rank column tooltip repeats it | M1 |
+| **Allocation is a second fact** | One grid reads one fact Entity, so measures are fields of that Entity only. Allocation shows only when the fact Entity carries it (the M3 pilot reads the allocation Entity). There are no join measures | — |
+| **Declined column** | One merged cell visually; every cell keeps "Declined to participate" as accessible text | M1 |
+| **Dense cells** | Display presets derived from the declaration, with no metadata: "Price and rank" (the primary measure and its rank), "Everything". The primary measure stays first | M1 |
+| **Key metadata unavailable** | `LIST_MATRIX_KEY_UNAVAILABLE` in `unavailableModes`; the list shows Table, as every unavailable layout does | M1 |
+| **A cell filter** | With a fact-level filter applied, an empty cell shows "—" (the line may exist) instead of the absence label | M1 |
+| **"Lowest on n items" in the header** | Deferred: it needs a small server aggregate beside `rankWithin`, and is a later decision | — |
+| **Best in Compare is not rank in the Matrix** | The Compare panel says that "Best" is among the 2–4 chosen, and the Matrix ranks every visible participant | C4 |
+
+### 5.4 URL and saved state
 
 - **Saved:** `matrix.measures` (which measures show) and `matrix.columns` (the participant filter: pinned column ids, kept as routing identities, never displayed).
 - **Location only:** `matrix.rowPage` and `matrix.columnPage`.
@@ -150,8 +183,8 @@ matrix?: {
 | `MATRIX_KEY_DIMENSION_UNCOVERED` | A key contains both pivot fields, but one of its extra dimensions is neither pinned by the surface's scope nor declared in `pivotDimensions`; the finding names the field (section 2.1) |
 | `MATRIX_BLOCK_ABOVE_PAGE` | `rows.pageSize × columns.pageSize` exceeds `MAX_LIST_PAGE_SIZE` |
 | `MATRIX_RANK_WITHOUT_EVALUATION` | A ranked measure with no declared evaluation amount and no single-currency proof; the direction is never inferred |
-| `MATRIX_MEASURE_INELIGIBLE` | A measure of an unsupported type, or ranked without `better` |
-| `MATRIX_RANK_CURRENCY` | A ranked money measure without `evaluation` or a single-currency guarantee |
+| `MATRIX_MEASURE_INELIGIBLE` | A measure of an unsupported type (audit 9: narrowed to this one mistake) |
+| `MATRIX_RANK_DIRECTION_REQUIRED` | A ranked measure without `better` |
 | `MATRIX_SCOPE_UNBOUND` (runtime) | No common parent fixes the master list; the prompt asks for the event |
 | `LIST_MATRIX_KEY_UNAVAILABLE` (per viewer) | A key field is unreadable or masked for this viewer |
 
@@ -228,19 +261,19 @@ The registration inventory follows the same nine steps as Calendar section 10. I
 | Phase | Delivers | Needs the cleanup? |
 | --- | --- | --- |
 | M1 | Contract, per-viewer projection, the grid on fixtures, paging, measures, participant filter, absence and declined states, drill-down to Compare, and a development-only request-cost diagnostic (audit 8) | Runtime on fixtures: no. A real Entity: yes |
-| M2 | `rankWithin` and difference to best, with a real-PostgreSQL test | No |
-| M3 | Pilot: `sourcing_event_award_allocation` as demand × award (awarded quantity and amount). The company dimension is covered in one of two authored ways: pinned by a locked company-code scope, or declared as a pivot dimension so that columns are award × company | Yes |
+| M2 | `rankWithin` and difference to best, `rankEligibility`, and the data revision, with a real-PostgreSQL test | No |
+| M3 | Pilot: `sourcing_event_award_allocation` as demand × award (awarded quantity and amount). The company dimension is covered in one of two authored ways: pinned by a locked company-code scope, or declared as a pivot dimension so that columns are award × company. Also builds `matrixKeyFinding` and wires it into the onboarding DDL rehearsal (audit 9) | Yes |
 | — | RFP bid tabulation: needs the supplier response and response-line Entities onboarded first | Onboarding |
 
-## 14. Decisions required (project owner)
+## 14. Decisions (project owner)
 
-Audit 8 recommends approving all five as revised below. The project owner has not yet approved them.
+All five were approved on 10 October 2026: "Matrix section 14 approved". Audit 9's two conditions are written into section 2.1 and M3.
 
-1. **The declaration** in section 5.1, with `pivotDimensions` and the key-coverage rule in section 2.1 (publication and request time).
-2. **Page sizes of 20 rows by 5 columns,** with the block rule `rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE` and short blocks failing closed (section 7).
-3. **`rankWithin`** as a shared repository capability beside `measureHierarchy`, taking the canonical predicate and ranking only on the evaluation amount (section 8). The direction is approved.
-4. **Ranking only on an evaluation amount or a proven single currency** (the direction is approved; AGENTS.md carries the rule), with the zero-best rule and the sign convention for difference to best.
-5. **Phases M1–M3,** and the award-allocation pilot with the company dimension pinned or declared.
+1. **Approved.** **The declaration** in section 5.1, with `pivotDimensions` and the key-coverage rule in section 2.1 (publication and request time).
+2. **Approved.** **Page sizes of 20 rows by 5 columns,** with the block rule `rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE` and short blocks failing closed (section 7).
+3. **Approved.** **`rankWithin`** as a shared repository capability beside `measureHierarchy`, taking the canonical predicate and ranking only on the evaluation amount (section 8). The direction is approved.
+4. **Approved.** **Ranking only on an evaluation amount or a proven single currency** (the direction is approved; AGENTS.md carries the rule), with the zero-best rule and the sign convention for difference to best.
+5. **Approved.** **Phases M1–M3,** and the award-allocation pilot with the company dimension pinned or declared.
 
 ## 15. Rejected and out-of-scope options
 
@@ -264,4 +297,9 @@ Audit 8 recommends approving all five as revised below. The project owner has no
 | Audit 8, finding 2 | The cell block can exceed or fall short of a page | Adopted: block rule at publication, explicit `limit`, and short or overfull blocks failing closed without the absence label (section 7) |
 | Audit 8, finding 3 | `rankWithin` under-specifies its predicate | Adopted: canonical predicate, partition by row key plus declared dimensions, always on the evaluation amount, refused without one (section 8) |
 | Audit 8, finding 4 | Difference to best at best = 0, and its sign | Adopted: always "worse than best" as a positive figure, and no percentage at a best of zero (section 8) |
+| Audit 9 | Publication cannot evaluate "pinned to one value" | Adopted as the publication/request split (section 2.1). Corrected reason: publication *can* see bindings, because the runtime descriptor's authorization operations carry scope resolvers and coordinates; what it cannot see is whether a request resolves to one value |
+| Audit 9 | The rehearsal reads unique indexes without their columns | Corrected: `entity-hierarchy-readiness.postgres.test.ts` already reads the columns (`indkey` → `pg_attribute`). The missing parts are `matrixKeyFinding` and the rehearsal wiring, both in M3 |
+| Audit 9 | Overlapping codes | `MATRIX_MEASURE_INELIGIBLE` narrowed to unsupported types; `MATRIX_RANK_DIRECTION_REQUIRED` added; `MATRIX_RANK_CURRENCY` dropped (covered by `MATRIX_RANK_WITHOUT_EVALUATION`) |
+| Audit 9 | Coverage is per request, not per link | Section 2.1, point 4 |
+| Owner's revised prototype (10 October 2026) | Eligibility, partial bids, data revision, evaluation basis, a second fact, declined cells, presets, Table fallback, cell filters, header aggregate | Section 5.3 |
 | Audit 8, prototype | Keep the request-cost strip as a development diagnostic; units gate display per cell; 6-row demo paging | Recorded: the strip is proposed as a development-only diagnostic for M1; the unit rule in section 8; product sizes are 20 × 5 |
