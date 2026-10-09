@@ -1,6 +1,6 @@
 # Entity list Compare — blueprint
 
-**Status:** approved, revision 2 (9 October 2026).
+**Status:** approved, revision 2 (9 October 2026). **Revision 3 (10 October 2026) proposes seven amendments for audit; none is approved.**
 
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
 - **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
@@ -9,6 +9,16 @@
   - **Finding 3,** folded into section 5.1: the binding constraint is stated, and 60 is recorded as a measured budget against the candidate tables (section 3).
   - **Finding 1,** a specification clarification in section 5.3 and section 3: the masked signal's source is the authorization field policy, through the existing `maskedPresentationField`, and the existing prohibition on masked fields in queries is cited.
 - **Approved for build (implementation authority):** C1 and C2 (decision 9). C1b, C3 and C4 each need their own approval. C2 runs on synthetic fixtures until the metadata cleanup lands; publishing a real Entity's comparison waits for the authoring storage (section 12) and a pilot.
+- **Revision 3, proposed for audit (10 October 2026).** These come from the owner's review of the Neon Compare Prototype (`docs/prototypes/Neon Compare Prototype.html`) and a check of the shipped snapshot comparison against the code. The owner asked for them to be written up for audit: "write them into the blueprint as revision 3 for audit". Each amendment is marked "Proposed, revision 3" where it changes a section, and listed as decisions 11–17 in section 15:
+  1. Row outcomes leave out a whole unavailable column (8.3), so one missing record no longer turns every row into "Not compared".
+  2. A comparison section may be collapsed by default (5.2, 12).
+  3. Two different referenced records with the same label are told apart by a readable code, never an identifier (8.6).
+  4. Differing words in long text are highlighted against the baseline (8.7).
+  5. C3 adds authored summary chips for best values (5.6, 8.5).
+  6. C4 adds the "Not in this record" and "Not in baseline" states and match-key line labels (5.7, 8.1).
+  7. C1b moves the snapshot onto the shared table view with the earlier snapshot as a fixed baseline, and removes identifiers from snapshot comparisons (9.6, 11.3).
+
+  Revision 3 also records presentation details from the prototype that fit inside the approved C2 contract and need no new metadata (9.2): previous and next difference, the summary line, the per-column baseline counts and the status chip in column headers.
 - **What this is not.** Compare is not a list Layout. It adds no route, page, provider stack or entity-specific comparison, and no mode to the registry.
 
 **Scope and authority.**
@@ -83,6 +93,8 @@ Verified against the repository on 9 October 2026.
 | Masked fields return masked values | `projectEffectiveReadRow` applies the field's mask (`entity-effective-read-projection.ts`) | A masked cell is shown as returned and never compared (section 8.1) |
 | "Masked" is a property of the authorization field policy, not of the field descriptor | `EntityFieldPolicyV1.representation: "plain" \| "masked"` (`server/packages/contracts/metadata/src/entity-authorization.ts:31`); the list descriptor already uses it through `maskedPresentationField` (`entity-list-service.ts:2355`) to keep masked fields out of list chrome, including a money field's currency (`entity-list-service.ts:1472`) | The Compare projection derives `masked` from the same function: one source of truth (section 5.3) |
 | Masked fields may not take part in queries | "Masked raw fields cannot participate in queries; publish a safe projection field" (`entity-authorization.ts:250`), refused when a masked policy declares any query use | Written policy for what section 8.1 does: a masked value is displayed, never filtered, sorted or compared |
+| **The shipped snapshot comparison can show identifiers** (revision 3 finding, from the code; not reproduced on a live page) | The server builds snapshot fields from every readable field (`readableRecordFields` in `server/packages/services/records/src/record-read-access.ts`, used by `activity-provider.ts:66` and `:155`), without leaving out the storage identity, the version field or UUID-typed fields. The browser formats a captured reference as its stored value ("references retain captured identity", `formatComparisonValue`), and neither `activity-workspace.tsx` nor `activity-comparison.tsx` filters identifiers. `activity-comparison-model.test.ts` groups `id` into "Additional fields" | C1b removes identifiers from snapshot comparisons (section 9.6, decision 17) |
+| One unavailable record would blank a comparison (revision 3 finding) | Section 8.3 as approved, implemented by `comparisonRowOutcome` in C1: any `unavailable` cell makes the row `not_comparable` | With three records of which one was deleted, every row would read "Not compared". Decision 11 amends section 8.3 |
 | Candidate tables have far fewer than 60 comparable fields | Measured on the real Neon DDL (9 October 2026), excluding identity, tenant, version and audit columns: `gl_account` 26 columns in total (16 non-reference), `catalog` 24, `cost_center` 23, `catalog_price` 22, `catalog_item` 21, `item` 21, `profit_center` 21, `chart_of_account` 19, `product` 17, `commodity_category` 16, `customer` 15, `supplier` 15. No quotation table exists yet | 60 is a budget with more than twice the headroom of the widest candidate (section 5.1) |
 | A money field may name its currency field | `field.list.currencyField` (`server/packages/contracts/metadata/src/descriptors.ts:141`); authoring column `entity_field.currency_field_id` (`normalized-core-contract.ts:215`) | Money equality and C3 ranking reuse it; no second currency declaration |
 | Exact decimal helpers exist | `addDecimals`, `compareDecimals` in `packages/contracts/platform/entity-list/src/decimal.ts` | Decimal and money equality is exact |
@@ -133,9 +145,12 @@ compare?: {
     key: string;                 // catalog code, unique within the declaration
     label: string;               // published label (localizable like other surface labels)
     fields: readonly string[];   // ordered field keys of this Entity, unique across the declaration
+    collapsed?: true;            // revision 3, proposed: the section starts collapsed
   }[];                           // 1–12 sections
 };
 ```
+
+**Proposed, revision 3 (not approved):** a section may declare `collapsed: true`, so it starts collapsed, for example an audit section ("Record details": created and updated). The author decides; the framework never guesses that a section is "technical" from its key or its fields. The viewer's own collapse and expand choices still apply for the life of the panel. A collapsed section still counts its differences in its heading and in the summary line, so a difference is never hidden without a trace.
 
 - **Present** means Compare is offered on this surface (subject to the viewer's access, section 5.3). **Absent** means Compare is not offered. There is no default.
 - **Sections** group the comparison rows. They are authored for comparison and are not a reference to the detail page's sections: detail sections contain components, computed panels and collections that are not comparable. The composer may *start* a declaration by copying detail sections at authoring time (section 12); the runtime never reads detail sections for Compare.
@@ -234,6 +249,17 @@ compare?: { better: "lower" | "higher" };
 - This is **new authoring**: a per-field property with its own Studio storage (section 12). It cannot be inferred from a name or type.
 - Money is ranked only when every compared cell carries the same currency through the field's existing `field.list.currencyField`, by the section 8.2 rule. Without a declared, readable and unmasked currency field, money is never ranked. With mixed currencies, the row shows "Mixed currencies" and no best mark. No second currency declaration is introduced.
 
+**Proposed, revision 3 (not approved):** summary chips for best values.
+
+```ts
+compare?: { better: "lower" | "higher"; summaryLabel?: string };   // summaryLabel: a published, localizable label
+```
+
+- A field with `better` may declare `summaryLabel` ("Lowest total price"). For each such field with a best value, the panel shows one chip above the table: "Lowest total price: Q-1003 · MYR 1,192,300.00".
+- Ties show every tied record ("Q-1001, Q-1004 · 30 Nov 2026"), marked "(tie)". A row with mixed currencies, no comparable values, or every value equal shows no chip.
+- At most six chips, in declaration order. The chips summarise row marks that are already in the table: they add no information that the table does not also show, so they are not needed to read the comparison.
+- `summaryLabel` without `better` is refused at publication (`COMPARE_SUMMARY_WITHOUT_BETTER`).
+
 ### 5.7 C4: related collections (shape only; needs its own approval and server contract)
 
 ```ts
@@ -250,6 +276,12 @@ collections?: readonly {
 - **Identity domain.** Lines are aligned by the **stored values** of `matchKey` within one parent record, never by label, display text or position. For a reference match key (for example a material), that is the referenced record's identity; for a code, the exact stored code. Lines from different parents match when their match-key values are equal.
 - **Uniqueness is a database fact.** Onboarding must show a database unique key on (tenant, parent, match key). Without one, the collection is refused at publication (`COMPARE_MATCH_KEY_NOT_UNIQUE`), because duplicate keys would make alignment ambiguous.
 - **Unmatched lines** appear as their own rows with "Not in this record" in the other columns. They are never paired with a neighbour.
+- **Proposed, revision 3 (not approved):** two line-cell states and line labels:
+  - **"Not in this record"** (`absent`): the line's match key does not occur in this column's record.
+  - **"Not in baseline"**: with a baseline, a line present in this column but absent from the baseline. A line absent from this column but present in the baseline reads "Differs from baseline", because the record lacks something the baseline has.
+  - A line's row is labelled by the line's own readable label from the first record that has it, with the match key's published label as the group heading ("Material"). When a line compares several fields, each field is a sub-row under that label.
+  - A line row whose match key is absent from any available column `differs`.
+  - Counts read "6 of 8 lines differ", next to the field summary.
 - **Server contract.** The list response carries no child collections. C4 needs either one record-scoped list request per compared record (at most four, each under the section's locked scope) or a new bounded collection read. Choosing between them is part of C4's own design.
 
 ## 6. Validation, availability and finding codes
@@ -266,6 +298,7 @@ collections?: readonly {
 | `COMPARE_IDENTITY_REQUIRED` | The surface has no published readable identity to head the columns |
 | `COMPARE_BETTER_INELIGIBLE` (C3) | `compare.better` on an ineligible type |
 | `COMPARE_MATCH_KEY_NOT_UNIQUE` (C4) | No database unique key backs the match key |
+| `COMPARE_SUMMARY_WITHOUT_BETTER` (C3, proposed in revision 3) | `compare.summaryLabel` on a field without `compare.better` |
 
 **Per viewer (not errors):** no readable declared field means `surface.compare` is absent; some hidden fields mean `fieldsRestricted: true`.
 
@@ -318,6 +351,7 @@ The response always includes the identity (`responseProjection`). When the confi
 | `masked` | The masked value as returned | **No** | A field the projection marks `masked` |
 | `unavailable` (`record_unavailable`) | "Not available" for the whole column | **No** | A requested record not returned: deleted, out of scope or not readable. These are deliberately indistinguishable |
 | `unavailable` (`not_captured`) | "Not captured" | **No** | Snapshot adapter only: the existing uncaptured state |
+| `absent` (C4, proposed in revision 3) | "Not in this record" | Yes, as different from any present line | A line whose match key does not occur in this record (section 5.7) |
 
 This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unavailable (not_captured)` / `empty` in the shared core. The snapshot view keeps its current wording through its adapter's labels (section 11), so C1 changes no visible text.
 
@@ -338,6 +372,13 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 ### 8.3 Row outcome
 
 - `not_comparable` when any cell is `masked` or `unavailable`, or a money row fails the currency rule in section 8.2. The row is shown in "all rows", and in "differences only" it is listed under a separate "Not compared" group at the end of its section, so it is never silently hidden.
+- **Proposed, revision 3 (not approved):** a column whose whole record is unavailable (`unavailable` with `record_unavailable`) is **left out** of every row's outcome, instead of making every row `not_comparable`. The outcome is decided over the available columns.
+  - Masked and not-captured cells keep the approved rule: they make the row `not_comparable`, because they belong to a record that is present.
+  - When fewer than two columns are available, the existing "Only one of these records is available" state applies (section 9.4).
+  - The unavailable column still shows "Record not available" in its header (9.4), and its marks relative to the baseline read "Not compared".
+  - The summary reads "12 of 40 fields differ across 2 available records", so leaving the column out is visible.
+  - **Why.** As approved, with three records of which one has since been deleted, every row reads "Not compared", and the two remaining records cannot be compared at all.
+  - **Effect on built code.** `comparisonRowOutcome` (C1) gains this rule, with a test. The pinned snapshot rendering test is unaffected, because snapshots have no `record_unavailable` cells.
 - `differs` when the comparable cells are not all equal.
 - `same` otherwise.
 
@@ -352,6 +393,24 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 
 - Among comparable cells, the best by `compare.better` gets the text mark "Best" (and an icon). Ties are all marked. `empty` cells are never best. A row with fewer than two comparable values shows no mark.
 - Best and baseline are independent: the baseline column may or may not hold the best value.
+- **Proposed, revision 3 (not approved):** the summary chips of section 5.6 are drawn from these marks.
+
+### 8.6 Same label, different record (proposed, revision 3)
+
+- When a reference row `differs` and two or more of its cells show **the same label for different records** (the prototype's material group "Steel" for two different groups), each such cell also shows the referenced record's **published readable identity** (its list identity field, for example the group code "MG-77"), in a secondary style.
+- The identity comes through the authorized reference label service, like the label itself. If that service cannot return a readable identity for the target Entity, the cell shows the text **"Different record"** instead.
+- **Never an identifier.** The prototype prints the reference's identifier here. In production that would be a UUID, which this rule forbids.
+- The C2 build first confirms whether the label service can return the target's readable identity. If it cannot, "Different record" is the behaviour, and extending the label service is a separate framework change.
+
+### 8.7 Highlighting differing words (proposed, revision 3)
+
+- For **`text`** fields only (long text, not `string`), with a baseline set, each non-baseline cell that differs from the baseline highlights the words not in the baseline's value.
+  - The highlight carries visually hidden text "(differs from baseline)", so the difference is announced, not only coloured.
+  - It is computed as a word-level longest common subsequence in the browser, over values already loaded, so it sends no request.
+- **Bounds.** Above 400 words in either value, the cell is marked "Differs from baseline" without word highlighting, so a long clause never stalls the panel.
+- **Controls.** A switch, "Highlight differing words", is on by default when the comparison includes a `text` field and a baseline is set. It is not offered otherwise.
+- **Why no metadata property.** The behaviour follows from the published value kind, as date and number formatting do, and asks for no authored field set. A per-field property would add authoring with no decision in it.
+- Never applied to masked, not-captured or unavailable cells.
 
 ## 9. Views and interaction
 
@@ -367,6 +426,13 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 - **Toolbar:** "Differences only" switch (on by default), with the summary "12 of 40 fields differ"; **Collapse all** / **Expand all** sections; **Close**.
 - **Body:** a table with a sticky first column of field labels and a sticky header row. Sections are collapsible row groups headed by their label and their difference count ("3 differ").
 - **Differences** are marked in each differing row by a text badge ("Differs") and a subtle row tone. Equal rows are plain.
+- **Within the approved C2 contract, recorded in revision 3 from the prototype** (presentation only; no new metadata):
+  - **Previous / Next difference.** Moves focus to the previous or next differing row's header, opening its section if collapsed, and announces "Difference 3 of 15: Payment terms". At the ends it stops and announces "First difference" or "Last difference".
+  - **Summary line.** "15 of 19 fields differ · 1 not compared", plus "· 6 of 8 lines differ" with C4.
+  - **Baseline counts.** Each non-baseline column header reads "3 differ from baseline", repeated as a chip above the table ("C-1004 v3 · 3 of 18 differ from baseline").
+  - **Status chip.** Each column header shows the record's status from the list's published status field and its tones (`semanticRole` "status", `statusTones`), the same chip as the list. There is no Compare-specific status property, and no chip when the list publishes no status field.
+  - **Section headings.** "3 differ" and "1 not compared", and "No differences in this section." when a section has none.
+  - **Formatting by kind.** Money is shown with its currency, dates and datetimes in the viewer's zone, choice and reference labels. A field with a published renderer (`rendererKey`, for example the address-format tokens) uses that renderer, never a Compare-specific format.
 
 ### 9.3 Narrow screens
 
@@ -394,6 +460,17 @@ In a record's section (for example Quotations under a request for quotation), Co
 ### 9.6 Snapshot comparison
 
 Unchanged in C1 (section 11). It keeps its entry point ("Compare selected snapshots"), its two columns and its wording. Moving it onto the N-column table view is a separate, visible change (C1b in section 14).
+
+**Proposed, revision 3 (not approved):** C1b scope.
+- **Table view.** The snapshot comparison uses the shared table view (sections 9.2 and 10): sections, counts, "Not compared" group, previous and next difference.
+- **Fixed baseline.** The earlier snapshot is the baseline, fixed: the server already orders the pair by snapshot sequence, so the column menus do not offer "Set as baseline". The wording is relative: "Differs from the earlier snapshot", never "changed".
+- **Column headers.** "Snapshot 1 · Baseline · Earlier snapshot", the capture time, and "captured by" the capturing person's published name. Never a principal identifier.
+- **No identifiers (the section 3 finding).**
+  - The server leaves the storage identity, the version field and UUID-typed fields out of snapshot comparisons.
+  - A captured reference is compared by its stored identity but displayed as **"Linked record"**, with its "Same" or "Differs from the earlier snapshot" mark.
+  - It is never resolved against today's label: the snapshot records what was true then, and today's label could be wrong for it.
+- **Values formatted by kind** (section 9.2), replacing today's raw strings for decimals.
+- **Proof.** The pinned rendering test is deliberately updated in C1b, in its own commit, with the new expected output reviewed. This is the visible change C1b exists for.
 
 ## 10. Accessibility
 
@@ -431,7 +508,7 @@ It cannot live in `list-view`: `form-detail` already depends on `list-view`, so 
 | `comparable`, `changed` | Directional; they read the server's `before`, `after` and `changed` |
 | `activityComparisonRows` (new adapter) | Maps `ActivityComparison` to two `ComparisonColumn`s and `ComparisonRow`s, passing the server's `changed` as the outcome |
 | Snapshot titles, `ActivityCollectionSection` | Snapshot-specific presentation and collections |
-| The current `<details>` / `<dl>` markup of `activity-comparison.tsx` | Kept in C1 so its rendering is unchanged; replaced only by C1b |
+| The current `<details>` / `<dl>` markup of `activity-comparison.tsx` | Kept in C1 so its rendering is unchanged; replaced only by C1b (revision 3 scope in section 9.6) |
 
 ### 11.4 Proof of no visible change
 
@@ -449,9 +526,10 @@ The comparison declaration is authored on the list surface in the existing Entit
 
 | Table | Rows | Columns |
 | --- | --- | --- |
-| `metadata.entity_surface_compare_section` | One per section of a list surface's declaration | standard draft-owned columns; `surface_id` (list surface), `section_key`, `label_id`, `sort_order` |
+| `metadata.entity_surface_compare_section` | One per section of a list surface's declaration | standard draft-owned columns; `surface_id` (list surface), `section_key`, `label_id`, `sort_order`; revision 3 proposes `collapsed boolean NOT NULL DEFAULT false` (decision 12) |
 | `metadata.entity_surface_compare_field` | One per field in a section | standard draft-owned columns; `compare_section_id`, `field_id`, `sort_order`; unique (`surface_id`, `field_id`) across the declaration |
 | `metadata.entity_field.compare_better` (C3) | Column on the existing field table | `text`, check `IN ('lower','higher')`, nullable |
+| `metadata.entity_field.compare_summary_label_id` (C3, proposed in revision 3) | Column on the existing field table | nullable reference to `entity_label`; check: null unless `compare_better` is set |
 | C4 collection rows | Designed with C4 | — |
 
 - The composer's **Start from detail sections** copies the detail surface's field placements into compare rows once, at authoring time, for the author to edit. Nothing at runtime reads detail sections for Compare.
@@ -479,10 +557,10 @@ Styles stay on the breakpoint scale and use design-system tokens.
 | Phase | Delivers | Needs the metadata cleanup? | Acceptance |
 | --- | --- | --- | --- |
 | **C1** Shared core | Package, extraction, snapshot adapter, rendering test first | No | Section 11.4: rendering test and `entity-activity.spec.ts` pass unchanged; model tests for section 8 rules |
-| **C1b** Snapshot on the table view | The snapshot comparison adopts the N-column table view (visible change: table semantics, section 10) | No | Snapshot browser spec updated deliberately; accessibility checks; owner sees the change |
-| **C2** Record comparison | `compare` declaration parsing and validation, per-viewer projection, selection-bar action, panel, URL state, baseline, narrow pair picker | **Runtime and tests: no** (synthetic fixtures, as Tree did). **A real Entity: yes** (authoring storage and a pilot's publication) | Fixtures prove: projection lists only readable fields; `fieldsRestricted` without names; masked cells not compared; one request with no excluded parameters; reload from URL; unavailable record column; baseline cleared on removal; decimal and money equality; Back closes; record-section scope kept; no UUID shown anywhere |
-| **C3** Best value | `field.compare.better`, best marks, currency rule via `currencyField` | **Runtime on fixtures: no. Authoring: yes**, because `compare_better` is new per-field authoring | Ties, empty cells, mixed currencies, no currency field |
-| **C4** Line items | Collection declaration, match-key alignment, the chosen server read | Yes | Its own design and approval first |
+| **C1b** Snapshot on the table view | The snapshot comparison adopts the N-column table view (visible change: table semantics, section 10); with decision 17: fixed earlier-snapshot baseline and no identifiers (section 9.6) | No | Snapshot browser spec updated deliberately; accessibility checks; owner sees the change |
+| **C2** Record comparison | `compare` declaration parsing and validation, per-viewer projection, selection-bar action, panel, URL state, baseline, narrow pair picker; the section 9.2 presentation recorded in revision 3. If approved: the unavailable-column rule (decision 11), `collapsed` sections (12), the same-label marker (13) and word highlighting (14) | **Runtime and tests: no** (synthetic fixtures, as Tree did). **A real Entity: yes** (authoring storage and a pilot's publication) | Fixtures prove: projection lists only readable fields; `fieldsRestricted` without names; masked cells not compared; one request with no excluded parameters; reload from URL; unavailable record column; baseline cleared on removal; decimal and money equality; Back closes; record-section scope kept; no UUID shown anywhere |
+| **C3** Best value | `field.compare.better`, best marks, currency rule via `currencyField`; with decision 15: `summaryLabel` chips | **Runtime on fixtures: no. Authoring: yes**, because `compare_better` is new per-field authoring | Ties, empty cells, mixed currencies, no currency field |
+| **C4** Line items | Collection declaration, match-key alignment, the chosen server read; with decision 16: the `absent` and "Not in baseline" states | Yes | Its own design and approval first |
 
 **Order of work.** C1, then C2 on fixtures, in parallel with the cleanup. After the cleanup: authoring storage (section 12), then a pilot. **Pilot proposal:** a master-data Entity already onboarded with a readable identity and enough comparable fields; the candidate is chosen with the owner when the cleanup lands. Quotation comparison waits for C3, C4 and the quotation Entities' onboarding.
 
@@ -517,6 +595,16 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 9. **Approved 9 October 2026.** **Phases:** C1 and C2 first; C1b, C3 and C4 each need their own approval.
 10. **Approved 9 October 2026.** **AGENTS.md entry** (section 18), added with this approval.
 
+**Revision 3, proposed for audit (10 October 2026); none approved.** Each is the author's recommendation.
+
+11. **Unavailable columns leave row outcomes** (section 8.3). A whole unavailable record no longer makes every row "Not compared"; masked and not-captured cells keep the approved rule. Amends approved decision 1's section 8.3 and the built `comparisonRowOutcome`.
+12. **`collapsed` comparison sections** (sections 5.2 and 12): an authored per-section default; collapsed sections still count their differences.
+13. **Same label, different record** (section 8.6): show the target's published readable identity, or "Different record"; never an identifier.
+14. **Highlight differing words** (section 8.7): `text` fields only, against the baseline, 400-word bound, announced by hidden text; no new metadata.
+15. **C3 summary chips** (section 5.6): authored `summaryLabel` on fields with `better`; ties shown; at most six; storage `compare_summary_label_id`. Part of C3, which still needs its own approval.
+16. **C4 line states** (sections 5.7 and 8.1): `absent` ("Not in this record"), "Not in baseline", match-key line labels and line counts. Part of C4, which still needs its own design and approval.
+17. **C1b scope** (section 9.6): shared table view, fixed earlier-snapshot baseline with relative wording, published names in headers, and no identifiers (storage identity, version and UUID-typed fields left out on the server; captured references shown as "Linked record"). C1b still needs its own approval to build; this decision fixes its scope.
+
 ## 16. Rejected and out-of-scope options
 
 | Option | Why not |
@@ -532,6 +620,12 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 | A record against its own draft, or a release against a release | Studio territory; not a list action |
 | Saving comparisons in saved views | A comparison is of named records, not a view of a query |
 | Exporting a comparison | Possible later through the existing data operations; not designed here |
+| A per-field property for word highlighting (revision 3) | The behaviour follows from the published value kind and holds no authored decision |
+| Inferring a "technical" section from its key or fields (revision 3) | Forbidden inference; `collapsed` is authored instead (decision 12) |
+| Resolving a snapshot's captured reference against today's label (revision 3) | Would present today's name as if it were true when the snapshot was taken |
+| Comparing the visible part of a masked value (revision 3) | A masked value cannot be compared; the approved rule stands |
+| Showing a reference's identifier to tell two same-label records apart (revision 3, from the prototype) | Displays a UUID in production; the published readable identity or "Different record" is used instead (decision 13) |
+| The prototype's Inspector, request log, density and theme switches | Prototype review tooling, not product features |
 
 ## 17. Review disposition
 
@@ -556,6 +650,7 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 | Audit 2, finding 2 | A masked currency field could produce a false "same" for money | Folded into section 8.2 (owner's wording): money is compared only when every currency cell is an equal `value` cell; masked, unreadable, undeclared, empty or unavailable currency makes the row `not_comparable` ("Currency not compared"). Section 5.6 (C3 ranking) follows the same rule |
 | Audit 2, finding 3 | 60 is an unverified budget | Folded into section 5.1 (owner's wording): the binding constraint is stated, and 60 is measured against the candidate tables (section 3; widest is `gl_account` at 26 columns) |
 | Audit 2 | Record-section URL ownership may not exist (`contentOnly`, `scopeCoordinate`, `viewNamespace`, no `embedding`) | Already the first check of C2 (section 9.5), with the caveat to be written there if the section list owns no location state |
+| Owner's prototype review, revision 3 (10 October 2026) | The Neon Compare Prototype was read in code, not only in screenshots, and checked against the shipped snapshot comparison and the server | Two findings from the code: identifiers can appear in snapshot comparisons (section 3; decision 17), and one unavailable record would blank every row (section 3; decision 11). Prototype features: within C2 presentation (9.2), or proposed as decisions 12–16. The prototype's own "Current" view is not the shipped view: the shipped view already groups by sections and tabs, defaults to changes only, and shows labels, choice labels and formatted dates (pinned in `activity-comparison-view.test.tsx`). Any before-and-after review should use the shipped view |
 
 ## 18. AGENTS.md entry
 
