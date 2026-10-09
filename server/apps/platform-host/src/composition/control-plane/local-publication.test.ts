@@ -38,7 +38,7 @@ vi.mock("../shared/publication/local-publication-inputs.js", () => ({
 import { createLocalPublicationAdmission } from "./local-publication.js";
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-it.each(["draft", "in_review", "approved"])(
+it.each(["draft", "in_review", "approved", "published"])(
   "%s admission rebuilds exact pins, replays and rejects caller-selected pins",
   async (status) => {
     const host = {
@@ -76,7 +76,7 @@ it.each(["draft", "in_review", "approved"])(
       developerPrincipalIds: [id(2)],
       authorWorkloadId: id(3),
       publisherWorkloadId: id(4),
-      actions: ["publish"],
+      actions: ["publish", "recover"],
       destinations: [{ plane: "studio", instance: "dev" }],
     };
     ports.authorize.mockResolvedValue({ allowed: true });

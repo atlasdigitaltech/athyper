@@ -3277,6 +3277,22 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/58_local_publication_request_renewal.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_compilation_recovery.sql",
+      "path": "migrations/20261010_local_publication_compilation_recovery.sql",
+      "sha256": "5affe2d7bb218ad0c6d676a3826c13660c5f54d0fc0b0bd3e4f5889a821789e1",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt"
+      ],
+      "reason": "Exact standing-authority recovery of committed uncompiled releases; preserve original sources and receipts.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/59_local_publication_compilation_recovery.sql"
+      ]
     }
   ]
 }

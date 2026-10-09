@@ -376,10 +376,28 @@ it("rejects lost catalog permissions and member tampering even with a fresh payl
     qualifyRuntimePublication(changed, f.dependencies, canonical, "sign"),
   ).rejects.toThrow();
 });
-it.each([undefined, "dev"])(
-  "worker signs immutably and dispatches with configured instance %s",
-  async (targetInstance) => {
+it.each([
+  { targetInstance: undefined, successor: false },
+  { targetInstance: "dev", successor: false },
+  { targetInstance: "dev", successor: true },
+])(
+  "worker signs and dispatches $targetInstance with resolved successor $successor",
+  async ({ targetInstance, successor }) => {
     const f = fixture();
+    if (successor) {
+      Object.assign(f.source, { releaseNo: 2 });
+      f.dependencies.predecessor = vi.fn(async () => ({
+        plane: "neon",
+        environment: "local",
+        instance: "dev",
+        publicationKey: f.source.publicationKey,
+        appliedReleaseId: id(90),
+        sourceReleaseId: id(91),
+        sourceReleaseNo: 1,
+        artifactHash: "d".repeat(64),
+        headVersion: 4,
+      }));
+    }
     let saved:
       | { id: string; unsigned_document: unknown; unsigned_hash: string }
       | undefined;
@@ -398,7 +416,8 @@ it.each([undefined, "dev"])(
               source_entity_id: f.source.sourceEntityId,
               source_release_hash: f.source.sourceReleaseHash,
               release_key: f.source.publicationKey,
-              release_no: 1,
+              release_no: f.source.releaseNo,
+              successor_policy: null,
               source_tenant_id: null,
               revision_id: id(2),
               published_by: id(3),
@@ -427,7 +446,7 @@ it.each([undefined, "dev"])(
               ...saved,
               publication_release_id: id(1),
               release_key: f.source.publicationKey,
-              release_no: 1,
+              release_no: f.source.releaseNo,
               created_by: id(3),
               tenant_id: id(4),
               release_metadata: targetInstance
@@ -492,6 +511,20 @@ it.each([undefined, "dev"])(
     try {
       const worker = new KyselyPublicationAuthorityWork(options);
       const compiled = await worker.compile(id(1));
+      if (successor) {
+        expect(f.dependencies.predecessor).toHaveBeenCalledWith(id(1), "neon");
+        expect(
+          JSON.parse(
+            String(
+              (
+                saved!.unsigned_document as {
+                  manifest: { evidence: { expectedPredecessor: string } };
+                }
+              ).manifest.evidence.expectedPredecessor,
+            ),
+          ),
+        ).toMatchObject({ sourceReleaseId: id(91), headVersion: 4 });
+      }
       const signed = await worker.sign(compiled.compilationIds[0]!);
       expect(authority.createDeployment).toHaveBeenCalledWith(
         expect.objectContaining({

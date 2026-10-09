@@ -596,6 +596,8 @@ export function createCompiledRuntimePublication(options: {
     });
   }
   return {
+    predecessor: async (releaseId, plane) =>
+      (await persisted(releaseId, plane)).expectedPredecessor,
     lower,
     registry,
     async qualify(input) {

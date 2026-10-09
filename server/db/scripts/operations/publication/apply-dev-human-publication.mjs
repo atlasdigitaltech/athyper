@@ -15,6 +15,8 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-COMPILATION-RECOVERY":
+    "20261010_local_publication_compilation_recovery.sql",
   "--apply=DEV-LOCAL-PUBLICATION-REQUEST-RENEWAL":
     "20261010_local_publication_request_renewal.sql",
   "--apply=DEV-LOCAL-PUBLICATION-WORKER-HASH":

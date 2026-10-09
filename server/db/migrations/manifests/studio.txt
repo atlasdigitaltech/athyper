@@ -99,3 +99,4 @@
 20261010_local_publication_hash_domains.sql
 20261010_local_publication_worker_hash.sql
 20261010_local_publication_request_renewal.sql
+20261010_local_publication_compilation_recovery.sql

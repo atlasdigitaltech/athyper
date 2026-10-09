@@ -167,7 +167,9 @@ export function createLocalPublicationAdmission(options: Options) {
             "LOCAL_PUBLICATION_REVISION_CHANGED",
             "Reload the saved draft before publishing",
           );
-        if (!["draft", "in_review", "approved"].includes(root.status))
+        if (
+          !["draft", "in_review", "approved", "published"].includes(root.status)
+        )
           throw new HttpError(
             409,
             "LOCAL_PUBLICATION_DRAFT_REQUIRED",
@@ -196,7 +198,7 @@ export function createLocalPublicationAdmission(options: Options) {
             authorWorkloadId: configuration.author.principalId,
             publisherWorkloadId: configuration.publisher.principalId,
             scope: { kind: "product" },
-            action: "publish",
+            action: root.status === "published" ? "recover" : "publish",
             targets: inputs.targets.map(({ plane, instance }) => ({
               plane,
               instance,

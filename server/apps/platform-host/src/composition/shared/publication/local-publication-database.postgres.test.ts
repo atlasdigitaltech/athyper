@@ -667,6 +667,63 @@ GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,
           `SELECT count(*),count(DISTINCT graph::text) FROM snapshot.entity_draft_save WHERE change_set_id='${draft}';`,
         ).trim(),
       ).toBe("4|1");
+      q(`CREATE TABLE publication.artifact_compilation(publication_release_id uuid);
+GRANT SELECT ON publication.artifact_compilation TO athyper_definer_product_publication;`);
+      q(ddl("publication/59_local_publication_compilation_recovery.sql"));
+      const recovery = createLocalPublicationRequest(
+        authority,
+        { ...admission, action: "recover" },
+        {
+          ...inputs,
+          revision: 4,
+          compilerHash: "d".repeat(64),
+        },
+      );
+      const admitRecovery = `SELECT publication.admit_local_publication_request(${literal(recovery)});`;
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(createLocalPublicationRequest(authority, admission, { ...inputs, revision: 4 }))}); ROLLBACK;`,
+        ),
+      ).toThrow(/RECOVERY_ACTION_REQUIRED/);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(createLocalPublicationRequest(authority, { ...admission, action: "recover" }, { ...inputs, revision: 4, resourceHashes: ["f".repeat(64)] }))}); ROLLBACK;`,
+        ),
+      ).toThrow(/RECOVERY_SOURCE_REQUIRED/);
+      expect(() =>
+        q(
+          `BEGIN; INSERT INTO publication.artifact_compilation VALUES('${releaseId}'); ${context("athyper_control_api", developer)} ${admitRecovery} ROLLBACK;`,
+        ),
+      ).toThrow(/RECOVERY_SOURCE_REQUIRED/);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} ${admitRecovery} ${admitRecovery} COMMIT;`,
+        ),
+      ).toContain(recovery.hash);
+      const recoveryScope = `${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${recovery.hash}',true);`;
+      expect(
+        q(
+          `BEGIN; ${recoveryScope} SELECT publication.local_publication_release_receipt('${recovery.hash}'); SELECT publication.local_publication_execution_context('${releaseId}')#>>'{request,hash}'; ROLLBACK;`,
+        ),
+      ).toContain(recovery.hash);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} SELECT publication.local_publication_execution_context('${releaseId}')#>>'{request,hash}'; ROLLBACK;`,
+        ),
+      ).toContain(recovery.hash);
+      expect(
+        q(
+          `BEGIN; ${recoveryScope} SELECT publication.transition_local_publication_request('${recovery.hash}','review',${literal({ contractHash: sourceHash, issues: [] })}); ROLLBACK;`,
+        ),
+      ).toContain('"replayed": true');
+      expect(q(`SELECT count(*) FROM metadata.entity_release;`).trim()).toBe(
+        "1",
+      );
+      expect(
+        q(
+          `SELECT request_json=${literal(request)} FROM publication.local_publication_request WHERE request_hash='${request.hash}';`,
+        ).trim(),
+      ).toBe("t");
     } finally {
       try {
         docker("rm", "-f", name);

@@ -625,12 +625,12 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     for (const row of rows) {
       const plane = planeValue(row["plane_key"]);
       const successor =
-        number(row, "release_no") > 1
+        !dependencies.predecessor && number(row, "release_no") > 1
           ? parseDevEntitySuccessorPolicy(row["successor_policy"])
           : undefined;
-      const expectedPredecessor = successor?.targets.find(
-        (t) => t.plane === plane,
-      );
+      const expectedPredecessor = dependencies.predecessor
+        ? await dependencies.predecessor(releaseId, plane)
+        : successor?.targets.find((t) => t.plane === plane);
       if (
         successor &&
         (!expectedPredecessor ||
