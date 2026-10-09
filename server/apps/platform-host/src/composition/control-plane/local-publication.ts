@@ -167,11 +167,11 @@ export function createLocalPublicationAdmission(options: Options) {
             "LOCAL_PUBLICATION_REVISION_CHANGED",
             "Reload the saved draft before publishing",
           );
-        if (root.status !== "draft")
+        if (!["draft", "in_review", "approved"].includes(root.status))
           throw new HttpError(
             409,
             "LOCAL_PUBLICATION_DRAFT_REQUIRED",
-            "Only a saved draft can start a new publication request",
+            "A draft or exact local publication in progress is required",
           );
         const source = await options.source(tx, id);
         const inputs = await resolveLocalPublicationInputs({

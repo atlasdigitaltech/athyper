@@ -3245,6 +3245,38 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/56_local_publication_hash_domains.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_worker_hash.sql",
+      "path": "migrations/20261010_local_publication_worker_hash.sql",
+      "sha256": "fcae7df690e11127acf9eff28b76f1adc6b92bc38a4b6e89cf775bed18905eae",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt"
+      ],
+      "reason": "Pure ledger hash calculation used by native worker release verification; no snapshot table grants.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/57_local_publication_worker_hash.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_publication_request_renewal.sql",
+      "path": "migrations/20261010_local_publication_request_renewal.sql",
+      "sha256": "9c150a308bdc9573ca551947230cf3fa63fcf06e30cdd15bf2b0af174780a358",
+      "planes": [
+        "studio"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt"
+      ],
+      "reason": "Fresh-authority request renewal from exact workload lifecycle progress; retain prior immutable receipts.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/58_local_publication_request_renewal.sql"
+      ]
     }
   ]
 }

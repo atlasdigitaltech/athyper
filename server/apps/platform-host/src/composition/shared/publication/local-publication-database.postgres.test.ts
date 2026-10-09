@@ -519,6 +519,61 @@ CREATE TRIGGER fixture_publish AFTER INSERT ON metadata.entity_release FOR EACH 
       );
       q(ddl("publication/45_local_publication_identity_status.sql"));
       q(ddl("publication/56_local_publication_hash_domains.sql"));
+      q(ddl("publication/58_local_publication_request_renewal.sql"));
+      const renewal = createLocalPublicationRequest(
+        authority,
+        admission,
+        { ...inputs, revision: 3 },
+        Date.now(),
+        60_000,
+      );
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(renewal)}); RESET ROLE; SELECT execution_status||':'||execution_revision||':'||renewed_from_hash FROM publication.local_publication_request WHERE request_hash='${renewal.hash}'; ROLLBACK;`,
+        ),
+      ).toContain(`approved:3:${request.hash}`);
+      expect(() =>
+        q(
+          `BEGIN; UPDATE publication.local_publication_request SET execution_revision=NULL,execution_status=NULL; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(renewal)}); ROLLBACK;`,
+        ),
+      ).toThrow(/RENEWAL_PROGRESS_REQUIRED/);
+      expect(
+        q(
+          `SELECT count(*) FROM publication.local_publication_request WHERE request_hash='${renewal.hash}';`,
+        ).trim(),
+      ).toBe("0");
+
+      const expiring = createLocalPublicationRequest(
+        authority,
+        admission,
+        { ...inputs, revision: 3 },
+        Date.now(),
+        1000,
+      );
+      q(
+        `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(expiring)}); COMMIT; SELECT pg_sleep(1.1);`,
+      );
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} SELECT publication.read_local_publication_request('${expiring.hash}'); ROLLBACK;`,
+        ),
+      ).toThrow(/REQUEST_EXPIRED/);
+      const renewed = createLocalPublicationRequest(authority, admission, {
+        ...inputs,
+        revision: 3,
+      });
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.admit_local_publication_request(${literal(renewed)}); RESET ROLE; SELECT renewed_from_hash FROM publication.local_publication_request WHERE request_hash='${renewed.hash}'; ROLLBACK;`,
+        ),
+      ).toContain(expiring.hash);
+      expect(
+        JSON.parse(
+          q(
+            `SELECT request_json FROM publication.local_publication_request WHERE request_hash='${expiring.hash}';`,
+          ),
+        ),
+      ).toEqual(expiring);
       // The real metadata trigger computes a ledger hash, not a descriptor digest.
       q(`CREATE FUNCTION metadata.fixture_release_hash() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.release_hash:=repeat('b',64); RETURN NEW; END $$;
 CREATE TRIGGER fixture_release_hash BEFORE INSERT ON metadata.entity_release FOR EACH ROW EXECUTE FUNCTION metadata.fixture_release_hash();`);
