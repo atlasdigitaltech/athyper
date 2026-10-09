@@ -9,9 +9,12 @@ import type { ActivityComparison as Comparison, ActivitySnapshotItem } from "../
 import { ActivityComparison } from "../../packages/platform/entity/runtime/form-detail/src/activity-comparison";
 import type { ActivityPresentation } from "../../packages/platform/entity/runtime/form-detail/src/activity-comparison-model";
 
-// Pins the snapshot comparison's rendered output before the shared comparison
-// core is extracted (Entity list Compare blueprint, section 11.4). The C1
-// extraction commits must leave these assertions unedited.
+// Pins the snapshot comparison's rendered output. First pinned before the C1
+// extraction (Entity list Compare blueprint section 11.4) and left unedited
+// through it; updated deliberately for C1b (section 9.6), in its own commit,
+// with the new output reviewed: the shared comparison table, the earlier
+// snapshot as fixed baseline, relative wording, exact decimals formatted by
+// kind, and captured references shown as "Linked record".
 
 const snapshots: ActivitySnapshotItem[] = [
   { id: "snap-1", sequence: 1, capturedAt: "2026-09-28T08:00:00.000Z", capturedBy: "u", sourceRecordVersion: 1, coverage: "authorized_fields" },
@@ -29,6 +32,7 @@ const comparison: Comparison = {
     { key: "valid_from", label: "valid_from", before: value("2026-09-28"), after: value(null), changed: true },
     { key: "region", label: "region", before: { state: "uncaptured" }, after: value("Asia"), changed: false },
     { key: "legacy", label: "legacy label", before: value(true), after: value(true), changed: false },
+    { key: "country", label: "country", before: value("7f3c2e1d-4b5a-4c6d-8e9f-000000000001"), after: value("7f3c2e1d-4b5a-4c6d-8e9f-000000000002"), changed: true, reference: true },
   ],
 };
 const metadata = {
@@ -39,12 +43,13 @@ const metadata = {
     { key: "rate", label: "Rate", kind: "decimal" },
     { key: "valid_from", label: "Valid from", kind: "date" },
     { key: "region", label: "Region", kind: "string" },
+    { key: "country", label: "Country", kind: "reference" },
   ],
   presentation: {
     sections: [
       { key: "general", label: "General", fields: ["name", "code", "status"] },
       { key: "terms", label: "Terms", fields: ["rate", "valid_from"] },
-      { key: "geography", label: "Geography", fields: ["region"] },
+      { key: "geography", label: "Geography", fields: ["region", "country"] },
     ],
     navigation: { tabs: [{ key: "overview", label: "Overview", sectionKeys: ["general", "terms", "geography"] }] },
   },
@@ -55,8 +60,11 @@ function outline(element: Element, depth = 0): string {
   const own = [...element.childNodes].filter((node) => node.nodeType === 3).map((node) => node.textContent!.trim()).filter(Boolean).join(" ");
   const attributes = [
     element.getAttribute("class") ? `.${element.getAttribute("class")!.split(" ").join(".")}` : "",
-    element.hasAttribute("open") ? "[open]" : "",
-    element.getAttribute("data-changed") ? `[changed=${element.getAttribute("data-changed")}]` : "",
+
+    element.getAttribute("data-outcome") ? `[outcome=${element.getAttribute("data-outcome")}]` : "",
+    element.getAttribute("data-state") ? `[state=${element.getAttribute("data-state")}]` : "",
+    element.hasAttribute("data-baseline") ? "[baseline]" : "",
+    element.getAttribute("aria-expanded") ? `[expanded=${element.getAttribute("aria-expanded")}]` : "",
     element.getAttribute("data-limited") ? `[limited=${element.getAttribute("data-limited")}]` : "",
     element.tagName === "INPUT" ? `[checked=${(element as HTMLInputElement).checked}]` : "",
   ].join("");
@@ -85,40 +93,46 @@ async function render(fields: Comparison["fields"], run: (root: HTMLElement, doc
 }
 
 const rows = (root: HTMLElement) =>
-  [...root.querySelectorAll(".a-activity-comparison__field")].map((row) => [
-    row.querySelector("dt")!.textContent,
-    ...[...row.querySelectorAll("dd")].map((cell) => cell.lastElementChild!.textContent),
-    row.getAttribute("data-changed"),
+  [...root.querySelectorAll("tbody tr.a-comparison__row")].map((row) => [
+    row.querySelector(".a-comparison__label")!.textContent,
+    ...[...row.querySelectorAll("td")].map((cell) => cell.textContent),
+    row.getAttribute("data-outcome"),
   ]);
 
-test("renders grouped differences with labels, choice labels, exact decimals, dates, empty and uncaptured cells", async () => {
+test("renders differences against the earlier snapshot, with labels, choice labels, exact decimals, dates, empty, uncaptured and linked-record cells", async () => {
   await render(comparison.fields, async (root) => {
     assert.equal(root.querySelector("h3")?.textContent, "Snapshot comparison");
-    const sections = [...root.querySelectorAll("details > summary")].map((summary) => summary.textContent);
-    assert.deepEqual(sections, ["OverviewGeneral2 changed fields", "OverviewTerms2 changed fields", "OverviewGeographySome values cannot be compared"]);
-    // Differences only (the default): changed rows, then the limited section as a note.
+    const headers = [...root.querySelectorAll("thead th")].map((cell) => cell.textContent);
+    assert.deepEqual(headers, ["Field", "Snapshot 1BaselineSep 28, 2026, 8:00 AMEarlier snapshot", "Snapshot 2Oct 2, 2026, 9:30 AMLater snapshot"]);
+    const sections = [...root.querySelectorAll(".a-comparison__section-heading button")].map((button) => button.textContent);
+    assert.deepEqual(sections, ["Overview · General2 differ", "Overview · Terms2 differ", "Overview · Geography1 differ1 not compared", "Additional fieldsnone differ"]);
+    // Differences only (the default): differing rows, then "Not compared".
     assert.deepEqual(rows(root), [
-      ["Name", "Old name", "New name", "true"],
-      ["Status", "Draft", "Active", "true"],
-      ["Rate", "1.50", "12345678901234567890.1234", "true"],
-      ["Valid from", "Sep 28, 2026", "Empty · captured", "true"],
-      ["Region", "Not captured", "Asia", "false"],
+      ["Name", "Old name", "New nameDiffers from the earlier snapshot", "differs"],
+      ["Status", "Draft", "ActiveDiffers from the earlier snapshot", "differs"],
+      ["Rate", "1.50", "12,345,678,901,234,567,890.1234Differs from the earlier snapshot", "differs"],
+      ["Valid from", "Sep 28, 2026", "Empty · capturedDiffers from the earlier snapshot", "differs"],
+      ["Country", "Linked record", "Linked recordDiffers from the earlier snapshot", "differs"],
+      ["Region", "Not captured", "AsiaNot compared", "not_comparable"],
     ]);
-    assert.match(root.querySelector(".a-activity-comparison__counts")!.textContent!, /4 changed fields/);
+    assert.match(root.querySelector(".a-activity-comparison__summary")!.textContent!, /^5 of 8 fields differ · 1 not compared$/);
+    assert.ok(!root.innerHTML.includes("7f3c2e1d"), "a captured reference never shows its identifier");
+    const vocabulary = [...root.querySelectorAll(".a-comparison__mark, .a-comparison__badge, .a-comparison__count, .a-activity-comparison__summary")].map((item) => item.textContent).join(" ");
+    assert.ok(!/chang/i.test(vocabulary), "difference wording is relative, never 'changed'");
   });
 });
 
-test("pins the rendered outline, and the differences toggle and collapse controls", async () => {
-  await render(comparison.fields, async (root, document) => {
-    const before = outline(root);
-    assert.equal(before, EXPECTED_OUTLINE);
+test("pins the rendered outline, the differences toggle, collapse, and next difference", async () => {
+  await render(comparison.fields, async (root) => {
+    assert.equal(outline(root), EXPECTED_OUTLINE);
     const toggle = root.querySelector<HTMLInputElement>(".a-activity-comparison__tools input")!;
     await act(async () => toggle.click());
-    assert.deepEqual(rows(root).map((row) => row[0]), ["Name", "Code", "Status", "Rate", "Valid from", "Region", "Legacy flag"]);
-    const collapse = [...root.querySelectorAll("button")].find((button) => button.textContent === "Collapse all")!;
-    await act(async () => collapse.click());
-    assert.ok([...root.querySelectorAll("details")].every((details) => !(details as HTMLDetailsElement).open));
-    assert.ok(document);
+    assert.deepEqual(rows(root).map((row) => row[0]), ["Name", "Code", "Status", "Rate", "Valid from", "Region", "Country", "Legacy flag"]);
+    const button = (text: string) => [...root.querySelectorAll("button")].find((item) => item.textContent === text)!;
+    await act(async () => button("Next difference").click());
+    assert.equal(root.ownerDocument.activeElement?.textContent?.startsWith("Name"), true);
+    await act(async () => button("Collapse all").click());
+    assert.equal(root.querySelectorAll("tbody tr.a-comparison__row").length, 0);
   });
 });
 
@@ -135,93 +149,127 @@ const EXPECTED_OUTLINE = `div
     header
       div
         h3 "Snapshot comparison"
-        p "Snapshot 1 · Sep 28, 2026, 8:00 AM Snapshot 2 · Oct 2, 2026, 9:30 AM"
       button.a-button.a-button--secondary.a-button--medium "Close details"
-    div.a-activity-comparison__counts
-      span "4 changed fields"
-      span "2 affected sections"
     div.a-activity-comparison__tools
-      label "Changes only"
+      label.a-activity-comparison__switch "Differences only"
         input[checked=true]
+      span.a-activity-comparison__summary "5 of 8 fields differ · 1 not compared"
       div
+        button.a-button.a-button--ghost.a-button--medium "Previous difference"
+        button.a-button.a-button--ghost.a-button--medium "Next difference"
         button.a-button.a-button--ghost.a-button--medium "Expand all"
         button.a-button.a-button--ghost.a-button--medium "Collapse all"
-    details.a-activity-comparison__section[open]
-      summary
-        span
-          small "Overview"
-          strong "General"
-        span "2 changed fields"
-      div.a-activity-comparison__fields
-        div.a-activity-comparison__columns
-          span "Field"
-          span "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-          span "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-        dl
-          div.a-activity-comparison__field[changed=true]
-            dt "Name"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-              span "Old name"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-              span "New name"
-          div.a-activity-comparison__field[changed=true]
-            dt "Status"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-              span "Draft"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-              span "Active"
-    details.a-activity-comparison__section[open]
-      summary
-        span
-          small "Overview"
-          strong "Terms"
-        span "2 changed fields"
-      div.a-activity-comparison__fields
-        div.a-activity-comparison__columns
-          span "Field"
-          span "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-          span "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-        dl
-          div.a-activity-comparison__field[changed=true]
-            dt "Rate"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-              span "1.50"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-              span "12345678901234567890.1234"
-          div.a-activity-comparison__field[changed=true]
-            dt "Valid from"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-              span "Sep 28, 2026"
-            dd
-              span.a-activity-comparison__value-label "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-              span "Empty · captured"
-    div.a-activity-comparison__notes
-      p "Comparison notes · not counted as changes"
-      details.a-activity-comparison__section
-        summary
-          span
-            small "Overview"
-            strong "Geography"
-          span "Some values cannot be compared"
-        div.a-activity-comparison__fields
-          div.a-activity-comparison__columns
-            span "Field"
-            span "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-            span "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-          dl
-            div.a-activity-comparison__field[changed=false]
-              dt "Region"
-              dd
-                span.a-activity-comparison__value-label "Snapshot 1 · Sep 28, 2026, 8:00 AM"
-                span "Not captured"
-              dd
-                span.a-activity-comparison__value-label "Snapshot 2 · Oct 2, 2026, 9:30 AM"
-                span "Asia"
+    div.a-activity-comparison__table
+      table.a-comparison
+        caption.a-comparison__caption "Snapshot comparison"
+        thead
+          tr
+            th.a-comparison__field-heading "Field"
+            th.a-comparison__column[baseline]
+              div.a-comparison__column-inner
+                div.a-comparison__column-text
+                  span.a-comparison__code "Snapshot 1"
+                  span.a-comparison__baseline "Baseline"
+                  span.a-comparison__title "Sep 28, 2026, 8:00 AM"
+                  span.a-comparison__note "Earlier snapshot"
+            th.a-comparison__column
+              div.a-comparison__column-inner
+                div.a-comparison__column-text
+                  span.a-comparison__code "Snapshot 2"
+                  span.a-comparison__title "Oct 2, 2026, 9:30 AM"
+                  span.a-comparison__note "Later snapshot"
+        tbody.a-comparison__section
+          tr.a-comparison__section-heading
+            th
+              button[expanded=true]
+                span.a-comparison__chevron
+                span "Overview · General"
+                span.a-comparison__count "2 differ"
+          tr.a-comparison__row[outcome=differs]
+            th
+              span.a-comparison__label "Name"
+              span.a-comparison__badge[outcome=differs] "Differs"
+            td.a-comparison__cell[state=value][baseline]
+              span.a-comparison__value "Old name"
+            td.a-comparison__cell[state=value]
+              span.a-comparison__value "New name"
+              span.a-comparison__marks
+                span.a-comparison__mark "Differs from the earlier snapshot"
+          tr.a-comparison__row[outcome=differs]
+            th
+              span.a-comparison__label "Status"
+              span.a-comparison__badge[outcome=differs] "Differs"
+            td.a-comparison__cell[state=value][baseline]
+              span.a-comparison__value "Draft"
+            td.a-comparison__cell[state=value]
+              span.a-comparison__value "Active"
+              span.a-comparison__marks
+                span.a-comparison__mark "Differs from the earlier snapshot"
+        tbody.a-comparison__section
+          tr.a-comparison__section-heading
+            th
+              button[expanded=true]
+                span.a-comparison__chevron
+                span "Overview · Terms"
+                span.a-comparison__count "2 differ"
+          tr.a-comparison__row[outcome=differs]
+            th
+              span.a-comparison__label "Rate"
+              span.a-comparison__badge[outcome=differs] "Differs"
+            td.a-comparison__cell[state=value][baseline]
+              span.a-comparison__value "1.50"
+            td.a-comparison__cell[state=value]
+              span.a-comparison__value "12,345,678,901,234,567,890.1234"
+              span.a-comparison__marks
+                span.a-comparison__mark "Differs from the earlier snapshot"
+          tr.a-comparison__row[outcome=differs]
+            th
+              span.a-comparison__label "Valid from"
+              span.a-comparison__badge[outcome=differs] "Differs"
+            td.a-comparison__cell[state=value][baseline]
+              span.a-comparison__value "Sep 28, 2026"
+            td.a-comparison__cell[state=empty]
+              span.a-comparison__value "Empty · captured"
+              span.a-comparison__marks
+                span.a-comparison__mark "Differs from the earlier snapshot"
+        tbody.a-comparison__section
+          tr.a-comparison__section-heading
+            th
+              button[expanded=true]
+                span.a-comparison__chevron
+                span "Overview · Geography"
+                span.a-comparison__count "1 differ"
+                span.a-comparison__count "1 not compared"
+          tr.a-comparison__row[outcome=differs]
+            th
+              span.a-comparison__label "Country"
+              span.a-comparison__badge[outcome=differs] "Differs"
+            td.a-comparison__cell[state=value][baseline]
+              span.a-comparison__value "Linked record"
+            td.a-comparison__cell[state=value]
+              span.a-comparison__value "Linked record"
+              span.a-comparison__marks
+                span.a-comparison__mark "Differs from the earlier snapshot"
+          tr.a-comparison__subheading
+            th "Not compared"
+          tr.a-comparison__row[outcome=not_comparable]
+            th
+              span.a-comparison__label "Region"
+              span.a-comparison__badge[outcome=not_comparable] "Not compared"
+            td.a-comparison__cell[state=unavailable][baseline]
+              span.a-comparison__value "Not captured"
+            td.a-comparison__cell[state=value]
+              span.a-comparison__value "Asia"
+              span.a-comparison__marks
+                span.a-comparison__mark "Not compared"
+        tbody.a-comparison__section
+          tr.a-comparison__section-heading
+            th
+              button[expanded=true]
+                span.a-comparison__chevron
+                span "Additional fields"
+                span.a-comparison__count "none differ"
+          tr.a-comparison__empty
+            td "No differences in this section."
+    p.a-comparison__visually-hidden
     p.a-entity-activity__hint "Grouped using the current record layout. Saved copies do not establish who changed these values or whether the live record has changed."`;
