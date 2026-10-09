@@ -1182,6 +1182,12 @@ export function registerServices(
                 : {}),
             },
           });
+          if (
+            configuration.localAuthority &&
+            (!native.transitionLocalNativeSource ||
+              !native.releaseLocalNativeSource)
+          )
+            throw Error("LOCAL_PUBLICATION_RELEASE_STARTUP_REQUIRED");
           if (native.transitionLocalNativeSource)
             localPublicationPreparations.set(container, {
               configuration,

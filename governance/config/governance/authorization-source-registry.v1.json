@@ -5357,6 +5357,7 @@
     "authorizeDelivery",
     "authorizeDescriptorOperation",
     "authorizeEntityActivation",
+    "authorizeLocalPublicationActivation",
     "authorizeEntityMutation",
     "authorizeEntityRelationship",
     "authorizeGateway",
