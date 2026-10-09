@@ -167,6 +167,9 @@ it.each(["draft", "in_review", "approved", "published"])(
       const first = await admit(context, id(6), command);
       expect(first).toMatchObject({ stage: "admitted", replayed: false });
       expect(
+        (stored as unknown as LocalPublicationRequest).admission.action,
+      ).toBe(status === "published" ? "recover" : "publish");
+      expect(
         (stored as unknown as LocalPublicationRequest).admission
           .developerPrincipalId,
       ).toBe(id(2));
