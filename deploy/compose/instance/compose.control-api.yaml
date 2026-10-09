@@ -1,11 +1,12 @@
-# DEV-only isolated source deployment. No published port and no combined bootstrap.
+# DEV-only isolated compiled deployment. No published port or implicit bootstrap.
+# Pin ATHYPER_CONTROL_IMAGE to the same committed runtime image as the worker.
 services:
   control-api:
-    image: ${ATHYPER_CONTROL_IMAGE:?set existing DEV Node runtime image}
+    image: ${ATHYPER_CONTROL_IMAGE:?set committed runtime image digest}
     user: "1000:1000"
-    working_dir: ${ATHYPER_SOURCE_ROOT:?set repository root}/server/apps/platform-host
+    working_dir: /app/server
     entrypoint: ["node"]
-    command: ["--import", "tsx", "src/entrypoints/control-api.ts"]
+    command: ["dist/entrypoints/control-api.js"]
     environment:
       ATHYPER_ENV: local
       ATHYPER_INSTANCE: dev
@@ -22,9 +23,9 @@ services:
       PLATFORM_CONTROL_SECRET_PROVIDER: infisical
       PLATFORM_CONTROL_INFISICAL_TOKEN_FILE: /run/secrets/publication-token
       NODE_EXTRA_CA_CERTS: /run/secrets/tls.crt
-    env_file: ["${ATHYPER_CONTROL_ROOT:?set control credential root}/runtime.env"]
+    env_file:
+      ["${ATHYPER_CONTROL_ROOT:?set control credential root}/runtime.env"]
     volumes:
-      - ${ATHYPER_SOURCE_ROOT}:${ATHYPER_SOURCE_ROOT}:ro
       - ${ATHYPER_CONTROL_ROOT}/database-url:/run/control/database-url:ro
       - ${ATHYPER_CONTROL_ROOT}/trust.json:/run/control/trust.json:ro
       - ${ATHYPER_DEV_SECRET_ROOT:?set DEV secret root}/publication-trust-v1/publisher-token:/run/secrets/publication-token:ro
@@ -37,7 +38,13 @@ services:
     init: true
     restart: unless-stopped
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:4010/livez').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:4010/livez').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 3s
       retries: 3

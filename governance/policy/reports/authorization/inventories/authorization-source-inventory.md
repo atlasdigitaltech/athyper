@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `2356e4ae5277fb483a952dd8538dc45954ccc13195e71edcd1ada9895e4b2776`
-Files scanned / authorization-bearing: 14726 / 2072
+Files scanned / authorization-bearing: 14728 / 2072
 Registered authorization objects: 470
 Aggregated object references: 1426
 Writer references: 148
@@ -957,7 +957,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 364, 463, 536, 661, 827, 918, 1234, 1340, 1375, 1597, 1731, 1925 |
 | `authorizeEntityActivation` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6530 |
 | `authorizeEntityActivation` | reviewed | test | server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts | 58 |
-| `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 74, 970, 972 |
+| `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 75, 972, 974 |
 | `authorizeEntityOperation` | unclassified | runtime | server/apps/platform-host/src/composition/register-services.ts | 5288 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/contracts/auth/src/entity-operation-authorization.ts | 5 |
 | `authorizeEntityOperation` | unclassified | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 65, 102 |
@@ -1778,7 +1778,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/integration/src/__tests__/integration-routes.test.ts | 183 |
 | `allowed` | route | server/packages/services/integration/src/integration-routes.ts | 54 |
 | `allowed` | test | server/packages/services/master-data/src/business-partner/capability-actions.test.ts | 169 |
-| `allowed` | test | server/packages/services/publication/src/__tests__/compiled-runtime-worker.test.ts | 598, 610 |
+| `allowed` | test | server/packages/services/publication/src/__tests__/compiled-runtime-worker.test.ts | 602, 614 |
 | `allowed` | route | server/packages/services/publication/src/publication-routes.ts | 143 |
 | `allowed` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `allowed` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 91, 125, 173, 198 |
@@ -4396,7 +4396,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/services/publication/src/__tests__/entity-authorization-publication-review.test.ts | 3 |
 | `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-compiler.ts | 42, 126 |
 | `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-publication-review.ts | 24 |
-| `profileHash` | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 807 |
+| `profileHash` | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 808 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 52, 81, 88, 114 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 52, 81, 88, 114 |

@@ -117,11 +117,11 @@
     "pino": "^10.3.1",
     "@athyper/contract-platform-collection": "workspace:*",
     "@athyper/contract-platform-activity": "workspace:*",
-    "@athyper/server-plane-studio-meta-entity-authoring": "workspace:*"
+    "@athyper/server-plane-studio-meta-entity-authoring": "workspace:*",
+    "@athyper/server-contract-meta-entity-authoring": "workspace:*"
   },
   "devDependencies": {
     "@athyper/server-adapter-publication-signing": "workspace:*",
-    "@athyper/server-contract-meta-entity-authoring": "workspace:*",
     "@athyper/server-db": "workspace:*",
     "@athyper/server-service-master-data": "workspace:*",
     "@athyper/server-service-publication": "workspace:*",

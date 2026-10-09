@@ -28,10 +28,9 @@ export function createDeployedComponentQualification(
     throw Error("COMPONENT_DEPLOYMENT_CONFIGURATION_INVALID");
   const digest = (value: unknown) =>
     canonical.sha256(canonical.canonicalBytes(value));
-  async function bytes(path: string) {
+  async function bytes(base: string, path: string) {
     if (!path || isAbsolute(path) || path.split(/[\\/]/).includes(".."))
       throw Error("COMPONENT_DEPLOYMENT_PATH_INVALID");
-    const base = await realpath(root!);
     const file = await realpath(resolve(base, path));
     const child = relative(base, file);
     if (
@@ -48,8 +47,9 @@ export function createDeployedComponentQualification(
   }
   return async (input) => {
     const source = parseUiComponentResourceSource(input);
+    const base = await realpath(root!);
     const document: unknown = JSON.parse(
-      (await bytes(manifest)).toString("utf8"),
+      (await bytes(base, manifest)).toString("utf8"),
     );
     if (digest(document) !== pin)
       throw Error("COMPONENT_DEPLOYMENT_MANIFEST_CHANGED");
@@ -125,18 +125,18 @@ export function createDeployedComponentQualification(
         !/^[a-f0-9]{64}$/.test(file.sha256)
       )
         throw Error("COMPONENT_DEPLOYMENT_FILE_INVALID");
-      const content = await bytes(file.path);
+      const content = await bytes(base, file.path);
       totalBytes += content.length;
       if (totalBytes > 256 * 1024 * 1024)
         throw Error("COMPONENT_DEPLOYMENT_BUDGET_EXCEEDED");
       if (canonical.sha256(content) !== file.sha256)
         throw Error("COMPONENT_DEPLOYMENT_FILE_CHANGED");
     };
-    // Four bounded reads avoid serial filesystem latency without caching trust.
+    // Sixteen bounded reads avoid serial filesystem latency without caching trust.
     // Await every started read, including on rejection; no work outlives the call.
-    for (let offset = 0; offset < files.length; offset += 4) {
+    for (let offset = 0; offset < files.length; offset += 16) {
       const results = await Promise.allSettled(
-        files.slice(offset, offset + 4).map(verify),
+        files.slice(offset, offset + 16).map(verify),
       );
       const rejected = results.find((result) => result.status === "rejected");
       if (rejected?.status === "rejected") throw rejected.reason;

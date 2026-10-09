@@ -1,3 +1,5 @@
+> Historical proposal, archived 10 October 2026. Not an executable cleanup plan. The [Entity Studio blueprint](../../blueprints/entity-studio/blueprint.md#meta-entity-legacy-cleanup-build-lifecycle) and [current runbook](../../runbooks/entity-foundation-qualification.md#current-local-native-build) supersede this proposal. No table deletion or repository replacement is authorized by this archive.
+
 # DDL Trim Manifest — Phase 2 (copy + trim)
 
 Source root in backup: `server/db/ddl/common/`
@@ -10,41 +12,42 @@ DDL. It is deterministic and dependency-safe (verified against `05_constraints.s
 
 `server/db/ddl/common/shared/03_tables.sql` defines 12 tables. Trim result:
 
-| Table | Disposition | Reason |
-| --- | --- | --- |
-| `shared.country` | **KEEP** | reference entity (in scope) |
-| `shared.currency` | **KEEP** | lookup reference |
-| `shared.language` | **KEEP** | lookup reference |
-| `shared.locale` | **KEEP** | lookup reference |
-| `shared.timezone` | **KEEP** | lookup reference |
-| `shared.state_region` | **KEEP** | lookup reference (FK → country) |
-| `shared.uom` | DROP | not a country lookup |
-| `shared.classification_scheme` | DROP | out of scope |
-| `shared.commodity_code` | DROP | out of scope |
-| `shared.industry_code` | DROP | out of scope |
-| `shared.commodity_crosswalk` | DROP | out of scope |
-| `shared.industry_crosswalk` | DROP | out of scope |
+| Table                          | Disposition | Reason                          |
+| ------------------------------ | ----------- | ------------------------------- |
+| `shared.country`               | **KEEP**    | reference entity (in scope)     |
+| `shared.currency`              | **KEEP**    | lookup reference                |
+| `shared.language`              | **KEEP**    | lookup reference                |
+| `shared.locale`                | **KEEP**    | lookup reference                |
+| `shared.timezone`              | **KEEP**    | lookup reference                |
+| `shared.state_region`          | **KEEP**    | lookup reference (FK → country) |
+| `shared.uom`                   | DROP        | not a country lookup            |
+| `shared.classification_scheme` | DROP        | out of scope                    |
+| `shared.commodity_code`        | DROP        | out of scope                    |
+| `shared.industry_code`         | DROP        | out of scope                    |
+| `shared.commodity_crosswalk`   | DROP        | out of scope                    |
+| `shared.industry_crosswalk`    | DROP        | out of scope                    |
 
 Bank master files are also **dropped entirely** (out of scope):
+
 - `03_bank_master.sql`, `04_bank_master_views.sql` (`bank_institution`, `bank_identifier`, `bank_branch`).
 
 ## Shared schema — reference seeds
 
 `server/db/ddl/common/shared/reference-data/`
 
-| Seed | Disposition |
-| --- | --- |
-| `001_country.sql` | KEEP |
-| `002_state_region.sql` | KEEP |
-| `003_currency.sql` | KEEP |
-| `004_language.sql` | KEEP |
-| `005_locale.sql` | KEEP |
-| `006_timezone.sql` | KEEP |
-| `007_uom.sql` | DROP |
-| `008a…008d` (commodity) | DROP |
-| `009b…009e` (industry) | DROP |
-| `010_bank_master.sql` | DROP |
-| `provenance.v1.json` | KEEP (seed provenance ledger) |
+| Seed                    | Disposition                   |
+| ----------------------- | ----------------------------- |
+| `001_country.sql`       | KEEP                          |
+| `002_state_region.sql`  | KEEP                          |
+| `003_currency.sql`      | KEEP                          |
+| `004_language.sql`      | KEEP                          |
+| `005_locale.sql`        | KEEP                          |
+| `006_timezone.sql`      | KEEP                          |
+| `007_uom.sql`           | DROP                          |
+| `008a…008d` (commodity) | DROP                          |
+| `009b…009e` (industry)  | DROP                          |
+| `010_bank_master.sql`   | DROP                          |
+| `provenance.v1.json`    | KEEP (seed provenance ledger) |
 
 ## Dependency safety (verified)
 

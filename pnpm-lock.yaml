@@ -1929,6 +1929,9 @@ importers:
       '@athyper/server-contract-master-data':
         specifier: workspace:*
         version: link:../../packages/contracts/master-data
+      '@athyper/server-contract-meta-entity-authoring':
+        specifier: workspace:*
+        version: link:../../packages/contracts/meta-entity-authoring
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../packages/contracts/metadata
@@ -2089,9 +2092,6 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
     devDependencies:
-      '@athyper/server-contract-meta-entity-authoring':
-        specifier: workspace:*
-        version: link:../../packages/contracts/meta-entity-authoring
       '@athyper/server-db':
         specifier: workspace:*
         version: link:../../db

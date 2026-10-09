@@ -1,0 +1,9 @@
+# Optional source debugging override. Never required by the compiled DEV build.
+# Apply after compose.control-api.yaml with an explicit Node/tsx development image.
+services:
+  control-api:
+    image: ${ATHYPER_CONTROL_SOURCE_IMAGE:?set Node development image}
+    working_dir: ${ATHYPER_SOURCE_ROOT:?set repository root}/server/apps/platform-host
+    command: ["--import", "tsx", "src/entrypoints/control-api.ts"]
+    volumes:
+      - ${ATHYPER_SOURCE_ROOT}:${ATHYPER_SOURCE_ROOT}:ro

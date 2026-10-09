@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14726,
+    "filesScanned": 14728,
     "authorizationFiles": 2072,
     "registeredObjects": 470,
     "objectReferences": 1426,
@@ -18802,7 +18802,7 @@
     {
       "path": "server/packages/services/publication/src/__tests__/compiled-runtime-worker.test.ts",
       "artifactClass": "test",
-      "sha256": "106341f8be23697fa18ab4717d18f910ec423d13fc4540804bdd25feaa0bed25"
+      "sha256": "f1cb18f95b94932ec75c3bb361385feb25d678769ef6e4d29d91ab1d82c179f0"
     },
     {
       "path": "server/packages/services/publication/src/__tests__/dev-publication-classifier.test.ts",
@@ -18877,7 +18877,7 @@
     {
       "path": "server/packages/services/publication/src/kysely-publication-authority-work.ts",
       "artifactClass": "runtime",
-      "sha256": "e139cb849b591c345e77d8ca88837628f1289b0dc20c306574f1540fa0fa51af"
+      "sha256": "c79a614c5697e52ae7c516d928dfeaf87d77aba89412c9b45152788c2f6230d3"
     },
     {
       "path": "server/packages/services/publication/src/publication-orchestrator.ts",
@@ -40483,10 +40483,10 @@
       "path": "server/packages/services/publication/src/kysely-publication-authority-work.ts",
       "artifactClass": "runtime",
       "access": "execute",
-      "line": 327,
+      "line": 328,
       "lines": [
-        327,
-        333
+        328,
+        334
       ]
     },
     {
@@ -41413,9 +41413,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        74,
-        970,
-        972
+        75,
+        972,
+        974
       ]
     },
     {
@@ -53500,8 +53500,8 @@
       "path": "server/packages/services/publication/src/__tests__/compiled-runtime-worker.test.ts",
       "artifactClass": "test",
       "lines": [
-        598,
-        610
+        602,
+        614
       ]
     },
     {
@@ -111980,7 +111980,7 @@
       "path": "server/packages/services/publication/src/kysely-publication-authority-work.ts",
       "artifactClass": "runtime",
       "lines": [
-        807
+        808
       ]
     },
     {

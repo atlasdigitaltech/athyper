@@ -1,3 +1,5 @@
+> Historical proposal, archived 10 October 2026. Not an executable cleanup plan. The [Entity Studio blueprint](../../blueprints/entity-studio/blueprint.md#meta-entity-legacy-cleanup-build-lifecycle) and [current runbook](../../runbooks/entity-foundation-qualification.md#current-local-native-build) supersede this proposal. No table deletion or repository replacement is authorized by this archive.
+
 # athyper Rebuild Plan — Meta-Entity-Driven Country Application
 
 Status: **DRAFT — for owner manual review. Nothing has been changed yet.**
@@ -19,14 +21,14 @@ parallel API/provider stacks**.
 
 ### In scope
 
-| Item | Notes |
-| --- | --- |
-| Shared schema tables | `shared.country` + the 5 lookup tables it links to |
-| Meta Entity metadata | `country`, `currency`, `language`, `locale`, `timezone`, `state_region` |
+| Item                    | Notes                                                                      |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Shared schema tables    | `shared.country` + the 5 lookup tables it links to                         |
+| Meta Entity metadata    | `country`, `currency`, `language`, `locale`, `timezone`, `state_region`    |
 | Shared Entity Framework | generic list/read runtime (server) + generic list/detail renderer (client) |
-| Publication | Studio authors → independent review/approve → publish to Neon/Mesh/Studio |
-| Docker | fresh, minimal (Postgres + API + web), no dependency on `deploy/` stack |
-| DDL | copied from current repo, then trimmed to the in-scope tables |
+| Publication             | Studio authors → independent review/approve → publish to Neon/Mesh/Studio  |
+| Docker                  | fresh, minimal (Postgres + API + web), no dependency on `deploy/` stack    |
+| DDL                     | copied from current repo, then trimmed to the in-scope tables              |
 
 ### Out of scope (dropped)
 
@@ -178,16 +180,16 @@ Success: `tsx db/migrate.ts --all` applies a clean schema; `shared.country` +
 
 ## 8. Milestones & verification
 
-| # | Milestone | Verifiable outcome |
-| --- | --- | --- |
-| M0 | Backup + scaffold + Docker | fresh repo; `docker compose up` healthy |
-| M1 | DDL copy/trim + migrate + seed | `shared.country` + 5 lookups seeded |
-| M2 | Metadata schemas + validation + Country import | Country artifacts validate & import into `runtime_meta` |
-| M3 | Server list/read engine | `GET /entity/country` + `…/:code` return metadata-driven results |
-| M4 | Frontend list/detail | Country renders list + detail in Neon, no UUIDs, tabs/sections correct |
-| M5 | Publication pipeline | Studio → approve → Neon/Mesh/Studio, same metadata renders everywhere |
-| M6 | Onboard the 5 lookups | new entity added with **metadata only**, zero app code changes |
-| M7 | Hardening + tests + docs | RLS/authz, audit, no-UUID validation, contract tests green |
+| #   | Milestone                                      | Verifiable outcome                                                     |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------- |
+| M0  | Backup + scaffold + Docker                     | fresh repo; `docker compose up` healthy                                |
+| M1  | DDL copy/trim + migrate + seed                 | `shared.country` + 5 lookups seeded                                    |
+| M2  | Metadata schemas + validation + Country import | Country artifacts validate & import into `runtime_meta`                |
+| M3  | Server list/read engine                        | `GET /entity/country` + `…/:code` return metadata-driven results       |
+| M4  | Frontend list/detail                           | Country renders list + detail in Neon, no UUIDs, tabs/sections correct |
+| M5  | Publication pipeline                           | Studio → approve → Neon/Mesh/Studio, same metadata renders everywhere  |
+| M6  | Onboard the 5 lookups                          | new entity added with **metadata only**, zero app code changes         |
+| M7  | Hardening + tests + docs                       | RLS/authz, audit, no-UUID validation, contract tests green             |
 
 Each milestone ends with a small verification command; I report the exact result
 rather than assuming it works.
@@ -203,11 +205,11 @@ rather than assuming it works.
    owner approval. No MFA code will be written in this build.
 4. **Effort honesty** — the current framework is large (compiled artifacts,
    successor releases, canaries, trust provisioning). I will reproduce the
-   *faithful minimum* for a single reference entity + lookups, not the entire
+   _faithful minimum_ for a single reference entity + lookups, not the entire
    plane/deploy surface. Deviations from the current behavior will be called out.
 5. **"All shared-schema tables"** — you asked for the framework to cover all
    shared-schema tables. I read this as "generic over the shared schema", but the
-   **onboarded** entities are Country + 5 lookups. If you want *every*
+   **onboarded** entities are Country + 5 lookups. If you want _every_
    `common/reference` table onboarded now (bank/commodity/industry/etc.), that's a
    scope expansion — confirm.
 
