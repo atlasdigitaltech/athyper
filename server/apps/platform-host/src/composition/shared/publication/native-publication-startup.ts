@@ -1,3 +1,4 @@
+import { validateLocalTransitionReceipt } from "./local-publication-receipt.js";
 import { createLocalNativeRelease } from "./local-publication-release.js";
 import type { ArtifactSigner } from "@athyper/server-contract-meta-entity-authoring";
 import { randomUUID } from "node:crypto";
@@ -292,22 +293,12 @@ export function createNativePublicationStartup(options: {
               ${request.hash},${phase},${JSON.stringify({ contractHash: request.inputs.sourceHash, issues: [] })}::jsonb) AS receipt`.execute(
                     transaction,
                   );
-                  const receipt = result.rows[0]?.receipt;
-                  if (
-                    result.rows.length !== 1 ||
-                    !receipt ||
-                    receipt.requestHash !== request.hash ||
-                    receipt.basis !== "local_development_authority" ||
-                    !Number.isSafeInteger(receipt.revision) ||
-                    receipt.revision <= request.inputs.revision ||
-                    !["in_review", "approved", "published"].includes(
-                      receipt.status,
-                    ) ||
-                    (phase === "review" &&
-                      !["approved", "published"].includes(receipt.status)) ||
-                    typeof receipt.replayed !== "boolean"
-                  )
-                    throw Error("LOCAL_PUBLICATION_TRANSITION_RECEIPT_INVALID");
+                  const receipt = validateLocalTransitionReceipt(
+                    result.rows,
+                    request.hash,
+                    request.inputs.revision,
+                    phase,
+                  );
                   if (!receipt.replayed) {
                     const auditId = randomUUID();
                     const recorded = await options.audit.record(
