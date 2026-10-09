@@ -1,0 +1,421 @@
+<title>Neon Bid Evaluation Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: Neon record page for one sourcing event; two shared-list views over the same data: Matrix (a list Layout pivoting response lines into items × participants) and Compare with C4 line items (2–4 chosen participants, paged by the event's item list). */
+:root{
+  --font:'Geist',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --display:'Bricolage Grotesque','Geist',system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,Menlo,monospace;
+  --bg:#f7f7f8;--surface:#fff;--surface2:#f0f0f2;--line:#e3e3e8;--fg:#16161a;--muted:#6a6a75;
+  --accent:#16161a;--accent-fg:#fff;--accent-soft:#ececf0;--focus:#2f6fdc;
+  --ok:#126b34;--ok-bg:#e3f4ea;--warn:#8a5200;--warn-bg:#fbefd6;--bad:#b02525;--bad-bg:#fbe4e4;--neu:#5c5c67;--neu-bg:#ececf0;
+  --diff:#fdf3e1;--pin:#e8eefb;--pin-fg:#1f4fa8;
+  --shadow:0 1px 2px rgba(20,20,30,.06),0 4px 14px rgba(20,20,30,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a1020;--surface:#111a2e;--surface2:#16213a;--line:#233252;--fg:#e9eefb;--muted:#93a1c0;
+  --accent:#5b9bf0;--accent-fg:#06101f;--accent-soft:#18284a;--focus:#7fb2ff;
+  --ok:#4cc17e;--ok-bg:#12301f;--warn:#e8a93a;--warn-bg:#352a0f;--bad:#f07070;--bad-bg:#381616;--neu:#93a1c0;--neu-bg:#1a2644;
+  --diff:#2a2414;--pin:#18284a;--pin-fg:#9cc0ff;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1020;--surface:#111a2e;--surface2:#16213a;--line:#233252;--fg:#e9eefb;--muted:#93a1c0;
+  --accent:#5b9bf0;--accent-fg:#06101f;--accent-soft:#18284a;--focus:#7fb2ff;
+  --ok:#4cc17e;--ok-bg:#12301f;--warn:#e8a93a;--warn-bg:#352a0f;--bad:#f07070;--bad-bg:#381616;--neu:#93a1c0;--neu-bg:#1a2644;
+  --diff:#2a2414;--pin:#18284a;--pin-fg:#9cc0ff;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--font);padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1360px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:1.65rem;letter-spacing:-.01em}
+h2{font-size:1.15rem}
+h3{font-size:1rem}
+.crumbs{color:var(--muted);font-size:.8rem}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;justify-content:space-between}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;background:var(--neu-bg);color:var(--neu);font-size:.75rem;font-weight:500;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.pin{background:var(--pin);color:var(--pin-fg)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;font:inherit;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--fg)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:0}
+.panel-h{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-h .sp{flex:1}
+.note{margin:0;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:.82rem}
+.note b{color:var(--fg)}
+.btn{min-height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-weight:500;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.pri:hover:not(:disabled){background:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.search{min-height:32px;min-width:0;width:220px;max-width:100%;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit}
+.swt{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer}
+.swt input{width:16px;height:16px;accent-color:var(--accent)}
+.scroll{overflow:auto;max-height:68vh}
+table{border-collapse:separate;border-spacing:0;font-size:.85rem}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:start;vertical-align:top}
+thead th{position:sticky;top:0;z-index:2;background:var(--surface2)}
+.rowh{position:sticky;left:0;z-index:1;background:var(--surface);min-width:240px;max-width:280px}
+thead .rowh{z-index:3;background:var(--surface2)}
+.cap{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.code{color:var(--muted);font-family:var(--mono);font-size:.74rem}
+.ttl{font-weight:600}
+.sub{color:var(--muted);font-size:.75rem}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+.rank{color:var(--muted);font-size:.74rem}
+.low{color:var(--ok);font-weight:600}
+.up{color:var(--warn)}
+.cell{min-width:150px}
+.cell.best{background:var(--ok-bg)}
+.cell.declined,.cell.absent{color:var(--muted);font-style:italic}
+.colh{min-width:170px}
+.colh label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.colh input{margin-top:3px;accent-color:var(--accent)}
+.colh .tot{display:block;margin-top:4px}
+.pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
+.pager .sp{flex:1}
+.drawer{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 16px;background:var(--surface2)}
+.drawer label{display:inline-flex;gap:6px;align-items:center;font-size:.82rem}
+.sec>th{background:var(--surface2);position:static}
+.sec button{border:0;background:none;font:inherit;font-weight:600;display:flex;flex-wrap:wrap;gap:8px;align-items:center;cursor:pointer;color:var(--fg);padding:0}
+.chev{display:inline-block;transition:transform .15s}
+.sec button[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.rdiff>th,.rdiff>td{background:var(--diff)}
+.badge{display:inline-block;margin-top:4px;padding:0 6px;border-radius:4px;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--neu-bg);color:var(--neu)}
+.badge.d{background:var(--warn);color:var(--surface)}
+.mk{display:inline-block;margin-top:4px;margin-inline-end:4px;padding:0 6px;border-radius:4px;font-size:.7rem;font-weight:500}
+.mk.same{background:var(--ok-bg);color:var(--ok)}.mk.diff{background:var(--warn-bg);color:var(--warn)}.mk.nc{background:var(--neu-bg);color:var(--neu)}.mk.best{background:var(--ok-bg);color:var(--ok);font-weight:700}
+.baseline{display:inline-block;padding:0 6px;border-radius:4px;background:var(--fg);color:var(--surface);font-size:.64rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+mark{background:var(--warn-bg);color:var(--warn);border-radius:2px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.tools .sp{flex:1}
+.pins{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pins button{border:0;font:inherit;cursor:pointer}
+.budget{display:grid;gap:4px;padding:12px 16px;font-size:.8rem;color:var(--muted)}
+.budget code{font-family:var(--mono);font-size:.76rem;color:var(--fg)}
+.empty{padding:16px;color:var(--muted);font-style:italic}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+@media (max-width:640px){.rowh{min-width:160px}.cell,.colh{min-width:130px}}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <div class="crumbs">Procurement / Sourcing events / <b>SE-2026-0142</b></div>
+      <h1>Gas turbine spares, Ras Laffan</h1>
+    </div>
+    <div class="facts">
+      <span class="chip warn">Evaluation</span>
+      <span class="chip">Evaluation currency USD</span>
+      <span class="chip">Closes 14 Oct 2026</span>
+      <span class="chip">Example data</span>
+    </div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="view"></div>
+  <p class="sub" id="live" aria-live="polite"></p>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var USD=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+var money=function(v){return USD.format(v)+' USD'};
+
+/* ---- Example data: one sourcing event ---- */
+var ITEMS=[
+ ['1.1','Fuel gas actuator, ESD quick exhaust valve','EA',1,'Valves'],
+ ['1.2','Fuel gas WBH GT burner SOV coil','EA',2,'Valves'],
+ ['1.3','GC 5.250 × .043 micron input frit filter','PC',15,'Filters'],
+ ['1.4','GC NGC feed-through assembly','PC',2,'Instruments'],
+ ['1.5','GC 8206 installation kit, feed-through','EA',1,'Instruments'],
+ ['1.6','Combustion liner, stage 1','EA',4,'Hot gas path'],
+ ['1.7','Transition piece seal kit','KIT',4,'Hot gas path'],
+ ['1.8','Igniter plug, high energy','EA',6,'Ignition'],
+ ['1.9','Flame detector, UV/IR','EA',3,'Instruments'],
+ ['1.10','Lube oil filter element, 10 µm','PC',24,'Filters'],
+ ['1.11','Bleed valve positioner','EA',2,'Valves'],
+ ['1.12','Thermocouple, type K, 600 mm','PC',18,'Instruments']
+].map(function(r,i){return{id:'d'+(i+1),code:r[0],label:r[1],uom:r[2],qty:r[3],cat:r[4]}});
+var SUPPLIERS=[
+ ['R-01','Multiline Technical Trading','submitted','Net 45','30 Nov 2026'],
+ ['R-02','Enertech Industrial Trading','submitted','Net 30','15 Nov 2026'],
+ ['R-03','Global Trade Link','declined','',''],
+ ['R-04','Pacific Alloy Supply','submitted','Net 60','31 Dec 2026'],
+ ['R-05','Gulf Rotating Equipment','submitted','Net 45','30 Nov 2026'],
+ ['R-06','Desert Valve Works','submitted','Net 30','20 Nov 2026'],
+ ['R-07','Coastline Instruments','submitted','Net 45','10 Dec 2026'],
+ ['R-08','Harbour Turbine Services','declined','',''],
+ ['R-09','Peninsula Spares','submitted','Net 60','05 Dec 2026'],
+ ['R-10','Northgate Engineering','submitted','Net 30','25 Nov 2026'],
+ ['R-11','Al Wakra Industrial','submitted','Net 45','30 Nov 2026']
+].map(function(r){return{id:r[0],code:r[0],name:r[1],status:r[2],terms:r[3],valid:r[4]}});
+/* Base unit prices (USD evaluation amount) per item; each supplier applies a factor, some items unquoted. */
+var BASE=[656.21,0,98.7,7782.62,3211.44,18450,1240,312.5,2890,46.2,1875,118.4];
+var FACT={'R-01':1,'R-02':1.258,'R-04':0.97,'R-05':1.06,'R-06':1.12,'R-07':0.99,'R-09':1.04,'R-10':1.18,'R-11':1.015};
+var SKIP={'R-01':['d2'],'R-02':['d2','d9'],'R-04':['d2','d5','d7'],'R-05':['d2','d12'],'R-06':['d2','d4','d9','d11'],'R-07':['d2','d6','d7'],'R-09':['d2'],'R-10':['d2','d3','d10'],'R-11':['d2','d8']};
+var LEAD={'R-01':21,'R-02':35,'R-04':28,'R-05':18,'R-06':30,'R-07':24,'R-09':40,'R-10':26,'R-11':22};
+var WOBBLE=[1,.97,1.04,.99,1.03,1.01,.98,1.02,1,.96,1.05,1];
+var LINES={};
+SUPPLIERS.forEach(function(s){
+  if(s.status!=='submitted')return;
+  LINES[s.id]={};
+  ITEMS.forEach(function(it,i){
+    if(SKIP[s.id].indexOf(it.id)>-1)return;
+    var price=Math.round(BASE[i]*FACT[s.id]*WOBBLE[(i+s.id.length+parseInt(s.id.slice(2),10))%12]*100)/100;
+    var uom=it.uom;
+    if(s.id==='R-09'&&it.id==='d10')uom='BOX';   /* quoted per box of 12: units differ */
+    LINES[s.id][it.id]={price:price,uom:uom,lead:LEAD[s.id]+(i%3)*2,alloc:(s.id==='R-01'&&['d1','d3','d4'].indexOf(it.id)>-1)?it.qty:0};
+  });
+});
+var QUESTIONS=[
+ {id:'q1',label:'ISO 9001 certified site',kind:'text'},
+ {id:'q2',label:'Warranty offered on hot gas path parts',kind:'text'},
+ {id:'q3',label:'Technical compliance score (0–100)',kind:'score'},
+ {id:'q4',label:'Delivery terms and exceptions',kind:'text'}
+];
+var ANSWERS={
+ 'R-01':['Yes, certificate valid to 2028.','18 months from installation.',86,'DAP Ras Laffan, two lots.'],
+ 'R-02':['Yes, certificate valid to 2027.','12 months from delivery.',74,'FOB Jebel Ali, buyer arranges freight.'],
+ 'R-04':['Yes, certificate valid to 2028.','24 months from installation.',91,'DAP Ras Laffan, single lot.'],
+ 'R-05':['Certification in progress.','12 months from installation.',68,'DAP Ras Laffan, two lots.'],
+ 'R-06':['Yes, certificate valid to 2026.','12 months from delivery.',70,'CIF Doha, partial shipments allowed.'],
+ 'R-07':['Yes, certificate valid to 2029.','18 months from delivery.',83,'DAP Ras Laffan, three lots.'],
+ 'R-09':['Yes, certificate valid to 2027.','12 months from installation.',77,'FOB Singapore.'],
+ 'R-10':['Yes, certificate valid to 2028.','18 months from installation.',80,'DAP Ras Laffan, two lots.'],
+ 'R-11':['Yes, certificate valid to 2027.','24 months from delivery.',88,'DAP Ras Laffan, two lots.']
+};
+
+/* ---- State ---- */
+var S={tab:'matrix',
+  m:{rowPage:0,colPage:0,q:'',measures:{price:true,lead:false,alloc:true},shown:SUPPLIERS.map(function(s){return s.id}),sel:[],filterOpen:false},
+  c:{cols:['R-01','R-04','R-07'],base:'R-01',all:false,linesOpen:true,qOpen:true,page:0,q:'',cat:'',pins:[],pinOnly:false}};
+var ROWS_PER_PAGE=6, COLS_PER_PAGE=5, MASTER_PAGE=6;  /* production: 20 rows, 5 columns, 50 master rows */
+
+function sup(id){return SUPPLIERS.filter(function(s){return s.id===id})[0]}
+function announce(t){$('live').textContent=t}
+
+/* Rank across every participant the viewer can see under the list's filters (here: the participant filter), computed as the server would. */
+function rankFor(itemId){
+  var pool=S.m.shown.filter(function(id){return LINES[id]&&LINES[id][itemId]});
+  var vals=pool.map(function(id){return{id:id,v:LINES[id][itemId].price,u:LINES[id][itemId].uom}});
+  var unit=ITEMS.filter(function(i){return i.id===itemId})[0].uom;
+  var ranked=vals.filter(function(x){return x.u===unit}).sort(function(a,b){return a.v-b.v});
+  var out={},best=ranked.length?ranked[0].v:null;
+  ranked.forEach(function(x){out[x.id]={rank:1+ranked.filter(function(y){return y.v<x.v}).length,of:ranked.length,best:best}});
+  vals.forEach(function(x){if(x.u!==unit)out[x.id]={unitsDiffer:true}});
+  return out;
+}
+
+/* ---- Matrix view ---- */
+function matrixHTML(){
+  var M=S.m,q=M.q.trim().toLowerCase();
+  var items=ITEMS.filter(function(it){return !q||(it.code+' '+it.label).toLowerCase().indexOf(q)>-1});
+  var rowPages=Math.max(1,Math.ceil(items.length/ROWS_PER_PAGE));if(M.rowPage>=rowPages)M.rowPage=rowPages-1;
+  var rows=items.slice(M.rowPage*ROWS_PER_PAGE,(M.rowPage+1)*ROWS_PER_PAGE);
+  var cols=M.shown.map(sup);var colPages=Math.max(1,Math.ceil(cols.length/COLS_PER_PAGE));if(M.colPage>=colPages)M.colPage=colPages-1;
+  var pageCols=cols.slice(M.colPage*COLS_PER_PAGE,(M.colPage+1)*COLS_PER_PAGE);
+  var submitted=SUPPLIERS.filter(function(s){return s.status==='submitted'}).length;
+  var h='<section class="panel" aria-labelledby="mh">';
+  h+='<div class="panel-h"><h2 id="mh">Bid tabulation</h2><span class="chip">Matrix layout · proposed</span><span class="sp"></span>'
+   +'<input class="search" id="mq" type="search" placeholder="Search items by code or title" value="'+esc(M.q)+'" aria-label="Search items">'
+   +'<button class="btn" id="mfilter" aria-expanded="'+M.filterOpen+'">Filter participants</button>'
+   +'<button class="btn" id="mdisplay" aria-expanded="'+(M.displayOpen?'true':'false')+'">Display</button>'
+   +'<button class="btn pri" id="mcompare"'+(M.sel.length<2||M.sel.length>4?' disabled':'')+'>Compare '+(M.sel.length||'')+' selected</button></div>';
+  h+='<p class="note">Showing <b>'+M.shown.length+' participants</b> ('+SUPPLIERS.length+' invited, '+submitted+' responded). Rank counts every participant you can see under these filters, computed on the server, never just the columns on screen. '+(M.sel.length<2?'Select 2 to 4 participants to compare them in detail.':M.sel.length>4?'Select at most 4 participants to compare.':'')+'</p>';
+  if(M.filterOpen){
+    h+='<div class="drawer" role="group" aria-label="Participants shown">'+SUPPLIERS.map(function(s){var on=M.shown.indexOf(s.id)>-1;return '<label><input type="checkbox" data-shown="'+s.id+'"'+(on?' checked':'')+'> '+esc(s.name)+(s.status==='declined'?' <span class="chip">Declined</span>':'')+'</label>'}).join('')+'</div>';
+  }
+  if(M.displayOpen){
+    h+='<div class="drawer" role="group" aria-label="Measures shown">'+[['price','Unit price (evaluation, USD)'],['lead','Lead time (days)'],['alloc','Allocated quantity']].map(function(x){return '<label><input type="checkbox" data-measure="'+x[0]+'"'+(M.measures[x[0]]?' checked':'')+(x[0]==='price'?' disabled':'')+'> '+x[1]+'</label>'}).join('')+'</div>';
+  }
+  h+='<div class="scroll"><table><caption class="cap">Bid tabulation: items by participant</caption><thead><tr><th class="rowh" scope="col">'+items.length+' items · unit price</th>';
+  pageCols.forEach(function(s){
+    var tot=0,n=0;if(LINES[s.id])ITEMS.forEach(function(it){var l=LINES[s.id][it.id];if(l&&l.uom===it.uom){tot+=l.price*it.qty;n++}});
+    var on=M.sel.indexOf(s.id)>-1;
+    h+='<th class="colh" scope="col"><label><input type="checkbox" data-sel="'+s.id+'"'+(on?' checked':'')+(s.status!=='submitted'?' disabled':'')+' aria-label="Select '+esc(s.name)+' to compare"><span><span class="code">'+s.code+'</span><br><span class="ttl">'+esc(s.name)+'</span>'
+     +(s.status==='submitted'?'<span class="tot num">'+money(tot)+'</span><span class="sub">'+n+' of '+ITEMS.length+' items quoted</span>':'<span class="tot"><span class="chip">Declined to participate</span></span>')+'</span></label></th>';
+  });
+  h+='</tr></thead><tbody>';
+  if(!rows.length)h+='<tr><td colspan="'+(pageCols.length+1)+'" class="empty">No items match “'+esc(M.q)+'”.</td></tr>';
+  rows.forEach(function(it){
+    var rk=rankFor(it.id);
+    h+='<tr><th class="rowh" scope="row"><span class="code">'+it.code+'</span> <span class="ttl">'+esc(it.label)+'</span><br><span class="sub">'+it.qty+' '+it.uom+' · '+esc(it.cat)+'</span></th>';
+    pageCols.forEach(function(s){
+      if(s.status!=='submitted'){h+='<td class="cell declined">Declined to participate</td>';return}
+      var l=LINES[s.id][it.id];
+      if(!l){h+='<td class="cell absent">Not quoted</td>';return}
+      var r=rk[s.id]||{};
+      var best=r.rank===1;
+      var c='<span class="num">'+money(l.price)+'</span>'+(l.uom!==it.uom?' <span class="sub">per '+l.uom+'</span>':'')+'<br>';
+      if(r.unitsDiffer)c+='<span class="mk nc">Units differ · not ranked</span>';
+      else if(r.rank)c+='<span class="rank">Rank '+r.rank+' of '+r.of+'</span> '+(best?'<span class="low">Lowest</span>':'<span class="up">+'+((l.price-r.best)/r.best*100).toFixed(1)+'%</span>');
+      if(M.measures.lead)c+='<br><span class="sub">Lead time '+l.lead+' days</span>';
+      if(M.measures.alloc&&l.alloc)c+='<br><span class="sub">Allocated '+l.alloc+' '+it.uom+' (100%)</span>';
+      h+='<td class="cell'+(best?' best':'')+'">'+c+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<div class="pager"><span>Items '+(rows.length?M.rowPage*ROWS_PER_PAGE+1:0)+'–'+(M.rowPage*ROWS_PER_PAGE+rows.length)+' of '+items.length+'</span>'
+   +'<button class="btn" data-rp="-1"'+(M.rowPage===0?' disabled':'')+' aria-label="Previous items">Previous</button><button class="btn" data-rp="1"'+(M.rowPage>=rowPages-1?' disabled':'')+' aria-label="Next items">Next</button>'
+   +'<span class="sp"></span><span>Participants '+(pageCols.length?M.colPage*COLS_PER_PAGE+1:0)+'–'+(M.colPage*COLS_PER_PAGE+pageCols.length)+' of '+cols.length+'</span>'
+   +'<button class="btn" data-cp="-1"'+(M.colPage===0?' disabled':'')+' aria-label="Previous participants">◀</button><button class="btn" data-cp="1"'+(M.colPage>=colPages-1?' disabled':'')+' aria-label="Next participants">▶</button></div>';
+  h+='<div class="budget"><b>Requests for this screen</b><span><code>1</code> page of the event’s items (prototype '+ROWS_PER_PAGE+', product 20) · <code>1</code> page of participants (5) · <code>1</code> cell request: item in (page items) and participant in (page participants), at most 100 rows · <code>1</code> rank request for the page’s items.</span></div>';
+  return h+'</section>';
+}
+
+/* ---- Compare view with C4 line items ---- */
+function cmpCells(values,better){
+  /* values: [{state:'value'|'absent'|'units', v}]; best among comparable values */
+  var vs=values.map(function(x,i){return{i:i,x:x}}).filter(function(o){return o.x.state==='value'});
+  var outcome=values.some(function(x){return x.state==='absent'})?'differs':vs.length<2?'same':vs.every(function(o){return o.x.v===vs[0].x.v})?'same':'differs';
+  if(values.some(function(x){return x.state==='units'}))outcome='nc';
+  var best=[];
+  if(better&&outcome!=='nc'&&vs.length>=2){
+    var top=vs.reduce(function(a,b){return (better==='lower'?b.x.v<a.x.v:b.x.v>a.x.v)?b:a});
+    best=vs.filter(function(o){return o.x.v===top.x.v}).map(function(o){return o.i});
+    if(best.length===vs.length)best=[];
+  }
+  return{outcome:outcome,best:best};
+}
+function words(text,base){
+  var a=text.split(/(\s+)/),b=base.split(/\s+/);
+  return a.map(function(w){return /^\s+$/.test(w)||b.indexOf(w)>-1?esc(w):'<mark>'+esc(w)+'<span class="vh"> (differs from baseline)</span></mark>'}).join('');
+}
+function compareHTML(){
+  var C=S.c,cols=C.cols.map(sup),bi=C.cols.indexOf(C.base);
+  var h='<section class="panel" aria-labelledby="ch">';
+  h+='<div class="panel-h"><h2 id="ch">Comparing '+cols.length+' responses</h2><span class="chip">Compare · C4 line items</span><span class="sp"></span>'
+   +'<label class="swt"><input type="checkbox" id="call"'+(C.all?'':' checked')+'> Differences only</label>'
+   +'<button class="btn" id="cback">Back to bid tabulation</button></div>';
+  h+='<p class="note">Line items page through the event’s own item list, so an item a participant did not quote reads <b>Not quoted</b> exactly. Narrow first with search, category and pinned items, then page.</p>';
+  h+='<div class="scroll"><table><caption class="cap">Comparison of '+cols.length+' responses</caption><thead><tr><th class="rowh" scope="col">Field</th>';
+  cols.forEach(function(s,i){
+    var quoted=Object.keys(LINES[s.id]).length;
+    h+='<th class="colh" scope="col"><span class="code">'+s.code+'</span> '+(i===bi?'<span class="baseline">Baseline</span>':'')+'<br><span class="ttl">'+esc(s.name)+'</span><br><span class="sub">'+quoted+' of '+ITEMS.length+' items quoted</span><br>'
+     +(i===bi?'<button class="btn" data-clearbase="1" style="margin-top:6px">Clear baseline</button>':'<button class="btn" data-base="'+s.id+'" style="margin-top:6px">Set as baseline</button>')+'</th>';
+  });
+  h+='</tr></thead>';
+  /* Header section */
+  var tot=function(s){var t=0;ITEMS.forEach(function(it){var l=LINES[s.id][it.id];if(l&&l.uom===it.uom)t+=l.price*it.qty});return Math.round(t*100)/100};
+  var headRows=[
+    {label:'Payment terms',vals:cols.map(function(s){return{state:'value',v:s.terms,d:s.terms}})},
+    {label:'Valid until',vals:cols.map(function(s){return{state:'value',v:s.valid,d:s.valid}})},
+    {label:'Total (evaluation, USD)',better:'lower',vals:cols.map(function(s){var t=tot(s);return{state:'value',v:t,d:money(t)}})},
+    {label:'Average lead time (days)',better:'lower',vals:cols.map(function(s){return{state:'value',v:LEAD[s.id],d:String(LEAD[s.id])}})}
+  ];
+  h+='<tbody>'+sectionHead('Commercial terms',headRows.filter(function(r){return cmpCells(r.vals,r.better).outcome==='differs'}).length+' differ',null,cols.length)+headRows.map(function(r){return rowHTML(r,cols,bi)}).filter(Boolean).join('')+'</tbody>';
+  /* Line items, master-list mode */
+  var q=C.q.trim().toLowerCase();
+  var master=ITEMS.filter(function(it){return (!q||(it.code+' '+it.label).toLowerCase().indexOf(q)>-1)&&(!C.cat||it.cat===C.cat)&&(!C.pinOnly||C.pins.indexOf(it.id)>-1)});
+  var pages=Math.max(1,Math.ceil(master.length/MASTER_PAGE));if(C.page>=pages)C.page=pages-1;
+  var page=master.slice(C.page*MASTER_PAGE,(C.page+1)*MASTER_PAGE);
+  var lineRows=page.map(function(it){
+    var vals=cols.map(function(s){var l=LINES[s.id][it.id];if(!l)return{state:'absent'};if(l.uom!==it.uom)return{state:'units',v:l.price,d:money(l.price)+' per '+l.uom};return{state:'value',v:l.price,d:money(l.price)}});
+    return{label:it.code+' '+it.label,sub:it.qty+' '+it.uom,item:it,better:'lower',vals:vals};
+  });
+  var diffN=lineRows.filter(function(r){return cmpCells(r.vals,'lower').outcome!=='same'}).length;
+  var cats=ITEMS.map(function(i){return i.cat}).filter(function(c,i,a){return a.indexOf(c)===i});
+  h+='<tbody>'+sectionHead('Line items · '+ITEMS.length+' event items',diffN+' items differ among items '+(page.length?C.page*MASTER_PAGE+1:0)+'–'+(C.page*MASTER_PAGE+page.length),'lines',cols.length);
+  if(C.linesOpen){
+    h+='<tr><td colspan="'+(cols.length+1)+'" style="padding:0"><div class="tools"><input class="search" id="lq" type="search" placeholder="Search event items" value="'+esc(C.q)+'" aria-label="Search event items">'
+     +'<select class="search" id="lcat" aria-label="Item category" style="width:auto"><option value="">All categories</option>'+cats.map(function(c){return '<option'+(C.cat===c?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'
+     +'<label class="swt"><input type="checkbox" id="lpin"'+(C.pinOnly?' checked':'')+(C.pins.length?'':' disabled')+'> Pinned items only</label>'
+     +'<span class="pins">'+C.pins.map(function(id){var it=ITEMS.filter(function(x){return x.id===id})[0];return '<button class="chip pin" data-unpin="'+id+'" aria-label="Unpin '+esc(it.code)+'">'+esc(it.code)+' ×</button>'}).join('')+'</span>'
+     +'<span class="sp"></span><span class="sub">Items '+(page.length?C.page*MASTER_PAGE+1:0)+'–'+(C.page*MASTER_PAGE+page.length)+' of '+master.length+'</span>'
+     +'<button class="btn" data-lp="-1"'+(C.page===0?' disabled':'')+'>Previous items</button><button class="btn" data-lp="1"'+(C.page>=pages-1?' disabled':'')+'>Next items</button></div></td></tr>';
+    var shown=lineRows.map(function(r){return rowHTML(r,cols,bi,true)}).filter(Boolean);
+    h+=shown.length?shown.join(''):'<tr><td colspan="'+(cols.length+1)+'" class="empty">'+(page.length?'No differences among these items.':'No event items match.')+'</td></tr>';
+  }
+  h+='</tbody>';
+  /* Questions, small mode */
+  var qRows=QUESTIONS.map(function(qq,qi){return{label:qq.label,better:qq.kind==='score'?'higher':null,text:qq.kind==='text',vals:cols.map(function(s){var a=ANSWERS[s.id][qi];return{state:'value',v:a,d:String(a)}})}});
+  h+='<tbody>'+sectionHead('Questions',qRows.filter(function(r){return cmpCells(r.vals,r.better).outcome==='differs'}).length+' differ','q',cols.length);
+  if(C.qOpen)h+=qRows.map(function(r){return rowHTML(r,cols,bi)}).filter(Boolean).join('');
+  h+='</tbody></table></div>';
+  h+='<div class="budget"><b>Requests for this page of line items</b><span><code>1</code> page of the event’s items (prototype '+MASTER_PAGE+', product 50) · <code>'+cols.length+'</code> line requests, one per response: item in (this page’s items), no other filter · coverage “N of M items quoted” from two exact counts.</span></div>';
+  return h+'</section>';
+}
+function sectionHead(label,count,key,n){
+  var open=key==='lines'?S.c.linesOpen:key==='q'?S.c.qOpen:true;
+  return '<tr class="sec"><th colspan="'+(n+1)+'" scope="colgroup">'+(key?'<button data-sec="'+key+'" aria-expanded="'+open+'"><span class="chev" aria-hidden="true">▸</span>'+esc(label)+' <span class="chip warn">'+esc(count)+'</span></button>':'<strong>'+esc(label)+'</strong> <span class="chip warn">'+esc(count)+'</span>')+'</th></tr>';
+}
+function rowHTML(r,cols,bi,line){
+  var res=cmpCells(r.vals,r.better);
+  if(!S.c.all&&res.outcome==='same')return '';
+  var h='<tr class="'+(res.outcome==='differs'?'rdiff':'')+'"><th class="rowh" scope="row"><span class="ttl">'+esc(r.label)+'</span>'+(r.sub?'<br><span class="sub">'+esc(r.sub)+'</span>':'')
+   +'<br>'+(res.outcome==='differs'?'<span class="badge d">Differs</span>':res.outcome==='nc'?'<span class="badge">Units differ</span>':'')
+   +(line&&r.item?' <button class="btn" data-pin="'+r.item.id+'" style="min-height:24px;padding:0 8px;font-size:.72rem;margin-top:4px">'+(S.c.pins.indexOf(r.item.id)>-1?'Pinned':'Pin')+'</button>':'')+'</th>';
+  r.vals.forEach(function(x,i){
+    var marks='',content;
+    if(x.state==='absent')content='<span class="sub"><i>Not quoted</i></span>';
+    else if(r.text&&bi>-1&&i!==bi&&x.v!==r.vals[bi].v)content=words(String(x.d),String(r.vals[bi].d));
+    else content='<span class="'+(typeof x.v==='number'?'num':'')+'">'+esc(x.d)+'</span>';
+    if(res.best.indexOf(i)>-1)marks+='<span class="mk best">★ Best</span>';
+    if(bi>-1&&i!==bi){
+      var b=r.vals[bi];
+      if(x.state==='units'||b.state==='units')marks+='<span class="mk nc">Not compared</span>';
+      else if(x.state==='absent'&&b.state==='absent')marks+='<span class="mk same">Same as baseline</span>';
+      else if(b.state==='absent')marks+='<span class="mk diff">Not in baseline</span>';
+      else marks+=x.state!=='absent'&&x.v===b.v?'<span class="mk same">Same as baseline</span>':'<span class="mk diff">Differs from baseline</span>';
+    }
+    h+='<td class="cell'+(res.best.indexOf(i)>-1?' best':'')+'">'+content+(marks?'<br>'+marks:'')+'</td>';
+  });
+  return h+'</tr>';
+}
+
+/* ---- Render and events ---- */
+function render(){
+  $('tabs').innerHTML=[['matrix','Bid tabulation (Matrix)'],['compare','Compare responses (C4)']].map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join('');
+  $('view').innerHTML=S.tab==='matrix'?matrixHTML():compareHTML();
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('button');if(!t)return;
+  var M=S.m,C=S.c;
+  if(t.dataset.tab){S.tab=t.dataset.tab}
+  else if(t.id==='mfilter'){M.filterOpen=!M.filterOpen}
+  else if(t.id==='mdisplay'){M.displayOpen=!M.displayOpen}
+  else if(t.id==='mcompare'){C.cols=M.sel.slice();C.base=C.cols[0];C.page=0;S.tab='compare';announce('Comparing '+C.cols.length+' responses. The first is the baseline.')}
+  else if(t.dataset.rp){M.rowPage+=+t.dataset.rp}
+  else if(t.dataset.cp){M.colPage+=+t.dataset.cp}
+  else if(t.id==='cback'){S.tab='matrix'}
+  else if(t.dataset.base){C.base=t.dataset.base;announce('Baseline set to '+sup(C.base).name)}
+  else if(t.dataset.clearbase){C.base=null;announce('Baseline cleared')}
+  else if(t.dataset.sec){var k=t.dataset.sec;if(k==='lines')C.linesOpen=!C.linesOpen;else C.qOpen=!C.qOpen}
+  else if(t.dataset.lp){C.page+=+t.dataset.lp}
+  else if(t.dataset.pin){var i=C.pins.indexOf(t.dataset.pin);if(i>-1)C.pins.splice(i,1);else C.pins.push(t.dataset.pin)}
+  else if(t.dataset.unpin){C.pins.splice(C.pins.indexOf(t.dataset.unpin),1);if(!C.pins.length)C.pinOnly=false}
+  else return;
+  render();
+});
+document.addEventListener('change',function(e){
+  var t=e.target,M=S.m,C=S.c;
+  if(t.dataset.sel){var i=M.sel.indexOf(t.dataset.sel);if(t.checked&&i<0)M.sel.push(t.dataset.sel);if(!t.checked&&i>-1)M.sel.splice(i,1)}
+  else if(t.dataset.shown){var j=M.shown.indexOf(t.dataset.shown);if(t.checked&&j<0)M.shown.push(t.dataset.shown);if(!t.checked&&j>-1)M.shown.splice(j,1);M.shown.sort();M.colPage=0;M.sel=M.sel.filter(function(id){return M.shown.indexOf(id)>-1})}
+  else if(t.dataset.measure){M.measures[t.dataset.measure]=t.checked}
+  else if(t.id==='call'){C.all=!t.checked}
+  else if(t.id==='lcat'){C.cat=t.value;C.page=0}
+  else if(t.id==='lpin'){C.pinOnly=t.checked;C.page=0}
+  else return;
+  render();
+});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='mq'){S.m.q=t.value;S.m.rowPage=0}
+  else if(t.id==='lq'){S.c.q=t.value;S.c.page=0}
+  else return;
+  var pos=t.selectionStart;render();var n=$(t.id);if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(_){}}
+});
+render();
+})();
+</script>

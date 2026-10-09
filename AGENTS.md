@@ -106,6 +106,21 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   [Entity Studio blueprint](docs/blueprints/entity-studio/blueprint.md); update
   both documents together where they meet.
 
+## Entity list Matrix Layout
+
+- The active design is the
+  [Entity list Matrix blueprint](docs/blueprints/entity-list-matrix/blueprint.md).
+  Read it before implementing pivoted (rows × columns) list behaviour, bid
+  tabulation or rank-within-group, and update it in place. It is proposed until
+  the project owner approves its contract properties; do not implement
+  unapproved properties.
+- Matrix is a Layout of the shared Entity list, available to any eligible
+  Entity through governed, published Meta Entity properties. Do not create a
+  bid-tabulation route, page, provider stack or entity-specific grid.
+- Rank and difference to best are computed by the server across every record
+  the viewer can read, never from the columns on screen, and only on a declared
+  evaluation amount or a proven single currency.
+
 ## Entity list Compare
 
 - The active design is the

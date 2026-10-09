@@ -1,6 +1,6 @@
 # Entity list Compare — blueprint
 
-**Status:** approved, revision 3 (10 October 2026). **Revision 4 (10 October 2026) proposes the C4 design (section 5.8) for audit; it is not approved.**
+**Status:** approved, revision 5 (10 October 2026). Revision 5 sets C4's design (sections 5.8 and 5.9). C4 is built after the prototype review.
 
 - **Origin.** The project owner asked to explore a Comparison view while the metadata cleanup is in progress: "current we have this view in Audit Log Snapshot...to compare the version... can we make this as generic to compare records in list view .. in future we can extend the same for quotation comparison, material master, Price Catalog List comparison".
 - **Review so far.** A first recommendation (Compare as a selection action, not a Layout) was audited against the code; revision 1 was then audited again. Both audits' findings and their disposition are in section 17. Two statements of the first audit were corrected against the code, and the second audit confirmed both corrections.
@@ -302,62 +302,102 @@ collections?: readonly {
   - Counts read "6 of 8 lines differ", next to the field summary.
 - **Server contract.** The list response carries no child collections. C4 needs either one record-scoped list request per compared record (at most four, each under the section's locked scope) or a new bounded collection read. Choosing between them is part of C4's own design (section 5.8).
 
-### 5.8 C4 design (revision 4, proposed for audit; not approved)
+### 5.8 C4 design (revision 5, approved direction 10 October 2026)
 
-The project owner approved the C4 phase on 10 October 2026: "also c3 and c4 approved". Section 14 also requires C4's own design and approval before its build, and section 5.7 left the server read open. This section is that design. Its choices are decisions 18–22 in section 15, proposed and not approved. Nothing in this section is built.
+**Approval.** The owner reviewed revision 4, the RFP worked example (section 5.9), the reference screenshot of a bid-award grid and audit 7. The owner approved the five recommendations of that review in these words: "totally agreeed". The five were:
+1. Matrix as a new list Layout with its own blueprint ([Entity list Matrix blueprint](../entity-list-matrix/blueprint.md)), not a stretched Compare.
+2. A server-side rank capability.
+3. Ranking only on a declared evaluation amount.
+4. The pilot sequence (point 10 below).
+5. This revision 5, with the audit 7 corrections.
 
-**Facts it relies on** (verified in the code on 10 October 2026):
-- Record sections already read related lines through the existing list operation, with a parent scope coordinate (`parentEntityCode`, `parentRecordId`, `relationshipKey`, `parentDescriptorHash`; `EntityListScopeCoordinateV1`). The server resolves and authorizes that scope on every request (`resolveCollectionScope`); the browser builds it with `bindEntityRelationship`.
-- Relationships are published on the parent's record presentation (`entityRelationships`: `key`, `targetEntity`, `cardinality`, field mappings, `readOperation`).
-- The list operation returns at most `MAX_LIST_PAGE_SIZE` = 100 rows per request.
+Revision 5 replaces revision 4's decisions 18–22 with decisions 23–30 (section 15). The owner asked for the C4 view to be prototyped next ("prepare two view"). The prototype is `docs/prototypes/Neon Bid Evaluation Prototype.html`. C4 is built after the prototype is reviewed.
 
-**1. Declaration** (amends the 5.7 shape: `relation` becomes `relationship`):
+**Facts it relies on** (verified in the code and the Neon DDL on 10 October 2026):
+- **Existing related-record path.** Record sections read related lines through the existing list operation with a parent scope coordinate (`parentEntityCode`, `parentRecordId`, `relationshipKey`, `parentDescriptorHash`). The server resolves and authorizes it on every request (`resolveCollectionScope`).
+- **Relationship metadata.** Relationships are published on the parent's record presentation (`entityRelationships`: `key`, `targetEntity`, `cardinality`, field mappings, `readOperation`).
+- **Limits.** `MAX_LIST_PAGE_SIZE` and `recordIds` are both 100. The `in` filter has no published value limit today (`filter-value-validation.ts` checks only that the array is non-empty and scalar).
+- **Selection in record sections.** Record sections offer selection and the selection bar (selection is enabled for every list that is not a picker). Not checked in a browser.
+- **Procurement tables that exist:**
+  - `document.sourcing_event` is the RFP header.
+  - `document.sourcing_event_demand` is the RFP's item list, unique per event (`sourcing_event_demand_uq`).
+  - `document.sourcing_event_award` is unique per (event, business partner).
+  - `document.sourcing_event_award_allocation` is unique per (award, demand, company code).
+- **Procurement tables that do not exist:** the supplier response header, response lines (price per demand line), questions and answers.
+- **Not suitable as a comparison key.** `document.purchase_requisition_line` is unique per (requisition, `line_no`) and its `item_id` is not unique. Requisition line numbers are not comparable across requisitions.
+- **Not competing quotations.** `document.sourcing_event_company` holds the participating buyer company codes.
+
+**1. Two collection modes, declared in metadata.**
 
 ```ts
-collections?: readonly {          // 0–2 per comparison
+collections?: readonly {                // 0–2 per comparison
   key: string;
   label: string;
-  relationship: string;           // a published entityRelationships key of this Entity, cardinality "many"
-  matchKey: readonly string[];    // 1–2 fields of the target (line) Entity
-  fields: readonly string[];      // 1–12 line fields to compare, in order
+  relationship: string;                 // published entityRelationships key, cardinality "many"
+  matchKey: readonly string[];          // 1–2 line fields
+  fields: readonly string[];            // 1–12 line fields
+  master?: {                            // master-list mode
+    entity: string;                     // the Entity the match key references (e.g. sourcing_event_demand)
+    parentField: string;                // the master's reference to the compared records' common parent
+  };
+  absentLabel?: string;                 // authored wording for a missing line, e.g. "Not quoted"
 }[];
 ```
 
-- **Publication checks:**
-  - an unknown relationship, or one that is not `many`, is `COMPARE_COLLECTION_RELATIONSHIP_INVALID`;
-  - a field listed both as match key and as compared field is `COMPARE_FIELD_DUPLICATE`;
-  - more than 2 collections or 12 fields is `COMPARE_FIELDS_ABOVE_CAP`.
+- **Master-list mode** (large, shared item list; an RFP's 2,000 items). The first match-key field references the master Entity. The compared records must share one parent: Compare is opened from that parent's record section, whose locked scope fixes it. Otherwise the collection is unavailable: "Line items compare within one {parent}" (`COMPARE_MASTER_SCOPE_UNBOUND`).
+- **Small mode** (no master; a record's few addresses). All lines of each compared record are read, up to 500 (five pages of 100), and aligned in the browser. More than 500 in any record fails closed with "Too many lines to compare: {record} has more than 500".
 
-  That match-key and line fields exist on the target Entity is checked by the authoring compiler, which sees both Entities (after the metadata cleanup). The parent's publication cannot see the target's fields, and the runtime fails closed (point 3).
-- **Uniqueness (`COMPARE_MATCH_KEY_NOT_UNIQUE`) is a DDL fact.** A finding function, `compareMatchKeyFinding({ matchKeyColumns, parentKeyColumns, uniqueKeys })`, is built and tested now and wired into the onboarding DDL rehearsal after the cleanup, exactly as the Tree blueprint did with `hierarchyParentKeyFinding`. Until it is wired, the runtime check in point 5 is the guard.
+**2. Paging in master-list mode.**
+- **Each page:**
+  1. One request for a page of the master list (50 rows): the existing list operation on the master Entity, scoped to the common parent and sorted by its published order.
+  2. One request per available compared record: the line Entity filtered by `matchKey in (the page's 50 master ids)`, under that record's parent scope coordinate, with the match key plus the compared fields, `limit` 100 and `countMode` none.
+- **Budget:** 1 + N (N ≤ 4) requests per page, whatever the RFP's size. Once per opening there is also the line Entity's list descriptor, and the coverage counts in point 6.
 
-**2. Server read (decision 18): one record-scoped list request per compared record.**
-- For each available compared record, at most four, the browser sends the existing list operation on the target Entity. It carries the parent scope coordinate (the same as a record section uses), fields set to the match key plus the line fields, `limit` 100 and `countMode` none.
-- No new endpoint and no new provider path: parent-scope authorization, tenant isolation, field readability and masking are the existing ones.
-- **Rejected: a new bounded collection read.** It would be a second, parallel path for parent-scoped reads with its own authorization, which AGENTS.md forbids.
-- **Request budget:** the headers request (C2), the target Entity's list descriptor (once), and one line request per available record, in parallel, all aborted when the comparison changes.
+**3. When absence means "not quoted"** (audit 7, with the corrections recorded in section 17). A master row with no line in a record's response is absent, shown with `absentLabel` or "Not in this record", only when all of these hold:
+- the line request carries no filter other than the match key and the parent scope (narrowing is applied to the master list only, never to lines);
+- the response is complete: `hasNext` false and at most one line per master row (the runtime duplicate refusal, point 5);
+- the line Entity's read access follows its parent's access.
 
-**3. Per-viewer line fields.**
-- The parent's `surface.compare` projection carries, per collection: `key`, `label`, `targetEntity` and `relationshipKey`. It does not carry the line fields, which belong to the target Entity.
-- The browser loads the target Entity's list descriptor under the first record's scope coordinate. A declared line field that this viewer cannot read is left out, with the panel's single restricted statement.
-- If the match key is unreadable or masked, the collection is unavailable: "Line items aren't available with your access", and no line rows. A line field that is not listed for the viewer is left out, never guessed.
+  A line Entity that publishes its own record-level read policy (owner access, record predicates or field-row policies independent of the parent) is refused at publication with `COMPARE_LINE_ACCESS_INDEPENDENT`. A hidden line would otherwise read as "Not quoted". An unavailable compared record keeps the existing unavailable-column rule and is never shown as absent.
 
-**4. Bound (decision 19): at most 100 lines per record, fail closed.**
-- If any compared record has more lines than one page (`hasNext`), the collection shows "Too many lines to compare: {record} has more than 100" and no line rows.
-- A partial read would label lines beyond the page as "Not in this record", which would be false.
+**4. Narrowing first, paging second.**
+- The panel opens the collection collapsed, with its counts. Expanded, it offers the master list's own published search and filters (for example item category), and **pinned items**: master rows the user picks, kept in the URL as `compareItems`.
+- These are server-side filters on the master list, so "steel products only" narrows 2,000 items to 140 before any line is read.
+- **"Differences only"** applies to line rows within the loaded pages and is worded for what is loaded: "3 items differ among items 1–150". No server-side differences count is built.
+- **"Not quoted by at least one" is not a list filter today.** List filters act on an Entity's own fields, and this is an existence test against another Entity. It needs either a new framework existence filter or a maintained count on the master row. Recorded as a later decision, not part of C4.
 
-**5. Alignment.**
-- Lines are aligned by the stored values of the match key: canonical JSON of the tuple, never a label or a position (section 5.7).
-- **Duplicate key, fail closed (decision 20):** if one record holds two lines with the same match-key value, the collection shows "Lines can't be aligned: {match key} repeats in {record}" and no line rows.
-- **Line order (decision 21):** by the match key's display label (reference labels through the authorized label service, never an identifier), with numeric collation, for example "4.1" before "12.1". The label is taken from the first record that has the line.
+**5. Keys and duplicates.**
+- In master-list mode, the match key's first field must be a reference to the master Entity (`COMPARE_MATCH_KEY_NOT_SHARED` otherwise). In small mode it must be a reference or a declared business code, never a per-parent sequence such as a line number.
+- Uniqueness per parent is checked against the DDL by `compareMatchKeyFinding`, wired into the onboarding DDL rehearsal after the metadata cleanup.
+- The runtime still refuses a page in which one record holds two lines for the same key: "Lines can't be aligned: {item} repeats in {record}". A duplicate would otherwise double a price.
 
-**6. Outcomes.** `comparisonLineOutcome` (decision 16) handles `absent`, then calls `comparisonRowOutcome` unchanged. Baseline marks follow section 5.7. Counts read "6 of 8 lines differ". "Differences only" hides lines whose every field is the same.
+**6. Coverage in column headers.** "1,946 of 2,000 items quoted" comes from two exact counts, shown only when both Entities publish exact counts (foundation section 5): the master list's total under the parent, and each record's line count. It is never computed from loaded pages.
 
-**7. Best value on lines (decision 22): deferred.**
-- The line Entity's own `field.compare.better` (C3) is not in the target Entity's list descriptor, and the parent cannot publish it.
-- Offering it needs either an optional `compare` on the list field descriptor or a `compare` declaration on the line Entity's list surface. Both widen a contract, so C4 is built without best marks on lines, and this is a separate decision.
+**7. Best value on lines (replaces revision 4's deferral).**
+- The per-viewer list field descriptor gains an optional `compare { better, summaryLabel? }`, carried from the line Entity's `field.compare` (C3). This is a contract widening of `ListFieldDescriptorV1`.
+- **Unit rule:** a line measure may declare `compare.unitField`. It is ranked only when that unit is equal in every compared line; otherwise the line shows "Units differ" and ranks nothing.
+- Money follows the currency rule (section 8.2). Ranking across currencies is allowed only on a declared evaluation-amount field (owner's decision 3), never converted in the browser.
 
-## 6. Validation, availability and finding codes
+**8. The `in` filter limit.** `MAX_LIST_FILTER_VALUES` = 100 is published in the shared list contract and enforced by the server (`INVALID_FILTER`). It lands with C4.
+
+**9. Outcomes and baseline.** `comparisonLineOutcome` (decision 16) handles absence and then calls `comparisonRowOutcome` unchanged. Baseline marks follow section 5.7. Line rows are labelled by the master row's readable label (reference labels through the authorized label service, never an identifier).
+
+**10. Pilot and prerequisites.**
+- **Pilot on existing tables:** compare 2–4 awards of one sourcing event (`sourcing_event_award`) by their allocation lines (`sourcing_event_award_allocation`). The match key is (`sourcing_event_demand_id`, `company_code_id`), and the master list is `sourcing_event_demand` under the event.
+- **The RFP case** needs the supplier response, response line (price per demand line, with an evaluation amount), question and answer Entities to be onboarded against `sourcing_event_demand` and the event. That is Entity onboarding, not part of C4.
+
+### 5.9 Worked example: an RFP with 200 suppliers, 2,000 items, 100 questions
+
+| Question the buyer asks | View | Built from |
+| --- | --- | --- |
+| Who is cheapest on this item, across all 200? | "Bids" section on the RFP item: the response-line list scoped to the item, sorted by evaluation amount, with group totals | Existing list and record sections |
+| Which suppliers belong on the shortlist? | The responses list in the RFP: sort, filter, a "Shortlisted" status | Existing list |
+| What does the whole field look like, item by item? | Matrix Layout (bid tabulation) on the response lines: items as rows, participants as columns, rank and % above lowest | [Entity list Matrix blueprint](../entity-list-matrix/blueprint.md) |
+| How do these 2–4 responses differ in detail? | Compare: header sections, the line items in master-list mode, the answers | This blueprint |
+
+Comparing 200 responses side by side is out of scope by design: side by side reads up to four, and the Matrix and the lists answer the many-way questions.
+
+## 6. Validation, availability and finding codes## 6. Validation, availability and finding codes
 
 **Publication (refused; the declaration is not published):**
 
@@ -755,13 +795,18 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 16. **Approved 10 October 2026, with audit 3 finding 1 resolved.** **C4 line states** (sections 5.7 and 8.1): `absent` ("Not in this record") as a line-level state; "Not in baseline", match-key line labels and line counts; C4 wraps `comparisonRowOutcome` unchanged through `comparisonLineOutcome`. Part of C4, which still needs its own design and approval.
 17. **Approved 10 October 2026.** **C1b scope** (section 9.6): shared table view, fixed earlier-snapshot baseline with relative wording, published names in headers, and no identifiers (storage identity, version and UUID-typed fields left out on the server; captured references shown as "Linked record"). C1b still needs its own approval to build; this decision fixes its scope.
 
-**Revision 4, proposed for audit (10 October 2026); none approved.** The C4 design (section 5.8). The owner approved the C4 phase ("also c3 and c4 approved"); these choices remain to be approved before C4 is built.
+**Revision 4 (10 October 2026), superseded by revision 5:** decisions 18–22 (per-record pages capped at 100 lines; best value on lines deferred) are replaced by 23–30.
 
-18. **Server read:** one record-scoped list request per compared record, on the existing list operation with the parent scope coordinate. No new collection read.
-19. **Bound:** at most 100 lines per record. More than that fails closed, with no partial alignment.
-20. **Duplicate match key:** fails closed at runtime. The DDL finding `compareMatchKeyFinding` is built now and wired into the onboarding rehearsal after the cleanup.
-21. **Line order:** by the match key's display label, with numeric collation.
-22. **Best value on lines:** deferred, because it needs a contract widening of its own.
+**Revision 5, approved direction 10 October 2026** (owner wording in section 5.8):
+
+23. **Two collection modes:** master-list paging (50 master rows per page; 1 + N requests) and small collections read whole up to 500 lines.
+24. **When absence means "not quoted":** no line filters, complete responses, and line access following the parent's (`COMPARE_LINE_ACCESS_INDEPENDENT` otherwise).
+25. **Narrowing first:** master-list search, filters and pinned items (`compareItems`); "Differences only" applies within loaded pages; no server-side differences count.
+26. **Shared match key:** a reference to the master Entity (`COMPARE_MATCH_KEY_NOT_SHARED`). Uniqueness is checked against the DDL, with a runtime duplicate refusal as well.
+27. **Exact coverage counts** in column headers, from two exact counts.
+28. **Best value on lines:** `ListFieldDescriptorV1.compare`, the unit rule, and evaluation-amount ranking.
+29. **`MAX_LIST_FILTER_VALUES` = 100,** published and enforced.
+30. **Pilot and prerequisites:** award allocations first; RFP response Entities onboarded separately; many-way questions answered by the lists and the Matrix Layout.
 
 ## 16. Rejected and out-of-scope options
 
@@ -813,6 +858,12 @@ All ten were approved on 9 October 2026 (owner wording in the status line). Deci
 | Audit 3, finding 2 | The masked-currency rule is already built in C1 | Recorded, no action: `comparisonRowOutcome` requires every currency cell to be a `value` cell, so a masked currency is `not_comparable` |
 | Audit 3, finding 3 | Name the status field the chip uses | `storage.statusField` with its own `statusTones`; omitted, never substituted, when undeclared, unreadable or not among the comparison's fields; carried in the projection (sections 3, 5.3 and 9.2) |
 | Audit 3, finding 4 | The label service cannot return a readable identity | Recorded as a fact in section 3; "Different record" is the shipped behaviour; widening the service needs its own approval (section 8.6) |
+| Audit 6 | C3 "ties marked as none": `best.length === values.length` conflates all-equal with a tie | Not a defect: every value equal to the best is the same condition as all values equal. A tie with a column outside it is marked, pinned by the test "best = columns 1 and 3, chip (tie)". No change |
+| Audit 6, C4 presentation gaps | Differences only by default, collapsed lines with counts, a line-subset control, `countMode` none on line reads | Adopted in revision 5 (section 5.8, points 2, 4 and 6) |
+| Audit 7 | "Page 2 absence is ambiguous" | Corrected: the line request names exactly the page's master rows, and one line per row is guaranteed, so a complete response makes absence exact. The real conditions are no line-level filters and line access following the parent's. Both are now in point 3, with `COMPARE_LINE_ACCESS_INDEPENDENT` |
+| Audit 7 | "Not quoted by at least one" is an ordinary master-list filter | Corrected: it is an existence test against another Entity, not a filter on the master's own fields. Recorded as a later decision (point 4) |
+| Audit 7 | Pilot on `purchase_requisition_line` / `sourcing_event_company` | Corrected against the DDL: requisition lines are unique by line number (not comparable) and `sourcing_event_company` holds buyer company codes. Pilot instead on `sourcing_event_award` and `sourcing_event_award_allocation` with `sourcing_event_demand` as the master list (point 10) |
+| Audit 7 | Publish an `in` limit; keep the runtime duplicate refusal; record sections need multi-select | Adopted (points 5 and 8); record sections already offer selection (facts above) |
 | Audit 4, finding 1 | The pushed-history flag was a ref the URL did not agree with | Fixed (`3bcb4ca22`): the marker lives in the history entry itself |
 | Audit 4, finding 2 | An unreadable currency field gave "Currency not compared" without the restricted statement | Fixed: `fieldsRestricted` is set when a declared currency field is dropped |
 | Audit 4, finding 3 | The narrow pair was not reset when membership or the baseline changed | Fixed: the pair resets on either change |
