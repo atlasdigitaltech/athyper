@@ -1,0 +1,33 @@
+/* Record comparison panel (Entity list Compare blueprint section 9). The
+   table itself is the shared comparison view (platform-entity-comparison). */
+.a-entity-compare{display:grid;gap:var(--a-space-3);min-inline-size:0;padding:var(--a-space-3) 0}
+.a-entity-compare__header{display:flex;align-items:center;gap:var(--a-space-3)}
+.a-entity-compare__header>h2{flex:1;margin:0;font-size:var(--a-font-size-md);font-weight:var(--a-font-weight-strong)}
+.a-entity-compare__header>h2:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:2px}
+.a-entity-compare__toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2)}
+.a-entity-compare__spacer{flex:1}
+.a-entity-compare__summary{color:var(--a-foreground);font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium)}
+.a-entity-compare__switch{display:inline-flex;align-items:center;gap:var(--a-space-2);font-size:var(--a-font-size-sm);cursor:pointer}
+.a-entity-compare__switch input{inline-size:1rem;block-size:1rem;accent-color:var(--a-primary)}
+.a-entity-compare__button{min-block-size:2rem;padding:0 var(--a-space-3);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-foreground);font:inherit;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium);cursor:pointer}
+.a-entity-compare__button[data-primary]{border-color:var(--a-primary);background:var(--a-primary);color:var(--a-surface)}
+.a-entity-compare__button:hover:not(:disabled){background:var(--a-muted)}
+.a-entity-compare__button[data-primary]:hover:not(:disabled){background:var(--a-primary)}
+.a-entity-compare__button:disabled{opacity:.55;cursor:not-allowed}
+.a-entity-compare__button:focus-visible,.a-entity-compare__menu-trigger:focus-visible,.a-entity-compare__menu-items button:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:1px}
+.a-entity-compare__note{margin:0;padding:var(--a-space-2) var(--a-space-3);border-radius:var(--a-radius-md);background:var(--a-muted);color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+.a-entity-compare__state{display:grid;justify-items:start;gap:var(--a-space-2);padding:var(--a-space-4);border:var(--a-border-width) dashed var(--a-border);border-radius:var(--a-radius-lg)}
+.a-entity-compare__state p{margin:0;font-weight:var(--a-font-weight-medium)}
+.a-entity-compare__scroll{max-block-size:70vh;overflow:auto;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg)}
+.a-entity-compare__pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--a-space-2)}
+.a-entity-compare__pair label{display:grid;gap:var(--a-space-1);font-size:var(--a-font-size-xs);color:var(--a-muted-foreground)}
+.a-entity-compare__pair select{min-block-size:2.25rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-foreground);font:inherit}
+.a-entity-compare__menu{position:relative;flex:none}
+.a-entity-compare__menu-trigger{display:inline-grid;place-items:center;inline-size:1.75rem;block-size:1.75rem;padding:0;border:0;border-radius:var(--a-radius-sm);background:none;color:var(--a-muted-foreground);font-size:1rem;cursor:pointer}
+.a-entity-compare__menu-trigger:hover{background:var(--a-surface);color:var(--a-foreground)}
+.a-entity-compare__menu-items{position:absolute;inset-inline-end:0;inset-block-start:100%;z-index:5;display:grid;min-inline-size:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-md)}
+.a-entity-compare__menu-items button{padding:var(--a-space-2);border:0;border-radius:var(--a-radius-sm);background:none;color:var(--a-foreground);font:inherit;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-regular);text-align:start;cursor:pointer}
+.a-entity-compare__menu-items button:hover:not(:disabled){background:var(--a-muted)}
+.a-entity-compare__menu-items button:disabled{color:var(--a-muted-foreground);cursor:not-allowed}
+.a-entity-compare[data-narrow] .a-comparison__field-heading{inline-size:8rem}
+.a-entity-list__selection-reason{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}

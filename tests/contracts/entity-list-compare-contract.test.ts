@@ -5,6 +5,9 @@ import {
   COMPARE_MAX_RECORDS,
   COMPARE_MIN_RECORDS,
   COMPARE_NARROW_COLUMNS,
+  decodeListLocationState,
+  encodeListLocationState,
+  parseEntityListDescriptor,
   parseListCompare,
   readCompareLocation,
   writeCompareLocation,
@@ -28,6 +31,37 @@ test("parses the projection and refuses what the server never publishes", () => 
   assert.throws(bad((value) => { value.statusField = "cur"; }), /compared field/);
   assert.throws(bad((value) => { value.sections[0].fields[0].currencyField = "cur"; }), /money field/);
   assert.throws(bad((value) => { value.sections[0].guess = true; }), /not a Compare section property/);
+});
+
+const field = (key: string, valueKind: string, defaultOrder: number) => ({ key, label: key, valueKind, defaultVisible: true, defaultOrder, filterOperators: ["eq"], sortable: true, groupable: false, aggregations: [] });
+const descriptor = (compare?: unknown) => parseEntityListDescriptor({
+  schemaVersion: 1, plane: "neon",
+  entity: { code: "material", label: "Material", pluralLabel: "Materials", identityField: "code" },
+  revision: { release: 1, descriptorHash: "a".repeat(64), surfaceHash: "b".repeat(64) },
+  surface: {
+    key: "default_list", title: "Materials",
+    defaultState: { filters: [], sort: [{ field: "code", direction: "asc" }], columns: ["code", "uom"], density: "comfortable", mode: "table" },
+    supportedModes: ["table"],
+    filterPresentation: { quickFields: [], source: "metadata", allowUserPinning: true },
+    ...(compare ? { compare } : {}),
+  },
+  fields: [field("code", "string", 0), field("uom", "enum", 1), field("cost", "money", 2), field("cur", "string", 3), field("status", "enum", 4)],
+  actions: [],
+  scope: { status: "ready", labels: [], fingerprint: "c".repeat(64) },
+  limits: { defaultPageSize: 50, allowedPageSizes: [25, 50], maxSortLevels: 3, countMode: "none" },
+});
+
+test("an open comparison is location state of a surface that offers Compare, never saved state", () => {
+  const offered = descriptor(projection);
+  assert.ok(offered.surface.compare);
+  const state = decodeListLocationState("compare=m1,m2,m3&compareBaseline=m2", offered);
+  assert.deepEqual(state.compare, { records: ["m1", "m2", "m3"], baseline: "m2" });
+  assert.equal(encodeListLocationState(state, offered).get("compare"), "m1,m2,m3");
+  // Other list state changes keep the comparison in the URL.
+  assert.equal(encodeListLocationState({ ...state, density: "compact" }, offered).get("compareBaseline"), "m2");
+  // A surface without Compare drops it, and an invalid comparison is not decoded.
+  assert.equal(decodeListLocationState("compare=m1,m2", descriptor()).compare, undefined);
+  assert.equal(decodeListLocationState("compare=m1", offered).compare, undefined);
 });
 
 test("URL state: records in column order, baseline in the set, and invalid states refused", () => {

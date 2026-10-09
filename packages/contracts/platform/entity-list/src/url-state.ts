@@ -4,6 +4,7 @@ import {
   ENTITY_LIST_MAX_URL_LENGTH,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
 } from "./types";
+import { readCompareLocation, writeCompareLocation } from "./compare";
 import {
   parseEntityListDescriptor,
   parseListLocationState,
@@ -179,6 +180,9 @@ export function decodeListLocationState(
     apply({ ganttAnchor: parameters.get("gantt") || undefined });
   if (parameters.has("tree.node"))
     apply({ treeNode: parameters.get("tree.node") || undefined });
+  // An invalid comparison is dropped here; the runtime reports it.
+  const compare = readCompareLocation(parameters);
+  if (compare && compare !== "invalid") apply({ compare });
   if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
   else if (
     parameters.get("sheet") === "custom" ||
@@ -262,6 +266,7 @@ export function encodeListLocationState(
   if (normalized.ganttAnchor) parameters.set("gantt", normalized.ganttAnchor);
   if (normalized.treeNode && normalized.mode === "tree")
     parameters.set("tree.node", normalized.treeNode);
+  if (normalized.compare) writeCompareLocation(parameters, normalized.compare);
   if (normalized.board && base.board) {
     if (normalized.board.laneField !== base.board.laneField)
       parameters.set("lane", normalized.board.laneField);

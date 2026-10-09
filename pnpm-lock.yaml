@@ -1046,6 +1046,12 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../../../tooling/config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.2.5
+        version: 19.2.8
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1153,6 +1159,9 @@ importers:
       '@athyper/platform-collection-controls':
         specifier: workspace:*
         version: link:../collection-controls
+      '@athyper/platform-entity-comparison':
+        specifier: workspace:*
+        version: link:../comparison
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../../foundation/i18n

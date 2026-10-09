@@ -188,6 +188,9 @@ compare?: {
       masked?: true;
       /** Money: the readable currency field, when declared and readable. */
       currencyField?: string;
+      /** Money: that currency field is masked for this viewer (the revision 2
+       * "own masked flag"), so amounts are not compared. */
+      currencyMasked?: true;
     }[];
   }[];                                 // sections left with no readable field are dropped
   /** Some declared fields are not shown to this viewer. No names, no count. */
@@ -477,7 +480,10 @@ This replaces the snapshot vocabulary `uncaptured` / `capturedEmpty` with `unava
 
 In a record's section (for example Quotations under a request for quotation), Compare works the same. The request carries the section's locked parent scope, so records outside that parent are never returned.
 
-**Open point for the C2 build (not assumed here).** A section's list (`related-entity-section.tsx`, `contentOnly` with a `viewNamespace`) shares the page with the detail record, and how it owns URL state today was not confirmed for this revision. The C2 build checks it first. If the section's list owns namespaced URL state, the `compare` keys follow that namespace. If it does not, a comparison opened in a section is not shareable by URL: it opens without URL keys, Escape and Close dismiss it, and the blueprint is amended to say so before the build continues.
+**Open point for the C2 build: answered from the code (10 October 2026).**
+- **What the code does.** A section's list (`related-entity-section.tsx`) is rendered with `contentOnly` and a `viewNamespace`, but without `embedding`. The list runtime writes the window location for every list without `embedding` (`update` and the descriptor load in `list-view/src/index.tsx`). So a section's list already owns the page's location, unnamespaced (`viewNamespace` namespaces saved views, not URL keys).
+- **What Compare does.** The comparison is location state (section 5.4), so in a record section it follows the same existing ownership: its keys go into the page URL like the section list's other state. A comparison opened in a section is therefore shareable by URL. It adds no namespacing of its own.
+- **Pre-existing behaviour, recorded rather than changed.** Two lists on one page would write the same URL keys. That predates Compare, applies to every list key (filters, sort, view), and is not changed here. Not yet verified in a browser on a real record page.
 
 ### 9.6 Snapshot comparison
 
@@ -601,7 +607,38 @@ Styles stay on the breakpoint scale and use design-system tokens.
 - **Foundation suite:** 78 files pass and 7 fail. The 7 failures (reference choice policy, Atlas answer and history, related presentation, error boundaries, header context identity, public auth surface) are unrelated to comparison. The related-presentation failure was confirmed to fail with the pre-extraction model as well.
 - **Deferred within the inventory:** `bestColumns` (section 11.2) belongs to C3 and is not built until C3 is approved. Boolean values still use the snapshot's `activity.yes` / `activity.no` messages through the core, unchanged; record comparison wording is settled in C2.
 - **Decision 11, built (10 October 2026):** `comparisonRowOutcome` leaves whole-record-unavailable columns out, with tests including the owner's not-captured assertion. All three comparison test files pass: the core 7/7, the pinned rendering test 3/3 unedited, and the snapshot model 4/4.
-- **C2:** not started.
+- **C2, built (10 October 2026), verified on synthetic fixtures, nothing published:**
+  - **Server and contract (`88f6f2dff`):**
+    - `listPresentation.compare` is parsed and validated at publication with the section 6 codes; the request limit counts the identity, title and currency fields.
+    - The per-viewer `surface.compare` projection (`list-compare.ts`) lists only readable fields, drops hidden ones without names or a count (`fieldsRestricted`), and marks masked fields and masked currencies from the authorization field policy. It names `storage.statusField` only when that field is readable, unmasked and compared.
+    - The browser contract adds the `COMPARE_*` bounds, `parseListCompare` and the URL keys.
+    - Tests: metadata 224, records 633, contracts 4 and 27 pass.
+  - **Browser:**
+    - The comparison is location state (`ListLocationStateV1.compare`, never saved), so list state changes keep it in the URL.
+    - The selection-bar Compare action is disabled with its reason for 1 or more than 4 records, or "all matching". Opening pushes one history entry, and Close goes back through it.
+    - The panel (`list-view/src/compare/`) sends one standalone request (record IDs and fields only, `countMode` none) and renders through the shared `ComparisonTable` (`platform-entity-comparison`). It covers:
+      - differences only and the summary line;
+      - previous and next difference with focus and announcement;
+      - collapsed sections;
+      - baseline set, clear and removal without promotion, with per-column counts;
+      - the status chip from `storage.statusField`;
+      - "Different record" (decision 13);
+      - word highlighting for `text` fields (decision 14);
+      - the narrow pair picker with the baseline fixed first;
+      - the restricted, loading, access-changed, failed, only-one-available and invalid-URL states.
+    - Messages are in English, Malay and Arabic.
+  - **Tests:** `tests/foundation/entity-list-compare.test.tsx`, 8 of 8, covering:
+    - the request shape (no cursor, hierarchy, group, search, filter, sort or standard view);
+    - the section 8 rules on cells, including a masked currency and an unavailable record;
+    - no record identifier rendered;
+    - baseline and removal, and next difference;
+    - the access, failure and only-one states, and the narrow pair;
+    - through the real list runtime: the selection-bar reason, column order by selection, one request without a list refetch, Close going back, and reopening from a shared URL with its baseline.
+  - **Foundation suite:** 79 files pass and 7 fail. The same 7 failed before C2, unrelated.
+  - **Not done:**
+    - no browser spec, and no check in a real browser;
+    - no real Entity declares a comparison (that needs the authoring storage in section 12 and a pilot);
+    - Studio authoring storage is not built.
 
 ## 15. Decisions (project owner)
 

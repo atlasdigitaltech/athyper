@@ -144,6 +144,23 @@ export interface ListCompareLocationV1 {
 const ROUTING_ID = /^[A-Za-z0-9_-]{1,128}$/;
 export const COMPARE_URL_KEYS = ["compare", "compareBaseline", "compareAll"] as const;
 
+/** A well-formed comparison location (used when location state is parsed). */
+export function isListCompareLocation(value: unknown): value is ListCompareLocationV1 {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  if (Object.keys(item).some((key) => !["records", "baseline", "all"].includes(key))) return false;
+  const records = item.records;
+  return (
+    Array.isArray(records) &&
+    records.length >= COMPARE_MIN_RECORDS &&
+    records.length <= COMPARE_MAX_RECORDS &&
+    new Set(records).size === records.length &&
+    records.every((id) => typeof id === "string" && ROUTING_ID.test(id)) &&
+    (item.baseline === undefined || records.includes(item.baseline)) &&
+    (item.all === undefined || item.all === true)
+  );
+}
+
 /** Reads the comparison from the URL; undefined when absent or invalid (the
  * caller removes invalid keys and shows the "could not be opened" notice). */
 export function readCompareLocation(params: URLSearchParams): ListCompareLocationV1 | "invalid" | undefined {

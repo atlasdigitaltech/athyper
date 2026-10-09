@@ -1,6 +1,8 @@
 "use client";
 export { renderFieldValue } from "./field-value";
 import { entityReferenceChoicesOperation } from "@athyper/platform-api-client";
+import { ComparePanel } from "./compare/compare-panel";
+import { COMPARE_MAX_RECORDS, COMPARE_MIN_RECORDS, readCompareLocation } from "@athyper/contract-platform-entity-list";
 import { FilterReferenceLoader } from "./filter-editor";
 import {
   EntityLink,
@@ -779,6 +781,8 @@ function EntityCollectionRuntime({
   });
   // Result-set key captured when the reader changes the list; see revealListStart.
   const pendingResultsReveal = useRef<string | undefined>(undefined);
+  // Opening a comparison pushes one history entry; Close then goes back to it.
+  const comparePushed = useRef(false);
   const descriptor = useMemo(
     () =>
       sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl),
@@ -1096,6 +1100,15 @@ function EntityCollectionRuntime({
           requestedLaneFieldUnavailable(next, effectiveSearch)
         )
           setActionNotice(listNotice("list.board.laneFieldUnavailable"));
+        else if (!embedding) {
+          // Compare blueprint section 5.4: an invalid comparison, or one on a
+          // surface that does not offer Compare, is removed with a notice.
+          const requestedCompare = readCompareLocation(new URLSearchParams(effectiveSearch));
+          if (requestedCompare === "invalid")
+            setActionNotice(listNotice("list.compare.invalid"));
+          else if (requestedCompare && !next.surface.compare)
+            setActionNotice(listNotice("list.compare.unavailableSurface"));
+        }
         const parameters = new URLSearchParams(effectiveSearch),
           preferences = readDisplayPreferences(
             next.plane,
@@ -1611,6 +1624,9 @@ function EntityCollectionRuntime({
     setAllMatchingSelected(false);
     update(withoutNavigation({ ...state, ...patch }), history);
   };
+  // The open comparison (Compare blueprint section 5.4): only on a surface
+  // that offers Compare, and never in a record picker.
+  const comparison = !embedding && descriptor.surface.compare ? state.compare : undefined;
   const selectionEnabled = embedding
     ? embedding.options.mode === "choose" &&
       embedding.selectionAllowed !== false
@@ -1853,7 +1869,36 @@ function EntityCollectionRuntime({
                 compact={Boolean(page)}
               />
             ) : null}
-            {loading && !page ? (
+            {comparison && descriptor.surface.compare ? (
+              <ComparePanel
+                key={`${authorityKey}:${comparison.records.join(",")}`}
+                client={client}
+                descriptor={descriptor}
+                compare={descriptor.surface.compare}
+                location={comparison}
+                {...(scopeCoordinate ? { scope: scopeCoordinate } : {})}
+                narrow={widthTier === "narrow"}
+                onChange={(next) => update({ ...state, compare: next }, "replace")}
+                onClose={() => {
+                  if (comparePushed.current) {
+                    comparePushed.current = false;
+                    window.history.back();
+                  } else update({ ...state, compare: undefined }, "replace");
+                }}
+                {...(onOpenRecord || descriptor.entity.detailRouteTemplate
+                  ? {
+                      onOpenRecord: (id: string) => {
+                        const row = selectedRows.find((item) => item.id === id) ?? page?.rows.find((item) => item.id === id);
+                        if (onOpenRecord && row) return onOpenRecord(row);
+                        const href = descriptor.entity.detailRouteTemplate?.replace(":recordId", encodeURIComponent(id));
+                        if (!href) return;
+                        if (onNavigate) onNavigate(href);
+                        else window.location.assign(href);
+                      },
+                    }
+                  : {})}
+              />
+            ) : loading && !page ? (
               <LoadingTable columns={fields.length} />
             ) : page &&
               state.mode === "calendar" &&
@@ -2058,6 +2103,7 @@ function EntityCollectionRuntime({
               </>
             ) : null}
             {page &&
+            !comparison &&
             !listModeTraits(state.mode).ownPaging &&
             !state.groups?.length ? (
               <EntityListPagination
@@ -2123,6 +2169,20 @@ function EntityCollectionRuntime({
                 void mutateBookmarks(operation, selectedRows)
               }
               onSelectAllMatching={() => setAllMatchingSelected(true)}
+              {...(descriptor.surface.compare && !comparison
+                ? {
+                    compareReason: allMatchingSelected
+                      ? entityIntl.message("list.compare.reasonAllMatching")
+                      : selectedIds.size < COMPARE_MIN_RECORDS || selectedIds.size > COMPARE_MAX_RECORDS
+                        ? entityIntl.message("list.compare.reasonCount", { min: COMPARE_MIN_RECORDS, max: COMPARE_MAX_RECORDS })
+                        : undefined,
+                    onCompare: () => {
+                      // Column order is the selection order (section 7.1).
+                      comparePushed.current = true;
+                      update({ ...state, compare: { records: [...selectedIds] } }, "push");
+                    },
+                  }
+                : {})}
               onExport={
                 !state.standardViewKey &&
                 descriptor.dataOperations?.export.selected.state === "enabled"
@@ -5274,6 +5334,8 @@ function SelectionBar({
   onSelectAllMatching,
   onExport,
   onClear,
+  onCompare,
+  compareReason,
 }: {
   readonly descriptor: EntityListDescriptorV1;
   readonly page?: EntityListResultV1;
@@ -5285,8 +5347,13 @@ function SelectionBar({
   readonly onSelectAllMatching: () => void;
   readonly onExport?: () => void;
   readonly onClear: () => void;
+  /** Compare (Compare blueprint section 9.1): offered when the surface declares it. */
+  readonly onCompare?: () => void;
+  /** Why Compare is disabled, when it is. */
+  readonly compareReason?: string;
 }) {
   const intl = useEntityI18n();
+  const compareReasonId = useId();
   const total = page?.pagination.total,
     bookmarkedCount = selectedRows.filter((row) =>
       bookmarkedIds.has(row.id),
@@ -5340,6 +5407,24 @@ function SelectionBar({
               ) : null}
             </MenuContent>
           </Menu>
+        ) : null}
+        {onCompare ? (
+          <>
+            <Button
+              size="small"
+              variant="secondary"
+              disabled={Boolean(compareReason)}
+              aria-describedby={compareReason ? compareReasonId : undefined}
+              onClick={onCompare}
+            >
+              {intl.message("list.compare.action")}
+            </Button>
+            {compareReason ? (
+              <span id={compareReasonId} className="a-entity-list__selection-reason">
+                {compareReason}
+              </span>
+            ) : null}
+          </>
         ) : null}
         {onExport ? (
           <Button size="small" variant="secondary" onClick={onExport}>

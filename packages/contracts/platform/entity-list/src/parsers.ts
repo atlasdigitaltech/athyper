@@ -52,7 +52,7 @@ import { isListDateAnchor } from "./date-range";
 import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
-import { parseListCompare } from "./compare";
+import { isListCompareLocation, parseListCompare } from "./compare";
 import {
   parseListBoard,
   parseListBoardState,
@@ -833,6 +833,7 @@ function stateRules(
       : {}),
     ...(descriptor.surface.gantt ? { gantt: descriptor.surface.gantt } : {}),
     ...(descriptor.surface.tree ? { tree: true } : {}),
+    ...(descriptor.surface.compare ? { compare: true } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
     defaultPageSize: descriptor.limits.defaultPageSize,
@@ -850,6 +851,8 @@ interface StateRules {
   readonly calendar?: ListCalendarV1;
   readonly gantt?: ListGanttV1;
   readonly tree?: true;
+  /** The surface offers Compare, so an open comparison is location state. */
+  readonly compare?: true;
   readonly maxSortLevels: number;
   readonly allowedPageSizes: ReadonlySet<number>;
   readonly defaultPageSize: number;
@@ -1023,6 +1026,10 @@ function parseState(
     // A Tree deep link belongs to the Tree layout: another layout drops it.
     ...(rules.tree && mode === "tree" && isListTreeNode(record.treeNode)
       ? { treeNode: record.treeNode }
+      : {}),
+    // An open comparison belongs to a surface that offers Compare.
+    ...(rules.compare && isListCompareLocation(record.compare)
+      ? { compare: record.compare }
       : {}),
   });
 }

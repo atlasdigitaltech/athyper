@@ -195,6 +195,9 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
   /** Tree deep link (`tree.node`): the record to reveal. Location only, an
    * internal routing identity that is never displayed. */
   readonly treeNode?: string;
+  /** The open comparison (Compare blueprint section 5.4): record routing
+   * identities, never displayed. Location only: never saved with a view. */
+  readonly compare?: import("./compare").ListCompareLocationV1;
 }
 
 export interface ListFieldDescriptorV1 {

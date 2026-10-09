@@ -1756,4 +1756,284 @@ export const entityRuntimeMessages = {
     "{count, plural, other {# medan lagi}}",
     "{count, plural, other {# حقول إضافية}}",
   ],
+  "list.compare.action": [
+    "Compare",
+    "Bandingkan",
+    "مقارنة",
+  ],
+  "list.compare.reasonCount": [
+    "Select {min} to {max} records to compare",
+    "Pilih {min} hingga {max} rekod untuk dibandingkan",
+    "اختر من {min} إلى {max} سجلات للمقارنة",
+  ],
+  "list.compare.reasonAllMatching": [
+    "Choose specific records to compare",
+    "Pilih rekod tertentu untuk dibandingkan",
+    "اختر سجلات محددة للمقارنة",
+  ],
+  "list.compare.heading": [
+    "Comparing {count} {entity}",
+    "Membandingkan {count} {entity}",
+    "مقارنة {count} من {entity}",
+  ],
+  "list.compare.caption": [
+    "Comparison of {count} {entity}",
+    "Perbandingan {count} {entity}",
+    "مقارنة {count} من {entity}",
+  ],
+  "list.compare.field": [
+    "Field",
+    "Medan",
+    "الحقل",
+  ],
+  "list.compare.close": [
+    "Close",
+    "Tutup",
+    "إغلاق",
+  ],
+  "list.compare.differencesOnly": [
+    "Differences only",
+    "Perbezaan sahaja",
+    "الاختلافات فقط",
+  ],
+  "list.compare.summary": [
+    "{differs} of {fields} fields differ",
+    "{differs} daripada {fields} medan berbeza",
+    "{differs} من {fields} حقول مختلفة",
+  ],
+  "list.compare.summaryNotCompared": [
+    "{count} not compared",
+    "{count} tidak dibandingkan",
+    "{count} غير مقارنة",
+  ],
+  "list.compare.summaryAvailable": [
+    "across {count} available records",
+    "merentas {count} rekod yang tersedia",
+    "عبر {count} سجلات متاحة",
+  ],
+  "list.compare.previous": [
+    "Previous difference",
+    "Perbezaan sebelumnya",
+    "الاختلاف السابق",
+  ],
+  "list.compare.next": [
+    "Next difference",
+    "Perbezaan seterusnya",
+    "الاختلاف التالي",
+  ],
+  "list.compare.firstDifference": [
+    "First difference",
+    "Perbezaan pertama",
+    "الاختلاف الأول",
+  ],
+  "list.compare.lastDifference": [
+    "Last difference",
+    "Perbezaan terakhir",
+    "الاختلاف الأخير",
+  ],
+  "list.compare.differenceAt": [
+    "Difference {index} of {count}: {field}",
+    "Perbezaan {index} daripada {count}: {field}",
+    "الاختلاف {index} من {count}: {field}",
+  ],
+  "list.compare.collapseAll": [
+    "Collapse all",
+    "Kuncupkan semua",
+    "طي الكل",
+  ],
+  "list.compare.expandAll": [
+    "Expand all",
+    "Kembangkan semua",
+    "توسيع الكل",
+  ],
+  "list.compare.highlightWords": [
+    "Highlight differing words",
+    "Serlahkan perkataan yang berbeza",
+    "تمييز الكلمات المختلفة",
+  ],
+  "list.compare.wordDiffers": [
+    "(differs from baseline)",
+    "(berbeza daripada garis dasar)",
+    "(يختلف عن الأساس)",
+  ],
+  "list.compare.restricted": [
+    "Some fields aren't shown because of your access.",
+    "Sesetengah medan tidak dipaparkan kerana akses anda.",
+    "بعض الحقول غير معروضة بسبب صلاحياتك.",
+  ],
+  "list.compare.loading": [
+    "Reading {count} records…",
+    "Membaca {count} rekod…",
+    "جارٍ قراءة {count} سجلات…",
+  ],
+  "list.compare.noDifferences": [
+    "These records match on every compared field.",
+    "Rekod ini sepadan pada setiap medan yang dibandingkan.",
+    "تتطابق هذه السجلات في كل الحقول المقارنة.",
+  ],
+  "list.compare.showAll": [
+    "Show all rows",
+    "Tunjukkan semua baris",
+    "عرض كل الصفوف",
+  ],
+  "list.compare.onlyOne": [
+    "Only one of these records is available, so there's nothing to compare.",
+    "Hanya satu daripada rekod ini tersedia, jadi tiada apa untuk dibandingkan.",
+    "سجل واحد فقط من هذه السجلات متاح، لذلك لا يوجد ما يُقارن.",
+  ],
+  "list.compare.accessChanged": [
+    "Your access to this list changed. Reload to compare.",
+    "Akses anda kepada senarai ini telah berubah. Muat semula untuk membandingkan.",
+    "تغيّرت صلاحياتك على هذه القائمة. أعد التحميل للمقارنة.",
+  ],
+  "list.compare.reload": [
+    "Reload",
+    "Muat semula",
+    "إعادة التحميل",
+  ],
+  "list.compare.failed": [
+    "The comparison could not be loaded.",
+    "Perbandingan tidak dapat dimuatkan.",
+    "تعذّر تحميل المقارنة.",
+  ],
+  "list.compare.retry": [
+    "Try again",
+    "Cuba lagi",
+    "حاول مرة أخرى",
+  ],
+  "list.compare.unavailableRecord": [
+    "Record not available",
+    "Rekod tidak tersedia",
+    "السجل غير متاح",
+  ],
+  "list.compare.baseline": [
+    "Baseline",
+    "Garis dasar",
+    "الأساس",
+  ],
+  "list.compare.options": [
+    "Options for {record}",
+    "Pilihan untuk {record}",
+    "خيارات {record}",
+  ],
+  "list.compare.setBaseline": [
+    "Set as baseline",
+    "Tetapkan sebagai garis dasar",
+    "تعيين كأساس",
+  ],
+  "list.compare.clearBaseline": [
+    "Clear baseline",
+    "Kosongkan garis dasar",
+    "مسح الأساس",
+  ],
+  "list.compare.remove": [
+    "Remove from comparison",
+    "Keluarkan daripada perbandingan",
+    "إزالة من المقارنة",
+  ],
+  "list.compare.openRecord": [
+    "Open record",
+    "Buka rekod",
+    "فتح السجل",
+  ],
+  "list.compare.baselineSet": [
+    "Baseline set to {record}",
+    "Garis dasar ditetapkan kepada {record}",
+    "تم تعيين الأساس إلى {record}",
+  ],
+  "list.compare.baselineCleared": [
+    "Baseline cleared",
+    "Garis dasar dikosongkan",
+    "تم مسح الأساس",
+  ],
+  "list.compare.removed": [
+    "{record} removed from comparison",
+    "{record} dikeluarkan daripada perbandingan",
+    "تمت إزالة {record} من المقارنة",
+  ],
+  "list.compare.differFromBaseline": [
+    "{count} differ from baseline",
+    "{count} berbeza daripada garis dasar",
+    "{count} مختلفة عن الأساس",
+  ],
+  "list.compare.sectionDiffer": [
+    "{count} differ",
+    "{count} berbeza",
+    "{count} مختلفة",
+  ],
+  "list.compare.sectionNone": [
+    "none differ",
+    "tiada yang berbeza",
+    "لا اختلافات",
+  ],
+  "list.compare.sectionNotCompared": [
+    "{count} not compared",
+    "{count} tidak dibandingkan",
+    "{count} غير مقارنة",
+  ],
+  "list.compare.sectionEmpty": [
+    "No differences in this section.",
+    "Tiada perbezaan dalam bahagian ini.",
+    "لا اختلافات في هذا القسم.",
+  ],
+  "list.compare.notComparedGroup": [
+    "Not compared",
+    "Tidak dibandingkan",
+    "غير مقارنة",
+  ],
+  "list.compare.differs": [
+    "Differs",
+    "Berbeza",
+    "مختلف",
+  ],
+  "list.compare.notCompared": [
+    "Not compared",
+    "Tidak dibandingkan",
+    "غير مقارن",
+  ],
+  "list.compare.currencyNotCompared": [
+    "Currency not compared",
+    "Mata wang tidak dibandingkan",
+    "العملة غير مقارنة",
+  ],
+  "list.compare.sameAsBaseline": [
+    "Same as baseline",
+    "Sama seperti garis dasar",
+    "مطابق للأساس",
+  ],
+  "list.compare.differsFromBaseline": [
+    "Differs from baseline",
+    "Berbeza daripada garis dasar",
+    "يختلف عن الأساس",
+  ],
+  "list.compare.notSet": [
+    "Not set",
+    "Tidak ditetapkan",
+    "غير محدد",
+  ],
+  "list.compare.differentRecord": [
+    "Different record",
+    "Rekod berbeza",
+    "سجل مختلف",
+  ],
+  "list.compare.firstRecord": [
+    "First record shown",
+    "Rekod pertama dipaparkan",
+    "السجل الأول المعروض",
+  ],
+  "list.compare.secondRecord": [
+    "Second record shown",
+    "Rekod kedua dipaparkan",
+    "السجل الثاني المعروض",
+  ],
+  "list.compare.invalid": [
+    "The comparison could not be opened.",
+    "Perbandingan tidak dapat dibuka.",
+    "تعذّر فتح المقارنة.",
+  ],
+  "list.compare.unavailableSurface": [
+    "Compare isn't available for this list.",
+    "Bandingkan tidak tersedia untuk senarai ini.",
+    "المقارنة غير متاحة لهذه القائمة.",
+  ],
 } as const;

@@ -2,3 +2,5 @@
 // the snapshot comparison and the record comparison. It depends only on
 // contracts and i18n, never on either consumer.
 export * from "./comparison-model";
+export * from "./comparison-words";
+export * from "./comparison-table";
