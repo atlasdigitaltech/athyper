@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14674,
+    "filesScanned": 14685,
     "authorizationFiles": 2069,
     "registeredObjects": 470,
     "objectReferences": 1421,
@@ -14152,7 +14152,7 @@
     {
       "path": "server/apps/platform-host/src/composition/control-plane/local-publication.ts",
       "artifactClass": "runtime",
-      "sha256": "ef59171e7ae6f3fdaffec47000ba078b13f1956bcea07075a549138f89b3dd3e"
+      "sha256": "ba3e8deb8e5ae21f8d6a5241c37e6c67a636da97b046935bcf8cf95ce0980dd0"
     },
     {
       "path": "server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.test.ts",
@@ -14787,7 +14787,7 @@
     {
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
-      "sha256": "a242d9600851d55dcb53a5b49979a0ed7ceac15acbac31fddef3b48d33983560"
+      "sha256": "c6332ec429e42186e4936c63812e38a0399a389f0222f03f2151a1336ab20c10"
     },
     {
       "path": "server/db/ddl/common/ai/05_constraints.sql",
@@ -15067,12 +15067,12 @@
     {
       "path": "server/db/ddl/common/shared/98_security_definer_privileges.sql",
       "artifactClass": "ddl",
-      "sha256": "50f2611cf5ff87d36221b7ca8667d0e4dff6ce3d6e1bf9636e8648b7f9f147bc"
+      "sha256": "49f4ddd8f47cde5c022a89abee1c32108cac1ab4b136dac83b7ddaf09e33fe40"
     },
     {
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
-      "sha256": "6f304f3361d1d27a5ced5f4bec93108e72ae08f02b922a059a7c36923ff1d326"
+      "sha256": "140c50bfc207f425bbbfd6a132c58fe8275bb5e7923734f7411ad63600152553"
     },
     {
       "path": "server/db/ddl/common/snapshot/03_tables.sql",
@@ -15892,7 +15892,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "723d7b38ed6ec8fd0e85da14cfca1a63612279724bd6717f193a393ee503fdf4"
+      "sha256": "7e49ab01e929554e1d6dbc952404995beb3abcf7beee18d4539d50df0b606b06"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -21301,14 +21301,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 1612,
+      "line": 1619,
       "lines": [
-        1612,
-        1945,
-        2255,
-        2680,
-        3109,
-        3571
+        1619,
+        1952,
+        2262,
+        2687,
+        3116,
+        3578
       ]
     },
     {
@@ -22749,14 +22749,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 1632,
+      "line": 1639,
       "lines": [
-        1632,
-        1992,
-        2271,
-        2687,
-        3165,
-        3681
+        1639,
+        1999,
+        2278,
+        2694,
+        3172,
+        3688
       ]
     },
     {
@@ -25616,39 +25616,39 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 807,
+      "line": 814,
       "lines": [
-        807,
-        1019,
-        1083,
+        814,
+        1026,
         1090,
-        1096,
-        1169,
-        1437,
+        1097,
+        1103,
+        1176,
         1444,
-        1450,
-        1648,
-        2013,
+        1451,
+        1457,
+        1655,
         2020,
-        2026,
-        2283,
-        2701,
+        2027,
+        2033,
+        2290,
         2708,
-        2714,
-        2773,
-        2823,
+        2715,
+        2721,
+        2780,
         2830,
-        2836,
-        3201,
-        3750,
+        2837,
+        2843,
+        3208,
         3757,
-        3763,
-        4080,
-        4193,
-        4704,
-        4718,
-        4737,
-        4831
+        3764,
+        3770,
+        4087,
+        4200,
+        4711,
+        4725,
+        4745,
+        4840
       ]
     },
     {
@@ -26147,8 +26147,8 @@
         4328,
         4950,
         4968,
-        4987,
-        5128
+        4988,
+        5130
       ]
     },
     {
@@ -31247,14 +31247,14 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3205,
+      "line": 3212,
       "lines": [
-        3205,
-        3769,
-        4708,
-        4719,
-        4741,
-        4837
+        3212,
+        3776,
+        4715,
+        4726,
+        4749,
+        4846
       ]
     },
     {
@@ -31318,8 +31318,8 @@
         3786,
         4956,
         4969,
-        4993,
-        5134
+        4994,
+        5136
       ]
     },
     {
@@ -33364,13 +33364,13 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 811,
+      "line": 818,
       "lines": [
-        811,
-        1173,
-        3221,
-        3859,
-        4084
+        818,
+        1180,
+        3228,
+        3866,
+        4091
       ]
     },
     {
@@ -37198,11 +37198,11 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 921,
+      "line": 928,
       "lines": [
-        921,
-        3903,
-        4047
+        928,
+        3910,
+        4054
       ]
     },
     {
@@ -38186,10 +38186,10 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 929,
+      "line": 936,
       "lines": [
-        929,
-        3919
+        936,
+        3926
       ]
     },
     {
@@ -39921,10 +39921,10 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 4270,
+      "line": 4277,
       "lines": [
-        4270,
-        4379
+        4277,
+        4386
       ]
     },
     {
@@ -40125,9 +40125,9 @@
       "path": "server/db/contracts/security/security-definer-ownership.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 4274,
+      "line": 4281,
       "lines": [
-        4274
+        4281
       ]
     },
     {
@@ -40329,9 +40329,9 @@
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
       "access": "execute",
-      "line": 645,
+      "line": 651,
       "lines": [
-        645
+        651
       ]
     },
     {
@@ -40456,9 +40456,9 @@
       "path": "server/db/ddl/common/shared/99_security_definer_hardening.sql",
       "artifactClass": "ddl",
       "access": "execute",
-      "line": 668,
+      "line": 674,
       "lines": [
-        668
+        674
       ]
     },
     {

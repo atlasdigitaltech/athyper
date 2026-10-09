@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `2356e4ae5277fb483a952dd8538dc45954ccc13195e71edcd1ada9895e4b2776`
-Files scanned / authorization-bearing: 14674 / 2069
+Files scanned / authorization-bearing: 14685 / 2069
 Registered authorization objects: 470
 Aggregated object references: 1421
 Writer references: 148
