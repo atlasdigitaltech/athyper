@@ -18,6 +18,8 @@ import {
   productDraftCreationMigrationName,
   operationBootstrapMigrationName,
   liveReadResourceReviewMigrationName,
+  cleanFoundationCompatibilityMigrationName,
+  cleanFoundationResourceCompatibilityMigrationName,
   ownershipInitializationMigrationName,
   referencePrivilegesMigrationName,
   snapshotMigrationName,
@@ -955,4 +957,46 @@ test("AI bootstrap forward migration preserves existing applied sources and rehe
     ),
     /athyper_schema_migration_v1/,
   );
+});
+
+test("clean foundation compatibility bridge is bounded to the canonical empty Studio root", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + cleanFoundationCompatibilityMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const statement = preparationSql(
+    source,
+    createHash("sha256").update(source).digest("hex"),
+    true,
+    cleanFoundationCompatibilityMigrationName,
+  cleanFoundationResourceCompatibilityMigrationName,
+  );
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_ENTITY_HISTORY_PRESENT/);
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_ROOT_GUARD_UNKNOWN/);
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_PENDING_GUARD_UNKNOWN/);
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_PROTOCOL_HELPER_DRIFT/);
+  assert.doesNotMatch(statement, /requires_mfa|\bGRANT\b|DROP CONSTRAINT/);
+});
+
+test("clean foundation resource bridge accepts only the maintained resource transition", () => {
+  const source = readFileSync(
+    new URL(
+      "../../../server/db/migrations/" + cleanFoundationResourceCompatibilityMigrationName,
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const statement = preparationSql(
+    source,
+    createHash("sha256").update(source).digest("hex"),
+    true,
+    cleanFoundationResourceCompatibilityMigrationName,
+  );
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_RESOURCE_PREDECESSOR_UNKNOWN/);
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_RESOURCE_PROTOCOL_DRIFT/);
+  assert.match(statement, /NATIVE_CLEAN_FOUNDATION_ENTITY_HISTORY_PRESENT/);
+  assert.doesNotMatch(statement, /requires_mfa|DROP CONSTRAINT/);
 });

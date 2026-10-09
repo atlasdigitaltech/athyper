@@ -58,6 +58,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { migrationSourcePath } from "./migration-source.mjs";
 
+export const cleanFoundationCompatibilityMigrationName =
+  "20261010_native_clean_foundation_bootstrap_compatibility.sql";
+export const cleanFoundationResourceCompatibilityMigrationName =
+  "20261010_native_clean_foundation_resource_compatibility.sql";
 export const ownershipInitializationMigrationName =
   "20261008_entity_legacy_ownership_initialization.sql";
 export const componentCatalogueMigrationName =
@@ -120,6 +124,8 @@ export function preparationSql(
       coreRootMigrationName,
       snapshotMigrationName,
       componentCatalogueMigrationName,
+      cleanFoundationCompatibilityMigrationName,
+      cleanFoundationResourceCompatibilityMigrationName,
       ownershipInitializationMigrationName,
       referencePrivilegesMigrationName,
       authoringResourceProjectionMigrationName,
@@ -168,6 +174,8 @@ export function runPreparation(args) {
     "--core-root-guards",
     "--snapshot-guards",
     "--component-catalogue",
+    "--clean-foundation-compatibility",
+    "--clean-foundation-resource-compatibility",
     "--ownership-initialization",
     "--reference-command-privileges",
     "--authoring-resource-projection",
@@ -226,6 +234,8 @@ export function runPreparation(args) {
       "--core-root-guards",
       "--snapshot-guards",
       "--component-catalogue",
+      "--clean-foundation-compatibility",
+      "--clean-foundation-resource-compatibility",
       "--ownership-initialization",
       "--reference-command-privileges",
       "--authoring-resource-projection",
@@ -347,6 +357,14 @@ export function runPreparation(args) {
                                                               )
                                                             ? ownershipInitializationMigrationName
                                                             : !allowed.has(
+                                                                  "--clean-foundation-compatibility",
+                                                                )
+                                                              ? cleanFoundationCompatibilityMigrationName
+                                                              : !allowed.has(
+                                                                    "--clean-foundation-resource-compatibility",
+                                                                  )
+                                                                ? cleanFoundationResourceCompatibilityMigrationName
+                                                                : !allowed.has(
                                                                   "--component-catalogue",
                                                                 )
                                                               ? componentCatalogueMigrationName

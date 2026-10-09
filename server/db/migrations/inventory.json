@@ -3,6 +3,36 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261010_native_clean_foundation_bootstrap_compatibility.sql",
+      "path": "migrations/20261010_native_clean_foundation_bootstrap_compatibility.sql",
+      "sha256": "e8c2428a22db208dd464cd0a1a5e659bbd69543fe2f0fe9ba23d2ca68301669e",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+            "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Bridge the current empty canonical Studio foundation to the exact native root-revision provenance helper. It rejects nonempty Entity history or any unrecognized root guard/pending constraint; historic upgrades retain their pinned transitions.",
+      "canonicalPaths": [
+            "ddl/planes/studio/metadata/31_entity_root_revision_provenance.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_clean_foundation_resource_compatibility.sql",
+      "path": "migrations/20261010_native_clean_foundation_resource_compatibility.sql",
+      "sha256": "aff08fb8085d6be8f96edcde4a9c1716b0274f3f10fdd990ca7d27569aeda225",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [
+            "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Bridge the empty current Studio foundation from the exact original authoring-resource review functions to the maintained live-read resource contract and immutable payload verifier. It rejects Entity history and unknown predecessor or resulting contracts.",
+      "canonicalPaths": [
+            "ddl/common/runtime_meta/13_authoring_resource_projection.sql",
+            "ddl/common/runtime_meta/14_live_read_resource_projection.sql",
+            "ddl/planes/studio/publication/33_live_read_resource_review.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261009_local_publication_request.sql",
       "path": "migrations/20261009_local_publication_request.sql",
       "sha256": "a327af9a6b73f818310e14fdef3a186b814186026b771456e0a43276fee4bdf0",
