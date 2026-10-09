@@ -1,3 +1,4 @@
+import { technicalFieldKeys } from "@athyper/server-contract-metadata";
 import { MAX_LIST_PAGE_SIZE } from "./list-limits.js";
 import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
@@ -1586,6 +1587,7 @@ export function compileEntityListDescriptor(
         entityFields: descriptor.fields,
         masked,
         ...(descriptor.storage.statusField ? { statusField: descriptor.storage.statusField } : {}),
+        technical: technicalFieldKeys(descriptor),
       })
     : undefined;
   const { supported: modes, unavailable: unavailableModes } = resolveModes(

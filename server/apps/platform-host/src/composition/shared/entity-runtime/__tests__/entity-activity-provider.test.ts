@@ -301,6 +301,11 @@ it("never compares technical identities, and marks captured references (Compare 
     expect(result.fields.map((field) => field.key)).toEqual(["name", "nullable", "uncaptured", "country"]);
     expect(result.fields.find((field) => field.key === "country")).toMatchObject({ reference: true, changed: true });
     expect(result.fields.find((field) => field.key === "name")).not.toHaveProperty("reference");
+    // The single-snapshot view applies the same rule (technicalFieldKeys).
+    f.get.mockResolvedValueOnce({ ...f.row, payload } as never);
+    const single = await f.provider.snapshot(f.subject, f.admission, "first");
+    expect(single.fields.map((field) => field.key)).toEqual(["name", "nullable", "uncaptured", "country"]);
+    expect(single.fields.find((field) => field.key === "country")).toMatchObject({ reference: true });
   } finally { await f.database.destroy(); vi.restoreAllMocks(); }
 });
 

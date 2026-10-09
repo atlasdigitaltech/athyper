@@ -193,7 +193,7 @@ export const entityActivityClient = {
             ...(v.collections === undefined ? {} : {collections:array(v.collections).map(value=>{const c=object(value);return {key:text(c.key),label:text(c.label),...(c.sectionKey===undefined?{}:{sectionKey:text(c.sectionKey)})};})}),
             fields: array(v.fields).map((value) => {
               const f = object(value);
-              return { key: text(f.key), label: text(f.label), ...state(f) };
+              return { key: text(f.key), label: text(f.label), ...state(f), ...(f.reference === true ? { reference: true as const } : {}) };
             }),
           };
         },

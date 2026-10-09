@@ -5,6 +5,7 @@ export type * from "./ports.js";
 export * from "./collection-relationship.js";
 
 export * from "./directory-scope.js";
+export { technicalFieldKeys } from "./technical-fields.js";
 
 export * from "./entity-ai.js";
 export * from "./entity-ai-manifest.js";

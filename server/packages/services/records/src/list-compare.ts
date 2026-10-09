@@ -16,6 +16,8 @@ export function resolveListCompare(input: {
   readonly masked: (key: string) => boolean;
   /** The descriptor's declared `storage.statusField`. */
   readonly statusField?: string;
+  /** Technical identities (`technicalFieldKeys`): never compared or displayed. */
+  readonly technical?: ReadonlySet<string>;
 }): ListCompareV1 | undefined {
   const listed = new Map(input.fields.map((field) => [field.key, field]));
   const declared = new Map(input.entityFields.map((field) => [field.key, field]));
@@ -24,7 +26,7 @@ export function resolveListCompare(input: {
   const sections = input.compare.sections.flatMap((section) => {
     const fields = section.fields.flatMap((key): ListCompareFieldV1[] => {
       const field = listed.get(key);
-      if (!field || field.valueKind === "uuid") {
+      if (!field || field.valueKind === "uuid" || input.technical?.has(key)) {
         restricted = true;
         return [];
       }

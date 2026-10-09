@@ -5,6 +5,7 @@ import type {
   ActivityTimelineItem,
 } from "@athyper/contract-platform-entity-runtime";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { activityActorLabel } from "./activity-actor";
 import { CollaborationPresentationContext } from "./collaboration-visibility";
 
 /** Group only authorized, same-record events with an explicit correlation, within display day. */
@@ -91,7 +92,7 @@ export function ActivityEvents({
             ? "activity.capturedBy"
             : "activity.actor",
         )}
-        : <bdi>{item.actor ?? intl.message("activity.system")}</bdi>
+        : <bdi>{activityActorLabel(item.actor, intl)}</bdi>
       </p>
       {inspect(item)}
     </>
@@ -135,7 +136,7 @@ export function ActivityEvents({
                   </td>
                   <td>{title(item)}</td>
                   <td>
-                    <bdi>{item.actor ?? intl.message("activity.system")}</bdi>
+                    <bdi>{activityActorLabel(item.actor, intl)}</bdi>
                   </td>
                   <td>
                     <span

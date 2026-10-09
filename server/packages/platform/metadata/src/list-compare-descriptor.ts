@@ -1,5 +1,5 @@
 import { COMPARE_MAX_FIELDS, COMPARE_MAX_SECTIONS } from "@athyper/contract-platform-entity-list";
-import type { EntityFieldDescriptor, EntityListCompareDescriptor } from "@athyper/server-contract-metadata";
+import { technicalFieldKeys, type EntityFieldDescriptor, type EntityListCompareDescriptor } from "@athyper/server-contract-metadata";
 import { fail, list, only as layoutOnly, record, text } from "./list-date-range-descriptor.js";
 import { parseEntityLocalizedText } from "@athyper/contract-platform-entity-list";
 
@@ -78,13 +78,13 @@ export function validatePublishedListCompare(
   const root = "listPresentation.compare";
   if (!input.identityField || !input.byKey.has(input.identityField))
     fail(root, "COMPARE_IDENTITY_REQUIRED: the list needs a published readable identity to head the columns");
-  const technical = new Set([input.storage.idField, input.storage.versionField].filter((value): value is string => typeof value === "string"));
+  const technical = technicalFieldKeys({ storage: input.storage, fields: [...input.byKey.values()] });
   const requested = new Set<string>([input.identityField, ...(input.titleField && input.byKey.has(input.titleField) ? [input.titleField] : [])]);
   for (const section of compare.sections)
     for (const key of section.fields) {
       const field = input.byKey.get(key);
       if (!field) fail(root, `COMPARE_FIELD_UNKNOWN: ${key} is not a field of the Entity`);
-      if (field.type === "uuid" || technical.has(key) || technical.has(field.storagePath))
+      if (technical.has(key))
         fail(root, `COMPARE_FIELD_TECHNICAL: ${key} is a technical identity and is never displayed`);
       requested.add(key);
       if (field.type === "money" && field.list?.currencyField) requested.add(field.list.currencyField);

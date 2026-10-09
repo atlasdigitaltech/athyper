@@ -21,6 +21,7 @@ import type {
   ActivityView,
 } from "@athyper/contract-platform-entity-runtime";
 import { ActivityEvents } from "./activity-events";
+import { activityActorLabel } from "./activity-actor";
 import { ActivityCollectionSection } from "./activity-collection-section";
 import { ActivityComparison as ComparisonView } from "./activity-comparison";
 import { formatActivityValue, type ActivityPresentation } from "./activity-comparison-model";
@@ -476,7 +477,7 @@ export function ActivityWorkspace({
                     </time>
                     <p className="a-entity-activity__actor">
                       {intl.message("activity.actor")}:{" "}
-                      {item.actor ?? intl.message("activity.system")}
+                      {activityActorLabel(item.actor, intl)}
                     </p>
                     {item.changedFields.length ? (
                       <div className="a-entity-activity__fields">
@@ -520,7 +521,7 @@ export function ActivityWorkspace({
                         timeStyle: "short",
                       })}
                     </time>
-                    <p className="a-entity-activity__capture-actor">{intl.message("activity.capturedBy")}: {item.capturedBy}</p>
+                    <p className="a-entity-activity__capture-actor">{intl.message("activity.capturedBy")}: {activityActorLabel(item.capturedBy, intl)}</p>
                     <details className="a-entity-activity__capture-info">
                       <summary aria-label={`${intl.message("activity.captureInfo")} ${item.sequence}`}>ⓘ</summary>
                       <p>{intl.message(item.coverage === "unknown" ? "activity.unknownCoverage" : item.coverage === "declared_fields" ? "activity.declaredCoverage" : "activity.authorizedCoverage")}</p>
@@ -554,7 +555,7 @@ export function ActivityWorkspace({
             {snapshot.fields.map((field) => (
               <div key={field.key}>
                 <dt>{label(field.key)}</dt>
-                <dd>{formatActivityValue(field, metadata?.fields.find(item => item.key === field.key), intl)}</dd>
+                <dd>{field.reference && field.state === "value" && field.value !== null && field.value !== undefined && field.value !== "" ? intl.message("activity.linkedRecord") : formatActivityValue(field, metadata?.fields.find(item => item.key === field.key), intl)}</dd>
               </div>
             ))}
           </dl>

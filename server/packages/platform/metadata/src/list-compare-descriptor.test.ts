@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EntityFieldDescriptor } from "@athyper/server-contract-metadata";
+import { technicalFieldKeys, type EntityFieldDescriptor } from "@athyper/server-contract-metadata";
 import { parsePublishedListCompare, validatePublishedListCompare } from "./list-compare-descriptor.js";
 
 // Publication checks of the comparison declaration (Entity list Compare blueprint section 6).
@@ -8,6 +8,13 @@ const byKey = new Map([field("code", "string"), field("name", "string"), field("
 const valid = { sections: [{ key: "basic", label: "Basic data", fields: ["uom", "cost"] }, { key: "audit", label: "Record details", fields: ["name"], collapsed: true }] };
 const check = (raw: unknown, extra: Partial<Parameters<typeof validatePublishedListCompare>[1]> = {}) =>
   validatePublishedListCompare(parsePublishedListCompare(raw), { byKey, identityField: "code", titleField: "name", storage: { idField: "id", versionField: "version" }, ...extra });
+
+describe("the one technical-identity rule", () => {
+  it("names the storage identity and version fields by key or storage path, and UUID-typed fields", () => {
+    const keys = technicalFieldKeys({ storage: { idField: "record_id", versionField: "row_version" }, fields: [field("id", "string", { storagePath: "record_id" }), field("version", "integer", { storagePath: "row_version" }), field("plant_id", "uuid"), field("country", "reference"), field("code", "string")] });
+    expect([...keys].sort()).toEqual(["id", "plant_id", "version"]);
+  });
+});
 
 describe("published comparison declaration", () => {
   it("parses sections in order with their collapsed default", () => {

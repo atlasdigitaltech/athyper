@@ -34,6 +34,8 @@ export interface ActivitySnapshot extends ActivitySnapshotItem {
     readonly label: string;
     readonly state: "value" | "uncaptured";
     readonly value?: unknown;
+    /** A captured reference: shown as "Linked record", never as an identifier. */
+    readonly reference?: true;
   }[];
 }
 export interface ActivityPage<T> {

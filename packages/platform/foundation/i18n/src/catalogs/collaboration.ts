@@ -125,6 +125,7 @@ export const collaborationMessages = {
   "activity.sameAsEarlier": ["Same as the earlier snapshot", "Sama seperti petikan lebih awal", "مطابق للقطة الأقدم"],
   "activity.differsFromEarlier": ["Differs from the earlier snapshot", "Berbeza daripada petikan lebih awal", "يختلف عن اللقطة الأقدم"],
   "activity.linkedRecord": ["Linked record", "Rekod berpaut", "سجل مرتبط"],
+  "activity.actorNameUnavailable": ["Name not available", "Nama tidak tersedia", "الاسم غير متاح"],
   "activity.comparison": ["Snapshot comparison", "Perbandingan petikan", "مقارنة اللقطات"],
   "activity.field": ["Field", "Medan", "الحقل"],
   "activity.before": ["First snapshot", "Petikan pertama", "اللقطة الأولى"],
