@@ -119,12 +119,15 @@ Compare shows two to four **chosen** records in detail. The Matrix shows the **w
 
 ```ts
 matrix?: {
+  parentField: string;             // section 5.4: the fact's reference to the common parent (e.g. sourcing event)
   rows: {
     field: string;                 // reference to the master Entity (e.g. demand)
+    parentField: string;           // the master Entity's reference to the same parent
     pageSize: 20;                  // rows per page; fixed for revision 1
   };
   columns: {
     field: string;                 // reference to the column Entity (e.g. supplier response)
+    parentField: string;           // the column Entity's reference to the same parent
     pageSize: 5;                   // columns per page; rows.pageSize × columns.pageSize ≤ MAX_LIST_PAGE_SIZE
     headerFields?: readonly string[];   // column Entity fields shown in its header (e.g. total, status), max 3
     declined?: { field: string; values: readonly string[] };  // column Entity state meaning "declined to participate"
@@ -169,7 +172,29 @@ matrix?: {
 | **"Lowest on n items" in the header** | Deferred: it needs a small server aggregate beside `rankWithin`, and is a later decision | — |
 | **Best in Compare is not rank in the Matrix** | The Compare panel says that "Best" is among the 2–4 chosen, and the Matrix ranks every visible participant | C4 |
 
-### 5.4 URL and saved state
+### 5.4 Build-time specifics (revision 3, recorded at the start of the M1/M2 build)
+
+These close three points sections 5.1–8 leave open. They are decided within the approved direction, with no new contract beyond what is listed.
+
+1. **The common parent comes from a fact field, scoped like Tree's `scopeField`.**
+   - The declaration gains `parentField`: a required reference on the fact Entity to the parent both master lists belong to, for example the sourcing event.
+   - `rows.parentField` and `columns.parentField` name each master list's reference to the same parent.
+   - The Matrix draws only for one parent value: a locked record scope on `parentField`, or exactly one `eq` filter on it. Otherwise it shows "Choose a {parent label}" with that field's filter, as Tree does.
+   - **Consequence for the M3 pilot:** `sourcing_event_award_allocation` has no sourcing-event column, so the pilot needs the allocation Entity to expose its event (a published derived field) or a different fact. Recorded for M3.
+2. **Eligibility is resolved on the server.**
+   - `rankEligibility` names a field of the **column** Entity.
+   - `rankWithin` excludes facts whose column record is not eligible, through a subquery on the column Entity's own table and tenant, read from its published descriptor with no entity name in code.
+   - Eligibility therefore applies to every participant, not only those on screen.
+3. **Rank travels on the existing list operation.**
+   - A cell request may carry `rank=<field>`, which must be a declared ranked measure, and `matrixColumns=<ids>` (the participant page, at most 100).
+   - The server ranks over the request's filters and scope, which include the page's row keys and the participant filter. It applies `matrixColumns` only to the rows it returns, never to the rank predicate.
+   - The response adds `ranks` (per returned fact: rank, count ranked, best value) and `revision` (a digest of the ranked set's count and latest version).
+   - One request therefore carries both the cells and their ranks. The budget per screen is 3 requests (rows, columns, cells with ranks) and one count request for coverage.
+4. **Coverage per column** ("11 of 12 items quoted") comes from an A2 group count of facts by column, under the parent and exact counts. It is never summed from loaded cells. Above the 50-group cap, coverage is not shown for the remaining columns.
+5. **Pivot dimensions in M1/M2.** M1 and M2 draw a Matrix whose extra key dimensions are pinned by scope or filter at request time (section 2.1). Drawing declared `pivotDimensions` as part of the column identity (award × company) lands with the M3 pilot, which needs it.
+6. **Drill-down.** "Compare selected" opens the column Entity's comparison inline, using that Entity's own published `compare` declaration and list descriptor, with the selected columns as the compared records. It is offered only when the column Entity declares Compare.
+
+### 5.5 URL and saved state
 
 - **Saved:** `matrix.measures` (which measures show) and `matrix.columns` (the participant filter: pinned column ids, kept as routing identities, never displayed).
 - **Location only:** `matrix.rowPage` and `matrix.columnPage`.
