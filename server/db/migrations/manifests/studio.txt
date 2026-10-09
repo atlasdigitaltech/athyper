@@ -85,3 +85,4 @@
 20261009_local_publication_admission_replay.sql
 20261009_local_publication_dispatch.sql
 20261009_local_publication_release.sql
+20261009_local_publication_identity_status.sql

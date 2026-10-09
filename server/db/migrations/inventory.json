@@ -2563,6 +2563,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/44_local_publication_release.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_identity_status.sql",
+      "path": "migrations/20261009_local_publication_identity_status.sql",
+      "sha256": "73c5406311fb6040c8a3c7256a74c2e30288840132d918961ad3b7e3ac05d91e",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Bounded standing-authority identity eligibility reads under application roles; preserves IAM row isolation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/45_local_publication_identity_status.sql"
+      ]
     }
   ]
 }

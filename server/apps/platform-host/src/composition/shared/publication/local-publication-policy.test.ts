@@ -71,15 +71,7 @@ it("checks enrolled actors with a read-only IAM grant and rejects revoked actors
           async query(statement: string) {
             if (/FOR\s+(SHARE|UPDATE)/i.test(statement))
               throw Error("permission denied for table principal");
-            return {
-              rows: revoked
-                ? []
-                : [
-                    { id: id(1), principal_type: "service_account" },
-                    { id: id(2), principal_type: "service_account" },
-                    { id: id(3), principal_type: "user" },
-                  ],
-            };
+            return { rows: [{ valid: !revoked }] };
           },
         }),
         end: async () => {},

@@ -479,6 +479,27 @@ CREATE TRIGGER fixture_publish AFTER INSERT ON metadata.entity_release FOR EACH 
       );
       q(commands.slice(linkStart, commands.indexOf("END $$;", linkStart) + 7));
       q(ddl("publication/44_local_publication_release.sql"));
+      q(
+        "ALTER TABLE master.principal ADD COLUMN provisioning_source text DEFAULT 'internal'",
+      );
+      q(ddl("publication/45_local_publication_identity_status.sql"));
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.local_publication_identity_status(ARRAY['${developer}']::uuid[],'${author}','${publisher}'); ROLLBACK;`,
+        )
+          .trim()
+          .split("\n")
+          .at(-1),
+      ).toBe("t");
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.local_publication_identity_status(ARRAY['${developer}','${developer}']::uuid[],'${author}','${publisher}'); ROLLBACK;`,
+        )
+          .trim()
+          .split("\n")
+          .at(-1),
+      ).toBe("f");
+
       q(`ALTER FUNCTION publication.fn_link_system_entity_release(uuid) OWNER TO athyper_definer_product_publication;
 GRANT SELECT,INSERT ON publication.entity_release_link TO athyper_definer_product_publication;
 CREATE TRIGGER fixture_link BEFORE INSERT ON publication.entity_release_link FOR EACH ROW EXECUTE FUNCTION publication.trg_validate_entity_release_link();`);

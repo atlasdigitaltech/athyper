@@ -123,23 +123,13 @@ export async function assertLocalPublicationEnrollment(
     Date.parse(policy.authority.expiresAt) <= now
   )
     throw Error("LOCAL_PUBLICATION_POLICY_EXPIRED");
-  const users = policy.authority.developerPrincipalIds;
-  const workloads = [policy.authorPrincipalId, policy.publisherPrincipalId];
-  // The control role reads IAM but cannot lock principal rows for update.
-  // Enrollment activation and every request independently recheck current actors.
-  const result = await sql<{ id: string; principal_type: string }>`
-    SELECT id,principal_type FROM master.principal WHERE tenant_id=${tenantId}::uuid
-    AND status='active' AND id=ANY(${[...users, ...workloads]}::uuid[])`.execute(
+  const result = await sql<{
+    valid: boolean;
+  }>`SELECT publication.local_publication_identity_status(
+    ${policy.authority.developerPrincipalIds}::uuid[],${policy.authorPrincipalId}::uuid,${policy.publisherPrincipalId}::uuid) AS valid`.execute(
     tx,
   );
-  if (
-    result.rows.length !== users.length + 2 ||
-    result.rows.some(
-      (row) =>
-        row.principal_type !==
-        (users.includes(row.id) ? "user" : "service_account"),
-    )
-  )
+  if (result.rows.length !== 1 || result.rows[0]?.valid !== true)
     throw Error("LOCAL_PUBLICATION_POLICY_ACTOR_REVOKED");
 }
 
@@ -208,7 +198,7 @@ export async function resolveLocalPublicationAuthority(options: {
     AND d.effective_from<=CURRENT_DATE AND (d.effective_until IS NULL OR d.effective_until>=CURRENT_DATE)
     AND NOT EXISTS(SELECT 1 FROM control.policy_definition n WHERE n.tenant_id=d.tenant_id AND n.entity_type=d.entity_type
       AND n.name=d.name AND n.id<>d.id AND n.status='active' AND n.version_no>=d.version_no) AS valid
-    FROM control.policy_definition d WHERE d.id=${options.pin.id}::uuid AND d.tenant_id=${options.context.tenantId}::uuid FOR SHARE OF d`.execute(
+    FROM control.policy_definition d WHERE d.id=${options.pin.id}::uuid AND d.tenant_id=${options.context.tenantId}::uuid`.execute(
     options.transaction,
   );
   if (live.rows.length !== 1 || live.rows[0]?.valid !== true)

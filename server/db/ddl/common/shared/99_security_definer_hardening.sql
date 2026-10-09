@@ -457,6 +457,12 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
+  },
+  {
+    "signature": "publication.local_publication_identity_status(uuid[],uuid,uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local request, signed release and immutable publication link; current standing authority and publisher checked without human-review fabrication or source-table grants."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -634,6 +640,7 @@ BEGIN
   "ops.record_transfer_stuck_counts(timestamp with time zone, integer)",
   "publication.admit_local_publication_command(jsonb, uuid)",
   "publication.admit_local_publication_request(jsonb)",
+  "publication.bind_local_publication_release(uuid)",
   "publication.fn_acknowledge_activation(uuid, text, text, uuid, jsonb)",
   "publication.fn_authorization_successor_compilation_source(uuid)",
   "publication.fn_collection_configuration_compilation_source(uuid)",
@@ -674,7 +681,10 @@ BEGIN
   "publication.fn_transition_deployment(uuid, publication.deployment_status_d, jsonb)",
   "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
   "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
+  "publication.local_publication_execution_context(uuid)",
+  "publication.local_publication_identity_status(uuid[],uuid,uuid)",
   "publication.local_publication_phase_authority(uuid, text)",
+  "publication.local_publication_release_receipt(text)",
   "publication.native_worker_entity_visible(uuid)",
   "publication.pending_local_publication_requests(text, integer)",
   "publication.read_local_publication_admission(uuid)",
@@ -698,10 +708,7 @@ BEGIN
   "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
   "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
   "snapshot.fn_verify_entity_snapshot_hash(uuid)",
-  "trustiam.lock_identity_replay_projection(uuid, uuid)",
-  "publication.bind_local_publication_release(uuid)",
-  "publication.local_publication_release_receipt(text)",
-  "publication.local_publication_execution_context(uuid)"
+  "trustiam.lock_identity_replay_projection(uuid, uuid)"
 ]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
             RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
         END IF;
