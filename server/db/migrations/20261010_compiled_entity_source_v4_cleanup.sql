@@ -1,5 +1,5 @@
--- A scoped read boundary for approved native sources lowered into split artifacts.
--- Authority tenant owns the job; nullable source tenant remains a separate coordinate.
+-- Consolidate the approved native Entity compilation reader.  The direct query
+-- preserves the previous v1/v2/v3 checks while avoiding a three-routine chain.
 CREATE OR REPLACE FUNCTION publication.fn_compiled_entity_compilation_source_v4(p_release_id uuid)
 RETURNS TABLE(publication_release_id uuid, release_key text, release_no bigint,
  source_tenant_id uuid, revision_id uuid, published_by uuid, entity_code text,
@@ -10,7 +10,8 @@ SET search_path=pg_catalog,publication,metadata,snapshot,shared AS $$
  SELECT pr.id,pr.release_key,pr.release_no,er.tenant_id,er.revision_id,er.published_by,
    e.entity_code,r.contract_json,a.compiled_json,a.plane_key,a.created_at,er.target_planes,
    er.entity_id,er.release_hash,pr.metadata->'successorPolicy'
- FROM publication.release pr JOIN publication.entity_release_link l ON l.publication_release_id=pr.id
+ FROM publication.release pr
+ JOIN publication.entity_release_link l ON l.publication_release_id=pr.id
  JOIN metadata.entity_release er ON er.id=l.entity_release_id
  JOIN metadata.entity e ON e.id=er.entity_id AND e.tenant_id IS NOT DISTINCT FROM er.tenant_id
  JOIN metadata.entity_change_set cs ON cs.id=er.change_set_id AND cs.entity_id=er.entity_id AND cs.tenant_id IS NOT DISTINCT FROM er.tenant_id
@@ -26,4 +27,11 @@ SET search_path=pg_catalog,publication,metadata,snapshot,shared AS $$
  ORDER BY a.plane_key;
 $$;
 REVOKE ALL ON FUNCTION publication.fn_compiled_entity_compilation_source_v4(uuid) FROM PUBLIC;
+ALTER FUNCTION publication.fn_compiled_entity_compilation_source_v4(uuid) OWNER TO athyper_definer_product_publication;
 GRANT EXECUTE ON FUNCTION publication.fn_compiled_entity_compilation_source_v4(uuid) TO athyper_publication_service;
+
+-- Callers are switched to v4 in the same source revision before this forward
+-- migration is installed. Historical migration bytes remain immutable.
+DROP FUNCTION publication.fn_compiled_entity_compilation_source_v3(uuid);
+DROP FUNCTION publication.fn_compiled_entity_compilation_source_v2(uuid);
+DROP FUNCTION publication.fn_compiled_entity_compilation_source(uuid);

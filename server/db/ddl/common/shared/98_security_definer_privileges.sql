@@ -5412,7 +5412,7 @@ BEGIN
       "shared.current_tenant_id()",
       "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
       "publication.fn_successor_canonical_json(jsonb)",
-      "publication.fn_compiled_entity_compilation_source(uuid)",
+      "publication.fn_compiled_entity_compilation_source_v4(uuid)",
       "snapshot.fn_compute_entity_contract_hash(jsonb)",
       "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
       "public.digest(bytea, text)",

@@ -175,9 +175,7 @@
     "publication.fn_authorization_successor_compilation_source(uuid)",
     "publication.fn_collection_configuration_compilation_source(uuid)",
     "publication.fn_compilation_recovery_source(jsonb, boolean)",
-    "publication.fn_compiled_entity_compilation_source(uuid)",
-    "publication.fn_compiled_entity_compilation_source_v2(uuid)",
-    "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+    "publication.fn_compiled_entity_compilation_source_v4(uuid)",
     "publication.fn_confirm_metadata_activation(uuid, text, uuid)",
     "publication.fn_coordinated_deployment_recovery_source(uuid, text)",
     "publication.fn_create_deployment(uuid, uuid, text, text, text, integer, uuid, uuid)",
@@ -492,19 +490,7 @@
       "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
     },
     {
-      "signature": "publication.fn_compiled_entity_compilation_source(uuid)",
-      "owner": "athyper_definer_product_publication",
-      "rowSecurityOff": false,
-      "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
-    },
-    {
-      "signature": "publication.fn_compiled_entity_compilation_source_v2(uuid)",
-      "owner": "athyper_definer_product_publication",
-      "rowSecurityOff": false,
-      "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
-    },
-    {
-      "signature": "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+      "signature": "publication.fn_compiled_entity_compilation_source_v4(uuid)",
       "owner": "athyper_definer_product_publication",
       "rowSecurityOff": false,
       "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
@@ -5038,7 +5024,7 @@
         "shared.current_tenant_id()",
         "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
         "publication.fn_successor_canonical_json(jsonb)",
-        "publication.fn_compiled_entity_compilation_source(uuid)",
+        "publication.fn_compiled_entity_compilation_source_v4(uuid)",
         "snapshot.fn_compute_entity_contract_hash(jsonb)",
         "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
         "public.digest(bytea, text)",

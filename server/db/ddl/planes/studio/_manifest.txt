@@ -259,7 +259,6 @@ planes/studio/publication/13_collection_configuration.sql
 planes/studio/publication/14_compiled_entity_runtime.sql
 planes/studio/control/13_publication_policy_evidence.sql
 planes/studio/publication/15_system_entity_commands.sql
-planes/studio/publication/16_compiled_entity_source_identity.sql
 planes/studio/publication/17_system_entity_successor.sql
 planes/studio/publication/18_compilation_recovery.sql
 planes/studio/publication/19_recovery_discovery.sql

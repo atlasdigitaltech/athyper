@@ -106,3 +106,4 @@
 20261010_local_publication_rollback.sql
 20261010_local_rollback_head.sql
 20261010_local_rollback_admission.sql
+20261010_compiled_entity_source_v4_cleanup.sql

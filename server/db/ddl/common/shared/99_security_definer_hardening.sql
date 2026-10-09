@@ -249,19 +249,7 @@ BEGIN
     "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
   },
   {
-    "signature": "publication.fn_compiled_entity_compilation_source(uuid)",
-    "owner": "athyper_definer_product_publication",
-    "rowSecurityOff": false,
-    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
-  },
-  {
-    "signature": "publication.fn_compiled_entity_compilation_source_v2(uuid)",
-    "owner": "athyper_definer_product_publication",
-    "rowSecurityOff": false,
-    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
-  },
-  {
-    "signature": "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+    "signature": "publication.fn_compiled_entity_compilation_source_v4(uuid)",
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
@@ -663,9 +651,7 @@ BEGIN
   "publication.fn_authorization_successor_compilation_source(uuid)",
   "publication.fn_collection_configuration_compilation_source(uuid)",
   "publication.fn_compilation_recovery_source(jsonb, boolean)",
-  "publication.fn_compiled_entity_compilation_source(uuid)",
-  "publication.fn_compiled_entity_compilation_source_v2(uuid)",
-  "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+  "publication.fn_compiled_entity_compilation_source_v4(uuid)",
   "publication.fn_confirm_metadata_activation(uuid, text, uuid)",
   "publication.fn_coordinated_deployment_recovery_source(uuid, text)",
   "publication.fn_create_deployment(uuid, uuid, text, text, text, integer, uuid, uuid)",

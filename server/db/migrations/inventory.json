@@ -422,7 +422,6 @@
       "canonicalPaths": [
         "ddl/planes/studio/control/13_publication_policy_evidence.sql",
         "ddl/planes/studio/publication/15_system_entity_commands.sql",
-        "ddl/planes/studio/publication/16_compiled_entity_source_identity.sql",
         "ddl/planes/studio/publication/17_system_entity_successor.sql",
         "ddl/planes/studio/publication/18_compilation_recovery.sql",
         "ddl/planes/studio/publication/19_human_reviewed_publication.sql",
@@ -2814,6 +2813,22 @@
       "reason": "Admit exact signed rollback target requests without creating a new release.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/65_local_rollback_admission.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_compiled_entity_source_v4_cleanup.sql",
+      "path": "migrations/20261010_compiled_entity_source_v4_cleanup.sql",
+      "sha256": "10facb8d21949287628e9dd2f08a69e159514d17d8a00123b1ab6908c1363c46",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Consolidate the approved Entity compilation-source reader and retire the unreferenced v1/v2/v3 chain after callers move to v4.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/14_compiled_entity_runtime.sql",
+        "ddl/planes/studio/publication/17_system_entity_successor.sql",
+        "ddl/planes/studio/publication/20_product_publication_owner.sql",
+        "ddl/common/shared/98_security_definer_privileges.sql",
+        "ddl/common/shared/99_security_definer_hardening.sql"
       ]
     }
   ]

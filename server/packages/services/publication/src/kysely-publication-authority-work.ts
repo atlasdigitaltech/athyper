@@ -197,7 +197,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     ).rows;
     if (declaredSplit.length) {
       const available = (
-        await sql<Row>`SELECT to_regprocedure('publication.fn_compiled_entity_compilation_source_v3(uuid)') IS NOT NULL AS available`.execute(
+        await sql<Row>`SELECT to_regprocedure('publication.fn_compiled_entity_compilation_source_v4(uuid)') IS NOT NULL AS available`.execute(
           this.options.database,
         )
       ).rows[0]?.["available"];
@@ -205,7 +205,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
         throw permanent("COMPILED_PUBLICATION_SOURCE_ADAPTER_REQUIRED");
       const split =
         await sql<Row>`SELECT s.*,p.metadata->>'coordinationHash' coordination_hash
-        FROM publication.fn_compiled_entity_compilation_source_v3(${releaseId}::uuid) s
+        FROM publication.fn_compiled_entity_compilation_source_v4(${releaseId}::uuid) s
         JOIN publication.release p ON p.id=s.publication_release_id`.execute(
           this.options.database,
         );

@@ -118,7 +118,7 @@ export function createCompiledRuntimePublication(options: {
         // SECURITY DEFINER function enforces authority tenant, approved snapshot,
         // maker/checker separation and immutable target descriptor hashes.
         const rows = (
-          await sql<SourceRow>`SELECT * FROM publication.fn_compiled_entity_compilation_source_v3(${releaseId}::uuid)`.execute(
+          await sql<SourceRow>`SELECT * FROM publication.fn_compiled_entity_compilation_source_v4(${releaseId}::uuid)`.execute(
             tx,
           )
         ).rows;

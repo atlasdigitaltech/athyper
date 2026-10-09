@@ -108,18 +108,3 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_system_entity_successor_policy(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION publication.fn_system_entity_successor_policy(uuid) TO athyper_runtime;
-
--- Approved immutable policy coordinates accompany the existing scoped source.
--- v1/v2 readers and historical signed artifacts are not rewritten.
-CREATE OR REPLACE FUNCTION publication.fn_compiled_entity_compilation_source_v3(p_release_id uuid)
-RETURNS TABLE(publication_release_id uuid, release_key text, release_no bigint,
- source_tenant_id uuid, revision_id uuid, published_by uuid, entity_code text,
- contract_json jsonb, compiled_json jsonb, plane_key text, created_at timestamptz,
- target_planes text[], source_entity_id uuid, source_release_hash text, successor_policy jsonb)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
- SELECT s.*,p.metadata->'successorPolicy'
- FROM publication.fn_compiled_entity_compilation_source_v2(p_release_id) s
- JOIN publication.release p ON p.id=s.publication_release_id;
-$$;
-REVOKE ALL ON FUNCTION publication.fn_compiled_entity_compilation_source_v3(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_compiled_entity_compilation_source_v3(uuid) TO athyper_publication_service;
