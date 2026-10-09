@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 262,
+    "configuration:new": 260,
     "database-commands:deferred": 76,
     "database-commands:migrated": 19,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 67,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 414,
+    "operational-scripts:new": 408,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -1105,10 +1105,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/scripts/operations/inspect-native-bootstrap-schema.ts",
-        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
-        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
-        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/apps/platform-host/src/diagnostics/telemetry/error-collector.ts",
         "server/apps/platform-host/src/scripts/publish-dev-reviewed-resources.ts",
@@ -1262,21 +1258,6 @@
       "currentLocations": [
         "server/apps/platform-host/src/development/graph-preview.ts",
         "server/packages/services/publication/src/local-definition-preview.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:athyper_local_source",
-      "category": "configuration",
-      "key": "athyper_local_source",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
-        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
-        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -3934,7 +3915,6 @@
         "server/.env.example",
         "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-case-contract-publication.ts",
         "server/apps/platform-host/scripts/db-verification/tests/integration/publication-authority-repository.mjs",
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/checks/contracts/meta-entity-audit.ts",
@@ -5725,7 +5705,6 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts",
@@ -7303,18 +7282,6 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "configuration:qualification_database_url",
-      "category": "configuration",
-      "key": "qualification_database_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:qualify_clamd_host",
       "category": "configuration",
       "key": "qualify_clamd_host",
@@ -8503,8 +8470,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts",
-        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts",
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/db/scripts/checks/security/field-security.ts",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts",
@@ -8522,7 +8487,6 @@
       "key": "studio_worker_database_url",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts",
         "server/apps/platform-host/src/scripts/reconcile-publication-ledger.ts",
         "server/production.env.example",
         "server/staging.env.example"
@@ -18762,48 +18726,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:qualify-approved-candidate",
-      "category": "operational-scripts",
-      "key": "qualify-approved-candidate",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-approved-candidate.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:qualify-component-deployment",
       "category": "operational-scripts",
       "key": "qualify-component-deployment",
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/scripts/operations/qualify-component-deployment.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:qualify-coordinated-product-scope",
-      "category": "operational-scripts",
-      "key": "qualify-coordinated-product-scope",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-coordinated-product-scope.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:qualify-deployment-recovery",
-      "category": "operational-scripts",
-      "key": "qualify-deployment-recovery",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-deployment-recovery.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18884,18 +18812,6 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
-    },
-    {
-      "identity": "operational-scripts:qualify-reviewed-permission-retry",
-      "category": "operational-scripts",
-      "key": "qualify-reviewed-permission-retry",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:realm-strict-mfa",
@@ -19090,18 +19006,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:rehearse-dev-recovery-compiler",
-      "category": "operational-scripts",
-      "key": "rehearse-dev-recovery-compiler",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/operations/publication/rehearse-dev-recovery-compiler.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:rehearse-native-product-review",
       "category": "operational-scripts",
       "key": "rehearse-native-product-review",
@@ -19120,18 +19024,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/publication/rehearse-publication-canary.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:rehearse-recovery-compiler",
-      "category": "operational-scripts",
-      "key": "rehearse-recovery-compiler",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

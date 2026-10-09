@@ -62,6 +62,8 @@ Names and SQL types below define the intended contract. Metadata sample IDs such
 
 **Execution checkpoint — 10 October 2026:** the approved local exception is recorded in AGENTS.md and its standing authority is installed. Country and State Region release 3 have compiled, signed, activated and acknowledged on Studio, Neon and Mesh under that authority, without renewed per-edit human approval. Scheduled recovery must use the same persisted-authority publisher resolution as normal dispatch; a generic worker identity is not interchangeable. The existing qualification runbook records exact releases and remaining cleanup, rollback and authenticated UI acceptance. This local checkpoint does not establish nonlocal promotion or completion of the entire cleanup plan.
 
+**Local cleanup boundary — 10 October 2026:** retire obsolete operations probes and legacy conversion tooling when their callers are gone; retain shared native publication/recovery and schema used by other saved graphs. Such tooling deletion does not require another DEV reset, review round or application image rebuild. Country successor recovery is executed on all three planes; State Region and the remaining cleanup status are tracked in the existing runbook. Nonlocal promotion is not a prerequisite for this local cleanup.
+
 #### Local authority and exact execution
 
 Reuse the machine-policy infrastructure, extending native admission and database/worker guards explicitly rather than fabricating `humanExecutionPolicy` evidence. Introduce the named approval basis `local_development_authority`. Existing exact draft/hash enrollment is not standing authority and cannot deliver successive edits without this change.
