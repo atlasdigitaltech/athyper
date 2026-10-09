@@ -133,6 +133,7 @@ it.skipIf(process.env.PRODUCT_REVIEW_POSTGRES !== "1")(
         CREATE TABLE metadata.entity_operation(id uuid,change_set_id uuid,entity_id uuid,tenant_id uuid,export_max_records bigint);
         CREATE TABLE metadata.entity_field_identity(id uuid,entity_id uuid,tenant_id uuid);
         CREATE TABLE metadata.entity_field(change_set_id uuid,field_identity_id uuid);
+        CREATE FUNCTION metadata.native_identity_available(uuid,uuid) RETURNS boolean LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Identity resolution is outside this empty-field review fixture'; END $$;
         GRANT USAGE ON SCHEMA publication TO athyper_control_api;
         UPDATE metadata.entity_change_set SET native_core_layout_version=2;
         INSERT INTO snapshot.entity_draft_save VALUES('${id(5)}',1,NULL,'{"exact":"source"}','${"a".repeat(64)}','${id(1)}','saved');`);
@@ -247,6 +248,32 @@ it.skipIf(process.env.PRODUCT_REVIEW_POSTGRES !== "1")(
           "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname='athyper_control_api'",
         ).trim(),
       ).toBe("f");
+      query(
+        `CREATE TABLE publication.local_publication_request(change_set_id uuid,tenant_id uuid,developer_id uuid,execution_status text,execution_revision bigint,execution_release_id uuid);`,
+      );
+      query(
+        readFileSync(
+          new URL(
+            "../../../../../db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      query(
+        `UPDATE metadata.entity_change_set SET status='published',status_changed_by='${id(2)}' WHERE id='${id(5)}';`,
+      );
+      expect(() => source(1)).toThrow();
+      query(
+        `INSERT INTO publication.local_publication_request SELECT id,'${id(3)}','${id(1)}','published',lock_version,'${id(30)}' FROM metadata.entity_change_set WHERE id='${id(5)}';`,
+      );
+      expect(source(1)).toContain("a".repeat(64));
+      expect(() => source(2)).toThrow();
+      expect(() => source(1, 6)).toThrow();
+      query(
+        `UPDATE publication.local_publication_request SET execution_revision=execution_revision-1;`,
+      );
+      expect(() => source(1)).toThrow();
     } finally {
       try {
         docker("rm", "-f", name);
