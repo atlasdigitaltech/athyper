@@ -1163,10 +1163,19 @@ export function registerServices(
               : {}),
             audit: container.platform.audit,
             targetDatabases: metadataDatabases,
-            run: (work) =>
-              container.adapters.athyperDatabase!.withTenantTransaction((tx) =>
-                work(tx as unknown as Kysely<Record<string, never>>),
-              ),
+            run: (work) => {
+              if (configuration.localAuthority) {
+                const workerDatabase = container.adapters.jobAthyperDatabase;
+                if (!workerDatabase)
+                  throw Error("LOCAL_PUBLICATION_WORKER_DATABASE_REQUIRED");
+                return workerDatabase.withSystemTransaction((tx) =>
+                  work(tx as unknown as Kysely<Record<string, never>>),
+                );
+              }
+              return container.adapters.athyperDatabase!.withTenantTransaction(
+                (tx) => work(tx as unknown as Kysely<Record<string, never>>),
+              );
+            },
             loader: {
               store: container.adapters.publicationArtifactStore!,
               verifier: container.adapters.publicationVerifier!,
@@ -1203,7 +1212,7 @@ export function registerServices(
                           jobs: container.runtimes.jobs,
                           execution: () => ({
                             planeKey: "studio",
-                            scope: "plane",
+                            scope: "tenant",
                             tenantId: configuration.tenantId,
                             principalId: configuration.publisher.principalId,
                           }),
