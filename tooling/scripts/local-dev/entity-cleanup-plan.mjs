@@ -12,6 +12,13 @@ const permittedEvidence = new Set([
   "publication.entity_runtime_restoration_link",
   "entity_command_private.operation_bootstrap_source",
 ]);
+// These rows are part of the current native lineage. A product-entity reset
+// may not discover them merely because their table happens to begin with
+// `entity_`; retirement needs a separate, explicit provenance disposition.
+const protectedNativeTables = new Set([
+  "metadata.entity_class_profile",
+  "metadata.entity_field_identity_adoption",
+]);
 export function validateCleanupScope(scope) {
   if (
     !scope ||
@@ -32,7 +39,7 @@ export function candidateTable(schema, table) {
   return (
     (schema === "metadata" &&
       table.startsWith("entity_") &&
-      table !== "entity_class_profile") ||
+      !protectedNativeTables.has(`${schema}.${table}`)) ||
     permittedEvidence.has(`${schema}.${table}`)
   );
 }

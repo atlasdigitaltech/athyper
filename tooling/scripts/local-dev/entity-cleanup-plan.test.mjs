@@ -71,6 +71,7 @@ test("AI or onboarding data blocks removing its parents and is never enrolled fo
   assert.equal(plan.candidateRows, 1);
   assert.equal(candidateTable("onboarding", "onboarding_case"), false);
   assert.equal(candidateTable("publication", "release"), false);
+  assert.equal(candidateTable("metadata", "entity_field_identity_adoption"), false);
 });
 test("cycles terminate and composite key tuples are preserved", async () => {
   const cyclic = edge("metadata", "entity_change_set");
