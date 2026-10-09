@@ -2791,6 +2791,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/63_local_publication_rollback.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_rollback_head.sql",
+      "path": "migrations/20261010_local_rollback_head.sql",
+      "sha256": "d74eb84bf4fb9a44f37d250840b75e19852b4c9e4c07e2062fb50f326c757cd6",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Read current active head for authenticated local rollback independently of original source predecessor.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/64_local_rollback_head.sql"
+      ]
     }
   ]
 }

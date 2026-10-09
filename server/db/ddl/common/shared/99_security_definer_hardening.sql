@@ -475,6 +475,12 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Read exact signed and acknowledged native product artifacts for current local rollback authority."
+  },
+  {
+    "signature": "publication.read_local_rollback_head(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Read exact signed and acknowledged native product artifacts for current local rollback authority."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -702,6 +708,7 @@ BEGIN
   "publication.read_local_publication_admission(uuid)",
   "publication.read_local_publication_predecessor(uuid)",
   "publication.read_local_publication_request(text)",
+  "publication.read_local_rollback_head(uuid)",
   "publication.read_local_rollback_targets(uuid)",
   "publication.transition_local_publication_request(text, text, jsonb)",
   "runtime_meta.fn_activate_release(uuid, jsonb)",

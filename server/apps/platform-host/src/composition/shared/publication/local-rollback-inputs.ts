@@ -54,7 +54,7 @@ export async function resolveLocalRollbackInputs(options: {
         ? (
             await sql<{
               artifact_hash: string;
-            }>`SELECT artifact_hash FROM publication.read_local_publication_predecessor(${options.changeSetId}::uuid) WHERE publication_key=${target.publication_key}`.execute(
+            }>`SELECT artifact_hash FROM publication.read_local_rollback_head(${options.changeSetId}::uuid) WHERE publication_key=${target.publication_key}`.execute(
               db,
             )
           ).rows

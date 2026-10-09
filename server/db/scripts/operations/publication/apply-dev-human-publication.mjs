@@ -15,6 +15,7 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-ROLLBACK-HEAD": "20261010_local_rollback_head.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ROLLBACK":
     "20261010_local_publication_rollback.sql",
   "--apply=DEV-LOCAL-PUBLICATION-IDENTITY-READER":

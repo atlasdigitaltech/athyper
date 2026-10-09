@@ -104,3 +104,4 @@
 20261010_local_publication_context_reader.sql
 20261010_local_publication_identity_reader.sql
 20261010_local_publication_rollback.sql
+20261010_local_rollback_head.sql
