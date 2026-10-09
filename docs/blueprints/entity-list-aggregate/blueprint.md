@@ -1,6 +1,10 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** proposed, revision 2 (10 October 2026).
+**Status:** approved, revision 3 (10 October 2026).
+- **Section 14 approved (10 October 2026).** The project owner approved decisions 1–7 in these words: "approved decisions 1–7 with the five already-checked decisions unchanged and decision 7 adopted as written". The owner added one recorded precondition, which changes no decision. The owner said nothing in section 5 is to be built until it is in this status block. It is:
+  - **Precondition: fact size under uncovered record authorization.** When a list's per-record authorization is not covered by its SQL scope (`aggregateAuthorizationCovered` is false), `executeAuthorizedAggregate` pages through the whole matching set 100 IDs at a time and authorizes every ID under one 5-second deadline. Its cost is linear in the matching set, and past the deadline it returns 503 rather than a total. A fact is therefore aggregate-eligible at volume only when its list's record authorization is SQL-covered; otherwise the authorized-aggregate path bounds the fact's size. A0 and A3 each check this for their fact before they are called done.
+- **Revision 3** records that approval and the precondition (here, in section 9.2 and in A0's and A3's acceptance). Revision 2 was committed first as proposed (`a1b518a5f`), so the approval is a separate, auditable step, as Compare did at revision 2.
+- **Build:** no build instruction is recorded yet. When one is given, A1 runs on fixtures (decision 6). A0 waits for the metadata cleanup and its dimension Entities.
 - **What revision 2 adds** (audit round 3, section 19):
   - the response bound stated as a checked constant, `LIST_AGGREGATE_MAX_CELLS` (section 7.2). It corrects the audit's reading that a Summary response counts against `MAX_LIST_PAGE_SIZE`;
   - section 9.2 rewritten. The A1 discovery the audit asked for is answered from the code: today's group aggregates already compute over an authorized identity set when record authorization is not covered in SQL. The Summary inherits that path instead of the refusal revision 1 proposed (decision 7);
@@ -14,8 +18,7 @@
   - `minimumGroupSize` as a declared floor, not a disclosure-control guarantee;
   - Approval assignment blocked on a separate owner instruction;
   - Chart deferred to A5, and Dashboard out of scope.
-- **Not yet approved:** the contract properties in section 5 and the decisions in section 14. Implement nothing in section 5 until section 14 is approved.
-- **Two approved conditions were corrected by revision 1.** Section 3 verified both against the code, and audit round 3 confirmed the corrections. Section 19 records the disposition, and section 14 asks for confirmation:
+- **Two approved conditions were corrected by revision 1.** Section 3 verified both against the code, and audit round 3 confirmed the corrections. Section 19 records the disposition, and section 14's approval confirmed them:
   - the "bucket-unit drift" does not exist;
   - the "group-level drift" is Tree's approved per-level design, not a defect.
 - **Delivery:** nothing built.
@@ -310,6 +313,7 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 - **Why not refuse, as Tree and Matrix do.** Their computations (child existence, orphans, rank partitions) run in SQL shapes that the ID set does not restrict. A grouped aggregate is exactly the shape the ID restriction was built for, and refusing would make the Summary stricter than the Table's own group counts on the same list.
 - **A1 acceptance:** the repository applies the ID restriction to every grouping set and to the column-value query. A real-PostgreSQL test checks this with an authorizer that denies some records.
 - **Cost is stated, not hidden.** On a large fact with uncovered record authorization, every Summary request enumerates the set, and a set too large for the budget returns the 503 with a retry. A3's performance budget measures this case if A3's fact has such authorization.
+- **Precondition: fact size under uncovered record authorization.** When a list's per-record authorization is not covered by its SQL scope (`aggregateAuthorizationCovered` is false), `executeAuthorizedAggregate` pages through the whole matching set 100 IDs at a time and authorizes every ID under one 5-second deadline. Its cost is linear in the matching set, and past the deadline it returns 503 rather than a total. A fact is therefore aggregate-eligible at volume only when its list's record authorization is SQL-covered; otherwise the authorized-aggregate path bounds the fact's size. A0 and A3 each check this for their fact before they are called done.
 
 ### 9.3 `minimumGroupSize` is a floor, not a guarantee
 
@@ -393,7 +397,7 @@ Recorded so that A1–A2 do not paint the chart into a corner. Its contract is p
 
 Already approved (status block): the direction, the backing (views, then `insight` only on evidence), phase order, no FX, `minimumGroupSize` as a floor, Approval assignment blocked, Chart at A5, Dashboard out of scope.
 
-Decisions for approval:
+Decisions (all seven approved on 10 October 2026; status block):
 
 1. **The declaration** in sections 5.1, 5.3–5.6: dimensions, measures with `count` and `countDistinct`, defaults, request parameters and response.
 2. **Loading model: one request per expansion, with `GROUPING SETS` per request** (section 7.1), as Tree loads grouped levels. This replaces the earlier wording "a multi-level GROUP BY, with `ENTITY_LIST_MAX_GROUP_LEVELS` enforced by the server". Section 3 shows that the single `group` per request is Tree's approved design, not drift. Under this model the server bounds every request, and the level constant bounds saved state.
@@ -403,7 +407,7 @@ Decisions for approval:
 6. **A1 runs on fixtures in parallel with A0.** This is the same pattern as Board, Calendar, Gantt, Tree and Matrix: the runtime is proven on fixtures, and the real Entity waits for the metadata cleanup and for its dimension Entities (section 17).
 7. **Record authorization not covered in SQL uses the existing authorized-aggregate path, not a refusal** (section 9.2; revision 2). This replaces revision 1's `LIST_AGGREGATE_RECORD_AUTHORIZATION_UNSUPPORTED`.
 
-Audit round 3 recommended approving decisions 1–6 unchanged. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
+Audit round 3 recommended approving decisions 1–6 unchanged; the owner approved 1–7. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
 
 ## 15. Studio authoring and registration inventory
 
@@ -435,9 +439,9 @@ Foundation section 9's policy gates run before each commit.
 
 | Phase | Delivers | Prerequisites |
 | --- | --- | --- |
-| **A0** | View-backed read-only Entity onboarding proven end to end on `ledger.v_trial_balance`: published, authorized, listed in Table, reference dimensions resolving to readable labels | Metadata cleanup. Company code, ledger book and GL account Entities onboarded (cost centre, profit centre and project join as they are onboarded; until then those dimensions stay unpublished). A decision on fiscal period: keep year and number as dimensions, or add a fiscal-period reference to the view through a forward migration |
+| **A0** | View-backed read-only Entity onboarding proven end to end on `ledger.v_trial_balance`: published, authorized, listed in Table, reference dimensions resolving to readable labels | Metadata cleanup. Company code, ledger book and GL account Entities onboarded (cost centre, profit centre and project join as they are onboarded; until then those dimensions stay unpublished). A decision on fiscal period: keep year and number as dimensions, or add a fiscal-period reference to the view through a forward migration. Acceptance includes the fact-size precondition (status block): whether the list's record authorization is SQL-covered |
 | **A1** | Summary mode: rows at up to 3 levels with one request per expansion, `GROUPING SETS` totals, `count` and `countDistinct`, additivity and `notSummable`, currency states, `minimumGroupSize`, masked-field projection and the authorized-aggregate path (section 9.2), `LIST_AGGREGATE_MAX_CELLS` with its contract test, revision notice, drill-down to Table, saved and URL state, narrow layout, accessibility | Section 14 approved. On fixtures first; on A0's Entity once A0 lands |
-| **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, with index findings | A1. The business partner, item and commodity category Entities for readable dimensions |
+| **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, with index findings, and the fact-size precondition (status block) checked for this fact | A1. The business partner, item and commodity category Entities for readable dimensions |
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated` | A1; proven at volume after A3 |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
 | **A5** | Chart (section 13), after its contract is approved | A2 |
@@ -499,4 +503,6 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 3, note 1 | Name the request limit: about 65 rows against `MAX_LIST_PAGE_SIZE` (100), with about 35 rows of headroom | **Adopted in intent, corrected in substance.** A `groupsOnly` request reads no record page, so `limit` and `MAX_LIST_PAGE_SIZE` do not bound it. Rows and columns multiply rather than add, and the real bound is about 3,510 measure values. Stated as `LIST_AGGREGATE_MAX_CELLS` with a contract test over the caps (section 7.2), the conversion the audit asked for |
 | Audit round 3, note 2 | A1 should discover how A2 group counts behave when per-record authorization is not expressible in SQL; A2 may need the refusal | **Answered from the code now, with the opposite finding.** A2 does not refuse, and needs no refusal: `executeAuthorizedAggregate` aggregates over an authorized ID set and fails closed with 503 past its budget. Revision 1's proposed refusal is withdrawn, and the Summary inherits this path (section 9.2; decision 7). What remains for A1 is a test that the ID restriction reaches every grouping set |
 | Audit round 3 | Add an AGENTS.md entry carrying the operation rule and the additivity/base-rows rule | Adopted: "Entity list Aggregate (Summary)" in AGENTS.md, marked proposed. It names the shared list operation rather than `records.list`: the shared list calls `entityList.list`, and both use the same query service |
-| Audit round 3 | Committing the documents as proposed is safe | Recorded. Committing is the owner's call |
+| Audit round 3 | Committing the documents as proposed is safe | Committed as revision 2, proposed (`a1b518a5f`), with its three companions in one commit |
+| Audit round 4 | Both round-3 notes withdrawn as corrected; `executeAuthorizedAggregate` is linear in the matching set under one 5-second deadline, so it bounds the fact size when record authorization is not SQL-covered | Adopted as a recorded precondition at the owner's request: status block, section 9.2, A0 and A3 acceptance. It changes no decision |
+| Owner (10 October 2026) | Section 14 decisions 1–7 | Approved; status block |

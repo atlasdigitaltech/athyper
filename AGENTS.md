@@ -126,8 +126,9 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - The active design is the
   [Entity list Aggregate blueprint](docs/blueprints/entity-list-aggregate/blueprint.md).
   Read it before implementing grouped totals, pivoted summaries or report
-  views, and update it in place. It is proposed until the project owner
-  approves its contract properties; do not implement unapproved properties.
+  views, and update it in place. Implement only contract properties and
+  phases the project owner has approved, and observe the preconditions in
+  its status block.
 - Summary is a Layout of the shared Entity list, available to any eligible
   Entity through governed, published Meta Entity properties. Its read is new
   parameters on the existing list operation, never a second aggregate or
