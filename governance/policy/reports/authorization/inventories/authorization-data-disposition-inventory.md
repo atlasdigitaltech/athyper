@@ -6,10 +6,10 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013`
 - Approval: **pending**
-- Cataloged database tables: 782
+- Cataloged database tables: 783
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
-- Unclassified tables: 0
+- Unclassified tables: 1
 
 The checked-in inventory assigns one proposed disposition to every table
 discoverable in versioned DDL, every exactly registered runtime-created table,
@@ -57,6 +57,7 @@ or multiply classified runtime objects.
 | tenant_finance_configuration | 5 |
 | tenant_foundation | 1 |
 | trace_telemetry | 1 |
+| unknown | 1 |
 
 ## Table dispositions
 
@@ -405,6 +406,7 @@ or multiply classified runtime objects.
 | `document.workforce_request_validation` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.workforce_requisition` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.workforce_requisition_supplier` | document_metadata | migrate_with_referenced_objects | schema_default |
+| `entity_command_private.declared_operation_initialization` | unknown | unclassified | none |
 | `entity_command_private.operation_bootstrap_source` | governance_audit | archive_evidence_and_reinstall_only_for_verified_target | exact_table_override |
 | `event.authorization_invalidation_outbox` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.channel_consent_event` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |

@@ -4,7 +4,7 @@
   "policyHash": "c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 782,
+    "discoveredTables": 783,
     "externalObjects": 12,
     "exactTableOverrides": 16,
     "exactRuntimeTableOverrides": 1,
@@ -43,7 +43,8 @@
       "tenant_business_context_non_authorizing": 1,
       "tenant_finance_configuration": 5,
       "tenant_foundation": 1,
-      "trace_telemetry": 1
+      "trace_telemetry": 1,
+      "unknown": 1
     },
     "byDisposition": {
       "archive_evidence_and_reinstall_only_for_verified_target": 1,
@@ -82,14 +83,17 @@
       "retain_or_expire_under_observability_policy_without_business_replay": 1,
       "revoke_and_do_not_migrate": 1,
       "revoke_flush_and_do_not_migrate": 1,
-      "supported_encrypted_backup_and_restore": 1
+      "supported_encrypted_backup_and_restore": 1,
+      "unclassified": 1
     }
   },
   "gates": {
-    "everyDiscoveredTableHasOneDisposition": true,
+    "everyDiscoveredTableHasOneDisposition": false,
     "everyExternalObjectHasOneDisposition": true,
     "allDispositionsApproved": false,
-    "unknownTables": [],
+    "unknownTables": [
+      "entity_command_private.declared_operation_initialization"
+    ],
     "duplicateRuntimeRegistrations": [],
     "approvalStatus": "pending"
   },
@@ -6332,6 +6336,24 @@
       "disposition": "migrate_with_referenced_objects",
       "retention": "document class and legal-hold policy",
       "evidence": "metadata count/checksum plus object existence, size, and content hash",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "entity_command_private.declared_operation_initialization",
+      "schema": "entity_command_private",
+      "table": "declared_operation_initialization",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/60_declared_operation_initialization.sql",
+          "line": 4
+        }
+      ],
+      "decisionSource": "none",
+      "dataClass": "unknown",
+      "disposition": "unclassified",
+      "retention": "unclassified",
+      "evidence": "missing policy",
       "approvalStatus": "pending"
     },
     {
