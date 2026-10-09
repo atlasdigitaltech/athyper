@@ -60,6 +60,8 @@ Names and SQL types below define the intended contract. Metadata sample IDs such
 
 **Objective:** one shared native metadata path, clean maintained source/schema/container configuration, and Country/State Region usable on Studio, Neon and Mesh. Local development becomes **edit → save → publish → test**, without repeated human approval. Keep the existing framework, ledgers, compiler, typed storage, authentication, tenant scope and runtime permission semantics. No entity-name runtime allowlist, second authoring source or parallel publisher is introduced. No evidence pack, new audit phase, historical conversion requirement or exhaustive cleanup report is required.
 
+**Execution checkpoint — 10 October 2026:** the approved local exception is recorded in AGENTS.md and its standing authority is installed. Country and State Region release 3 have compiled, signed, activated and acknowledged on Studio, Neon and Mesh under that authority, without renewed per-edit human approval. Scheduled recovery must use the same persisted-authority publisher resolution as normal dispatch; a generic worker identity is not interchangeable. The existing qualification runbook records exact releases and remaining cleanup, rollback and authenticated UI acceptance. This local checkpoint does not establish nonlocal promotion or completion of the entire cleanup plan.
+
 #### Local authority and exact execution
 
 Reuse the machine-policy infrastructure, extending native admission and database/worker guards explicitly rather than fabricating `humanExecutionPolicy` evidence. Introduce the named approval basis `local_development_authority`. Existing exact draft/hash enrollment is not standing authority and cannot deliver successive edits without this change.

@@ -6319,6 +6319,29 @@ function registerPublication(
             const database = databases[coordinate.targetPlane];
             if (!database)
               throw new Error("PUBLICATION_APPLIER_DATABASE_UNAVAILABLE");
+            // Scheduled recovery starts in plane scope, not as the original
+            // publisher. Resolve the persisted release's enrolled workload
+            // exactly as normal dispatch does before using the legacy worker.
+            const coordinatedPrincipal = await coordinatedApplyPrincipal({
+              authority: authorityDatabase,
+              target: database,
+              configuration: coordinatedWorkload,
+              execution: {
+                planeKey: "studio",
+                scope: "tenant",
+                tenantId: coordinate.tenantId,
+                principalId: coordinatedWorkload?.publisher.principalId ?? "",
+              },
+              plane: coordinate.targetPlane,
+              deploymentId: coordinate.deploymentId,
+            });
+            if (coordinatedPrincipal)
+              return {
+                planeKey: coordinate.targetPlane,
+                tenantId: coordinate.tenantId,
+                principalId: coordinatedPrincipal,
+                scope: "tenant" as const,
+              };
             const principalId = await database
               .transaction()
               .execute(async (tx) => {
