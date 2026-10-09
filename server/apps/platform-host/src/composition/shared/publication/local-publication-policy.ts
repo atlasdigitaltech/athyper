@@ -125,9 +125,11 @@ export async function assertLocalPublicationEnrollment(
     throw Error("LOCAL_PUBLICATION_POLICY_EXPIRED");
   const users = policy.authority.developerPrincipalIds;
   const workloads = [policy.authorPrincipalId, policy.publisherPrincipalId];
+  // The control role reads IAM but cannot lock principal rows for update.
+  // Enrollment activation and every request independently recheck current actors.
   const result = await sql<{ id: string; principal_type: string }>`
     SELECT id,principal_type FROM master.principal WHERE tenant_id=${tenantId}::uuid
-    AND status='active' AND id=ANY(${[...users, ...workloads]}::uuid[]) FOR SHARE`.execute(
+    AND status='active' AND id=ANY(${[...users, ...workloads]}::uuid[])`.execute(
     tx,
   );
   if (

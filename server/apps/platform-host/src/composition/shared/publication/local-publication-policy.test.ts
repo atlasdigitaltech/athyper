@@ -56,3 +56,43 @@ it("rejects QA in local runtime, actor overlap, unsupported scope and duplicate 
   targets.authority.destinations.push(targets.authority.destinations[0]!);
   expect(() => parseLocalPublicationPolicy(targets)).toThrow();
 });
+
+it("checks enrolled actors with a read-only IAM grant and rejects revoked actors", async () => {
+  const { Kysely, PostgresDialect } = await import("kysely");
+  const { assertLocalPublicationEnrollment } =
+    await import("./local-publication-policy.js");
+  const p = policyFixture();
+  let revoked = false;
+  const db = new Kysely<Record<string, never>>({
+    dialect: new PostgresDialect({
+      pool: {
+        connect: async () => ({
+          release() {},
+          async query(statement: string) {
+            if (/FOR\s+(SHARE|UPDATE)/i.test(statement))
+              throw Error("permission denied for table principal");
+            return {
+              rows: revoked
+                ? []
+                : [
+                    { id: id(1), principal_type: "service_account" },
+                    { id: id(2), principal_type: "service_account" },
+                    { id: id(3), principal_type: "user" },
+                  ],
+            };
+          },
+        }),
+        end: async () => {},
+      } as never,
+    }),
+  });
+  try {
+    await assertLocalPublicationEnrollment(db, p as never, id(9));
+    revoked = true;
+    await expect(
+      assertLocalPublicationEnrollment(db, p as never, id(9)),
+    ).rejects.toThrow("ACTOR_REVOKED");
+  } finally {
+    await db.destroy();
+  }
+});
