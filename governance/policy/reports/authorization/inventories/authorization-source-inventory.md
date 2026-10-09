@@ -3,9 +3,9 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `2356e4ae5277fb483a952dd8538dc45954ccc13195e71edcd1ada9895e4b2776`
-Files scanned / authorization-bearing: 14716 / 2069
+Files scanned / authorization-bearing: 14722 / 2071
 Registered authorization objects: 470
-Aggregated object references: 1421
+Aggregated object references: 1425
 Writer references: 148
 Contract/UI field references: 3206
 Permission definitions / uses: 89 / 2236
@@ -80,8 +80,8 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 6 | 361 | 56 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 3 | 90 | 14 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 6 | 363 | 56 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 3 | 92 | 14 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 41 | 3 |
 | identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 4 | 187 | 27 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
@@ -900,7 +900,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `publication.read_authoring_resource_history` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/24_authoring_resource_history.sql:2 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `publication.read_authoring_resource_history` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/scripts/operations/upgrades/entity-product-command/20261008_entity_authoring_resource_history.sql:13 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `publication.read_native_product_review_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/63_native_review_source.sql:3 | `master.principal`<br>`master.principal_identity_binding` |
+| function | `publication.read_native_product_review_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql:3 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `publication.read_native_product_review_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261009_native_review_source.sql:5 | `master.principal`<br>`master.principal_identity_binding` |
+| function | `publication.read_native_product_review_source` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20261010_local_publication_recovery_source_read.sql:3 | `master.principal`<br>`master.principal_identity_binding` |
 | table | `runtime_meta.authorization_epoch` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/runtime_meta/03_tables.sql:70 | — |
 | trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:46 | — |
 | function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:107 | — |
@@ -1127,7 +1129,7 @@ Capture DDLs:
 | `master.principal` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-case-contract-publication.ts | 56 |
 | `master.principal` | update | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 205 |
 | `master.principal` | insert | test | server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts | 78 |
-| `master.principal` | update | test | server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts | 155, 158 |
+| `master.principal` | update | test | server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts | 156, 159 |
 | `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/deployment-recovery-compiler.postgres.test.ts | 86 |
 | `master.principal` | update | test | server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts | 105 |
 | `master.principal` | insert | test | server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts | 187 |
@@ -1555,7 +1557,7 @@ Capture DDLs:
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/native-runtime-lowering.test.ts | 44, 46 |
 | `allowed` | test | server/apps/platform-host/src/composition/atlas-feature-gates.test.ts | 32 |
 | `allowed` | test | server/apps/platform-host/src/composition/control-plane/__tests__/control-session.test.ts | 10 |
-| `allowed` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 137, 196 |
+| `allowed` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 137, 199 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/control-plane/local-publication.ts | 106, 120 |
 | `allowed` | test | server/apps/platform-host/src/composition/control-plane/product-command-governance.test.ts | 49, 63 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/control-plane/product-review.ts | 137, 147 |
@@ -2239,7 +2241,7 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11, 35 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 50 |
 | `denied` | test | server/apps/platform-host/src/composition/atlas-feature-gates.test.ts | 33 |
-| `denied` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 138, 220, 224, 227 |
+| `denied` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 138, 223, 227, 230 |
 | `denied` | test | server/apps/platform-host/src/composition/control-plane/product-command-governance.test.ts | 50 |
 | `denied` | runtime | server/apps/platform-host/src/composition/control-plane/product-command-governance.ts | 85 |
 | `denied` | runtime | server/apps/platform-host/src/composition/control-plane/product-review.ts | 124, 147 |
@@ -2676,7 +2678,7 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/native-runtime-lowering.test.ts | 76 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/studio-collection-compilation.test.ts | 15, 19, 20, 32 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 144, 193 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 144, 196 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/control-plane/local-publication.ts | 109, 117 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.test.ts | 16, 48, 96, 131, 175, 200 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.ts | 135, 149 |
@@ -3505,7 +3507,7 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/src/composition/control-plane/__tests__/control-session.test.ts | 10, 26 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/control-plane.ts | 85 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/identity.ts | 44, 45 |
-| `permissions` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 133, 222, 223 |
+| `permissions` | test | server/apps/platform-host/src/composition/control-plane/local-publication.test.ts | 133, 225, 226 |
 | `permissions` | test | server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.test.ts | 91, 183, 196 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.ts | 140, 174 |
 | `permissions` | test | server/apps/platform-host/src/composition/control-plane/native-bootstrap-compilation.test.ts | 165, 167 |
@@ -3539,7 +3541,7 @@ Capture DDLs:
 | `permissions` | runtime | server/apps/platform-host/src/composition/shared/publication/capability-qualification.ts | 76, 141, 377 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/shared/publication/compilation-recovery-authority.ts | 33, 36 |
 | `permissions` | test | server/apps/platform-host/src/composition/shared/publication/compiled-runtime-native.test.ts | 96 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/shared/publication/compiled-runtime.ts | 435, 561, 595 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/shared/publication/compiled-runtime.ts | 435, 563, 597 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/shared/publication/deployment-recovery-execution.ts | 33, 41 |
 | `permissions` | test | server/apps/platform-host/src/composition/shared/publication/entity-ai-manifest-publication.test.ts | 26, 36, 38 |
 | `permissions` | test | server/apps/platform-host/src/composition/shared/publication/entity-live-read-evidence.test.ts | 24 |

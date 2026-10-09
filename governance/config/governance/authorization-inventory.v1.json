@@ -38,10 +38,10 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14716,
-    "authorizationFiles": 2069,
+    "filesScanned": 14722,
+    "authorizationFiles": 2071,
     "registeredObjects": 470,
-    "objectReferences": 1421,
+    "objectReferences": 1425,
     "writerReferences": 148,
     "securitySymbolReferences": 133,
     "contractFieldReferences": 3206,
@@ -49,7 +49,7 @@
     "permissionUses": 2236,
     "routes": 30,
     "keycloakMappings": 145,
-    "derivedDatabaseObjects": 395,
+    "derivedDatabaseObjects": 397,
     "generatedArtifacts": 7,
     "captureSources": 0,
     "captureSourcesByPlane": {},
@@ -1109,7 +1109,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 6,
-      "readerCount": 361,
+      "readerCount": 363,
       "writerCount": 56,
       "executionCount": 0,
       "files": [
@@ -1274,6 +1274,7 @@
         "server/db/ddl/planes/studio/publication/43_local_publication_dispatch.sql",
         "server/db/ddl/planes/studio/publication/44_local_publication_release.sql",
         "server/db/ddl/planes/studio/publication/45_local_publication_identity_status.sql",
+        "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
         "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
         "server/db/ddl/planes/studio/snapshot/05_constraints.sql",
         "server/db/ddl/planes/studio/trustiam/12_identity_replay_approval.sql",
@@ -1303,6 +1304,7 @@
         "server/db/migrations/20261009_native_product_review.sql",
         "server/db/migrations/20261009_native_publication_authority.sql",
         "server/db/migrations/20261009_native_review_source.sql",
+        "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
         "server/db/migrations/equivalence/20260926_entity_execution_binding_storage.catalog.json",
         "server/db/migrations/equivalence/20260929_entity_owner_access.catalog.json",
         "server/db/migrations/equivalence/20260929_entity_owner_access.sql",
@@ -1507,7 +1509,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 3,
-      "readerCount": 90,
+      "readerCount": 92,
       "writerCount": 14,
       "executionCount": 0,
       "files": [
@@ -1560,6 +1562,7 @@
         "server/db/ddl/planes/studio/publication/25_authoring_resource_current_source.sql",
         "server/db/ddl/planes/studio/publication/26_authoring_resource_worker_reads.sql",
         "server/db/ddl/planes/studio/publication/36_native_publication_authority.sql",
+        "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
         "server/db/migrations/20261001_principal_person_source_authority.sql",
         "server/db/migrations/20261002_projected_profile_source_authority.sql",
         "server/db/migrations/20261002_security_definer_ownership.sql",
@@ -1572,6 +1575,7 @@
         "server/db/migrations/20261009_native_product_review.sql",
         "server/db/migrations/20261009_native_publication_authority.sql",
         "server/db/migrations/20261009_native_review_source.sql",
+        "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
         "server/db/prisma/schema.mesh.prisma",
         "server/db/prisma/schema.neon.prisma",
         "server/db/prisma/schema.studio.prisma",
@@ -14147,7 +14151,7 @@
     {
       "path": "server/apps/platform-host/src/composition/control-plane/local-publication.test.ts",
       "artifactClass": "test",
-      "sha256": "2c7c187a34f0a33099e9befb8fa88fde101f28c37d4c5e3d8a3fa0504145dd48"
+      "sha256": "5f520316719a20a566333855ce72f586d42b34feba9a54968379df9021aef06a"
     },
     {
       "path": "server/apps/platform-host/src/composition/control-plane/local-publication.ts",
@@ -14212,7 +14216,7 @@
     {
       "path": "server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts",
       "artifactClass": "test",
-      "sha256": "43b0b5b7931e9c12cd3386ebfa6375c10dfb53a4a4ba598cb0b6d0ad4766e9b9"
+      "sha256": "d61caa3c1f00a0d062b53c381ca5047200251b1b228310286f8b316dbc210508"
     },
     {
       "path": "server/apps/platform-host/src/composition/control-plane/product-review.ts",
@@ -14477,12 +14481,12 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/compiled-runtime-native.test.ts",
       "artifactClass": "test",
-      "sha256": "3960cdacc19f9a1712b7429f17560b6dfe96be04b965c8d842bfd00bceb09ccc"
+      "sha256": "6b79fde076576c14e6472a19fa247b8c73a77dbf145cdad6123973c37b03b727"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/compiled-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "33fc0fa090257bd2ca35db99379f3ab4ff03d749522c1222cca993993f735f8d"
+      "sha256": "8a58fe05fce120a2a67cb0ff2d0ced54f759853eb30db3b69d25b5fe486d8368"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/deployment-recovery-authority.ts",
@@ -14552,7 +14556,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-database.postgres.test.ts",
       "artifactClass": "test",
-      "sha256": "804f88aff800bef95c12b7008f6b6d9e7324d16934c50a824d3e01b3ab57614e"
+      "sha256": "ef068b3f10a259e0cecc29dfa57ff0af4c456a36903c592d6f53e71e9413c1cd"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/local-publication-policy.test.ts",
@@ -15685,6 +15689,11 @@
       "sha256": "99f3d5bcf11170463b4f480cb6de801bc0fdb13d12a98008fafb30ad2d96d051"
     },
     {
+      "path": "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
+      "artifactClass": "ddl",
+      "sha256": "a05d6e1e68f167e6ccc7fded57d5bb132735df4290e03260320e77785d43e3d5"
+    },
+    {
       "path": "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
       "artifactClass": "ddl",
       "sha256": "f787535a4ae05d6f95db334eefdc3e4f458c1c05fcac901aed7c1b296b58a762"
@@ -15870,6 +15879,11 @@
       "sha256": "8b67a738c511db7af45ceb9e5292e7e991626fc5662fcd1fdfcca74e07e1b6a2"
     },
     {
+      "path": "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
+      "artifactClass": "runtime",
+      "sha256": "a05d6e1e68f167e6ccc7fded57d5bb132735df4290e03260320e77785d43e3d5"
+    },
+    {
       "path": "server/db/migrations/equivalence/20260926_entity_execution_binding_storage.catalog.json",
       "artifactClass": "runtime",
       "sha256": "5b5350af84a07d20541b8b048d633cab97d4e2d518750828e9d9457596b1f79d"
@@ -15892,7 +15906,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "cdaa0f702aa9f89fb4f56f8d2021a84c9fb19b5340c8d949a831fce1d459b4bd"
+      "sha256": "bd56c06030fd78f416e4c29b9ebc220a8e7597cb86e8870a7454d40920435c20"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -18782,7 +18796,7 @@
     {
       "path": "server/packages/services/publication/src/__tests__/compiled-runtime-worker.test.ts",
       "artifactClass": "test",
-      "sha256": "57b3caa16e8bdd75ab01eee25b4b0417208f4b65c20edc467f1473a456a75b42"
+      "sha256": "106341f8be23697fa18ab4717d18f910ec423d13fc4540804bdd25feaa0bed25"
     },
     {
       "path": "server/packages/services/publication/src/__tests__/dev-publication-classifier.test.ts",
@@ -25158,10 +25172,10 @@
       "path": "server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts",
       "artifactClass": "test",
       "access": "update",
-      "line": 155,
+      "line": 156,
       "lines": [
-        155,
-        158
+        156,
+        159
       ]
     },
     {
@@ -28075,6 +28089,17 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
+      "path": "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
+      "artifactClass": "ddl",
+      "access": "read",
+      "line": 9,
+      "lines": [
+        9
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
       "path": "server/db/ddl/planes/studio/runtime_meta/05_constraints.sql",
       "artifactClass": "ddl",
       "access": "reference",
@@ -28542,6 +28567,17 @@
       "line": 11,
       "lines": [
         11
+      ]
+    },
+    {
+      "objectId": "identity.principal",
+      "qualifiedName": "master.principal",
+      "path": "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 9,
+      "lines": [
+        9
       ]
     },
     {
@@ -31718,6 +31754,17 @@
     {
       "objectId": "identity.principal_binding",
       "qualifiedName": "master.principal_identity_binding",
+      "path": "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
+      "artifactClass": "ddl",
+      "access": "read",
+      "line": 9,
+      "lines": [
+        9
+      ]
+    },
+    {
+      "objectId": "identity.principal_binding",
+      "qualifiedName": "master.principal_identity_binding",
       "path": "server/db/migrations/20261001_principal_person_source_authority.sql",
       "artifactClass": "runtime",
       "access": "read",
@@ -31869,6 +31916,17 @@
       "line": 11,
       "lines": [
         11
+      ]
+    },
+    {
+      "objectId": "identity.principal_binding",
+      "qualifiedName": "master.principal_identity_binding",
+      "path": "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
+      "artifactClass": "runtime",
+      "access": "read",
+      "line": 9,
+      "lines": [
+        9
       ]
     },
     {
@@ -51277,7 +51335,7 @@
       "artifactClass": "test",
       "lines": [
         137,
-        196
+        199
       ]
     },
     {
@@ -68377,9 +68435,9 @@
       "artifactClass": "test",
       "lines": [
         138,
-        220,
-        224,
-        227
+        223,
+        227,
+        230
       ]
     },
     {
@@ -89363,7 +89421,7 @@
       "artifactClass": "test",
       "lines": [
         144,
-        193
+        196
       ]
     },
     {
@@ -98200,8 +98258,8 @@
       "artifactClass": "test",
       "lines": [
         133,
-        222,
-        223
+        225,
+        226
       ]
     },
     {
@@ -98589,8 +98647,8 @@
       "artifactClass": "runtime",
       "lines": [
         435,
-        561,
-        595
+        563,
+        597
       ]
     },
     {
@@ -137150,8 +137208,8 @@
       "lines": [
         137,
         144,
-        193,
-        224
+        196,
+        227
       ]
     },
     {
@@ -149551,8 +149609,34 @@
     {
       "qualifiedName": "publication.read_native_product_review_source",
       "kind": "function",
+      "path": "server/db/ddl/planes/studio/publication/60_local_publication_recovery_source_read.sql",
+      "line": 3,
+      "dependencies": [
+        "master.principal",
+        "master.principal_identity_binding"
+      ],
+      "classification": "structural_dependency",
+      "owner": "platform-iam",
+      "disposition": "review_with_registered_dependency"
+    },
+    {
+      "qualifiedName": "publication.read_native_product_review_source",
+      "kind": "function",
       "path": "server/db/migrations/20261009_native_review_source.sql",
       "line": 5,
+      "dependencies": [
+        "master.principal",
+        "master.principal_identity_binding"
+      ],
+      "classification": "structural_dependency",
+      "owner": "platform-iam",
+      "disposition": "review_with_registered_dependency"
+    },
+    {
+      "qualifiedName": "publication.read_native_product_review_source",
+      "kind": "function",
+      "path": "server/db/migrations/20261010_local_publication_recovery_source_read.sql",
+      "line": 3,
       "dependencies": [
         "master.principal",
         "master.principal_identity_binding"
