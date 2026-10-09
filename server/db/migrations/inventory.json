@@ -2539,6 +2539,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/41_local_publication_request.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261009_local_publication_dispatch.sql",
+      "path": "migrations/20261009_local_publication_dispatch.sql",
+      "sha256": "ae89c8272ecf6b7198652e017b373b71b6b3c4e0852aa3cb3acc6b98da311d32",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Bind developer command IDs to exact local requests and expose bounded worker discovery for durable queue delivery.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/43_local_publication_dispatch.sql"
+      ]
     }
   ]
 }

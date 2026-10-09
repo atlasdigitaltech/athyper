@@ -1,3 +1,4 @@
+import { loadPublicationWorkloadConfiguration } from "../composition/shared/publication/workload-configuration.js";
 import { createNativeBootstrapStartup } from "../composition/control-plane/native-bootstrap-startup.js";
 import {
   createDeployedComponentArtifactQualification,
@@ -343,6 +344,10 @@ export async function startControlApi() {
             : {}),
         })
       : undefined;
+    const localPublicationConfiguration = loadPublicationWorkloadConfiguration(
+      process.env,
+      "local",
+    );
     const drain = new HttpDrainController();
     const app = createHttpApplication({
       environment: "local",
@@ -360,6 +365,14 @@ export async function startControlApi() {
       rateLimit: { windowMs: 60000, maxRequests: 60, scope: "source" },
       configure(application) {
         registerControlPlane(application, {
+          ...(localPublicationConfiguration?.localAuthority
+            ? {
+                localPublication: {
+                  configuration: localPublicationConfiguration,
+                  targetDatabases: nativeTargetDatabases,
+                },
+              }
+            : {}),
           ...(nativeBootstrap.nativeSource
             ? { nativeSource: nativeBootstrap.nativeSource }
             : {}),

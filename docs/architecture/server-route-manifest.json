@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1223,
+    "identities": 1224,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 355,
+    "currentOnly": 356,
     "legacyOccurrences": 898,
-    "currentOccurrences": 421
+    "currentOccurrences": 422
   },
   "routes": [
     {
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3909,
+          "line": 3913,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3299,
+          "line": 3303,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -15935,6 +15935,21 @@
           "line": 165,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
           "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/local-publication",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/local-publication",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/control-plane/local-publication.ts",
+          "line": 256,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/local-publication",
+          "kind": "contract"
         }
       ],
       "status": "current-only"

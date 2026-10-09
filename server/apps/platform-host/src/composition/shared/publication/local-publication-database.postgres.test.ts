@@ -206,12 +206,38 @@ INSERT INTO snapshot.entity_draft_save VALUES('${draft}',NULL,1,${literal(graph)
           "utf8",
         ).split("GRANT SELECT")[0]!,
       );
+      q(
+        readFileSync(
+          new URL(
+            "../../../../../../db/ddl/planes/studio/publication/43_local_publication_dispatch.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
       const admit = `SELECT publication.admit_local_publication_request(${literal(request)});`;
       expect(
         q(
           `BEGIN; ${context("athyper_control_api", developer)} ${admit} ${admit} COMMIT;`,
         ),
       ).toContain(request.hash);
+      const commandId = randomUUID();
+      const admitCommand = `SELECT publication.admit_local_publication_command(${literal(request)},'${commandId}');`;
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} ${admitCommand} ${admitCommand} SELECT publication.read_local_publication_admission('${commandId}')->>'hash'; COMMIT;`,
+        ),
+      ).toContain(request.hash);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} SELECT * FROM publication.pending_local_publication_requests(NULL,100); ROLLBACK;`,
+        ),
+      ).toContain(request.hash);
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT * FROM publication.pending_local_publication_requests(NULL,100); ROLLBACK;`,
+        ),
+      ).toThrow(/permission denied/);
       expect(
         q(`BEGIN; ${context("athyper_worker", publisher)} SELECT set_config('app.local_publication_request_hash','${request.hash}',true);
         SELECT publication.native_worker_entity_visible('${entity}'),publication.native_worker_entity_visible('${owner}'); ROLLBACK;`),
@@ -383,6 +409,19 @@ GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bi
           `BEGIN; ${context("athyper_control_api", developer)} ${admit} ROLLBACK;`,
         ),
       ).toContain(request.hash);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.read_local_publication_admission('${commandId}')->>'hash'; ROLLBACK;`,
+        ),
+      ).toContain(request.hash);
+      expect(
+        q(
+          `BEGIN; ${context("athyper_worker", publisher)} SELECT count(*) FROM publication.pending_local_publication_requests(NULL,100); ROLLBACK;`,
+        )
+          .trim()
+          .split("\n")
+          .at(-1),
+      ).toBe("0");
       expect(
         q(
           `SELECT count(*),count(DISTINCT graph::text) FROM snapshot.entity_draft_save WHERE change_set_id='${draft}';`,

@@ -23,7 +23,7 @@
     "database-commands:migrated": 19,
     "database-commands:new": 102,
     "jobs:deferred": 1,
-    "jobs:new": 66,
+    "jobs:new": 67,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
     "operational-scripts:new": 413,
@@ -11970,6 +11970,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/services/publication/src/publication-jobs.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "jobs:publication.dispatch-local-requests",
+      "category": "jobs",
+      "key": "publication.dispatch-local-requests",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/publication/local-publication-dispatch.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

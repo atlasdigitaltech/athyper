@@ -1,3 +1,4 @@
+import { registerLocalPublicationAdmission } from "./local-publication.js";
 import { registerControlResourceReview } from "./resource-review-routes.js";
 import type { createControlResourceReview } from "./resource-review.js";
 import {
@@ -41,6 +42,10 @@ export function registerControlPlane(
     productLabelEnrollment?: Parameters<typeof createProductLabelEnrollment>[0];
     productReferenceEnrollment?: ProductReferenceEnrollmentOptions;
     resourceReview?: ReturnType<typeof createControlResourceReview>;
+    localPublication?: Pick<
+      Parameters<typeof registerLocalPublicationAdmission>[1],
+      "configuration" | "targetDatabases"
+    >;
     nativeSource?: Parameters<
       typeof registerControlProductReview
     >[1]["nativeSource"];
@@ -53,6 +58,15 @@ export function registerControlPlane(
       service: options.resourceReview,
     });
   registerControlProductReview(application, options);
+  if (options.localPublication) {
+    if (!options.nativeSource)
+      throw Error("LOCAL_PUBLICATION_NATIVE_CONFIGURATION_REQUIRED");
+    registerLocalPublicationAdmission(application, {
+      ...options,
+      ...options.localPublication,
+      source: options.nativeSource,
+    });
+  }
   if (options.productLabelEnrollment) {
     registerProductLabelEnrollmentRoutes(application, {
       ...options.productLabelEnrollment,

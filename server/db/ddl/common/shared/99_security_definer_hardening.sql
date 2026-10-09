@@ -421,6 +421,24 @@ BEGIN
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,
     "reason": "Exact local DEV request lifecycle; active standing scope, distinct workloads, unchanged native graph, recorded revision progression and idempotent phase replay."
+  },
+  {
+    "signature": "publication.read_local_publication_admission(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local DEV developer command replay or publisher-scoped pending request discovery; no direct request/source table grants."
+  },
+  {
+    "signature": "publication.admit_local_publication_command(jsonb, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local DEV developer command replay or publisher-scoped pending request discovery; no direct request/source table grants."
+  },
+  {
+    "signature": "publication.pending_local_publication_requests(text, integer)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact local DEV developer command replay or publisher-scoped pending request discovery; no direct request/source table grants."
   }
 ]'::jsonb)
             WHERE value->>'signature' = identity_signature;
@@ -596,6 +614,7 @@ BEGIN
   "ops.acknowledge_record_transfer_cleanup(text, uuid, text, uuid, text, text, timestamp with time zone)",
   "ops.record_transfer_cleanup_candidates(text, timestamp with time zone, integer)",
   "ops.record_transfer_stuck_counts(timestamp with time zone, integer)",
+  "publication.admit_local_publication_command(jsonb, uuid)",
   "publication.admit_local_publication_request(jsonb)",
   "publication.fn_acknowledge_activation(uuid, text, text, uuid, jsonb)",
   "publication.fn_authorization_successor_compilation_source(uuid)",
@@ -639,6 +658,8 @@ BEGIN
   "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
   "publication.local_publication_phase_authority(uuid, text)",
   "publication.native_worker_entity_visible(uuid)",
+  "publication.pending_local_publication_requests(text, integer)",
+  "publication.read_local_publication_admission(uuid)",
   "publication.read_local_publication_request(text)",
   "publication.transition_local_publication_request(text, text, jsonb)",
   "runtime_meta.fn_activate_release(uuid, jsonb)",

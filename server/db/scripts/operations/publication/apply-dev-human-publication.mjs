@@ -14,6 +14,8 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-DISPATCH":
+    "20261009_local_publication_dispatch.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ADMISSION-REPLAY":
     "20261009_local_publication_admission_replay.sql",
   "--apply=DEV-LOCAL-PUBLICATION-TRANSITIONS":
@@ -167,7 +169,12 @@ try {
     assert.equal(installed.status, "applied");
   }
 
-  if (name === "20261009_local_publication_admission_replay.sql") {
+  if (
+    [
+      "20261009_local_publication_admission_replay.sql",
+      "20261009_local_publication_dispatch.sql",
+    ].includes(name)
+  ) {
     const dependencyName = "20261009_local_publication_transitions.sql";
     const dependency = JSON.parse(
       readFileSync(new URL("migrations/inventory.json", root), "utf8"),

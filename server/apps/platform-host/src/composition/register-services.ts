@@ -1,4 +1,8 @@
 import {
+  createLocalPublicationDispatchHandler,
+  DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+} from "./shared/publication/local-publication-dispatch.js";
+import {
   createLocalPublicationPreparationHandler,
   PREPARE_LOCAL_PUBLICATION_JOB,
 } from "./shared/publication/local-publication-job.js";
@@ -6347,6 +6351,44 @@ function registerPublication(
       executionRetentionDays: 90,
     });
   }
+  if (coordinatedWorkload?.localAuthority) {
+    container.runtimes.jobDefinitions.push({
+      code: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+      owner: "@athyper/server-platform-host",
+      queue: PUBLICATION_AUTHORITY_QUEUE,
+      name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+      scope: "plane",
+      payloadSchema: {
+        name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+        version: 1,
+      },
+      timeoutMs: 60_000,
+      maxAttempts: 3,
+      executionRetentionDays: 90,
+    });
+    if (container.runtimes.scheduler)
+      container.runtimes.scheduledJobs.push({
+        scheduleId: "publication-dispatch-local-requests",
+        queue: PUBLICATION_AUTHORITY_QUEUE,
+        name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+        data: {},
+        pattern: { kind: "interval", everyMs: 5000 },
+        options: {
+          jobId: "publication:dispatch-local-requests",
+          maxAttempts: 3,
+          payloadSchema: {
+            name: DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+            version: 1,
+          },
+          execution: {
+            planeKey: "studio",
+            scope: "plane",
+            tenantId: coordinatedWorkload.tenantId,
+            principalId: coordinatedWorkload.publisher.principalId,
+          },
+        },
+      });
+  }
   if (container.runtimes.scheduler && config.publication.recoveryEnabled)
     container.runtimes.scheduledJobs.push({
       scheduleId: "publication-recover-stalled",
@@ -6435,6 +6477,15 @@ function registerPublication(
     });
     const localPreparation = localPublicationPreparations.get(container);
     if (localPreparation) {
+      container.runtimes.jobs.register(
+        PUBLICATION_AUTHORITY_QUEUE,
+        DISPATCH_LOCAL_PUBLICATION_REQUESTS_JOB,
+        createLocalPublicationDispatchHandler({
+          database: authorityDatabase,
+          configuration: localPreparation.configuration,
+          jobs: container.runtimes.jobs,
+        }),
+      );
       container.runtimes.jobs.register(
         PUBLICATION_AUTHORITY_QUEUE,
         PREPARE_LOCAL_PUBLICATION_JOB,

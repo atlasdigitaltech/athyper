@@ -9,12 +9,7 @@ import { withLocalPublicationRequest } from "./local-publication-database.js";
 import { readFileSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import { sql, type Kysely, type Transaction } from "kysely";
-import {
-  compileNativePublication,
-  nativePublicationTargets,
-  sha256,
-} from "@athyper/server-plane-studio-meta-entity-authoring";
-import { publicationCompilerIdentity } from "./compiler-build.js";
+import { resolveLocalPublicationInputs } from "./local-publication-inputs.js";
 import { resolveLocalPublicationAuthority } from "./local-publication-policy.js";
 import type { PublicationWorkloadConfiguration } from "./workload-configuration.js";
 import { createNativeReviewSource } from "../../control-plane/native-review-source.js";
@@ -132,7 +127,6 @@ export function createNativePublicationStartup(options: {
           )
             throw Error("LOCAL_PUBLICATION_WORKLOAD_MISMATCH");
           const resolved = await source(tx, request.inputs.changeSetId);
-          const compiled = compileNativePublication(resolved);
           const current = await sql<{
             lock_version: string | number;
           }>`SELECT root_json->>'lock_version' AS lock_version FROM publication.read_native_worker_source(${request.inputs.changeSetId}::uuid,4194304)`.execute(
@@ -140,56 +134,16 @@ export function createNativePublicationStartup(options: {
           );
           if (current.rows.length !== 1)
             throw Error("LOCAL_PUBLICATION_SOURCE_UNAVAILABLE");
-          const key = `metadata.${resolved.graph.entity.entityClass === "reference" ? "reference" : "entity"}.${resolved.graph.entity.entityCode}`;
-          const targets = [];
-          for (const target of nativePublicationTargets(
-            resolved.graph,
-            compiled,
-          )) {
-            const db =
-              target.targetPlane === "studio"
-                ? tx
-                : options.targetDatabases?.[target.targetPlane];
-            if (!db) throw Error("LOCAL_PUBLICATION_TARGET_DATABASE_REQUIRED");
-            const head = await sql<{
-              artifact_hash: string;
-              valid: boolean;
-            }>`SELECT h.artifact_hash,
-          (a.status='active' AND a.publication_key=h.publication_key AND a.artifact_hash=h.artifact_hash
-          AND a.source_release_no=h.source_release_no) AS valid
-          FROM runtime_meta.release_activation_head h LEFT JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
-          WHERE h.publication_key=${key}`.execute(db);
-            if (
-              head.rows.length > 1 ||
-              (head.rows.length === 1 && head.rows[0]!.valid !== true)
-            )
-              throw Error("LOCAL_PUBLICATION_HEAD_INVALID");
-            targets.push({
-              plane: target.targetPlane,
-              instance: local.instance,
-              predecessorHash: head.rows[0]?.artifact_hash ?? null,
-              artifactHash: target.artifact.descriptorHash,
-            });
-          }
           return {
             authority,
-            inputs: {
+            inputs: await resolveLocalPublicationInputs({
+              database: tx,
+              targetDatabases: options.targetDatabases,
+              source: resolved,
               changeSetId: request.inputs.changeSetId,
-              // SQL has checked any lifecycle advance against this exact receipt
-              // and identical saved graph. The immutable input pins the save,
-              // not the later submission/approval revision.
               revision: request.inputs.revision,
-              sourceHash: compiled.contractHash,
-              compilerHash: publicationCompilerIdentity().buildHash,
-              resourceHashes: [
-                ...new Set(
-                  (resolved.targetCompilers ?? [resolved.compiler]).map(
-                    (context) => sha256(context),
-                  ),
-                ),
-              ].sort(),
-              targets,
-            },
+              instance: local.instance,
+            }),
           };
         },
       }
