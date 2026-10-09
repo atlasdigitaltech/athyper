@@ -1604,6 +1604,7 @@ export const entityRuntimeMessages = {
   "list.mode.calendar": ["Calendar", "Kalendar", "التقويم"],
   "list.mode.gantt": ["Gantt", "Gantt", "مخطط جانت"],
   "list.mode.tree": ["Tree", "Pokok", "شجرة"],
+  "list.mode.matrix": ["Matrix", "Matriks", "مصفوفة"],
   "list.density.compact": ["Compact", "Padat", "مضغوط"],
   "list.density.comfortable": ["Comfortable", "Selesa", "مريح"],
   "list.density.spacious": ["Spacious", "Luas", "واسع"],
@@ -2195,5 +2196,230 @@ export const entityRuntimeMessages = {
     "Line items aren't available for this list.",
     "Item baris tidak tersedia untuk senarai ini.",
     "البنود غير متاحة لهذه القائمة.",
+  ],
+  "list.matrix.chooseParent": [
+    "Choose a {parent} to see the matrix.",
+    "Pilih {parent} untuk melihat matriks.",
+    "اختر {parent} لعرض المصفوفة.",
+  ],
+  "list.matrix.chooseParentHint": [
+    "Filter the list to one {parent}.",
+    "Tapis senarai kepada satu {parent}.",
+    "صفِّ القائمة إلى {parent} واحد.",
+  ],
+  "list.matrix.searchRows": [
+    "Search {rows}",
+    "Cari {rows}",
+    "ابحث في {rows}",
+  ],
+  "list.matrix.display": [
+    "Display",
+    "Paparan",
+    "العرض",
+  ],
+  "list.matrix.presetPrimaryRank": [
+    "{measure} and rank",
+    "{measure} dan kedudukan",
+    "{measure} والترتيب",
+  ],
+  "list.matrix.presetPrimary": [
+    "{measure} only",
+    "{measure} sahaja",
+    "{measure} فقط",
+  ],
+  "list.matrix.presetEverything": [
+    "Everything",
+    "Semua",
+    "كل شيء",
+  ],
+  "list.matrix.showAllColumns": [
+    "Show all {columns}",
+    "Tunjukkan semua {columns}",
+    "إظهار كل {columns}",
+  ],
+  "list.matrix.showSelectedColumns": [
+    "Show only selected ({count, number})",
+    "Tunjukkan yang dipilih sahaja ({count, number})",
+    "إظهار المحدد فقط ({count, number})",
+  ],
+  "list.matrix.compareSelected": [
+    "Compare selected ({count, number})",
+    "Bandingkan yang dipilih ({count, number})",
+    "مقارنة المحدد ({count, number})",
+  ],
+  "list.matrix.basis": [
+    "{measure} ranks on: {basis}",
+    "Kedudukan {measure} berdasarkan: {basis}",
+    "يُرتَّب {measure} على أساس: {basis}",
+  ],
+  "list.matrix.revisionChanged": [
+    "Values changed since the first page. Refresh to see current ranks.",
+    "Nilai telah berubah sejak halaman pertama. Muat semula untuk melihat kedudukan semasa.",
+    "تغيّرت القيم منذ الصفحة الأولى. حدّث لرؤية الترتيب الحالي.",
+  ],
+  "list.matrix.refresh": [
+    "Refresh",
+    "Muat semula",
+    "تحديث",
+  ],
+  "list.matrix.fieldsRestricted": [
+    "Some values aren't shown with your access.",
+    "Sesetengah nilai tidak dipaparkan dengan akses anda.",
+    "بعض القيم غير معروضة بصلاحياتك.",
+  ],
+  "list.matrix.filteredCells": [
+    "Filters apply to the cells: an empty cell may hold a record the filters exclude.",
+    "Penapis digunakan pada sel: sel kosong mungkin mengandungi rekod yang dikecualikan oleh penapis.",
+    "تنطبق عوامل التصفية على الخلايا: قد تحتوي خلية فارغة على سجل استبعدته التصفية.",
+  ],
+  "list.matrix.failed": [
+    "The matrix couldn't be loaded.",
+    "Matriks tidak dapat dimuatkan.",
+    "تعذّر تحميل المصفوفة.",
+  ],
+  "list.matrix.retry": [
+    "Try again",
+    "Cuba lagi",
+    "إعادة المحاولة",
+  ],
+  "list.matrix.incomplete": [
+    "This page couldn't be read completely.",
+    "Halaman ini tidak dapat dibaca sepenuhnya.",
+    "تعذّرت قراءة هذه الصفحة بالكامل.",
+  ],
+  "list.matrix.loading": [
+    "Loading the matrix…",
+    "Memuatkan matriks…",
+    "جارٍ تحميل المصفوفة…",
+  ],
+  "list.matrix.noRows": [
+    "No {rows} for this selection.",
+    "Tiada {rows} untuk pilihan ini.",
+    "لا توجد {rows} لهذا التحديد.",
+  ],
+  "list.matrix.noColumns": [
+    "No {columns} for this selection.",
+    "Tiada {columns} untuk pilihan ini.",
+    "لا توجد {columns} لهذا التحديد.",
+  ],
+  "list.matrix.caption": [
+    "{rows} by {columns}: {measure}",
+    "{rows} mengikut {columns}: {measure}",
+    "{rows} حسب {columns}: {measure}",
+  ],
+  "list.matrix.selectColumn": [
+    "Select {column}",
+    "Pilih {column}",
+    "تحديد {column}",
+  ],
+  "list.matrix.coverage": [
+    "{count, number} of {total, number} {rows}",
+    "{count, number} daripada {total, number} {rows}",
+    "{count, number} من {total, number} {rows}",
+  ],
+  "list.matrix.partial": [
+    "Partial",
+    "Separa",
+    "جزئي",
+  ],
+  "list.matrix.notEligible": [
+    "Not eligible",
+    "Tidak layak",
+    "غير مؤهل",
+  ],
+  "list.matrix.declinedChip": [
+    "Declined",
+    "Menolak",
+    "معتذر",
+  ],
+  "list.matrix.declined": [
+    "Declined to participate",
+    "Menolak untuk menyertai",
+    "اعتذر عن المشاركة",
+  ],
+  "list.matrix.absent": [
+    "None",
+    "Tiada",
+    "لا يوجد",
+  ],
+  "list.matrix.noValueShown": [
+    "no value shown",
+    "tiada nilai dipaparkan",
+    "لا توجد قيمة معروضة",
+  ],
+  "list.matrix.notEligibleRank": [
+    "Not ranked · not eligible",
+    "Tidak disenaraikan · tidak layak",
+    "غير مرتّب · غير مؤهل",
+  ],
+  "list.matrix.unitsDiffer": [
+    "Units differ",
+    "Unit berbeza",
+    "الوحدات مختلفة",
+  ],
+  "list.matrix.lowest": [
+    "Lowest",
+    "Terendah",
+    "الأدنى",
+  ],
+  "list.matrix.highest": [
+    "Highest",
+    "Tertinggi",
+    "الأعلى",
+  ],
+  "list.matrix.rankOf": [
+    "Rank {rank, number} of {count, number}",
+    "Kedudukan {rank, number} daripada {count, number}",
+    "الترتيب {rank, number} من {count, number}",
+  ],
+  "list.matrix.rowsOf": [
+    "{rows} {from, number}–{to, number} of {total, number}",
+    "{rows} {from, number}–{to, number} daripada {total, number}",
+    "{rows} {from, number}–{to, number} من {total, number}",
+  ],
+  "list.matrix.rowsFrom": [
+    "{rows} {from, number}–{to, number}",
+    "{rows} {from, number}–{to, number}",
+    "{rows} {from, number}–{to, number}",
+  ],
+  "list.matrix.previousRows": [
+    "Previous {rows}",
+    "{rows} sebelumnya",
+    "{rows} السابقة",
+  ],
+  "list.matrix.nextRows": [
+    "Next {rows}",
+    "{rows} seterusnya",
+    "{rows} التالية",
+  ],
+  "list.matrix.columnsOf": [
+    "{columns} {from, number}–{to, number} of {total, number}",
+    "{columns} {from, number}–{to, number} daripada {total, number}",
+    "{columns} {from, number}–{to, number} من {total, number}",
+  ],
+  "list.matrix.columnsFrom": [
+    "{columns} {from, number}–{to, number}",
+    "{columns} {from, number}–{to, number}",
+    "{columns} {from, number}–{to, number}",
+  ],
+  "list.matrix.previousColumns": [
+    "Previous {columns}",
+    "{columns} sebelumnya",
+    "{columns} السابقة",
+  ],
+  "list.matrix.nextColumns": [
+    "Next {columns}",
+    "{columns} seterusnya",
+    "{columns} التالية",
+  ],
+  "list.mode.reason.matrixKeyUnavailable": [
+    "a field it pivots on is not available to you.",
+    "medan yang dipangsikannya tidak tersedia untuk anda.",
+    "حقل يعتمد عليه غير متاح لك.",
+  ],
+  "list.mode.reason.matrixMeasureUnavailable": [
+    "none of its values is available to you.",
+    "tiada nilainya tersedia untuk anda.",
+    "لا تتوفر لك أي من قيمه.",
   ],
 } as const;

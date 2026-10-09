@@ -49,6 +49,8 @@ export function saveableViewState(
     ...(state.calendar ? { calendar: state.calendar } : {}),
     // Gantt's date field and zoom are saved; its anchor never is.
     ...(state.gantt ? { gantt: state.gantt } : {}),
+    // Matrix measures and pinned participants are saved; its pages never are.
+    ...(state.matrix ? { matrix: state.matrix } : {}),
   });
 }
 

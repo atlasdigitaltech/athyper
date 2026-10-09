@@ -59,6 +59,10 @@ export interface ListMatrixV1 {
   readonly exactCounts?: true;
   /** Some declared measures or header fields are not readable (one statement, no names). */
   readonly fieldsRestricted?: true;
+  /** The fact Entity's access does not follow the parent's (record
+   * predicates, owner access or a non-tenant directory scope): a missing fact
+   * may be hidden, so the absence label is never claimed. */
+  readonly accessIndependent?: true;
 }
 
 const axis = (raw: unknown, at: string, extra: readonly string[]) => {
@@ -154,7 +158,7 @@ export function isListMatrixPage(value: unknown): value is number {
 export function parseListMatrix(raw: unknown, listed: ReadonlyMap<string, { readonly valueKind: string }>): ListMatrixV1 {
   const root = "surface.matrix";
   const value = record(raw, root);
-  allowKeys(value, ["parentField", "parentLabel", "parentLocked", "rows", "columns", "measures", "absentLabel", "basisLabel", "exactCounts", "fieldsRestricted"], root, "Matrix");
+  allowKeys(value, ["parentField", "parentLabel", "parentLocked", "rows", "columns", "measures", "absentLabel", "basisLabel", "exactCounts", "fieldsRestricted", "accessIndependent"], root, "Matrix");
   const parentField = text(value.parentField, `${root}.parentField`);
   if (listed.get(parentField)?.valueKind !== "reference") fail(`${root}.parentField`, "must be a listed reference field");
   const rows = axis(value.rows, `${root}.rows`, ["searchable"]);
@@ -200,7 +204,7 @@ export function parseListMatrix(raw: unknown, listed: ReadonlyMap<string, { read
   });
   if (!measures.length || measures.length > MATRIX_MAX_MEASURES) fail(`${root}.measures`, "must hold 1 to 6 measures");
   if (value.parentLocked !== undefined && value.parentLocked !== true) fail(`${root}.parentLocked`, "must be true when present");
-  for (const flag of ["exactCounts", "fieldsRestricted"] as const)
+  for (const flag of ["exactCounts", "fieldsRestricted", "accessIndependent"] as const)
     if (value[flag] !== undefined && value[flag] !== true) fail(`${root}.${flag}`, "must be true when present");
   return Object.freeze({
     parentField,
@@ -219,5 +223,6 @@ export function parseListMatrix(raw: unknown, listed: ReadonlyMap<string, { read
     ...(value.basisLabel === undefined ? {} : { basisLabel: text(value.basisLabel, `${root}.basisLabel`) }),
     ...(value.exactCounts ? { exactCounts: true as const } : {}),
     ...(value.fieldsRestricted ? { fieldsRestricted: true as const } : {}),
+    ...(value.accessIndependent ? { accessIndependent: true as const } : {}),
   });
 }

@@ -126,6 +126,7 @@ import {
 import { TreeStrip } from "./tree/tree-parts";
 import { ganttRange } from "./gantt/gantt-model";
 import { EntityGantt } from "./gantt/gantt-view";
+import { EntityMatrix } from "./matrix/matrix-view";
 import { dateRangePageState } from "./date-range/date-range-model";
 import { EntityCalendar } from "./calendar/calendar-view";
 import {
@@ -1188,6 +1189,10 @@ function EntityCollectionRuntime({
           state.mode === "tree"
             ? // Tree: the roots query (Tree blueprint section 7.2).
               treePageState(state, descriptor)
+            : state.mode === "matrix"
+            ? // Matrix reads its own rows, columns and cells; the page query
+              // only confirms the list's authority, at its smallest.
+              { ...state, groups: undefined, pageSize: 1, columns: [descriptor.entity.identityField] }
             : listModeTraits(state.mode).ownGrouping
             ? dateRangePageState(
                 boardSummaryState(state, descriptor),
@@ -1927,6 +1932,22 @@ function EntityCollectionRuntime({
                   />
                 )}
                 onCalendarChange={(change) =>
+                  update({ ...state, ...change }, "replace")
+                }
+              />
+            ) : state.mode === "matrix" &&
+              descriptor.surface.matrix &&
+              hostLayouts(host).matrix ? (
+              <EntityMatrix
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                matrix={descriptor.surface.matrix}
+                state={state}
+                {...(scopeCoordinate ? { scope: scopeCoordinate } : {})}
+                widthTier={widthTier}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                onMatrixChange={(change) =>
                   update({ ...state, ...change }, "replace")
                 }
               />
@@ -5877,6 +5898,12 @@ function modeUnavailableReasonKey(code: string): string {
     code === "LIST_GANTT_DATE_FIELD_UNAVAILABLE"
   )
     return "list.mode.reason.dateFieldUnavailable";
+  if (code === "LIST_MATRIX_KEY_UNAVAILABLE")
+    return "list.mode.reason.matrixKeyUnavailable";
+  if (code === "LIST_MATRIX_MEASURE_UNAVAILABLE")
+    return "list.mode.reason.matrixMeasureUnavailable";
+  if (code === "LIST_MATRIX_SCOPE_UNBOUND")
+    return "list.mode.reason.scopeUnbound";
   return "list.mode.reason.unsupported";
 }
 function listCountLabel(

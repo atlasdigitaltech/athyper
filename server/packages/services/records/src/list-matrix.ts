@@ -69,6 +69,8 @@ export function resolveListMatrix(input: {
   readonly technical: ReadonlySet<string>;
   readonly locked?: { readonly recordScoped: boolean; readonly fields: ReadonlySet<string> };
   readonly exactCounts: boolean;
+  /** Fact access does not follow the parent's (Compare 5.8 point 3's rule). */
+  readonly accessIndependent?: boolean;
   readonly axes?: MatrixAxes;
 }): ListMatrixResolution {
   const { matrix } = input;
@@ -173,6 +175,7 @@ export function resolveListMatrix(input: {
       ...(matrix.basisLabel ? { basisLabel: matrix.basisLabel } : {}),
       ...(input.exactCounts ? { exactCounts: true as const } : {}),
       ...(restricted ? { fieldsRestricted: true as const } : {}),
+      ...(input.accessIndependent ? { accessIndependent: true as const } : {}),
     }),
   };
 }

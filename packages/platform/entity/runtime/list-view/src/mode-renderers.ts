@@ -7,7 +7,7 @@ import type { ListWidthTier } from "./presentation-tier";
 
 /** The shared renderer families a list body can use. */
 export type ListRendererKind =
-  "table" | "cards" | "board" | "calendar" | "gantt" | "tree";
+  "table" | "cards" | "board" | "calendar" | "gantt" | "tree" | "matrix";
 
 /** Mode → renderer registry. A mode is rendered only through an entry here;
  * adding a layout means registering its renderer, not adding a branch. */
@@ -20,6 +20,7 @@ const LIST_MODE_RENDERERS: Readonly<
   calendar: "calendar",
   gantt: "gantt",
   tree: "tree",
+  matrix: "matrix",
 });
 
 export const LIST_MODE_RENDERER_MISSING = "LIST_MODE_RENDERER_MISSING";
@@ -83,6 +84,14 @@ const LIST_RENDERER_TRAITS: Readonly<
     ownGrouping: true,
     ownCounts: true,
   },
+  // Matrix: one row at a time when narrow; rows and columns page
+  // themselves; the pivot is its grouping; the page query is not its rows.
+  matrix: {
+    adaptsWhenNarrow: true,
+    ownPaging: true,
+    ownGrouping: true,
+    ownCounts: true,
+  },
 });
 
 const NO_TRAITS: ListRendererTraits = Object.freeze({
@@ -137,10 +146,11 @@ export function hostLayouts(host: ListHost): {
   readonly calendar: boolean;
   readonly gantt: boolean;
   readonly tree: boolean;
+  readonly matrix: boolean;
 } {
   const allowed = host !== "picker";
   // Tree also helps choose a record: a picker offers it for hierarchies.
-  return { board: allowed, calendar: allowed, gantt: allowed, tree: true };
+  return { board: allowed, calendar: allowed, gantt: allowed, tree: true, matrix: allowed };
 }
 
 /** Moves supported modes that this runtime cannot render into
@@ -148,12 +158,13 @@ export function hostLayouts(host: ListHost): {
  * state, list body) sees only modes it can draw. */
 export function withRenderableModes(
   descriptor: EntityListDescriptorV1,
-  /** Hosts that cannot place a board, calendar, Gantt or tree (for example, record choosers) pass false. */
+  /** Hosts that cannot place a board, calendar, Gantt, tree or matrix (for example, record choosers) pass false. */
   options: {
     readonly board?: boolean;
     readonly calendar?: boolean;
     readonly gantt?: boolean;
     readonly tree?: boolean;
+    readonly matrix?: boolean;
   } = {},
 ): EntityListDescriptorV1 {
   const { supportedModes, defaultState } = descriptor.surface;
@@ -162,7 +173,8 @@ export function withRenderableModes(
     (mode !== "board" || options.board !== false) &&
     (mode !== "calendar" || options.calendar !== false) &&
     (mode !== "gantt" || options.gantt !== false) &&
-    (mode !== "tree" || options.tree !== false);
+    (mode !== "tree" || options.tree !== false) &&
+    (mode !== "matrix" || options.matrix !== false);
   const missing = supportedModes.filter((mode) => !drawable(mode));
   if (!missing.length) return descriptor;
   const renderable = supportedModes.filter(drawable);
@@ -178,7 +190,7 @@ export function withRenderableModes(
       .map((mode) => ({ mode, code: LIST_MODE_RENDERER_MISSING })),
   ];
   // A projection travels with its mode: an unrenderable Board takes its lanes with it.
-  const { board, calendar, gantt, tree, ...surface } = descriptor.surface;
+  const { board, calendar, gantt, tree, matrix, ...surface } = descriptor.surface;
   return {
     ...descriptor,
     surface: {
@@ -187,6 +199,7 @@ export function withRenderableModes(
       ...(calendar && renderable.includes("calendar") ? { calendar } : {}),
       ...(gantt && renderable.includes("gantt") ? { gantt } : {}),
       ...(tree && renderable.includes("tree") ? { tree } : {}),
+      ...(matrix && renderable.includes("matrix") ? { matrix } : {}),
       supportedModes: renderable.length ? renderable : [fallback],
       unavailableModes,
       defaultState: renderable.includes(defaultState.mode)

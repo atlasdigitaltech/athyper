@@ -86,10 +86,12 @@ describe("list mode renderer registry", () => {
     assert.equal(classifyListHost({ lookup: false, section: false }), "page");
     assert.equal(classifyListHost({ lookup: false, section: true }), "section");
     assert.equal(classifyListHost({ lookup: true, section: false }), "picker");
-    assert.deepEqual(hostLayouts("section"), { board: true, calendar: true, gantt: true, tree: true });
-    assert.deepEqual(hostLayouts("page"), { board: true, calendar: true, gantt: true, tree: true });
-    // A picker may offer Tree for a hierarchical target (Tree blueprint B5).
-    assert.deepEqual(hostLayouts("picker"), { board: false, calendar: false, gantt: false, tree: true });
+    assert.deepEqual(hostLayouts("section"), { board: true, calendar: true, gantt: true, tree: true, matrix: true });
+    assert.deepEqual(hostLayouts("page"), { board: true, calendar: true, gantt: true, tree: true, matrix: true });
+    // A picker may offer Tree for a hierarchical target (Tree blueprint B5); never a Matrix.
+    assert.deepEqual(hostLayouts("picker"), { board: false, calendar: false, gantt: false, tree: true, matrix: false });
+    assert.equal(listModeTraits("matrix").ownCounts, true);
+    assert.equal(listRendererKind("matrix", "narrow"), "matrix");
     assert.equal(listModeTraits("tree").ownPaging, true);
     assert.equal(listRendererKind("tree", "narrow"), "tree");
   });

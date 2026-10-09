@@ -1658,6 +1658,10 @@ export function compileEntityListDescriptor(
         ),
         exactCounts:
           (configuredLimits?.countMode ?? descriptor.listPresentation.countMode) === "exact",
+        accessIndependent:
+          Boolean(descriptor.recordPredicates?.length) ||
+          Boolean(descriptor.ownerAccess) ||
+          Boolean(descriptor.directoryScope?.mode && descriptor.directoryScope.mode !== "tenant"),
         ...(matrixAxes ? { axes: matrixAxes } : {}),
       })
     : undefined;
