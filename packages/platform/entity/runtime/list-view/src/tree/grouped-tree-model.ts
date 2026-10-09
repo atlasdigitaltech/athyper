@@ -71,6 +71,8 @@ export interface GroupHeading {
   readonly aggregateCurrencies?: Readonly<Record<string, string>>;
   /** Money aggregates left out because the rows span currencies. */
   readonly mixedCurrencies?: readonly string[];
+  /** Money aggregates left out because some amounts have no recorded currency. */
+  readonly unknownCurrencies?: readonly string[];
 }
 
 /** A bucket as the server returns it. */
@@ -80,11 +82,13 @@ type Bucket = {
   readonly aggregates?: GroupHeading["aggregates"];
   readonly aggregateCurrencies?: GroupHeading["aggregateCurrencies"];
   readonly mixedCurrencies?: GroupHeading["mixedCurrencies"];
+  readonly unknownCurrencies?: GroupHeading["unknownCurrencies"];
 };
 const totals = (bucket: Bucket) => ({
   ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}),
   ...(bucket.aggregateCurrencies ? { aggregateCurrencies: bucket.aggregateCurrencies } : {}),
   ...(bucket.mixedCurrencies ? { mixedCurrencies: bucket.mixedCurrencies } : {}),
+  ...(bucket.unknownCurrencies ? { unknownCurrencies: bucket.unknownCurrencies } : {}),
 });
 
 /** At most this many headings per level; more shows the "more groups" notice. */
@@ -162,15 +166,21 @@ export function groupHeadings(
 /** Unmapped values combine their buckets' sums, minimums and maximums
  * exactly; an average cannot be combined from averages, so it is left out. A
  * money total combines only when every bucket has the same one currency. */
-export function combineAggregates(items: readonly ReturnType<typeof totals>[]): Pick<GroupHeading, "aggregates" | "aggregateCurrencies" | "mixedCurrencies"> {
+export function combineAggregates(items: readonly ReturnType<typeof totals>[]): Pick<GroupHeading, "aggregates" | "aggregateCurrencies" | "mixedCurrencies" | "unknownCurrencies"> {
   const combined: Record<string, number | string | null> = {};
   const currencies: Record<string, string> = {};
   const mixed: string[] = [];
+  const unknown: string[] = [];
   for (const key of new Set(items.flatMap((item) => Object.keys(item.aggregates ?? {})))) {
     if (key.endsWith(":average")) continue;
     const codes = new Set(items.flatMap((item) => (item.aggregateCurrencies?.[key] ? [item.aggregateCurrencies[key]!] : [])));
     if (items.some((item) => item.mixedCurrencies?.includes(key)) || codes.size > 1) {
       mixed.push(key);
+      combined[key] = null;
+      continue;
+    }
+    if (items.some((item) => item.unknownCurrencies?.includes(key))) {
+      unknown.push(key);
       combined[key] = null;
       continue;
     }
@@ -187,6 +197,7 @@ export function combineAggregates(items: readonly ReturnType<typeof totals>[]): 
     aggregates: combined,
     ...(Object.keys(currencies).length ? { aggregateCurrencies: currencies } : {}),
     ...(mixed.length ? { mixedCurrencies: mixed } : {}),
+    ...(unknown.length ? { unknownCurrencies: unknown } : {}),
   };
 }
 

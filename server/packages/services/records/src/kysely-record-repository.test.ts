@@ -179,6 +179,7 @@ it("computes child existence and orphans inside the visible set with aliased cor
   expect(statements[0]).toContain(`'YYYY-"Q"Q'`);
   expect(statements[0]).toContain('sum("amount") AS "__aggregate_0"');
   expect(statements[0]).toContain('count(DISTINCT "currency_code") AS "__currencies_0"');
+  expect(statements[0]).toContain('count(*) FILTER (WHERE "amount" IS NOT NULL AND "currency_code" IS NULL) AS "__uncurrenced_0"');
   expect(statements[0]).toContain("GROUP BY 1 ORDER BY 1 ASC NULLS FIRST LIMIT $");
   // An ordinary request computes no child existence and returns no child flags.
   statements.length = 0;

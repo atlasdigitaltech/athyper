@@ -67,6 +67,12 @@ describe("group aggregates (A2)", () => {
     expect(published.fields.find((field) => field.key === "amount")?.aggregations).toEqual(["count", "sum"]);
   });
 
+  it("withholds a money total whose amounts have no recorded currency, rather than calling it mixed", async () => {
+    const uncurrenced = [{ id: id(9), tenant_id: tenantId, code: "INV-9", status: "draft", due: null, posted: "2026-12-01T00:00:00Z", amount: 5, currency: null }];
+    const page = parseEntityListResult(await lists(descriptor(), uncurrenced).list({ ...request, group: "status", groupAggregates: [{ field: "amount", aggregate: "sum" }] }));
+    expect(page.groups?.find((group) => group.value === "draft")).toEqual({ value: "draft", label: "draft", count: 1, aggregates: { "amount:sum": null }, unknownCurrencies: ["amount:sum"] });
+  });
+
   it("sums decimals exactly, as the database does", async () => {
     const page = parseEntityListResult(await lists().list({ ...request, group: "status", groupAggregates: [{ field: "units", aggregate: "sum" }] }));
     expect(page.groups?.[0]?.aggregates).toEqual({ "units:sum": "1234567890123456.79" });

@@ -107,6 +107,8 @@ export interface RecordListResult {
     readonly aggregateCurrencies?: Readonly<Record<string, string>>;
     /** Money aggregates left out because the group's rows span currencies. */
     readonly mixedCurrencies?: readonly string[];
+    /** Money aggregates left out because some amounts have no recorded currency. */
+    readonly unknownCurrencies?: readonly string[];
   }>[];
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: boolean;

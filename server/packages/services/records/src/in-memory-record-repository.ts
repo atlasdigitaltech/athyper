@@ -228,11 +228,15 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
     buckets: Object.freeze(kept.map(([item, list]) => {
       const currencies: Record<string, string> = {};
       const mixed: string[] = [];
+      const unknown: string[] = [];
       const values = Object.fromEntries(aggregates.map((aggregate) => {
         const name = `${aggregate.field}:${aggregate.aggregate}`;
         if (aggregate.currencyField) {
           const codes = new Set(list.map((row) => value(row, descriptor, aggregate.currencyField!)).filter((code) => code !== null && code !== undefined));
           if (codes.size > 1) { mixed.push(name); return [name, null]; }
+          const amount = (row: Row) => value(row, descriptor, aggregate.field);
+          const currency = (row: Row) => value(row, descriptor, aggregate.currencyField!);
+          if (list.some((row) => amount(row) !== null && amount(row) !== undefined && (currency(row) === null || currency(row) === undefined))) { unknown.push(name); return [name, null]; }
           if (codes.size === 1) currencies[name] = String([...codes][0]);
         }
         return [name, compute(list, aggregate)];
@@ -243,6 +247,7 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
         ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
         ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
         ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
+        ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
       });
     })),
   };

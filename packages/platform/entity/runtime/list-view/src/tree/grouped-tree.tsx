@@ -128,13 +128,18 @@ function headingAggregates(heading: GroupHeading, fields: readonly ListFieldDesc
     const [fieldKey, aggregate] = key.split(":");
     const field = fields.find((item) => item.key === fieldKey);
     const mixed = heading.mixedCurrencies?.includes(key);
-    if (!field || (value === null && !mixed)) return null;
+    const unknown = heading.unknownCurrencies?.includes(key);
+    if (!field || (value === null && !mixed && !unknown)) return null;
     const currency = heading.aggregateCurrencies?.[key];
     return (
       <span key={key} className="a-entity-tree__aggregate">
         <span className="a-entity-tree__aggregate-label">{intl.message(`list.group.aggregate.${aggregate}`, { field: field.label })}</span>{" "}
         <span className="a-entity-tree__aggregate-value">
-          {mixed ? intl.message("list.group.mixedCurrencies") : `${formatFieldValue(value, field, intl)}${currency ? ` ${currency}` : ""}`}
+          {mixed
+            ? intl.message("list.group.mixedCurrencies")
+            : unknown
+              ? intl.message("list.group.unknownCurrency")
+              : `${formatFieldValue(value, field, intl)}${currency ? ` ${currency}` : ""}`}
         </span>
       </span>
     );

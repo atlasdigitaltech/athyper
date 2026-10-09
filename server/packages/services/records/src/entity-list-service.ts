@@ -1172,6 +1172,7 @@ export function createEntityListService(options: {
                     ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),
                     ...(group.aggregateCurrencies ? { aggregateCurrencies: Object.freeze({ ...group.aggregateCurrencies }) } : {}),
                     ...(group.mixedCurrencies?.length ? { mixedCurrencies: Object.freeze([...group.mixedCurrencies]) } : {}),
+                    ...(group.unknownCurrencies?.length ? { unknownCurrencies: Object.freeze([...group.unknownCurrencies]) } : {}),
                   }),
                 ),
               ),

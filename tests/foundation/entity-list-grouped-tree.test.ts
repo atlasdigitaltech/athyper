@@ -76,6 +76,7 @@ describe("group aggregates and date buckets (A2, A3)", () => {
     // Money combines only within one currency.
     assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": 2 }, aggregateCurrencies: { "amount:sum": "MYR" } }]), { aggregates: { "amount:sum": 3 }, aggregateCurrencies: { "amount:sum": "MYR" } });
     assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": 2 }, aggregateCurrencies: { "amount:sum": "USD" } }]), { aggregates: { "amount:sum": null }, mixedCurrencies: ["amount:sum"] });
+    assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": null }, unknownCurrencies: ["amount:sum"] }]), { aggregates: { "amount:sum": null }, unknownCurrencies: ["amount:sum"] });
     const headings = groupHeadings(status, [{ value: "active", label: "Active" }], [{ value: "active", count: 1, aggregates: { "budget:sum": 10 } }, { value: "legacy", count: 1, aggregates: { "budget:sum": 4 } }, { value: "retired", count: 1, aggregates: { "budget:sum": 6 } }]);
     assert.deepEqual(headings.map((heading) => heading.aggregates), [{ "budget:sum": 10 }, { "budget:sum": 10 }]);
   });

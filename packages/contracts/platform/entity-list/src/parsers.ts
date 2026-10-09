@@ -1307,9 +1307,11 @@ function parseBuckets(value: unknown, name: string) {
       const currencies = item.aggregateCurrencies === undefined
         ? undefined
         : Object.freeze(Object.fromEntries(Object.entries(object(item.aggregateCurrencies, `${name}[${index}].aggregateCurrencies`)).map(([key, code]) => [aggregateKey(key), text(code, `${name}[${index}].aggregateCurrencies.${key}`)])));
-      const mixed = item.mixedCurrencies === undefined
+      const keys = (raw: unknown, label: string) => raw === undefined
         ? undefined
-        : Object.freeze(array(item.mixedCurrencies, `${name}[${index}].mixedCurrencies`).map((key) => aggregateKey(text(key, `${name}[${index}].mixedCurrencies`))));
+        : Object.freeze(array(raw, `${name}[${index}].${label}`).map((key) => aggregateKey(text(key, `${name}[${index}].${label}`))));
+      const mixed = keys(item.mixedCurrencies, "mixedCurrencies");
+      const unknown = keys(item.unknownCurrencies, "unknownCurrencies");
       return Object.freeze({
         value: json(item.value, `${name}[${index}].value`),
         label: text(item.label, `${name}[${index}].label`),
@@ -1317,6 +1319,7 @@ function parseBuckets(value: unknown, name: string) {
         ...(aggregates ? { aggregates: Object.freeze(aggregates) } : {}),
         ...(currencies ? { aggregateCurrencies: currencies } : {}),
         ...(mixed ? { mixedCurrencies: mixed } : {}),
+        ...(unknown ? { unknownCurrencies: unknown } : {}),
       });
     }),
   );

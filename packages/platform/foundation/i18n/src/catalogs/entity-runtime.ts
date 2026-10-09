@@ -1207,6 +1207,7 @@ export const entityRuntimeMessages = {
   "list.group.aggregate.minimum": ["{field} lowest", "{field} terendah", "أدنى {field}"],
   "list.group.aggregate.maximum": ["{field} highest", "{field} tertinggi", "أعلى {field}"],
   "list.group.mixedCurrencies": ["more than one currency", "lebih daripada satu mata wang", "أكثر من عملة واحدة"],
+  "list.group.unknownCurrency": ["currency not recorded", "mata wang tidak direkodkan", "العملة غير مسجلة"],
   "list.group.moreGroups": ["Showing the first {count, number} groups. Narrow the filters to see the rest.", "Memaparkan {count, number} kumpulan pertama. Sempitkan penapis untuk melihat selebihnya.", "يُعرض أول {count, number} مجموعة. ضيّق عوامل التصفية لرؤية الباقي."],
   "list.tree.expandAll": ["Expand all loaded", "Kembangkan semua yang dimuatkan", "توسيع كل ما تم تحميله"],
   "list.tree.collapseAll": ["Collapse all", "Kuncupkan semua", "طي الكل"],

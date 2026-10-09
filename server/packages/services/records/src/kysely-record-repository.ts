@@ -329,7 +329,7 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
     const currency = item.currencyField ? sql.ref(fieldPath(input.descriptor, item.currencyField)) : undefined;
     return {
       name: `${item.field}:${item.aggregate}`,
-      select: sql`, ${fn}(${target}) AS ${sql.ref(`__aggregate_${index}`)}${currency ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}` : sql``}`,
+      select: sql`, ${fn}(${target}) AS ${sql.ref(`__aggregate_${index}`)}${currency ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}, count(*) FILTER (WHERE ${target} IS NOT NULL AND ${currency} IS NULL) AS ${sql.ref(`__uncurrenced_${index}`)}` : sql``}`,
       money: Boolean(currency),
     };
   });
@@ -347,10 +347,16 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
     buckets: Object.freeze(rows.map((row) => {
       const currencies: Record<string, string> = {};
       const mixed: string[] = [];
+      const unknown: string[] = [];
       const values = Object.fromEntries(aggregates.map((item, index) => {
         if (item.money) {
           if (Number(row[`__currencies_${index}`] ?? 0) > 1) {
             mixed.push(item.name);
+            return [item.name, null];
+          }
+          // An amount without a recorded currency makes the total's currency unknown.
+          if (Number(row[`__uncurrenced_${index}`] ?? 0) > 0) {
+            unknown.push(item.name);
             return [item.name, null];
           }
           if (typeof row[`__currency_${index}`] === "string") currencies[item.name] = row[`__currency_${index}`] as string;
@@ -363,6 +369,7 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
         ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
         ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
         ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
+        ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
       });
     })),
   };
