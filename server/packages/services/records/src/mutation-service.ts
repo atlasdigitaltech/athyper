@@ -139,7 +139,14 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
         await validateReferences(options, command.context, descriptor, values, command.input);
         await policy?.validate({context:command.context,descriptor,action:"patch",values},transaction);
       }
-      const result = await options.repository.patch(descriptor, command.context.tenantId, command.recordId, {...command.input,...actorValues}, command.expectedVersion, transaction);
+      let result: Awaited<ReturnType<typeof options.repository.patch>>;
+      try {
+        result = await options.repository.patch(descriptor, command.context.tenantId, command.recordId, {...command.input,...actorValues}, command.expectedVersion, transaction);
+      } catch (error) {
+        // Only the parent write's own refusals are hierarchy refusals.
+        if (moving) mapHierarchyRefusal(error);
+        throw error;
+      }
       if (result.versionConflict !== undefined) return { kind: "VersionConflict", expectedVersion: command.expectedVersion!, currentVersion: result.versionConflict };
       if (!result.record) return { kind: "NotFound", entityCode: command.entityCode, recordId: command.recordId };
       await policy?.committed({context:command.context,descriptor,record:result.record},transaction);
@@ -147,7 +154,9 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
       return { kind: "Committed", action: "patch", entityCode: command.entityCode, recordId: command.recordId, record: result.record, version: versionOf(descriptor, result.record), replayed: false };
     }, descriptor);
   }).catch((error: unknown) => {
-    if (moving) mapHierarchyRefusal(error);
+    // A deferred parent foreign key is checked at commit: map it only when the
+    // refusal names this table's parent column, never another column's error.
+    if (moving && deferredParentRefusal(error, descriptor)) throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");
     throw error;
   });
 }
@@ -175,12 +184,27 @@ async function guardHierarchyMove<Transaction>(options: RecordMutationServiceOpt
       if (!branch) throw new RecordServiceError(409, "HIERARCHY_LEAF_PARENT", "This record cannot have records under it.");
     }
   }
+  // A cycle must pass through the record's own ancestor chain: refuse the
+  // record itself or any of its descendants as the new parent. The database
+  // remains the backstop for what the framework cannot see.
+  if (target === command.recordId) throw new RecordServiceError(409, "HIERARCHY_CYCLE", "A record cannot be moved under itself or a record below it.");
   const measured = await options.repository.measureHierarchy({ descriptor, tenantId: command.context.tenantId, parentField: hierarchy.parentField, parentId: target ?? null, recordId: command.recordId, bound: hierarchy.maxDepth + 1 }, transaction);
+  if (measured.parentChainIncludesRecord) throw new RecordServiceError(409, "HIERARCHY_CYCLE", "A record cannot be moved under itself or a record below it.");
   if (measured.parentDepth + measured.subtreeHeight > hierarchy.maxDepth) throw new RecordServiceError(409, "HIERARCHY_DEPTH_EXCEEDED", `This move would go deeper than ${hierarchy.maxDepth} levels.`);
 }
 
-/** The database is the final authority (section 7.5): its refusals of a move
- * map to two codes, without the database's own message text. */
+/** Whether a commit-time foreign-key refusal concerns this table's parent key:
+ * PostgreSQL names the table and the key columns ("Key (…, parent_id)=…"). */
+function deferredParentRefusal(error: unknown, descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor): boolean {
+  if (!error || typeof error !== "object" || Reflect.get(error, "code") !== "23503") return false;
+  const parentPath = descriptor.fields.find((field) => field.key === descriptor.hierarchy?.parentField)?.storagePath;
+  const detail = String(Reflect.get(error, "detail") ?? "");
+  const keys = /^Key \(([^)]*)\)/.exec(detail)?.[1]?.split(",").map((column) => column.trim().replace(/^"|"$/g, "")) ?? [];
+  return Reflect.get(error, "table") === descriptor.storage.object && Boolean(parentPath && keys.includes(parentPath));
+}
+
+/** The database is the final authority (section 7.5): refusals of the parent
+ * write map to two codes, without the database's own message text. */
 function mapHierarchyRefusal(error: unknown): void {
   const code = error && typeof error === "object" ? Reflect.get(error, "code") : undefined;
   if (code === "23503") throw new RecordServiceError(409, "HIERARCHY_PARENT_OUTSIDE_SCOPE", "Choose a parent in this tree.");

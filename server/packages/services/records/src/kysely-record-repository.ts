@@ -43,8 +43,9 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const parentPath = fieldPath(descriptor, input.parentField);
       const stored = baseConditions(descriptor, tenantId, "read");
       let parentDepth = 0;
+      let parentChainIncludesRecord = false;
       if (input.parentId) {
-        const up = await sql<{ depth: number | string | null }>`
+        const up = await sql<{ depth: number | string | null; cycle: boolean | null }>`
           WITH RECURSIVE "__tree_up" ("__up_id", "__up_parent", "__up_depth") AS (
             SELECT ${sql.ref(idPath)}, ${sql.ref(parentPath)}, 1 FROM ${table(descriptor)} WHERE ${sql.ref(idPath)} = ${input.parentId}::uuid AND ${sql.join(stored, sql` AND `)}
             UNION
@@ -52,9 +53,10 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
               JOIN "__tree_up" ON ${sql.ref(idPath)} = "__tree_up"."__up_parent"
              WHERE "__tree_up"."__up_depth" < ${bound} AND ${sql.join(stored, sql` AND `)}
           )
-          SELECT max("__up_depth") AS depth FROM "__tree_up"
+          SELECT max("__up_depth") AS depth, bool_or("__up_id" = ${input.recordId}::uuid) AS cycle FROM "__tree_up"
         `.execute(executor);
         parentDepth = Number(up.rows[0]?.depth ?? 0);
+        parentChainIncludesRecord = up.rows[0]?.cycle === true;
       }
       const down = await sql<{ height: number | string | null }>`
         WITH RECURSIVE "__tree_down" ("__down_id", "__down_height") AS (
@@ -66,7 +68,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
         )
         SELECT max("__down_height") AS height FROM "__tree_down"
       `.execute(executor);
-      return { parentDepth, subtreeHeight: Number(down.rows[0]?.height ?? 1) };
+      return { parentDepth, subtreeHeight: Number(down.rows[0]?.height ?? 1), parentChainIncludesRecord };
     },
     async list(input, transaction) {
       const executor = transaction ?? databaseFor(input.descriptor);

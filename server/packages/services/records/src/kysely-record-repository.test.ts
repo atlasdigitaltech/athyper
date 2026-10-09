@@ -168,6 +168,7 @@ it("computes child existence and orphans inside the visible set with aliased cor
   await repository.measureHierarchy!({ descriptor: tree, tenantId: input.tenantId, parentField: "parent", parentId: "00000000-0000-4000-8000-000000000002", recordId: "00000000-0000-4000-8000-000000000003", bound: 7 });
   expect(statements[0]).toContain('WITH RECURSIVE "__tree_up"');
   expect(statements[0]).toContain('"__tree_up"."__up_depth" < $');
+  expect(statements[0]).toContain('bool_or("__up_id" = $');
   expect(statements[1]).toContain('WITH RECURSIVE "__tree_down"');
   expect(statements[1]).toContain('"parent_id" = "__tree_down"."__down_id"');
   // An ordinary request computes no child existence and returns no child flags.

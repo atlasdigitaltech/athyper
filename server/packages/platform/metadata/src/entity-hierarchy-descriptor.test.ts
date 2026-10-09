@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EntityFieldDescriptor } from "@athyper/server-contract-metadata";
-import { hierarchyParentKeyFinding, parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
+import { hierarchyMovableFinding, hierarchyParentKeyFinding, parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
 
 const field = (key: string, type: EntityFieldDescriptor["type"], extra: Partial<EntityFieldDescriptor> = {}): EntityFieldDescriptor => ({ key, storagePath: key, type, required: false, writableOn: [], ...extra });
 const fields = new Map([
@@ -77,6 +77,13 @@ describe("published record hierarchy", () => {
     const writable = new Map(fields).set("parent", field("parent", "reference", { referenceTargetEntity: "gl_account", writableOn: ["patch"] }));
     expect(() => validateEntityHierarchy("gl_account", movable, ["tree"], writable)).not.toThrow();
     expect(() => parseEntityHierarchy({ parentField: "parent", maxDepth: 6, movable: false })).toThrow(/must be true/);
+  });
+
+  it("refuses movable without a database cycle guard, for the DDL inspection (checklist item 7)", () => {
+    const movable = parseEntityHierarchy({ parentField: "parent", maxDepth: 6, movable: true });
+    expect(hierarchyMovableFinding({ hierarchy: movable, cycleGuarded: false })).toBe("TREE_MOVABLE_UNGUARDED");
+    expect(hierarchyMovableFinding({ hierarchy: movable, cycleGuarded: true })).toBeUndefined();
+    expect(hierarchyMovableFinding({ hierarchy: parseEntityHierarchy({ parentField: "parent", maxDepth: 6 }), cycleGuarded: false })).toBeUndefined();
   });
 });
 

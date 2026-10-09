@@ -30,7 +30,11 @@ const context = {
 } as unknown as VerifiedRequestContext;
 const row = (n: number, code: string, parent: number | null, kind: string, chart = "chart-a") => ({ id: id(n), tenant_id: tenantId, version: 1, code, parent_id: parent ? id(parent) : null, chart_id: chart, kind });
 
-function fixture(described = descriptor(), wrap: (repository: RecordRepository<unknown>) => RecordRepository<unknown> = (repository) => repository) {
+function fixture(
+  described = descriptor(),
+  wrap: (repository: RecordRepository<unknown>) => RecordRepository<unknown> = (repository) => repository,
+  hooks: { readonly audit?: () => void; readonly commit?: () => void } = {},
+) {
   const persistence = createInMemoryRecordPersistence();
   persistence.seed(described, tenantId, [
     row(1, "1000", null, "summary"), row(2, "1100", 1, "summary"), row(3, "1110", 2, "posting"),
@@ -41,9 +45,11 @@ function fixture(described = descriptor(), wrap: (repository: RecordRepository<u
     metadata: { getEntityDescriptor: async () => described },
     authorizer: { entityDescriptorSupported: () => true, authorize: async () => ({ allowed: true }) },
     repository: wrap(persistence.repository as RecordRepository<unknown>),
-    transactions: persistence.transactions,
+    transactions: hooks.commit
+      ? { run: async (...args: Parameters<typeof persistence.transactions.run>) => { const result = await persistence.transactions.run(...args); hooks.commit!(); return result; } }
+      : persistence.transactions,
     commandExecutions: createInMemoryCommandExecutionStore(),
-    audit: { record: async (input) => ({ ...input, id: "event", createdAt: new Date(), tenantId, eventCode: "t", action: "t", outcome: "success", actor: { kind: "user", principalId: "principal" } }) as never },
+    audit: { record: async (input: object) => { hooks.audit?.(); return ({ ...input, id: "event", createdAt: new Date(), tenantId, eventCode: "t", action: "t", outcome: "success", actor: { kind: "user", principalId: "principal" } }) as never; } },
     outbox: { append: vi.fn(async () => undefined) },
   } as never);
   let sequence = 0;
@@ -76,6 +82,23 @@ describe("moving a node", () => {
 
   it("refuses any parent change when the hierarchy is not movable", async () => {
     await expect(fixture(descriptor({ movable: undefined })).move(3, 4)).rejects.toMatchObject({ code: "HIERARCHY_MOVE_UNAVAILABLE" });
+  });
+
+  it("refuses the record itself or any record below it as the new parent", async () => {
+    await expect(fixture().move(2, 2)).rejects.toMatchObject({ code: "HIERARCHY_CYCLE" });
+    // 1000 under 1100, its own child.
+    await expect(fixture().move(1, 2)).rejects.toMatchObject({ code: "HIERARCHY_CYCLE" });
+  });
+
+  it("maps only the parent write's refusals, and a deferred refusal only when it names the parent column", async () => {
+    const dbError = (code: string, extra: object = {}) => Object.assign(new Error("database text"), { code, ...extra });
+    // An unrelated constraint raised after the parent write keeps its own error.
+    await expect(fixture(descriptor(), undefined, { audit: () => { throw dbError("23514"); } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
+    // A deferred foreign key on the parent key, checked at commit.
+    const parentKey = dbError("23503", { table: "gl_account", detail: `Key (tenant_id, chart_id, parent_id)=(x) is not present in table "gl_account".` });
+    await expect(fixture(descriptor(), undefined, { commit: () => { throw parentKey; } }).move(3, 4)).rejects.toMatchObject({ code: "HIERARCHY_PARENT_OUTSIDE_SCOPE" });
+    const otherKey = dbError("23503", { table: "gl_account", detail: `Key (tenant_id, cost_center_id)=(x) is not present in table "cost_center".` });
+    await expect(fixture(descriptor(), undefined, { commit: () => { throw otherKey; } }).move(3, 4)).rejects.toMatchObject({ message: "database text" });
   });
 
   it("maps the database's own refusals without its message text", async () => {

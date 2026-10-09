@@ -125,6 +125,19 @@ export function validateEntityHierarchy(
   }
 }
 
+/** The DDL side of `movable` (blueprint section 2.4, item 7): a hierarchy may
+ * be declared movable only when the database guards the table against cycles
+ * (for example `trg_guard_organization_hierarchy_cycle` or a table-specific
+ * validator). The published descriptor cannot see triggers, so this runs with
+ * the DDL inspection beside {@link hierarchyParentKeyFinding}. */
+export function hierarchyMovableFinding(input: {
+  readonly hierarchy: EntityHierarchyDescriptor;
+  /** The DDL inspection found a cycle guard on the table's parent column. */
+  readonly cycleGuarded: boolean;
+}): "TREE_MOVABLE_UNGUARDED" | undefined {
+  return input.hierarchy.movable && !input.cycleGuarded ? "TREE_MOVABLE_UNGUARDED" : undefined;
+}
+
 /** The DDL side of the hierarchy declaration (blueprint section 2.4, item 1):
  * the parent's foreign key decides whether a scope field is required. Given
  * the storage columns of the parent foreign key, returns the finding, or

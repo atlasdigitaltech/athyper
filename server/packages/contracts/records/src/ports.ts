@@ -239,7 +239,12 @@ export interface RecordRepository<Transaction = unknown> {
   measureHierarchy?(
     input: RecordHierarchyMeasureInput,
     transaction?: Transaction,
-  ): Promise<{ readonly parentDepth: number; readonly subtreeHeight: number }>;
+  ): Promise<{
+    readonly parentDepth: number;
+    readonly subtreeHeight: number;
+    /** The record is the new parent or one of its ancestors: the move would close a cycle. */
+    readonly parentChainIncludesRecord: boolean;
+  }>;
   list(
     input: RecordRepositoryListInput,
     transaction?: Transaction,
