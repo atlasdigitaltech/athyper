@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 14685,
+    "filesScanned": 14687,
     "authorizationFiles": 2069,
     "registeredObjects": 470,
     "objectReferences": 1421,
@@ -14147,12 +14147,12 @@
     {
       "path": "server/apps/platform-host/src/composition/control-plane/local-publication.test.ts",
       "artifactClass": "test",
-      "sha256": "dc8d861d94fa017c297d1460e17a057d4ac92c867712e8f9f26bf28a7583dc36"
+      "sha256": "8641521a717e87ebdbc9079a305021bbcc39be2bdc47a4b2e522b0c25fea9541"
     },
     {
       "path": "server/apps/platform-host/src/composition/control-plane/local-publication.ts",
       "artifactClass": "runtime",
-      "sha256": "ba3e8deb8e5ae21f8d6a5241c37e6c67a636da97b046935bcf8cf95ce0980dd0"
+      "sha256": "942af06c96408ae6cfe5af00443b77c0b80ccf969e829acc635b68f98276c210"
     },
     {
       "path": "server/apps/platform-host/src/composition/control-plane/native-bootstrap-authorization.test.ts",
@@ -14257,7 +14257,7 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "56fcbd952d76d57c923296742a767235fc4099df030ad9589c8a86c2d8538b3c"
+      "sha256": "6b62062b9c054a339065d9c710f22c5adc1f7ea09b703ea7322dc1ac64d7438d"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
@@ -14607,7 +14607,7 @@
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/native-publication-startup.ts",
       "artifactClass": "runtime",
-      "sha256": "c065228e429eef41b7321a2c9290bfe2fd357f000deb99e2e58dd2533e2af6e1"
+      "sha256": "89fdeae338bbd6a5b5cdfe265cb0bebdbc548cba9fca032747878b7d2edcd7dc"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/publication/native-worker-entity-read.postgres.test.ts",
@@ -15892,7 +15892,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "7e49ab01e929554e1d6dbc952404995beb3abcf7beee18d4539d50df0b606b06"
+      "sha256": "f8e90952c4d4678e0d5ff71b8f019631ac9206420895fd4b6fca3efb1620a6d7"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -25225,11 +25225,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3456,
+      "line": 3465,
       "lines": [
-        3456,
-        6320,
-        6583
+        3465,
+        6329,
+        6592
       ]
     },
     {
@@ -40885,8 +40885,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6195,
-        6499
+        6204,
+        6508
       ]
     },
     {
@@ -40934,7 +40934,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4851
+        4860
       ]
     },
     {
@@ -40971,7 +40971,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        5139
+        5148
       ]
     },
     {
@@ -41042,13 +41042,13 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2403,
-        2696,
-        2715,
-        2778,
-        4349,
-        4592,
-        4615
+        2412,
+        2705,
+        2724,
+        2787,
+        4358,
+        4601,
+        4624
       ]
     },
     {
@@ -41068,9 +41068,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3077,
-        4592,
-        4615
+        3086,
+        4601,
+        4624
       ]
     },
     {
@@ -41194,10 +41194,10 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2202,
-        2268,
-        2283,
-        2326
+        2211,
+        2277,
+        2292,
+        2335
       ]
     },
     {
@@ -41236,7 +41236,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3784
+        3793
       ]
     },
     {
@@ -41320,7 +41320,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6498
+        6507
       ]
     },
     {
@@ -41349,7 +41349,7 @@
       "artifactClass": "runtime",
       "classification": "unclassified",
       "lines": [
-        5279
+        5288
       ]
     },
     {
@@ -41488,7 +41488,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4330
+        4339
       ]
     },
     {
@@ -41644,9 +41644,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3478,
-        3556,
-        3658
+        3487,
+        3565,
+        3667
       ]
     },
     {
@@ -41655,7 +41655,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2426
+        2435
       ]
     },
     {
@@ -41700,9 +41700,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2283,
-        2363,
-        5260
+        2292,
+        2372,
+        5269
       ]
     },
     {
@@ -41827,7 +41827,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3654
+        3663
       ]
     },
     {
@@ -42003,7 +42003,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6638
+        6647
       ]
     },
     {
@@ -51277,7 +51277,7 @@
       "artifactClass": "test",
       "lines": [
         135,
-        184
+        194
       ]
     },
     {
@@ -51337,14 +51337,14 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1387,
-        3256,
-        4852,
-        4855,
-        4856,
-        5013,
-        5026,
-        5148
+        1396,
+        3265,
+        4861,
+        4864,
+        4865,
+        5022,
+        5035,
+        5157
       ]
     },
     {
@@ -68377,9 +68377,9 @@
       "artifactClass": "test",
       "lines": [
         136,
-        203,
-        207,
-        210
+        213,
+        217,
+        220
       ]
     },
     {
@@ -68428,7 +68428,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        5016
+        5025
       ]
     },
     {
@@ -89363,7 +89363,7 @@
       "artifactClass": "test",
       "lines": [
         142,
-        181
+        191
       ]
     },
     {
@@ -89471,11 +89471,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        3254,
-        3305,
-        5077,
-        5145,
-        5283
+        3263,
+        3314,
+        5086,
+        5154,
+        5292
       ]
     },
     {
@@ -94601,7 +94601,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1387
+        1396
       ]
     },
     {
@@ -98200,8 +98200,8 @@
       "artifactClass": "test",
       "lines": [
         131,
-        205,
-        206
+        215,
+        216
       ]
     },
     {
@@ -98308,24 +98308,24 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1284,
-        1313,
-        1321,
-        1333,
-        1387,
-        2261,
-        2264,
-        2265,
-        3470,
-        3473,
-        3474,
-        4852,
-        4855,
-        4856,
-        5013,
-        5016,
-        5019,
-        5022
+        1293,
+        1322,
+        1330,
+        1342,
+        1396,
+        2270,
+        2273,
+        2274,
+        3479,
+        3482,
+        3483,
+        4861,
+        4864,
+        4865,
+        5022,
+        5025,
+        5028,
+        5031
       ]
     },
     {
@@ -103231,7 +103231,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        5022
+        5031
       ]
     },
     {
@@ -103915,7 +103915,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        5019
+        5028
       ]
     },
     {
@@ -111108,9 +111108,9 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        2265,
-        3474,
-        5110
+        2274,
+        3483,
+        5119
       ]
     },
     {
@@ -137150,8 +137150,8 @@
       "lines": [
         135,
         142,
-        181,
-        207
+        191,
+        217
       ]
     },
     {
@@ -140761,9 +140761,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4853,
+      "line": 4862,
       "lines": [
-        4853
+        4862
       ]
     },
     {
@@ -149764,7 +149764,7 @@
         "symbol": "authorizeEntityOperation",
         "path": "server/apps/platform-host/src/composition/register-services.ts",
         "lines": [
-          5279
+          5288
         ]
       },
       {
