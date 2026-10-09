@@ -387,8 +387,8 @@ it.each([
     if (successor) {
       Object.assign(f.source, { releaseNo: 2 });
       f.dependencies.predecessor = vi.fn(async () => ({
-        plane: "neon",
-        environment: "local",
+        plane: "neon" as const,
+        environment: "local" as const,
         instance: "dev",
         publicationKey: f.source.publicationKey,
         appliedReleaseId: id(90),
