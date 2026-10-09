@@ -371,6 +371,24 @@ CREATE TRIGGER fixture_status_revision BEFORE UPDATE OF status ON metadata.entit
 ALTER FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) OWNER TO athyper_definer_product_publication;
 GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid),publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) TO athyper_definer_product_publication;`);
+      // Deferred invoker validation must finish before returning to the worker.
+      q(`ALTER TABLE publication.local_publication_request ADD COLUMN execution_release_id uuid;
+CREATE FUNCTION metadata.fixture_native_integrity() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+ PERFORM 1 FROM metadata.entity_change_set WHERE id=NEW.id;
+ IF current_setting('app.fixture_invalid_graph',true)='true' THEN RAISE EXCEPTION 'FIXTURE_NATIVE_INTEGRITY_INVALID' USING ERRCODE='23514'; END IF;
+ RETURN NEW; END $$;`);
+      for (const guard of [
+        "native_layout_final_guard",
+        "native_core_final_guard",
+        "native_root_final_guard",
+        "native_snapshot_final_guard",
+        "settings_locale_check",
+      ]) {
+        q(
+          `CREATE CONSTRAINT TRIGGER ${guard} AFTER UPDATE ON metadata.entity_change_set DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.fixture_native_integrity();`,
+        );
+      }
+      q(ddl("publication/53_local_publication_transition_validation.sql"));
       const report = { contractHash: sourceHash, issues: [] };
       const transition = (phase: string, validation = report) =>
         `SELECT publication.transition_local_publication_request('${request.hash}','${phase}',${literal(validation)});`;
@@ -400,6 +418,16 @@ GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bi
       expect(
         q("SELECT count(*) FROM snapshot.entity_contract_revision;").trim(),
       ).toBe("0");
+      expect(() =>
+        q(
+          `BEGIN; ${context("athyper_worker", author)} SELECT set_config('app.fixture_invalid_graph','true',true); ${transition("submit")} COMMIT;`,
+        ),
+      ).toThrow(/FIXTURE_NATIVE_INTEGRITY_INVALID/);
+      expect(
+        q(
+          `SELECT status||':'||lock_version FROM metadata.entity_change_set WHERE id='${draft}';`,
+        ).trim(),
+      ).toBe("draft:1");
       expect(
         q(
           `BEGIN; ${context("athyper_worker", author)} ${transition("submit")} ${transition("submit")} COMMIT;`,
@@ -478,11 +506,22 @@ CREATE TRIGGER fixture_publish AFTER INSERT ON metadata.entity_release FOR EACH 
         "CREATE OR REPLACE FUNCTION publication.fn_link_system_entity_release(",
       );
       q(commands.slice(linkStart, commands.indexOf("END $$;", linkStart) + 7));
+      q(
+        "ALTER TABLE publication.local_publication_request DROP COLUMN execution_release_id",
+      );
       q(ddl("publication/44_local_publication_release.sql"));
+      q(
+        `CREATE TRIGGER entity_release_link_native_validation AFTER INSERT ON publication.entity_release_link FOR EACH ROW EXECUTE FUNCTION publication.finish_native_publication_validation();`,
+      );
+      q(ddl("publication/53_local_publication_transition_validation.sql"));
       q(
         "ALTER TABLE master.principal ADD COLUMN provisioning_source text DEFAULT 'internal'",
       );
       q(ddl("publication/45_local_publication_identity_status.sql"));
+      q(ddl("publication/56_local_publication_hash_domains.sql"));
+      // The real metadata trigger computes a ledger hash, not a descriptor digest.
+      q(`CREATE FUNCTION metadata.fixture_release_hash() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.release_hash:=repeat('b',64); RETURN NEW; END $$;
+CREATE TRIGGER fixture_release_hash BEFORE INSERT ON metadata.entity_release FOR EACH ROW EXECUTE FUNCTION metadata.fixture_release_hash();`);
       expect(
         q(
           `BEGIN; ${context("athyper_control_api", developer)} SELECT publication.local_publication_identity_status(ARRAY['${developer}']::uuid[],'${author}','${publisher}'); ROLLBACK;`,
@@ -537,7 +576,7 @@ GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,
           `SELECT execution_status FROM publication.local_publication_request WHERE request_hash='${request.hash}';`,
         ).trim(),
       ).toBe("approved");
-      const link = `RESET ROLE; INSERT INTO publication.release VALUES('${releaseId}','${tenant}','metadata.reference.fixture_reference',1,'${artifact.descriptorHash}','publish','${publisher}',
+      const link = `RESET ROLE; INSERT INTO publication.release VALUES('${releaseId}','${tenant}','metadata.reference.fixture_reference',1,repeat('b',64),'publish','${publisher}',
  jsonb_build_object('sourceContractHash','${sourceHash}','sourceDescriptorHash','${artifact.descriptorHash}','productHash','${sourceHash}') || publication.fn_system_entity_execution_metadata('${releaseId}'),'approved');
  ${scoped} SELECT publication.fn_link_system_entity_release('${releaseId}');`;
       expect(

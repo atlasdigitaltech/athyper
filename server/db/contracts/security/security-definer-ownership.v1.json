@@ -4816,6 +4816,202 @@
         {
           "relation": "metadata.entity_target",
           "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_access_permission",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_ai_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_ai_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_ai_profile",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_ai_reference",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_ai_term",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_authorization_profile",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_capability",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_change_case_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_contract_test_case",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field_access",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field_choice",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field_identity",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field_policy_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_field_reference_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_flow",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_flow_step",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_key",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_key_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_label",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_label_translation",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_lifecycle_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_lifecycle_operation_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_materialization_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_materialization_field_mapping",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_numbering_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation_context_requirement",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation_permission",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation_rule",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_operation_scope_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_policy_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_predicate",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_relation",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_relation_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_relation_target",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_runtime_profile",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_search_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_search_profile",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_field_binding",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_navigation_group",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_operation",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_section",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_view",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.entity_surface_view_field",
+          "privileges": ["SELECT"]
+        },
+        {
+          "relation": "metadata.ui_component_contract",
+          "privileges": ["SELECT"]
         }
       ],
       "functions": [
@@ -5008,6 +5204,300 @@
           "command": "SELECT",
           "using": "(tenant_id IS NULL AND EXISTS (SELECT 1 FROM metadata.entity_change_set c WHERE c.id=entity_target.change_set_id AND c.entity_id=entity_target.entity_id AND c.tenant_id IS NULL AND c.source_kind='product' AND c.native_core_layout_version=2))",
           "reason": "Native publication verifies exact canonical target enrollment. Definer-only read; no caller role membership or target mutation."
+        },
+        {
+          "relation": "metadata.entity_access_permission",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_ai_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_ai_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_ai_profile",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_ai_reference",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_ai_term",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_authorization_profile",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_capability",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_change_case_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_contract_test_case",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field_access",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field_choice",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field_identity",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field_policy_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_field_reference_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_flow",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_flow_step",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_key",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_key_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_label",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_label_translation",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_lifecycle_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_lifecycle_operation_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_materialization_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_materialization_field_mapping",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_numbering_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation_context_requirement",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation_permission",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation_rule",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_operation_scope_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_policy_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_predicate",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_relation",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_relation_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_relation_target",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_runtime_profile",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_search_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_search_profile",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_field_binding",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_navigation_group",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_operation",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_section",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_view",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.entity_surface_view_field",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
+        },
+        {
+          "relation": "metadata.ui_component_contract",
+          "command": "SELECT",
+          "using": "(tenant_id IS NULL)",
+          "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
         }
       ]
     },

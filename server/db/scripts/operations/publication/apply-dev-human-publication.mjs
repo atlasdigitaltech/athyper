@@ -15,6 +15,14 @@ const plane = initialTarget
   : "studio";
 assert.ok(["studio", "neon", "mesh"].includes(plane));
 const migrations = {
+  "--apply=DEV-LOCAL-PUBLICATION-HASH-DOMAINS":
+    "20261010_local_publication_hash_domains.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-BINDING-DIAGNOSTICS":
+    "20261010_local_publication_binding_diagnostics.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-VALIDATION-READS":
+    "20261010_local_publication_validation_reads.sql",
+  "--apply=DEV-LOCAL-PUBLICATION-TRANSITION-VALIDATION":
+    "20261010_local_publication_transition_validation.sql",
   "--apply=DEV-LOCAL-PUBLICATION-WORKER-AUDIT":
     "20261010_local_publication_worker_audit.sql",
   "--apply=DEV-LOCAL-PUBLICATION-ADMISSION-AUDIT":
