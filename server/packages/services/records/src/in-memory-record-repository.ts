@@ -41,9 +41,10 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const hierarchy = input.hierarchy;
       const idOf = (row: Row) => row[input.descriptor.storage.idField];
       const parentOf = (row: Row) => (hierarchy ? value(row, input.descriptor, hierarchy.parentField) : undefined);
+      // A scoped hierarchy compares the owner too (T1), as the SQL does.
+      const scopeOf = (row: Row) => (hierarchy?.scopeField ? value(row, input.descriptor, hierarchy.scopeField) : undefined);
       if (hierarchy?.mode === "orphans") {
-        const visibleIds = new Set(visibleSet.map(idOf));
-        rows = rows.filter((row) => parentOf(row) !== null && parentOf(row) !== undefined && !visibleIds.has(parentOf(row)));
+        rows = rows.filter((row) => parentOf(row) !== null && parentOf(row) !== undefined && !visibleSet.some((parent) => idOf(parent) === parentOf(row) && scopeOf(parent) === scopeOf(row)));
       }
       const childMatches = (row: Row) =>
         (input.filters ?? []).filter((filter) => filter.field !== hierarchy?.parentField).every((filter) => matches(row, input.descriptor, filter)) &&
@@ -61,7 +62,7 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const page = candidates.slice(0, input.limit);
       const countMode = input.countMode === "exact" ? "exact" : "none";
       const projected = page.map((row) => project(input.descriptor, row, input.projection));
-      const hasChildren = hierarchy ? page.map((row) => visibleSet.some((child) => parentOf(child) === idOf(row) && childMatches(child))) : undefined;
+      const hasChildren = hierarchy ? page.map((row) => visibleSet.some((child) => parentOf(child) === idOf(row) && scopeOf(child) === scopeOf(row) && childMatches(child))) : undefined;
       const last = projected.at(-1);
       return { data: projected, ...(groups ? { groups } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
     },

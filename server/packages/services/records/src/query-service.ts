@@ -1,3 +1,4 @@
+import { lockedScope } from "./list-tree.js";
 import {
   withEntityEffectiveRead,
   type EntityLiveReadEvidencePort,
@@ -139,6 +140,19 @@ export function createRecordListExecutor<Transaction = unknown>(
         const operators = parent ? recordFieldFilterOperators(parent) : [];
         if (!parent || !parent.filterable || !readableKeys.has(parent.key) || !["eq", "in", "is_null"].every((operator) => operators.includes(operator as never)))
           throw new RecordServiceError(400, "LIST_TREE_PARENT_FIELD_UNAVAILABLE", "This list has no hierarchy the viewer can browse");
+        // A scoped hierarchy (Tree blueprint T1) is browsed one owner at a
+        // time: the locked record scope fixes the scope field, or the request
+        // names exactly one value with one `eq` filter. A record section whose
+        // locked scope does not fix it fails closed (foundation section 8).
+        const scopeField = descriptor.hierarchy!.scopeField;
+        if (scopeField) {
+          const locked = lockedScope(collectionScope.constraints);
+          if (locked.recordScoped && !locked.fields.has(scopeField))
+            throw new RecordServiceError(400, "LIST_TREE_SCOPE_UNBOUND", "This record section does not fix the hierarchy's scope");
+          const scopeFilters = (query.filters ?? []).filter((filter) => filter.field === scopeField);
+          if (!locked.fields.has(scopeField) && (scopeFilters.length !== 1 || scopeFilters[0]!.operator !== "eq" || !readableKeys.has(scopeField)))
+            throw new RecordServiceError(400, "LIST_TREE_SCOPE_REQUIRED", "Choose exactly one value of the hierarchy's scope field");
+        }
       }
       const responseFields = responseProjection(
         descriptor,
@@ -345,7 +359,13 @@ export function createRecordListExecutor<Transaction = unknown>(
                 ...(query.group ? { group: query.group } : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
                 ...(query.hierarchy && descriptor.hierarchy
-                  ? { hierarchy: { mode: query.hierarchy, parentField: descriptor.hierarchy.parentField } }
+                  ? {
+                      hierarchy: {
+                        mode: query.hierarchy,
+                        parentField: descriptor.hierarchy.parentField,
+                        ...(descriptor.hierarchy.scopeField ? { scopeField: descriptor.hierarchy.scopeField } : {}),
+                      },
+                    }
                   : {}),
                 ...(query.cursor ? { cursor: query.cursor } : {}),
                 ...(query.search ? { search: query.search } : {}),

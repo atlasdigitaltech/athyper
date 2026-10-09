@@ -29,17 +29,24 @@ function code(value: unknown, path: string): string {
 export function parseEntityHierarchy(raw: unknown): EntityHierarchyDescriptor {
   const root = "hierarchy";
   const value = record(raw, root);
-  only(value, ["parentField", "orderField", "nodeKind", "maxDepth", "rollups"], root);
+  only(value, ["parentField", "scopeField", "orderField", "nodeKind", "maxDepth", "rollups"], root);
   const maxDepth = value.maxDepth;
   if (typeof maxDepth !== "number" || !Number.isInteger(maxDepth) || maxDepth < 1 || maxDepth > ENTITY_HIERARCHY_MAX_DEPTH)
     fail(`${root}.maxDepth`, `must be an integer from 1 to ${ENTITY_HIERARCHY_MAX_DEPTH} (TREE_DEPTH_OUT_OF_RANGE)`);
   let nodeKind: EntityHierarchyDescriptor["nodeKind"];
   if (value.nodeKind !== undefined) {
+    // Discriminated, so the declaration says which kind of field it reads.
     const item = record(value.nodeKind, `${root}.nodeKind`);
-    only(item, ["field", "branchValues"], `${root}.nodeKind`);
-    if (!Array.isArray(item.branchValues) || !item.branchValues.length || item.branchValues.some((entry) => typeof entry !== "string" || !entry))
-      fail(`${root}.nodeKind.branchValues`, "must list the choices that may have children");
-    nodeKind = Object.freeze({ field: code(item.field, `${root}.nodeKind.field`), branchValues: Object.freeze([...new Set(item.branchValues as string[])]) });
+    if (item.kind === "choice") {
+      only(item, ["kind", "field", "branchValues"], `${root}.nodeKind`);
+      if (!Array.isArray(item.branchValues) || !item.branchValues.length || item.branchValues.some((entry) => typeof entry !== "string" || !entry))
+        fail(`${root}.nodeKind.branchValues`, "must list the choices that may have children");
+      nodeKind = Object.freeze({ kind: "choice" as const, field: code(item.field, `${root}.nodeKind.field`), branchValues: Object.freeze([...new Set(item.branchValues as string[])]) });
+    } else if (item.kind === "boolean") {
+      only(item, ["kind", "field", "branchWhen"], `${root}.nodeKind`);
+      if (typeof item.branchWhen !== "boolean") fail(`${root}.nodeKind.branchWhen`, "must be true or false");
+      nodeKind = Object.freeze({ kind: "boolean" as const, field: code(item.field, `${root}.nodeKind.field`), branchWhen: item.branchWhen });
+    } else fail(`${root}.nodeKind.kind`, "must be choice or boolean (TREE_NODE_KIND_INELIGIBLE)");
   }
   let rollups: EntityHierarchyDescriptor["rollups"];
   if (value.rollups !== undefined) {
@@ -55,6 +62,7 @@ export function parseEntityHierarchy(raw: unknown): EntityHierarchyDescriptor {
   }
   return Object.freeze({
     parentField: code(value.parentField, `${root}.parentField`),
+    ...(value.scopeField === undefined ? {} : { scopeField: code(value.scopeField, `${root}.scopeField`) }),
     ...(value.orderField === undefined ? {} : { orderField: code(value.orderField, `${root}.orderField`) }),
     ...(nodeKind ? { nodeKind } : {}),
     maxDepth,
@@ -65,8 +73,9 @@ export function parseEntityHierarchy(raw: unknown): EntityHierarchyDescriptor {
 const NUMERIC = new Set(["integer", "decimal", "money"]);
 
 /** Checks the declaration against the Entity: the parent field is a nullable
- * reference to this same Entity; the order field is an integer; the node kind
- * is an enum whose branch values are published choices; each rollup is a
+ * reference to this same Entity; a scope field is a required reference to
+ * another Entity; the order field is an integer; a choice node kind is an enum
+ * whose branch values are published choices, a boolean one reads a boolean; each rollup is a
  * numeric field that publishes that aggregate; and Tree is declared exactly
  * when a hierarchy is. */
 export function validateEntityHierarchy(
@@ -83,14 +92,27 @@ export function validateEntityHierarchy(
     throw new Error(`hierarchy.parentField must reference this same Entity: ${hierarchy.parentField} (TREE_PARENT_FIELD_NOT_SELF_REFERENCE)`);
   if (parent.required)
     throw new Error(`hierarchy.parentField must be nullable, so records without a parent are roots: ${hierarchy.parentField} (TREE_PARENT_FIELD_NOT_NULLABLE)`);
+  if (hierarchy.scopeField !== undefined) {
+    // The owner every node of one tree shares. Whether the parent key really
+    // includes it is a DDL fact, checked at onboarding (blueprint section 2.4).
+    const scope = byKey.get(hierarchy.scopeField);
+    if (!scope || scope.type !== "reference" || !scope.required || scope.key === hierarchy.parentField || scope.referenceTargetEntity === entityCode)
+      throw new Error(`hierarchy.scopeField must be a required reference to the owning record: ${hierarchy.scopeField} (TREE_SCOPE_FIELD_INELIGIBLE)`);
+  }
   if (hierarchy.orderField !== undefined && byKey.get(hierarchy.orderField)?.type !== "integer")
     throw new Error(`hierarchy.orderField must be an integer field: ${hierarchy.orderField} (TREE_ORDER_FIELD_INELIGIBLE)`);
   if (hierarchy.nodeKind) {
-    const kind = byKey.get(hierarchy.nodeKind.field);
-    const options = kind?.validation?.["options"];
-    const values = new Set(Array.isArray(options) ? options.map((option) => (option && typeof option === "object" ? String(Reflect.get(option, "value")) : String(option))) : []);
-    if (!kind || kind.type !== "enum" || hierarchy.nodeKind.branchValues.some((value) => !values.has(value)))
-      throw new Error(`hierarchy.nodeKind must be an enum whose branch values are published choices: ${hierarchy.nodeKind.field} (TREE_NODE_KIND_INELIGIBLE)`);
+    const declared = hierarchy.nodeKind;
+    const kind = byKey.get(declared.field);
+    if (declared.kind === "boolean") {
+      if (!kind || kind.type !== "boolean")
+        throw new Error(`hierarchy.nodeKind of kind boolean must read a boolean field: ${declared.field} (TREE_NODE_KIND_INELIGIBLE)`);
+    } else {
+      const options = kind?.validation?.["options"];
+      const values = new Set(Array.isArray(options) ? options.map((option) => (option && typeof option === "object" ? String(Reflect.get(option, "value")) : String(option))) : []);
+      if (!kind || kind.type !== "enum" || declared.branchValues.some((value) => !values.has(value)))
+        throw new Error(`hierarchy.nodeKind of kind choice must be an enum whose branch values are published choices: ${declared.field} (TREE_NODE_KIND_INELIGIBLE)`);
+    }
   }
   for (const rollup of hierarchy.rollups ?? []) {
     const field = byKey.get(rollup.field);

@@ -110,10 +110,10 @@ Section 1's mode → renderer registry (`list-view/src/mode-renderers.ts`) now a
 
 **Approval.** The project owner (nchandravel-atlas) approved this rule as T3 of the [Entity list Tree blueprint](../entity-list-tree/blueprint.md) revision 3, to be decided once for every layout: "pilot 1, T1, T2, T3 and the B2 design entry as per recommendation... approved all five with with T2 and B4 amend below".
 
-Today every layout other than Table and Cards is switched off in every embedded host (`withRenderableModes(…, { board: !embedding, calendar: !embedding, gantt: !embedding, tree: !embedding })`). The rule:
+Board, Calendar, Gantt and Tree are switched off only in record pickers: `withRenderableModes(…, { board: !embedding, calendar: !embedding, gantt: !embedding, tree: !embedding })`, where `embedding` is the picker. Record sections (`related-entity-section.tsx`) pass a parent `scopeCoordinate` and `section`, not `embedding`, so rule 1 already holds in code. (Corrected at the Tree T1–T3 build on 9 October 2026; the first text of this section said every embedded host.) The rule:
 
 1. **Record-section hosts may offer a layout; record pickers may not.** An embedded list shown as a section of a record (a record-scoped collection) may offer Board, Calendar, Gantt and Tree when its descriptor supports them. A list embedded to choose records keeps Table and Cards only.
 2. **The scope comes only from the section's locked record scope,** resolved and enforced on the server exactly as embedded lists already are. A layout never takes its scope from a filter the browser supplies, so a caller cannot widen it.
 3. **Fail closed.** A layout that needs a scope (Tree with a `scopeField`) is unavailable in a section whose locked scope does not bind that field, with its reason code, never drawn over the wider set.
-4. **Each layout adopts the rule in its own build step.** Tree adopts it as T3 (Tree blueprint section 12); Board, Calendar and Gantt adopt it when each needs an embedded variant, with no further decision on the rule itself.
+4. **Each layout adopts the rule in its own build step.** Tree adopted it as T3 on 9 October 2026: the server publishes `scopeLocked` when the parent scope fixes the scope field and otherwise reports `LIST_TREE_SCOPE_UNBOUND` (Tree blueprint section 12); Board, Calendar and Gantt adopt it when each needs an embedded variant, with no further decision on the rule itself.
 

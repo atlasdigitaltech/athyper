@@ -101,7 +101,12 @@ import {
 } from "./tree/grouped-tree";
 import { handleTreeKeyDown } from "./tree/tree-keyboard";
 import { groupedPageState } from "./tree/grouped-tree-model";
-import { treeOrdered, treePageState } from "./tree/tree-model";
+import {
+  recordQuery,
+  treeOrdered,
+  treePageState,
+  treeScopeSatisfied,
+} from "./tree/tree-model";
 import {
   HierarchyTreeChrome,
   HierarchyTreeLines,
@@ -4421,12 +4426,51 @@ function EntityRows({
   const ownGrouping = listModeTraits(mode).ownGrouping;
   const group = ownGrouping ? undefined : groups?.[0];
   const grouped = Boolean(groups?.length && groupedSource) && !ownGrouping;
+  // A scoped hierarchy (T1) is browsed only for one scope value.
+  const declaredTree = mode === "tree" ? descriptor.surface.tree : undefined;
+  const scopeSatisfied = Boolean(
+    declaredTree &&
+      groupedSource &&
+      treeScopeSatisfied(groupedSource.query, declaredTree),
+  );
   const hierarchy = useHierarchyTree({
     descriptor,
-    source: mode === "tree" ? groupedSource : undefined,
+    source: scopeSatisfied ? groupedSource : undefined,
     rootsPage: pageCurrent ? page : undefined,
     revealId,
   });
+  // A deep link into a scoped hierarchy first sets the scope filter to the
+  // record's own scope, then the tree reveals it.
+  const scopeReveal =
+    declaredTree?.scopeField && !scopeSatisfied && revealId && groupedSource
+      ? revealId
+      : undefined;
+  const scopeRevealInput = useRef({ declaredTree, groupedSource, onFilters });
+  scopeRevealInput.current = { declaredTree, groupedSource, onFilters };
+  useEffect(() => {
+    const { declaredTree: tree, groupedSource: source, onFilters: apply } =
+      scopeRevealInput.current;
+    const field = tree?.scopeField;
+    if (!scopeReveal || !tree || !field || !source) return;
+    const controller = new AbortController();
+    source.client
+      .request(entityListOperation, {
+        params: { entityCode: descriptor.entity.code },
+        query: entityListQuery(
+          recordQuery(source.query, descriptor, tree, scopeReveal, false),
+          descriptor,
+          source.scope,
+        ),
+        signal: controller.signal,
+      })
+      .then((result) => {
+        const value = result.rows[0]?.values[field];
+        if (!controller.signal.aborted && typeof value === "string" && value)
+          apply(field, [{ field, operator: "eq", value }]);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [scopeReveal, descriptor]);
   // Grouped records load per group, outside the page.
   const [groupRows, setGroupRows] = useState<
     ReadonlyMap<string, readonly EntityListRowV1[]>
@@ -4517,6 +4561,34 @@ function EntityRows({
       {item.count !== undefined ? <span>{intl.number(item.count)}</span> : null}
     </button>
   );
+  if (declaredTree?.scopeField && !scopeSatisfied) {
+    // T1: choose one scope value first; the prompt names the scope field by its
+    // published label and offers that field's own filter.
+    const field = descriptor.fields.find(
+      (item) => item.key === declaredTree.scopeField,
+    );
+    return (
+      <Card className="a-entity-list__state a-entity-tree__scope">
+        <h2>
+          {intl.message("list.tree.chooseScope", {
+            field: field?.label ?? "",
+          })}
+        </h2>
+        <p>{intl.message("list.tree.chooseScopeHint")}</p>
+        {field ? (
+          <div className="a-entity-tree__scope-filter">
+            <span>{field.label}</span>
+            <ColumnFilter
+              descriptor={descriptor}
+              field={field}
+              filters={filters}
+              onApply={(next) => onFilters(field.key, next)}
+            />
+          </div>
+        ) : null}
+      </Card>
+    );
+  }
   const empty = hierarchy
     ? hierarchy.empty
     : grouped
@@ -5610,6 +5682,10 @@ function modeUnavailableReasonKey(code: string): string {
     return "list.mode.reason.countsUnavailable";
   if (code === "LIST_TREE_PARENT_FIELD_UNAVAILABLE")
     return "list.mode.reason.parentFieldUnavailable";
+  if (code === "LIST_TREE_SCOPE_FIELD_UNAVAILABLE")
+    return "list.mode.reason.scopeFieldUnavailable";
+  if (code === "LIST_TREE_SCOPE_UNBOUND")
+    return "list.mode.reason.scopeUnbound";
   if (
     code === "LIST_CALENDAR_DATE_FIELD_UNAVAILABLE" ||
     code === "LIST_GANTT_DATE_FIELD_UNAVAILABLE"

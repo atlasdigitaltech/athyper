@@ -748,6 +748,35 @@ describe("safe entity list service", () => {
     expect(orphans.rows.map((row) => [row.values["code"], row.hasChildren, row.parentOutsideView])).toEqual([["1200", false, true]]);
   });
 
+  it("browses a scoped hierarchy one owner at a time (Tree blueprint T1)", async () => {
+    const scoped: EntityRuntimeDescriptor = {
+      ...descriptor,
+      fields: [
+        ...descriptor.fields,
+        { key: "parent", storagePath: "parent_uuid", type: "reference", required: false, writableOn: [], filterable: true },
+        { key: "chart", storagePath: "chart_uuid", type: "reference", required: true, writableOn: [], filterable: true },
+      ],
+      hierarchy: { parentField: "parent", scopeField: "chart", maxDepth: 5 },
+    };
+    const lists = createTestListService({
+      metadata: { getEntityDescriptor: async () => scoped },
+      descriptor: scoped,
+      authorizer: allowReadOnly(),
+      rows: [
+        { partner_uuid: "a-1", tenant_id: context.tenantId, partner_code: "1000", display_name: "Assets A", parent_uuid: null, chart_uuid: "chart-a", row_version: 1 },
+        { partner_uuid: "b-1", tenant_id: context.tenantId, partner_code: "1000", display_name: "Assets B", parent_uuid: null, chart_uuid: "chart-b", row_version: 1 },
+      ],
+    });
+    const request = { context, entityCode: scoped.entityCode, sort: [{ field: "code", direction: "asc" as const }], hierarchy: "nodes" as const };
+    const roots = { field: "parent", operator: "is_null" as const };
+    for (const filters of [[roots], [roots, { field: "chart", operator: "in" as const, value: ["chart-a", "chart-b"] }], [roots, { field: "chart", operator: "eq" as const, value: "chart-a" }, { field: "chart", operator: "eq" as const, value: "chart-b" }]])
+      await expect(lists.list({ ...request, filters })).rejects.toMatchObject({ code: "LIST_TREE_SCOPE_REQUIRED" });
+    const chartA = await lists.list({ ...request, filters: [roots, { field: "chart", operator: "eq", value: "chart-a" }] });
+    expect(chartA.rows.map((row) => row.values["name"] ?? row.values["code"])).toHaveLength(1);
+    // A flat list needs no scope.
+    expect((await lists.list({ context, entityCode: scoped.entityCode })).rows).toHaveLength(2);
+  });
+
   it("offers a field for grouping only when it is bounded by class", async () => {
     const field = (key: string, type: string, extra: Record<string, unknown> = {}) => ({
       key, storagePath: key, type, required: false, writableOn: [], filterable: true, list: { groupable: true }, ...extra,

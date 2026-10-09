@@ -21,7 +21,9 @@ const script = buildSync({
       field('status','Status','enum',{groupable:true,filterOptions:opts(['active','Active'],['blocked','Blocked for posting'],['deprecated','Deprecated']),statusTones:{active:'success',blocked:'danger'}}),
       field('account_type','Account type','enum',{groupable:true,filterOptions:opts(['asset','Asset'],['liability','Liability'])}),
       field('kind','Kind','enum',{filterOptions:opts(['summary','Summary account'],['posting','Posting account'])}),
-      field('budget','Annual budget','decimal'),field('parent','Parent account','reference',{defaultVisible:false})];
+      field('budget','Annual budget','decimal'),field('parent','Parent account','reference',{defaultVisible:false}),
+      field('chart','Chart of accounts','reference',{defaultVisible:false,filterOperators:['eq','in'],filterOptions:opts(['chart-a','Operating chart'],['chart-b','Group chart'])}),
+      field('postable','Postable','boolean',{defaultVisible:false,filterOperators:['eq']})];
     const accounts=[
       ['1000','Assets','active','asset','summary',null,null],['1100','Current assets','active','asset','summary',null,'1000'],
       ['1110','Cash and bank','active','asset','summary',null,'1100'],['1111','Operating accounts','active','asset','summary',null,'1110'],
@@ -30,14 +32,17 @@ const script = buildSync({
       ['2000','Liabilities','active','liability','summary',null,null],['2100','Trade payables','blocked','liability','posting',null,'2000'],
       ['2200','Accruals','legacy','liability','posting',null,'2000'],['3000','Suspense','active',null,'posting',null,null],
       ['1131','Raw materials','active','asset','posting',50000,'1130'],
-      ...Array.from({length:cfg.many??0},(_,i)=>['9'+String(i).padStart(3,'0'),'Bulk '+i,'active','asset','posting',1,null])];
-    const idOf=Object.fromEntries(accounts.map(([code],i)=>[code,uuid(i)]));
-    const rows=accounts.map(([code,name,status,account_type,kind,budget,parent],i)=>({id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[parent]:null},...(parent&&!(cfg.hidden??[]).includes(parent)?{displayValues:{parent:accounts.find(a=>a[0]===parent)[1]}}:{})}));
+      ...Array.from({length:cfg.many??0},(_,i)=>['9'+String(i).padStart(3,'0'),'Bulk '+i,'active','asset','posting',1,null]),
+      // A second chart reusing the same codes (scoped fixtures only).
+      ...(cfg.scoped?[['1000','Group assets','active','asset','summary',null,null,'chart-b'],['1100','Group current assets','active','asset','posting',null,'1000','chart-b']]:[])];
+    const chartOf=a=>a[7]??'chart-a';
+    const idOf=Object.fromEntries(accounts.map((a,i)=>[chartOf(a)+':'+a[0],uuid(i)]));
+    const rows=accounts.map((a,i)=>{const [code,name,status,account_type,kind,budget,parent]=a;return {id:uuid(i),values:{code,name,status,account_type,kind,budget,parent:parent?idOf[chartOf(a)+':'+parent]:null,chart:chartOf(a),postable:kind==='posting'},...(parent&&!(cfg.hidden??[]).includes(parent)?{displayValues:{parent:accounts.find(x=>x[0]===parent&&chartOf(x)===chartOf(a))[1]}}:{})}});
     const descriptor={schemaVersion:1,plane:'neon',
       entity:{code:'gl_account',label:'gl_account',pluralLabel:'Chart of Accounts',identityField:'code',detailRouteTemplate:'/gl_account/:recordId'},
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
       surface:{key:'list',title:'Chart of Accounts',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','name','status','account_type','kind','budget'],density:'comfortable',mode:cfg.defaultMode??'table'},search:{minimumQueryLength:1},filterPresentation:{quickFields:[],source:'metadata',allowUserPinning:true},
-        ...(cfg.tree?{supportedModes:['table','compact','tree'],tree:{parentField:'parent',nodeKind:{field:'kind',branchValues:['summary'],tones:{summary:'success'}},maxDepth:cfg.maxDepth??5}}
+        ...(cfg.tree?{supportedModes:['table','compact','tree'],tree:{parentField:'parent',...(cfg.scoped?{scopeField:'chart'}:{}),...(cfg.scopeLocked?{scopeLocked:true}:{}),nodeKind:cfg.booleanKind?{kind:'boolean',field:'postable',branchWhen:false}:{kind:'choice',field:'kind',branchValues:['summary'],tones:{summary:'success'}},maxDepth:cfg.maxDepth??5}}
           :cfg.treeUnavailable?{supportedModes:['table','compact'],unavailableModes:[{mode:'tree',code:'LIST_TREE_PARENT_FIELD_UNAVAILABLE'}]}
           :{supportedModes:['table','compact']})},
       fields:fields.map((f,i)=>({...f,defaultOrder:i})),actions:[],
@@ -85,7 +90,7 @@ const script = buildSync({
   define: { "process.env.NODE_ENV": '"test"' },
 }).outputFiles[0]!.text;
 
-type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[] };
+type Fixture = { defaultMode?: string; exact?: boolean; many?: number; pageSize?: number; tree?: boolean; treeUnavailable?: boolean; maxDepth?: number; hidden?: string[]; scoped?: boolean; scopeLocked?: boolean; booleanKind?: boolean };
 type Query = { filter?: string[]; group?: string; groupsOnly?: string; countMode?: string; hierarchy?: string; recordIds?: string | string[]; cursor?: string };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -336,3 +341,53 @@ test.describe("B1 Tree layout", () => {
     await expect(page.locator("[role=row][aria-posinset]")).toHaveCount(500);
   });
 });
+
+test.describe("T1–T3 scoped hierarchy and node kind", () => {
+  test("a scoped hierarchy asks for one scope value, names the field by its label, and sends no tree request until then", async ({ page }) => {
+    await mount(page, 1440, { tree: true, scoped: true }, "?view=tree");
+    await expect(page.getByRole("heading", { name: "Choose Chart of accounts to see the tree" })).toBeVisible();
+    await expect(page.getByRole("treegrid")).toHaveCount(0);
+    expect((await requests(page)).some(q => q.hierarchy)).toBe(false);
+    await page.screenshot({ path: "tooling/config/test-results/entity-list-tree-scope-prompt.png", fullPage: true });
+    // The prompt offers the scope field's own filter; choosing one value draws the tree.
+    await page.getByRole("button", { name: "Filter Chart of accounts" }).click();
+    const dialog = page.getByRole("dialog", { name: "Filter Chart of accounts" });
+    await dialog.getByRole("combobox", { name: "Value for Chart of accounts filter 1" }).click();
+    await page.getByRole("option", { name: "Group chart" }).click();
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(page.locator('[role=row][aria-level="1"][aria-posinset] .a-entity-tree__title')).toHaveText(["Group assets"]);
+  });
+
+  test("with one scope value the tree shows that chart only, even where codes repeat", async ({ page }) => {
+    const filter = encodeURIComponent(JSON.stringify({ operator: "eq", value: "chart-b" }));
+    await mount(page, 1440, { tree: true, scoped: true }, `?view=tree&filter.chart=${filter}`);
+    await expect(page.getByRole("treegrid")).toBeVisible();
+    await expect(page.locator('[role=row][aria-level="1"][aria-posinset] .a-entity-tree__title')).toHaveText(["Group assets"]);
+    await node(page, "Group assets").getByRole("button", { name: /Expand 1000/ }).click();
+    await expect(page.locator('[role=row][aria-level="2"][aria-posinset] .a-entity-tree__title')).toHaveText(["Group current assets"]);
+    const tree = (await requests(page)).filter(q => q.hierarchy);
+    expect(tree.length).toBeGreaterThan(0);
+    for (const q of tree) expect((q.filter ?? []).map(f => JSON.parse(f))).toContainEqual({ field: "chart", operator: "eq", value: "chart-b" });
+  });
+
+  test("a locked record scope satisfies the scope without a filter", async ({ page }) => {
+    await mount(page, 1440, { tree: true, scoped: true, scopeLocked: true }, "?view=tree");
+    await expect(page.getByRole("treegrid")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Choose Chart of accounts/ })).toHaveCount(0);
+  });
+
+  test("a deep link into a scoped hierarchy sets the scope filter, then reveals the node", async ({ page }) => {
+    await mount(page, 1440, { tree: true, scoped: true }, `?view=tree&tree.node=${idOf(5)}`);
+    await expect(node(page, "1113")).toBeFocused();
+    expect(decodeURIComponent(page.url())).toContain('filter.chart={"operator":"eq","value":"chart-a"}');
+  });
+
+  test("a boolean node kind draws leaves where the field is not the branch value", async ({ page }) => {
+    await mount(page, 1440, { tree: true, booleanKind: true }, "?view=tree");
+    await expect(node(page, "1000").locator(".a-entity-tree__kind")).toHaveAttribute("data-shape", "branch");
+    await expect(node(page, "3000").locator(".a-entity-tree__kind")).toHaveAttribute("data-shape", "leaf");
+    await expect(node(page, "3000").locator(".a-entity-tree__kind")).toHaveText("Postable: Yes");
+    await expect(node(page, "1000").locator(".a-entity-tree__kind")).toHaveAttribute("data-tone", "neutral");
+  });
+});
+

@@ -386,14 +386,27 @@ export interface EntityPolicyBindingDescriptor {
 export interface EntityHierarchyDescriptor {
   /** A nullable reference to this same Entity; records without one are roots. */
   readonly parentField: string;
+  /** A required reference to the owning record (a chart, a company code, a
+   * project) when the parent key includes that owner; a parent and its
+   * children share its value (Tree blueprint T1). */
+  readonly scopeField?: string;
   /** An integer sibling order; without it siblings follow the list's default sort. */
   readonly orderField?: string;
-  readonly nodeKind?: {
-    /** An entity-owned enum. */
-    readonly field: string;
-    /** Choices that may have children; every other choice is a leaf. */
-    readonly branchValues: readonly string[];
-  };
+  /** The database's own leaf rule (Tree blueprint T2). */
+  readonly nodeKind?:
+    | {
+        readonly kind: "choice";
+        /** An entity-owned enum. */
+        readonly field: string;
+        /** Choices that may have children; every other choice is a leaf. */
+        readonly branchValues: readonly string[];
+      }
+    | {
+        readonly kind: "boolean";
+        readonly field: string;
+        /** The value that means "may have children" (false for `is_postable`). */
+        readonly branchWhen: boolean;
+      };
   /** 1–16. Nothing deeper is requested. */
   readonly maxDepth: number;
   /** At most 5; sum or count over visible descendants (Phase B3). */

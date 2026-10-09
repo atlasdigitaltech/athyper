@@ -38,7 +38,7 @@ export function treeOrdered(tree: ListTreeV1, descriptor: EntityListDescriptorV1
 export function treeColumns(state: ListLocationStateV1, descriptor: EntityListDescriptorV1, tree: ListTreeV1): readonly string[] {
   const listed = new Set(descriptor.fields.map((field) => field.key));
   const title = descriptor.fields.find((field) => field.semanticRole === "title")?.key;
-  const wanted = [descriptor.entity.identityField, title, tree.parentField, tree.nodeKind?.field];
+  const wanted = [descriptor.entity.identityField, title, tree.parentField, tree.scopeField, tree.nodeKind?.field];
   return [...new Set([...state.columns, ...wanted.filter((key): key is string => Boolean(key && listed.has(key)))])];
 }
 
@@ -97,10 +97,31 @@ export function recordQuery(state: ListLocationStateV1, descriptor: EntityListDe
   };
 }
 
+/** A scoped hierarchy (T1) draws one owner's tree: the list's locked record
+ * scope fixes the scope field, or the list has exactly one `eq` filter on it.
+ * An unscoped hierarchy is always satisfied. */
+export function treeScopeSatisfied(state: Pick<ListLocationStateV1, "filters">, tree: ListTreeV1): boolean {
+  if (!tree.scopeField || tree.scopeLocked) return true;
+  const scope = state.filters.filter((filter) => filter.field === tree.scopeField);
+  return scope.length === 1 && scope[0]!.operator === "eq";
+}
+
 /** The list's page query in Tree mode is the roots query, so the list's own
- * authority, error and retry handling cover the top level. */
+ * authority, error and retry handling cover the top level. Without one scope
+ * value it stays the ordinary list query: its rows decide only the empty state
+ * and no tree request is sent. */
 export function treePageState(state: ListLocationStateV1, descriptor: EntityListDescriptorV1): ListLocationStateV1 | TreeQueryState {
-  return state.mode === "tree" && descriptor.surface.tree ? rootsQuery(state, descriptor, descriptor.surface.tree) : state;
+  const tree = descriptor.surface.tree;
+  return state.mode === "tree" && tree && treeScopeSatisfied(state, tree) ? rootsQuery(state, descriptor, tree) : state;
+}
+
+/** Whether a row may have children by its declared node kind (T2). */
+export function branchByKind(row: EntityListRowV1, tree: ListTreeV1): boolean | undefined {
+  const kind = tree.nodeKind;
+  if (!kind) return undefined;
+  const value = row.values[kind.field];
+  if (kind.kind === "boolean") return typeof value === "boolean" ? value === kind.branchWhen : undefined;
+  return typeof value === "string" ? kind.branchValues.includes(value) : undefined;
 }
 
 /** The parent identifier a row carries (internal; never displayed). */

@@ -2,19 +2,19 @@ import { describe, expect, it } from "vitest";
 import type { ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import { createInMemoryRecordPersistence } from "./in-memory-record-repository.js";
-import { LIST_TREE_PARENT_FIELD_UNAVAILABLE, resolveListTree } from "./list-tree.js";
+import { LIST_TREE_PARENT_FIELD_UNAVAILABLE, LIST_TREE_SCOPE_FIELD_UNAVAILABLE, LIST_TREE_SCOPE_UNBOUND, lockedScope, resolveListTree } from "./list-tree.js";
 import { parseRecordListParameters } from "./records-routes.js";
 
 const listField = (key: string, valueKind: ListFieldDescriptorV1["valueKind"], options: Partial<ListFieldDescriptorV1> = {}): ListFieldDescriptorV1 => ({
   key, label: key, valueKind, defaultVisible: true, defaultOrder: 0, filterOperators: ["eq", "in", "is_null", "is_not_null"], sortable: true, groupable: false, aggregations: [], ...options,
 });
-const hierarchy = { parentField: "parent", orderField: "sequence", nodeKind: { field: "kind", branchValues: ["summary"] }, maxDepth: 6, rollups: [{ field: "budget", aggregate: "sum" as const }] };
+const hierarchy = { parentField: "parent", orderField: "sequence", nodeKind: { kind: "choice" as const, field: "kind", branchValues: ["summary"] }, maxDepth: 6, rollups: [{ field: "budget", aggregate: "sum" as const }] };
 const fields = [listField("parent", "reference"), listField("sequence", "integer"), listField("kind", "enum", { statusTones: { summary: "neutral" } }), listField("budget", "money")];
 
 describe("per-viewer Tree resolution", () => {
   it("offers the hierarchy with order, node kind and rollups the viewer can read", () => {
     expect(resolveListTree({ hierarchy, fields, masked: () => false })).toEqual({ tree: {
-      parentField: "parent", orderField: "sequence", nodeKind: { field: "kind", branchValues: ["summary"], tones: { summary: "neutral" } }, maxDepth: 6,
+      parentField: "parent", orderField: "sequence", nodeKind: { kind: "choice", field: "kind", branchValues: ["summary"], tones: { summary: "neutral" } }, maxDepth: 6,
       rollups: [{ field: "budget", aggregate: "sum", label: "budget" }],
     } });
   });
@@ -27,6 +27,26 @@ describe("per-viewer Tree resolution", () => {
   it("omits an order, node-kind or rollup field the viewer cannot read", () => {
     const result = resolveListTree({ hierarchy, fields, masked: (key) => key !== "parent" });
     expect(result).toEqual({ tree: { parentField: "parent", maxDepth: 6 } });
+  });
+
+  const scoped = { parentField: "parent", scopeField: "chart", maxDepth: 6 };
+  const withChart = [...fields, listField("chart", "reference", { filterOperators: ["eq", "in"] })];
+  it("offers a scoped hierarchy only when the viewer can filter by its scope field (T1)", () => {
+    expect(resolveListTree({ hierarchy: scoped, fields: withChart, masked: () => false })).toEqual({ tree: { parentField: "parent", scopeField: "chart", maxDepth: 6 } });
+    expect(resolveListTree({ hierarchy: scoped, fields: withChart, masked: (key) => key === "chart" })).toEqual({ unavailable: LIST_TREE_SCOPE_FIELD_UNAVAILABLE });
+    expect(resolveListTree({ hierarchy: scoped, fields: [...fields, listField("chart", "reference", { filterOperators: ["in"] })], masked: () => false })).toEqual({ unavailable: LIST_TREE_SCOPE_FIELD_UNAVAILABLE });
+  });
+
+  it("in a record section, the locked scope must fix the scope field or Tree fails closed (T3)", () => {
+    const parent = (field: string) => lockedScope([{ kind: "entity.parent.v1", entityCode: "gl_account", storageSchema: "app", storageObject: "gl_account", predicates: [{ field, value: "c-1" }] }]);
+    expect(resolveListTree({ hierarchy: scoped, fields: withChart, masked: () => false, locked: parent("chart") })).toEqual({ tree: { parentField: "parent", scopeField: "chart", scopeLocked: true, maxDepth: 6 } });
+    expect(resolveListTree({ hierarchy: scoped, fields: withChart, masked: () => false, locked: parent("owner") })).toEqual({ unavailable: LIST_TREE_SCOPE_UNBOUND });
+    expect(lockedScope([])).toEqual({ recordScoped: false, fields: new Set() });
+  });
+
+  it("publishes a boolean node kind with its branch value (T2)", () => {
+    const result = resolveListTree({ hierarchy: { parentField: "parent", nodeKind: { kind: "boolean" as const, field: "postable", branchWhen: false }, maxDepth: 6 }, fields: [...fields, listField("postable", "boolean")], masked: () => false });
+    expect(result).toEqual({ tree: { parentField: "parent", nodeKind: { kind: "boolean", field: "postable", branchWhen: false }, maxDepth: 6 } });
   });
 });
 
@@ -82,6 +102,26 @@ describe("hierarchy requests", () => {
     const orphans = await seed().list({ ...base, filters: [], hierarchy: { mode: "orphans", parentField: "parent" } });
     expect(orphans.data.map((row) => row["code"])).toEqual(["2110"]);
     expect(orphans.hasChildren).toEqual([false]);
+  });
+
+  it("compares the scope for child existence and orphans in a scoped hierarchy (T1)", async () => {
+    const scopedDescriptor = {
+      ...descriptor,
+      fields: [...descriptor.fields, { key: "chart", storagePath: "chart_id", type: "reference", required: true, writableOn: [], filterable: true }],
+      hierarchy: { parentField: "parent", scopeField: "chart", maxDepth: 6 },
+    } as unknown as EntityRuntimeDescriptor;
+    const persistence = createInMemoryRecordPersistence();
+    persistence.seed(scopedDescriptor, tenantId, [
+      { id: id(1), tenant_id: tenantId, code: "1000", parent_id: null, chart_id: "chart-a", status: "active" },
+      { id: id(2), tenant_id: tenantId, code: "1100", parent_id: id(1), chart_id: "chart-a", status: "active" },
+      // A row naming a parent in another chart is never that parent's child.
+      { id: id(3), tenant_id: tenantId, code: "1100", parent_id: id(1), chart_id: "chart-b", status: "active" },
+    ]);
+    const scopedBase = { ...base, descriptor: scopedDescriptor };
+    const roots = await persistence.repository.list({ ...scopedBase, filters: [{ field: "parent", operator: "is_null" }, { field: "chart", operator: "eq", value: "chart-a" }], hierarchy: { mode: "nodes", parentField: "parent", scopeField: "chart" } });
+    expect(roots.hasChildren).toEqual([true]);
+    const orphans = await persistence.repository.list({ ...scopedBase, filters: [{ field: "chart", operator: "eq", value: "chart-b" }], hierarchy: { mode: "orphans", parentField: "parent", scopeField: "chart" } });
+    expect(orphans.data.map((row) => row["code"])).toEqual(["1100"]);
   });
 
   it("returns no child flags on ordinary requests", async () => {

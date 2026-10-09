@@ -14,8 +14,12 @@ import {
   orphansQuery,
   recordQuery,
   rootsQuery,
+  branchByKind,
+  treeColumns,
   treeEntries,
   treeOrdered,
+  treePageState,
+  treeScopeSatisfied,
   type TreeLevels,
 } from "../../packages/platform/entity/runtime/list-view/src/tree/tree-model";
 
@@ -25,7 +29,7 @@ const descriptor = {
   fields: [field("code", "string"), field("name", "string", { semanticRole: "title" }), field("parent", "reference"), field("seq", "integer"), field("kind", "enum")],
   limits: { maxSortLevels: 3 },
 } as unknown as EntityListDescriptorV1;
-const tree: ListTreeV1 = { parentField: "parent", orderField: "seq", nodeKind: { field: "kind", branchValues: ["summary"] }, maxDepth: 3 };
+const tree: ListTreeV1 = { parentField: "parent", orderField: "seq", nodeKind: { kind: "choice", field: "kind", branchValues: ["summary"] }, maxDepth: 3 };
 const state = { filters: [{ field: "status", operator: "eq", value: "active" }], sort: [{ field: "name", direction: "desc" }], columns: ["code", "seq"], density: "comfortable", mode: "tree", query: "cash" } as unknown as ListLocationStateV1;
 const row = (id: string, hasChildren = false, parent?: string): EntityListRowV1 => ({ id, values: { code: id.toUpperCase(), name: `Account ${id}`, ...(parent ? { parent } : {}) }, hasChildren }) as unknown as EntityListRowV1;
 const levels = (entries: Record<string, readonly EntityListRowV1[]>, extra: Record<string, object> = {}): TreeLevels =>
@@ -127,3 +131,39 @@ describe("tree levels", () => {
     assert.deepEqual(treeEntries(loaded, new Set(["a"]), true, tree, true).at(-1), { kind: "message", key: "ceiling:a", level: 2, message: "ceiling" });
   });
 });
+
+describe("scoped hierarchy and node kind (T1, T2)", () => {
+  const scoped: ListTreeV1 = { parentField: "parent", scopeField: "chart", maxDepth: 3 };
+  const scopedDescriptor = { ...descriptor, fields: [...descriptor.fields, field("chart", "reference")], surface: { tree: scoped } } as unknown as EntityListDescriptorV1;
+  const eq = (value: string) => ({ field: "chart", operator: "eq", value }) as const;
+
+  it("needs exactly one eq filter on the scope field, unless the record scope is locked", () => {
+    assert.equal(treeScopeSatisfied({ filters: [] }, scoped), false);
+    assert.equal(treeScopeSatisfied({ filters: [eq("a")] }, scoped), true);
+    assert.equal(treeScopeSatisfied({ filters: [eq("a"), eq("b")] }, scoped), false);
+    assert.equal(treeScopeSatisfied({ filters: [{ field: "chart", operator: "in", value: ["a"] }] }, scoped), false);
+    assert.equal(treeScopeSatisfied({ filters: [] }, { ...scoped, scopeLocked: true }), true);
+    assert.equal(treeScopeSatisfied({ filters: [] }, tree), true);
+  });
+
+  it("without one scope value the page query stays the ordinary list query; the scope field is always requested", () => {
+    const unscoped = treePageState({ ...state, filters: [] }, scopedDescriptor);
+    assert.equal("hierarchy" in unscoped, false);
+    const one = treePageState({ ...state, filters: [eq("a")] }, scopedDescriptor) as { hierarchy?: string; filters: unknown[] };
+    assert.equal(one.hierarchy, "nodes");
+    assert.ok(one.filters.some((filter) => JSON.stringify(filter) === JSON.stringify(eq("a"))));
+    assert.ok(treeColumns(state, scopedDescriptor, scoped).includes("chart"));
+  });
+
+  it("reads the node kind from a choice or a boolean field", () => {
+    const choice = { ...tree };
+    const withKind = (values: Record<string, unknown>) => ({ id: "x", values }) as unknown as EntityListRowV1;
+    assert.equal(branchByKind(withKind({ kind: "summary" }), choice), true);
+    assert.equal(branchByKind(withKind({ kind: "posting" }), choice), false);
+    const boolean: ListTreeV1 = { ...tree, nodeKind: { kind: "boolean", field: "postable", branchWhen: false } };
+    assert.equal(branchByKind(withKind({ postable: false }), boolean), true);
+    assert.equal(branchByKind(withKind({ postable: true }), boolean), false);
+    assert.equal(branchByKind(withKind({}), boolean), undefined);
+  });
+});
+

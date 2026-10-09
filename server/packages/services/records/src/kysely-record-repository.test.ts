@@ -139,6 +139,14 @@ it("computes child existence and orphans inside the visible set with aliased cor
   statements.length = 0;
   await repository.list({ ...input, filters: [], hierarchy: { mode: "orphans", parentField: "parent" } });
   expect(statements[0]).toContain('("__tree_row"."parent_id" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "app"."gl_account" AS "__tree_parent" WHERE "__tree_parent"."id" = "__tree_row"."parent_id" AND "tenant_id" =');
+  // A scoped hierarchy compares the owner inside both checks (T1).
+  statements.length = 0;
+  const scopedTree = { ...tree, fields: [...tree.fields, { key: "chart", storagePath: "chart_id", type: "reference", required: true, writableOn: [], filterable: true }] } as unknown as EntityRuntimeDescriptor;
+  await repository.list({ ...input, descriptor: scopedTree, hierarchy: { mode: "nodes", parentField: "parent", scopeField: "chart" } });
+  expect(statements[0]).toContain('"__tree_child"."chart_id" = "__tree_row"."chart_id"');
+  statements.length = 0;
+  await repository.list({ ...input, descriptor: scopedTree, filters: [], hierarchy: { mode: "orphans", parentField: "parent", scopeField: "chart" } });
+  expect(statements[0]).toContain('"__tree_parent"."chart_id" = "__tree_row"."chart_id"');
   // An ordinary request computes no child existence and returns no child flags.
   statements.length = 0;
   const flat = await repository.list(input);

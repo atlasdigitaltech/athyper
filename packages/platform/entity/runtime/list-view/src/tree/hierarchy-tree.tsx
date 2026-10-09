@@ -17,6 +17,7 @@ import {
   TREE_ORPHANS,
   TREE_ROOTS,
   admitPage,
+  branchByKind,
   ceilingState,
   childLevel,
   childrenQuery,
@@ -415,11 +416,20 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
   const { tree } = hierarchy;
   const { row } = entry;
   const label = treeNodeLabel(row, descriptor);
-  const kindValue = tree.nodeKind ? row.values[tree.nodeKind.field] : undefined;
-  const kind = tree.nodeKind && typeof kindValue === "string" ? kindValue : undefined;
-  // The kind's published choice label, never its raw code.
-  const kindField = tree.nodeKind ? descriptor.fields.find((field) => field.key === tree.nodeKind!.field) : undefined;
-  const kindText = tree.nodeKind && kind ? String(row.displayValues?.[tree.nodeKind.field] ?? formatFieldValue(kind, kindField, intl)) : undefined;
+  // Node kind (T2): round for "may have children", a diamond for a leaf; a
+  // choice kind draws its published tone, a boolean kind a neutral one. The
+  // kind is hidden text: the choice label, or the field label and yes or no.
+  const nodeKind = tree.nodeKind;
+  const branch = branchByKind(row, tree);
+  const kindField = nodeKind ? descriptor.fields.find((field) => field.key === nodeKind.field) : undefined;
+  const kindValue = nodeKind ? row.values[nodeKind.field] : undefined;
+  const kindText =
+    branch === undefined || !nodeKind
+      ? undefined
+      : nodeKind.kind === "boolean"
+        ? `${kindField?.label ?? ""}: ${intl.message(kindValue === true ? "entity.value.yes" : "entity.value.no")}`
+        : String(row.displayValues?.[nodeKind.field] ?? formatFieldValue(kindValue as string, kindField, intl));
+  const tone = nodeKind?.kind === "choice" && typeof kindValue === "string" ? (nodeKind.tones?.[kindValue] ?? "neutral") : "neutral";
   const children = hierarchy.levels.get(childLevel(row.id));
   const count = entry.expanded && children?.total !== undefined ? children.total : undefined;
   const content = (
@@ -437,8 +447,8 @@ export function TreeNodeLabel({ entry, hierarchy, descriptor, intl, href, onOpen
         label={intl.message(entry.expanded ? "list.tree.collapseNode" : "list.tree.expandNode", { record: label.text })}
         onToggle={() => hierarchy.toggle(row.id)}
       />
-      {tree.nodeKind && kind ? (
-        <span className="a-entity-tree__kind" data-tone={tree.nodeKind.tones?.[kind] ?? "neutral"} data-shape={tree.nodeKind.branchValues.includes(kind) ? "branch" : "leaf"}>
+      {kindText !== undefined ? (
+        <span className="a-entity-tree__kind" data-tone={tone} data-shape={branch ? "branch" : "leaf"}>
           <span className="a-visually-hidden">{kindText}</span>
         </span>
       ) : null}

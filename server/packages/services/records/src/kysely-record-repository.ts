@@ -177,9 +177,13 @@ function hierarchySql(input: RecordRepositoryListInput, compilers: ReadonlyMap<s
     ...(input.filters ?? []).filter((filter) => filter.field !== hierarchy.parentField).map((filter) => filterCondition(descriptor, filter)),
     ...(input.search ? [searchCondition(descriptor, input.search)] : []),
   ];
-  const hasChildren = sql`EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_child")} WHERE ${sql.ref(`__tree_child.${parentPath}`)} = ${sql.ref(`${TREE_ROW}.${idPath}`)} AND ${sql.join(childConditions, sql` AND `)})`;
+  // A scoped hierarchy (T1) compares the owner too, matching the composite
+  // parent key and its index: a child or parent is always in the row's scope.
+  const scopePath = hierarchy.scopeField ? fieldPath(descriptor, hierarchy.scopeField) : undefined;
+  const sameScope = (alias: string) => (scopePath ? [sql`${sql.ref(`${alias}.${scopePath}`)} = ${sql.ref(`${TREE_ROW}.${scopePath}`)}`] : []);
+  const hasChildren = sql`EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_child")} WHERE ${sql.ref(`__tree_child.${parentPath}`)} = ${sql.ref(`${TREE_ROW}.${idPath}`)} AND ${sql.join([...sameScope("__tree_child"), ...childConditions], sql` AND `)})`;
   const orphanCondition = hierarchy.mode === "orphans"
-    ? sql`(${sql.ref(`${TREE_ROW}.${parentPath}`)} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_parent")} WHERE ${sql.ref(`__tree_parent.${idPath}`)} = ${sql.ref(`${TREE_ROW}.${parentPath}`)} AND ${sql.join(visible, sql` AND `)}))`
+    ? sql`(${sql.ref(`${TREE_ROW}.${parentPath}`)} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ${table(descriptor)} AS ${sql.ref("__tree_parent")} WHERE ${sql.ref(`__tree_parent.${idPath}`)} = ${sql.ref(`${TREE_ROW}.${parentPath}`)} AND ${sql.join([...sameScope("__tree_parent"), ...visible], sql` AND `)}))`
     : undefined;
   return { hasChildren, orphanCondition };
 }

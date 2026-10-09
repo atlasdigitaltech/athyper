@@ -71,3 +71,8 @@ a.a-entity-tree__label:hover .a-entity-tree__title{text-decoration:underline}
 .a-entity-tree__details>div{display:flex;gap:var(--a-space-1);min-inline-size:0}
 .a-entity-tree__details dt{color:var(--a-muted-foreground)}
 .a-entity-tree__details dd{margin:0;overflow-wrap:anywhere}
+.a-entity-list__state.a-entity-tree__scope{display:grid;justify-items:center;gap:var(--a-space-2);text-align:center}
+.a-entity-tree__scope>h2{margin:0;font-size:var(--a-font-size-md)}
+.a-entity-tree__scope>p{margin:0;color:var(--a-muted-foreground)}
+.a-entity-tree__scope-filter{display:inline-flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-1) var(--a-space-3);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface)}
+.a-entity-tree__scope-filter .a-entity-list__column-filter{opacity:1}

@@ -923,6 +923,16 @@ export const entityRuntimeMessages = {
     "medan induknya tidak tersedia untuk anda.",
     "حقل الأصل الخاص به غير متاح لك.",
   ],
+  "list.mode.reason.scopeFieldUnavailable": [
+    "its scope field is not available to you.",
+    "medan skopnya tidak tersedia untuk anda.",
+    "حقل النطاق الخاص به غير متاح لك.",
+  ],
+  "list.mode.reason.scopeUnbound": [
+    "this record section does not fix its scope.",
+    "bahagian rekod ini tidak menetapkan skopnya.",
+    "قسم السجل هذا لا يحدد نطاقه.",
+  ],
   "list.mode.reason.dateFieldUnavailable": [
     "none of its date fields is available to you.",
     "tiada medan tarikhnya tersedia untuk anda.",
@@ -1198,6 +1208,8 @@ export const entityRuntimeMessages = {
   "list.tree.noRecords": ["No records", "Tiada rekod", "لا توجد سجلات"],
   "list.tree.loadMore": ["Load more", "Muat lagi", "تحميل المزيد"],
   "list.tree.loadMoreLeft": ["Load more ({count, number} left)", "Muat lagi ({count, number} lagi)", "تحميل المزيد (يتبقى {count, number})"],
+  "list.tree.chooseScope": ["Choose {field} to see the tree", "Pilih {field} untuk melihat pokok", "اختر {field} لعرض الشجرة"],
+  "list.tree.chooseScopeHint": ["The tree shows the records of one value at a time. Use the filter to choose it.", "Pokok memaparkan rekod bagi satu nilai pada satu masa. Gunakan penapis untuk memilihnya.", "تعرض الشجرة سجلات قيمة واحدة في كل مرة. استخدم عامل التصفية لاختيارها."],
   "list.tree.expandNode": ["Expand {record}", "Kembangkan {record}", "توسيع {record}"],
   "list.tree.collapseNode": ["Collapse {record}", "Kuncupkan {record}", "طي {record}"],
   "list.tree.orphans": ["Records whose parent is outside your view", "Rekod yang induknya di luar paparan anda", "سجلات يقع أصلها خارج نطاق عرضك"],

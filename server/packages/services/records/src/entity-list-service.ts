@@ -2,7 +2,7 @@ import { MAX_LIST_PAGE_SIZE } from "./list-limits.js";
 import { resolveCardContent, resolveListBoard } from "./list-board.js";
 import { resolveListCalendar } from "./list-calendar.js";
 import { resolveListGantt } from "./list-gantt.js";
-import { resolveListTree } from "./list-tree.js";
+import { lockedScope, resolveListTree } from "./list-tree.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -1475,7 +1475,14 @@ export function compileEntityListDescriptor(
       ? ganttResolution.gantt
       : undefined;
   const treeResolution = descriptor.hierarchy
-    ? resolveListTree({ hierarchy: descriptor.hierarchy, fields: ordered, masked })
+    ? resolveListTree({
+        hierarchy: descriptor.hierarchy,
+        fields: ordered,
+        masked,
+        locked: lockedScope(
+          collectionScope?.status === "ready" ? collectionScope.constraints : [],
+        ),
+      })
     : undefined;
   const tree =
     treeResolution && "tree" in treeResolution ? treeResolution.tree : undefined;
