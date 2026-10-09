@@ -2803,6 +2803,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/publication/64_local_rollback_head.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_local_rollback_admission.sql",
+      "path": "migrations/20261010_local_rollback_admission.sql",
+      "sha256": "647812de866c364ca8b3fb6cfbc829952593e0e61dfa453fe461486d0e92cc37",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Admit exact signed rollback target requests without creating a new release.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/65_local_rollback_admission.sql"
+      ]
     }
   ]
 }
