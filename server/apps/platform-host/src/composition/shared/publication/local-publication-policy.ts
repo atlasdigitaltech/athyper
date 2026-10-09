@@ -192,8 +192,8 @@ export async function resolveLocalPublicationAuthority(options: {
     throw Error("LOCAL_PUBLICATION_AUTHORITY_CHANGED");
   // Database execution also checks independent enrollment actors and supersession.
   const live = await sql<{ valid: boolean }>`SELECT d.created_by<>d.updated_by
-    AND (SELECT count(*) FROM master.principal p WHERE p.tenant_id=d.tenant_id AND p.id IN(d.created_by,d.updated_by)
-      AND p.status='active' AND p.principal_type='user')=2
+    AND publication.local_publication_identity_status(ARRAY[d.created_by,d.updated_by],
+      ${policy.authorPrincipalId}::uuid,${policy.publisherPrincipalId}::uuid)
     AND d.status='active' AND d.definition_hash=${options.pin.hash} AND d.version_no=${options.pin.version}
     AND d.effective_from<=CURRENT_DATE AND (d.effective_until IS NULL OR d.effective_until>=CURRENT_DATE)
     AND NOT EXISTS(SELECT 1 FROM control.policy_definition n WHERE n.tenant_id=d.tenant_id AND n.entity_type=d.entity_type
