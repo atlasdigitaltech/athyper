@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 260,
+    "configuration:new": 261,
     "database-commands:deferred": 76,
     "database-commands:migrated": 19,
     "database-commands:new": 102,
@@ -1416,6 +1416,7 @@
       "currentLocations": [
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts"
       ],
       "disposition": "new",
@@ -1684,7 +1685,20 @@
         "server/packages/platform/metadata/src/entity-hierarchy-readiness.postgres.test.ts",
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:athyper_service_test_other_tenant_id",
+      "category": "configuration",
+      "key": "athyper_service_test_other_tenant_id",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/services/records/src/matrix-rank.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -1713,6 +1727,7 @@
       "currentLocations": [
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts",
         "server/packages/test-utils/src/authz-epoch.postgres.test.ts"
       ],
