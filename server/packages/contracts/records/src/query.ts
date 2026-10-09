@@ -67,6 +67,24 @@ export interface ListRecordsQuery {
   readonly recordIds?: readonly string[];
   /** Untrusted explicit coordinate; authority is resolved again on every request. */
   readonly scopeCoordinate?: RecordListScopeCoordinate;
+  /** Matrix rank (Matrix blueprint 5.4 point 3): a declared ranked measure.
+   * Ranks cover every record the request's filters and scope admit. */
+  readonly rank?: string;
+  /** Matrix participant page: column key values the returned rows are narrowed
+   * to. Output only; never part of the ranked set. Valid only with `rank`. */
+  readonly matrixColumns?: readonly string[];
+}
+
+/** One returned row's place in its Matrix partition. */
+export interface RecordRank {
+  readonly rank: number;
+  /** Records ranked in the partition. */
+  readonly count: number;
+  /** The partition's best value, exact. */
+  readonly best: string;
+  /** |value − best| / |best| as a percentage, exact to one decimal; absent at
+   * the best value and when the best value is zero. */
+  readonly difference?: string;
 }
 
 export interface GetRecordQuery {
@@ -112,6 +130,12 @@ export interface RecordListResult {
   }>[];
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: boolean;
+  /** Per row of a rank request: its rank, or null when it is not ranked
+   * (an empty value or an ineligible column record). */
+  readonly ranks?: readonly (RecordRank | null)[];
+  /** A digest of the ranked set: a later page with another revision was
+   * ranked from different data. */
+  readonly rankRevision?: string;
   readonly pagination: {
     readonly pageSize: number;
     readonly hasMore: boolean;

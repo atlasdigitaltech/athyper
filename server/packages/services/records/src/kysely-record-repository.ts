@@ -5,7 +5,7 @@ import { validateFilterValue } from "./filter-value-validation.js";
 import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
-import type { RecordFilter, RecordListResult, RecordRepository, RecordRepositoryListInput } from "@athyper/server-contract-records";
+import type { RecordFilter, RecordListResult, RecordRank, RecordRepository, RecordRepositoryListInput } from "@athyper/server-contract-records";
 import { assembleTreeMatches } from "./tree-matches.js";
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 import { decodeRecordCursor, encodeRecordCursor, type DecodedRecordCursor } from "./record-cursor.js";
@@ -106,7 +106,14 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       }
       const order = orderBy(input);
       const cursor = decodeRecordCursor(input);
-      const pageConditions = cursor ? [...conditions, cursorCondition(input, cursor)] : conditions;
+      // A Matrix rank's participant page narrows the returned rows only; the
+      // ranked set below keeps the full conditions (Matrix blueprint 5.4).
+      const output = input.rank?.output;
+      const pageConditions = [
+        ...conditions,
+        ...(cursor ? [cursorCondition(input, cursor)] : []),
+        ...(output ? [filterCondition(input.descriptor, { field: output.field, operator: "in", value: output.values })] : []),
+      ];
       const result = await sql<Record<string, unknown>>`
         SELECT ${projection(input.descriptor, input.projection)}${tree ? sql`, ${tree.hasChildren} AS ${sql.ref(HAS_CHILDREN)}` : sql``} FROM ${tree ? sql`${table(input.descriptor)} AS ${sql.ref(TREE_ROW)}` : table(input.descriptor)}
          WHERE ${sql.join(pageConditions, sql` AND `)}
@@ -130,7 +137,8 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       }
       const countMode = input.countMode === "exact" ? "exact" : "none";
       const last = rows.at(-1);
-      return { data: rows, ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
+      const ranked = input.rank ? await rankRows(input, input.rank, conditions, rows, executor) : undefined;
+      return { data: rows, ...(ranked ? { ranks: ranked.ranks, rankRevision: ranked.revision } : {}), ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: rows.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(total !== undefined ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projectionKeys, transaction) {
       const executor = transaction ?? databaseFor(descriptor);
@@ -167,6 +175,74 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const conflict = await conflictOrMissing(descriptor, tenantId, recordId, expectedVersion, transaction);
       return { deleted: false, ...(conflict.versionConflict !== undefined ? { versionConflict: conflict.versionConflict } : {}) };
     },
+  };
+}
+
+/** Matrix rank (Matrix blueprint section 8): one window over every record
+ * the list's conditions admit, never only the rows returned. Ties share a
+ * rank, empty values are not ranked, and with an eligibility rule only facts
+ * whose column record is in an eligible state are ranked. Difference to best
+ * is |value − best| / |best| in exact numeric arithmetic, absent at the best
+ * value and when the best is zero. The revision digests the ranked set's
+ * identities, versions and values, so a later page ranked from different data
+ * is detectable. */
+async function rankRows(
+  input: RecordRepositoryListInput,
+  rank: NonNullable<RecordRepositoryListInput["rank"]>,
+  conditions: readonly RawBuilder<unknown>[],
+  rows: readonly Record<string, unknown>[],
+  executor: RecordDatabase | RecordTransaction,
+): Promise<{ readonly ranks: readonly (RecordRank | null)[]; readonly revision: string }> {
+  const { descriptor } = input;
+  const value = sql.ref(fieldPath(descriptor, rank.field));
+  const partition = sql.join(rank.partition.map((key) => sql.ref(fieldPath(descriptor, key))));
+  const direction = rank.better === "lower" ? sql`ASC` : sql`DESC`;
+  const best = rank.better === "lower" ? sql`min(${value})` : sql`max(${value})`;
+  const version = descriptor.storage.versionField ? sql`coalesce(${sql.ref(descriptor.storage.versionField)}::text, '')` : sql`''`;
+  const ranked = [...conditions, sql`${value} IS NOT NULL`];
+  const eligibility = rank.eligibility;
+  if (eligibility) {
+    // The fact table is not aliased (scope compilers may qualify it by name),
+    // so the correlation names it in full; the column table is aliased and
+    // its own conditions resolve to it first.
+    const column = eligibility.column;
+    const outer = sql.ref(`${descriptor.storage.schema}.${descriptor.storage.object}.${fieldPath(descriptor, eligibility.field)}`);
+    ranked.push(sql`EXISTS (
+      SELECT 1 FROM ${table(column)} AS "__rank_column"
+       WHERE ${sql.ref(`__rank_column.${column.storage.idField}`)} = ${outer}
+         AND ${sql.ref(`__rank_column.${fieldPath(column, eligibility.columnField)}`)} IN (${sql.join(eligibility.values.map((item) => sql`${item}`))})
+         AND ${sql.join(baseConditions(column, input.tenantId, "read"), sql` AND `)}
+    )`);
+  }
+  const ids = rows.map((row) => String(row[descriptor.storage.idField]));
+  const result = await sql<{ id: string | null; rank: string | number | null; count: string | number | null; best: string | null; difference: string | null; revision: string }>`
+    WITH "__rank_set" AS (
+      SELECT ${sql.ref(descriptor.storage.idField)}::text AS "__rank_id",
+             ${value} AS "__rank_value",
+             rank() OVER (PARTITION BY ${partition} ORDER BY ${value} ${direction}) AS "__rank",
+             count(*) OVER (PARTITION BY ${partition}) AS "__rank_count",
+             ${best} OVER (PARTITION BY ${partition}) AS "__rank_best",
+             ${sql.ref(descriptor.storage.idField)}::text || ':' || ${version} || ':' || ${value}::text AS "__rank_mark"
+        FROM ${table(descriptor)}
+       WHERE ${sql.join(ranked, sql` AND `)}
+    )
+    SELECT "__rank_row"."__rank_id" AS id, "__rank_row"."__rank" AS rank, "__rank_row"."__rank_count" AS count,
+           "__rank_row"."__rank_best"::text AS best,
+           CASE WHEN "__rank_row"."__rank_best" = 0 OR "__rank_row"."__rank_value" = "__rank_row"."__rank_best" THEN NULL
+                ELSE round(abs("__rank_row"."__rank_value" - "__rank_row"."__rank_best") * 100 / abs("__rank_row"."__rank_best"), 1)::text END AS difference,
+           "__rank_digest".revision
+      FROM (SELECT md5(coalesce(string_agg("__rank_mark", ',' ORDER BY "__rank_mark"), '')) AS revision FROM "__rank_set") AS "__rank_digest"
+      LEFT JOIN "__rank_set" AS "__rank_row" ON "__rank_row"."__rank_id" IN (${ids.length ? sql.join(ids.map((id) => sql`${id}`)) : sql`NULL`})
+  `.execute(executor);
+  const byId = new Map(result.rows.filter((row) => row.id !== null).map((row) => [row.id!, row]));
+  return {
+    revision: result.rows[0]!.revision,
+    ranks: ids.map((id) => {
+      const row = byId.get(id);
+      return row
+        ? Object.freeze({ rank: Number(row.rank), count: Number(row.count), best: row.best!, ...(row.difference !== null ? { difference: row.difference } : {}) })
+        : null;
+    }),
   };
 }
 

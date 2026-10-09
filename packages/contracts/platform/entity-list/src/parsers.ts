@@ -52,6 +52,7 @@ import { isListDateAnchor } from "./date-range";
 import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
+import { isListMatrixPage, parseListMatrix, parseListMatrixRanks, parseListMatrixState, type ListMatrixV1 } from "./matrix";
 import { isListCompareLocation, parseListCompare } from "./compare";
 import {
   parseListBoard,
@@ -238,6 +239,12 @@ export function parseEntityListDescriptor(
       : parseListTree(surfaceRecord.tree, fieldByKey);
   if (Boolean(tree) !== supportedModes.includes("tree"))
     throw new TypeError("surface.tree is required exactly when Tree is supported");
+  const matrix =
+    surfaceRecord.matrix === undefined
+      ? undefined
+      : parseListMatrix(surfaceRecord.matrix, fieldByKey);
+  if (Boolean(matrix) !== supportedModes.includes("matrix"))
+    throw new TypeError("surface.matrix is required exactly when Matrix is supported");
   // Compare is a selection action, not a mode: present or absent on its own.
   const compare =
     surfaceRecord.compare === undefined
@@ -257,6 +264,7 @@ export function parseEntityListDescriptor(
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
+    ...(matrix ? { matrix } : {}),
     maxSortLevels,
     allowedPageSizes: new Set(allowedPageSizes),
     defaultPageSize,
@@ -356,6 +364,7 @@ export function parseEntityListDescriptor(
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
+      ...(matrix ? { matrix } : {}),
       ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
@@ -746,6 +755,9 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
       : record.groupsTruncated === true
         ? { groupsTruncated: true as const }
         : (() => { throw new TypeError("groupsTruncated must be true when present"); })()),
+    ...(record.ranks === undefined && record.rankRevision === undefined
+      ? {}
+      : parseListMatrixRanks(record.ranks, record.rankRevision)),
     ...(record.matchesTruncated === undefined
       ? {}
       : record.matchesTruncated === true
@@ -833,6 +845,7 @@ function stateRules(
       : {}),
     ...(descriptor.surface.gantt ? { gantt: descriptor.surface.gantt } : {}),
     ...(descriptor.surface.tree ? { tree: true } : {}),
+    ...(descriptor.surface.matrix ? { matrix: descriptor.surface.matrix } : {}),
     ...(descriptor.surface.compare ? { compare: true } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
@@ -851,6 +864,7 @@ interface StateRules {
   readonly calendar?: ListCalendarV1;
   readonly gantt?: ListGanttV1;
   readonly tree?: true;
+  readonly matrix?: ListMatrixV1;
   /** The surface offers Compare, so an open comparison is location state. */
   readonly compare?: true;
   readonly maxSortLevels: number;
@@ -967,6 +981,9 @@ function parseState(
   const gantt = rules.gantt
     ? parseListGanttState(record.gantt, rules.gantt)
     : undefined;
+  const matrix = rules.matrix
+    ? parseListMatrixState(record.matrix, rules.matrix)
+    : undefined;
   const base = {
     ...(optionalCode(record.standardViewKey, "standardViewKey")
       ? {
@@ -989,6 +1006,7 @@ function parseState(
     ...(board ? { board } : {}),
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
+    ...(matrix ? { matrix } : {}),
   };
   if (!rules.includeLocation) return Object.freeze(base);
   const pageSize =
@@ -1026,6 +1044,12 @@ function parseState(
     // A Tree deep link belongs to the Tree layout: another layout drops it.
     ...(rules.tree && mode === "tree" && isListTreeNode(record.treeNode)
       ? { treeNode: record.treeNode }
+      : {}),
+    ...(rules.matrix && isListMatrixPage(record.matrixRowPage)
+      ? { matrixRowPage: record.matrixRowPage }
+      : {}),
+    ...(rules.matrix && isListMatrixPage(record.matrixColumnPage)
+      ? { matrixColumnPage: record.matrixColumnPage }
       : {}),
     // An open comparison belongs to a surface that offers Compare.
     ...(rules.compare && isListCompareLocation(record.compare)

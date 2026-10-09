@@ -180,6 +180,20 @@ export function decodeListLocationState(
     apply({ ganttAnchor: parameters.get("gantt") || undefined });
   if (parameters.has("tree.node"))
     apply({ treeNode: parameters.get("tree.node") || undefined });
+  if (state.matrix && (parameters.has("matrix.measures") || parameters.has("matrix.columns"))) {
+    const listed = (key: string, fallback: readonly string[]) => {
+      const raw = parameters.get(key);
+      return raw === null ? fallback : raw.split(",").filter(Boolean);
+    };
+    apply({
+      matrix: {
+        measures: listed("matrix.measures", state.matrix.measures),
+        columns: listed("matrix.columns", state.matrix.columns),
+      },
+    });
+  }
+  for (const [key, property] of [["matrix.rows", "matrixRowPage"], ["matrix.cols", "matrixColumnPage"]] as const)
+    if (parameters.has(key)) apply({ [property]: Number(parameters.get(key)) });
   // An invalid comparison is dropped here; the runtime reports it.
   const compare = readCompareLocation(parameters);
   if (compare && compare !== "invalid") apply({ compare });
@@ -266,6 +280,14 @@ export function encodeListLocationState(
   if (normalized.ganttAnchor) parameters.set("gantt", normalized.ganttAnchor);
   if (normalized.treeNode && normalized.mode === "tree")
     parameters.set("tree.node", normalized.treeNode);
+  if (normalized.matrix && base.matrix) {
+    if (!equal(normalized.matrix.measures, base.matrix.measures))
+      parameters.set("matrix.measures", normalized.matrix.measures.join(","));
+    if (!equal(normalized.matrix.columns, base.matrix.columns))
+      parameters.set("matrix.columns", normalized.matrix.columns.join(","));
+  }
+  if (normalized.matrixRowPage) parameters.set("matrix.rows", String(normalized.matrixRowPage));
+  if (normalized.matrixColumnPage) parameters.set("matrix.cols", String(normalized.matrixColumnPage));
   if (normalized.compare) writeCompareLocation(parameters, normalized.compare);
   if (normalized.board && base.board) {
     if (normalized.board.laneField !== base.board.laneField)
@@ -307,6 +329,7 @@ export function toSaveableListState(
     ...(state.board ? { board: state.board } : {}),
     ...(state.calendar ? { calendar: state.calendar } : {}),
     ...(state.gantt ? { gantt: state.gantt } : {}),
+    ...(state.matrix ? { matrix: state.matrix } : {}),
   });
 }
 

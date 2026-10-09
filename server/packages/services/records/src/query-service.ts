@@ -1,4 +1,5 @@
 import { lockedScope } from "./list-tree.js";
+import { resolveMatrixRank } from "./list-matrix-rank.js";
 import { LIST_TREE_MATCHES_LIMIT } from "./tree-matches.js";
 import {
   withEntityEffectiveRead,
@@ -164,6 +165,12 @@ export function createRecordListExecutor<Transaction = unknown>(
         )
           throw new RecordServiceError(400, "LIST_TREE_MATCHES_UNCONSTRAINED", "Search or filter the tree to see matches");
       }
+      const rank = await resolveMatrixRank({
+        descriptor,
+        query,
+        readableKeys,
+        loadColumn: (code) => descriptorFor(options.metadata, query.context, code),
+      });
       const responseFields = responseProjection(
         descriptor,
         readableFields,
@@ -181,6 +188,8 @@ export function createRecordListExecutor<Transaction = unknown>(
             use: "sort",
           })),
           ...(query.group ? [{ field: query.group, use: "group" }] : []),
+          // A rank orders by its measure within each row-key partition.
+          ...(rank ? [{ field: rank.field, use: "sort" }, ...rank.partition.map((field) => ({ field, use: "group" }))] : []),
           // Aggregates are published only with group use (queryableListFields).
           ...(query.groupAggregates ?? []).flatMap((item) => {
             const currency = descriptor.fields.find((field) => field.key === item.field)?.list?.currencyField;
@@ -289,6 +298,10 @@ export function createRecordListExecutor<Transaction = unknown>(
       // than risk disclosing hidden records (Tree blueprint principle 5).
       if (query.hierarchy && enforced && !aggregateAuthorizationCovered)
         throw new RecordServiceError(400, "LIST_TREE_RECORD_AUTHORIZATION_UNSUPPORTED", "Tree is not available for this list's record authorization");
+      // A rank must cover every record the viewer can read; when that set is
+      // not expressible in SQL, rank fails closed (Matrix blueprint section 8).
+      if (rank && enforced && !aggregateAuthorizationCovered)
+        throw new RecordServiceError(400, "LIST_MATRIX_RANK_RECORD_AUTHORIZATION_UNSUPPORTED", "Rank is not available for this list's record authorization");
       const repositoryResult = await options.transactions.run(
         query.context.planeKey,
         {
@@ -323,6 +336,12 @@ export function createRecordListExecutor<Transaction = unknown>(
                 })),
                 ...(query.group
                   ? [{ key: query.group, use: "group" as const }]
+                  : []),
+                ...(rank
+                  ? [
+                      { key: rank.field, use: "sort" as const },
+                      ...rank.partition.map((key) => ({ key, use: "group" as const })),
+                    ]
                   : []),
                 ...(query.groupAggregates ?? []).map((item) => ({
                   key: item.field,
@@ -399,6 +418,7 @@ export function createRecordListExecutor<Transaction = unknown>(
                   : {}),
                 ...(query.cursor ? { cursor: query.cursor } : {}),
                 ...(query.search ? { search: query.search } : {}),
+                ...(rank ? { rank } : {}),
               };
               // A matches request is one bounded response; its authorization is
               // already proven covered by SQL (Tree requests fail closed otherwise).

@@ -309,6 +309,46 @@ export interface EntityListGanttDescriptor {
   readonly progress?: { readonly field: string };
 }
 
+/** Published Matrix Layout (Entity list Matrix blueprint 5.1 and 5.4): this
+ * Entity's records pivoted, one row per member of the row Entity and one
+ * column per member of the column Entity, under one common parent. */
+export interface EntityListMatrixDescriptor {
+  /** This Entity's reference to the parent both master lists belong to. */
+  readonly parentField: string;
+  readonly rows: {
+    readonly field: string;
+    /** The row Entity's reference to the same parent. */
+    readonly parentField: string;
+    /** Fixed at 20 for revision 1 (section 14, decision 2). */
+    readonly pageSize?: number;
+  };
+  readonly columns: {
+    readonly field: string;
+    readonly parentField: string;
+    /** Column Entity fields shown in its header, at most 3. */
+    readonly headerFields?: readonly string[];
+    /** Column Entity state meaning "declined to participate". */
+    readonly declined?: { readonly field: string; readonly values: readonly string[] };
+    /** Fixed at 5 for revision 1; rows × columns ≤ the 100-row page. */
+    readonly pageSize?: number;
+  };
+  /** Extra key dimensions that join the column identity (drawn from M3). */
+  readonly pivotDimensions?: readonly string[];
+  readonly measures: readonly {
+    readonly field: string;
+    readonly rank?: true;
+    readonly better?: "lower" | "higher";
+    readonly evaluation?: true;
+    readonly unitField?: string;
+  }[];
+  readonly absentLabel?: string;
+  /** Column Entity state that may be ranked (section 5.3). */
+  readonly rankEligibility?: { readonly field: string; readonly values: readonly string[] };
+  readonly basisLabel?: string;
+  /** Column Entity sort, for example items quoted desc, total asc. */
+  readonly columnOrder?: readonly { readonly field: string; readonly direction: "asc" | "desc" }[];
+}
+
 /** Compiled projection of the surface's binding_kind = summary placements. */
 export interface EntityListCardContentDescriptor {
   readonly fields: readonly {
@@ -345,6 +385,7 @@ export interface EntityListPresentationDescriptor {
   readonly compare?: EntityListCompareDescriptor;
   readonly calendar?: EntityListCalendarDescriptor;
   readonly gantt?: EntityListGanttDescriptor;
+  readonly matrix?: EntityListMatrixDescriptor;
   readonly cardContent?: EntityListCardContentDescriptor;
   /** @deprecated Use limits.defaultPageSize. */
   readonly defaultPageSize?: number;

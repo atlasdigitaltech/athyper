@@ -6,6 +6,7 @@ import { resolveListGantt } from "./list-gantt.js";
 import { lockedScope, resolveListTree } from "./list-tree.js";
 import { resolveListCompare } from "./list-compare.js";
 import { resolveCompareCollections } from "./list-compare-collections.js";
+import { resolveListMatrix, resolveMatrixAxes, type MatrixAxes } from "./list-matrix.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -749,6 +750,25 @@ export function createEntityListService(options: {
             }
           : field,
       );
+      // Another Entity's list view, compiled for this viewer: the master
+      // lists of C4 collections and of a Matrix.
+      const listFor = async (target: EntityRuntimeDescriptor) => {
+        const readableTarget = await readableRecordFields(options.authorizer, context, target);
+        const list = compileEntityListDescriptor(context, target, queryableListFields(target, readableTarget));
+        return {
+          fields: list.fields,
+          identityField: list.entity.identityField,
+          exactCounts: list.limits.countMode === "exact",
+          searchable: target.fields.some((field) => field.searchable === true && readableTarget.some((readableField) => readableField.key === field.key)),
+        };
+      };
+      const load = (code: string) => descriptorFor(options.metadata, context, code);
+      const masked = (target: EntityRuntimeDescriptor, key: string) => maskedPresentationField(target, key);
+      // Matrix axes are other Entities, read here before compiling so the
+      // surface's modes and hash reflect them (Matrix blueprint 5.2).
+      const matrixAxes = descriptor.listPresentation?.matrix
+        ? await resolveMatrixAxes({ matrix: descriptor.listPresentation.matrix, fields: descriptor.fields, load, listFor, masked })
+        : undefined;
       const compiled = compileEntityListDescriptor(
         context,
         descriptor,
@@ -758,6 +778,7 @@ export function createEntityListService(options: {
         dataOperations,
         actions,
         navigation,
+        matrixAxes,
       );
       // C4 line-item collections are resolved per viewer here, where other
       // Entities' descriptors can be read (Compare blueprint 5.8 point 10a).
@@ -768,18 +789,9 @@ export function createEntityListService(options: {
           ? await resolveCompareCollections({
               descriptor,
               listedParentKeys: new Set(compiled.fields.map((field) => field.key)),
-              load: (code) => descriptorFor(options.metadata, context, code),
-              listFor: async (target) => {
-                const readableTarget = await readableRecordFields(options.authorizer, context, target);
-                const list = compileEntityListDescriptor(context, target, queryableListFields(target, readableTarget));
-                return {
-                  fields: list.fields,
-                  identityField: list.entity.identityField,
-                  exactCounts: list.limits.countMode === "exact",
-                  searchable: target.fields.some((field) => field.searchable === true && readableTarget.some((readableField) => readableField.key === field.key)),
-                };
-              },
-              masked: (target, key) => maskedPresentationField(target, key),
+              load,
+              listFor,
+              masked,
             })
           : undefined;
       return {
@@ -1178,8 +1190,24 @@ export function createEntityListService(options: {
           hierarchy: query.hierarchy ?? null,
           search: query.search ?? null,
           countMode: query.countMode ?? "none",
+          rank: query.rank ?? null,
+          matrixColumns: query.matrixColumns ? [...query.matrixColumns].sort() : [],
         }),
         rows: Object.freeze(rows),
+        // Matrix ranks travel beside the rows, keyed by row identity.
+        ...(result.ranks && result.rankRevision
+          ? {
+              ranks: Object.freeze(
+                Object.fromEntries(
+                  rows.flatMap((row, index) => {
+                    const rank = result.ranks![index];
+                    return rank ? [[row.id, Object.freeze({ ...rank })]] : [];
+                  }),
+                ),
+              ),
+              rankRevision: result.rankRevision,
+            }
+          : {}),
         ...(result.groupsTruncated ? { groupsTruncated: true as const } : {}),
         ...(result.matchesTruncated ? { matchesTruncated: true as const } : {}),
         ...(result.matchesBeyondDepth ? { matchesBeyondDepth: result.matchesBeyondDepth } : {}),
@@ -1379,6 +1407,8 @@ export function compileEntityListDescriptor(
   dataOperations?: EntityListDataOperationsV1,
   actions: readonly EffectiveListActionV1[] = [],
   navigation: readonly EffectiveEntitySectionV1[] = [],
+  /** The Matrix row and column Entities' list views (read by the caller). */
+  matrixAxes?: MatrixAxes,
 ): EntityListDescriptorV1 {
   readableFields = queryableListFields(descriptor, readableFields);
   if (!readableFields.length)
@@ -1616,6 +1646,25 @@ export function compileEntityListDescriptor(
     : undefined;
   const tree =
     treeResolution && "tree" in treeResolution ? treeResolution.tree : undefined;
+  const matrixResolution = descriptor.listPresentation?.matrix
+    ? resolveListMatrix({
+        matrix: descriptor.listPresentation.matrix,
+        fields: ordered,
+        entityFields: descriptor.fields,
+        masked,
+        technical: technicalFieldKeys(descriptor),
+        locked: lockedScope(
+          collectionScope?.status === "ready" ? collectionScope.constraints : [],
+        ),
+        exactCounts:
+          (configuredLimits?.countMode ?? descriptor.listPresentation.countMode) === "exact",
+        ...(matrixAxes ? { axes: matrixAxes } : {}),
+      })
+    : undefined;
+  const matrix =
+    matrixResolution && "matrix" in matrixResolution
+      ? matrixResolution.matrix
+      : undefined;
   // Compare is a selection action, not a mode (Compare blueprint section 5.3).
   const compare = descriptor.listPresentation?.compare
     ? resolveListCompare({
@@ -1652,6 +1701,12 @@ export function compileEntityListDescriptor(
         treeResolution && "unavailable" in treeResolution
           ? treeResolution.unavailable
           : tree
+            ? undefined
+            : "LIST_MODE_UNSUPPORTED",
+      matrix:
+        matrixResolution && "unavailable" in matrixResolution
+          ? matrixResolution.unavailable
+          : matrix
             ? undefined
             : "LIST_MODE_UNSUPPORTED",
     },
@@ -1707,6 +1762,7 @@ export function compileEntityListDescriptor(
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
     ...(tree ? { tree } : {}),
+    ...(matrix ? { matrix } : {}),
     ...(compare ? { compare } : {}),
     ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
@@ -1771,6 +1827,7 @@ export function compileEntityListDescriptor(
       ...(calendar ? { calendar } : {}),
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
+      ...(matrix ? { matrix } : {}),
       ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({

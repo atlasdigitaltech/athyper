@@ -337,6 +337,8 @@ const query = {
       ],
     },
     recordIds: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] },
+    rank: { type: "string", minLength: 1, maxLength: 127 },
+    matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] },
     countMode: {
       type: "string",
       enum: ["none", "cached", "approximate", "exact"],

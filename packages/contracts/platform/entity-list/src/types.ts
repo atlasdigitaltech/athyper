@@ -182,6 +182,7 @@ export interface SaveableListStateV1 {
   readonly board?: import("./board").ListBoardStateV1;
   readonly calendar?: import("./calendar").ListCalendarStateV1;
   readonly gantt?: import("./gantt").ListGanttStateV1;
+  readonly matrix?: import("./matrix").ListMatrixStateV1;
 }
 
 export interface ListLocationStateV1 extends SaveableListStateV1 {
@@ -197,6 +198,9 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
   /** Tree deep link (`tree.node`): the record to reveal. Location only, an
    * internal routing identity that is never displayed. */
   readonly treeNode?: string;
+  /** Matrix row and column page indices. Location only: never saved. */
+  readonly matrixRowPage?: number;
+  readonly matrixColumnPage?: number;
   /** The open comparison (Compare blueprint section 5.4): record routing
    * identities, never displayed. Location only: never saved with a view. */
   readonly compare?: import("./compare").ListCompareLocationV1;
@@ -332,6 +336,8 @@ export interface EntityListDescriptorV1 {
     readonly gantt?: import("./gantt").ListGanttV1;
     /** The record hierarchy this viewer can browse; present only when Tree is supported. */
     readonly tree?: import("./tree").ListTreeV1;
+    /** The pivot this viewer can use; present only when Matrix is supported. */
+    readonly matrix?: import("./matrix").ListMatrixV1;
     /** The comparison this viewer can open from the selection bar (Compare
      * blueprint section 5.3); present only when the surface declares one. */
     readonly compare?: import("./compare").ListCompareV1;
@@ -445,6 +451,10 @@ export interface EntityListResultV1 {
   }[];
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: true;
+  /** Only on a Matrix `rank` request: each ranked row's place, by row id. */
+  readonly ranks?: Readonly<Record<string, import("./matrix").ListMatrixRankV1>>;
+  /** Only on a Matrix `rank` request: a digest of the ranked set. */
+  readonly rankRevision?: string;
 }
 
 export interface EntityApplicationDescriptorV1 {

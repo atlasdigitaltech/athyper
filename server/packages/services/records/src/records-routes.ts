@@ -42,7 +42,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 404: { description: "Record not found" }, 423: { description: "Record lock required" }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, rank: { type: "string", minLength: 1, maxLength: 127 }, matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({
     method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get",
     summary: "Get a record", tags: ["Records"], authenticated: true,
@@ -102,6 +102,11 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   // Matches are one bounded response: no cursor and no record restriction.
   if (hierarchy === "matches" && (cursor || recordIds))
     throw new RecordServiceError(400, "LIST_HIERARCHY_INVALID", "hierarchy=matches cannot be combined with a cursor or recordIds");
+  // Matrix rank (Matrix blueprint 5.4 point 3): a measure key and the
+  // participant page; admitted against the published Matrix by the service.
+  const rank = query["rank"] === undefined ? undefined : catalogQueryCode(query["rank"], "rank");
+  const matrixColumns = query["matrixColumns"] === undefined ? undefined : queryValues(query["matrixColumns"], "matrixColumns", 100);
+  if (matrixColumns && matrixColumns.some((id) => !isEntityRecordId(id))) throw new RecordServiceError(400, "INVALID_MATRIXCOLUMNS", "matrixColumns must contain valid record identities");
   const hydrateReferences = query["hydrateReferences"] === undefined ? undefined : oneOfQuery(query["hydrateReferences"], ["true", "false"] as const, "hydrateReferences") === "true";
   return {
     ...(recordIds ? { recordIds: Object.freeze([...new Set(recordIds)]) } : {}),
@@ -118,6 +123,8 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     ...(sort.length ? { sort } : {}),
     ...(countMode ? { countMode } : {}),
     ...(hydrateReferences !== undefined ? { hydrateReferences } : {}),
+    ...(rank ? { rank } : {}),
+    ...(matrixColumns ? { matrixColumns: Object.freeze([...new Set(matrixColumns)]) } : {}),
   };
 }
 
@@ -148,5 +155,5 @@ function queryJson(value: string, name: string): Record<string, unknown> { try {
 function queryValues(value: unknown, name: string, maximum: number): string[] { if (value === undefined) return []; const values = Array.isArray(value) ? value : [value]; if (values.length > maximum || values.some((item) => typeof item !== "string" || !item.trim())) throw new RecordServiceError(400, `INVALID_${name.toUpperCase()}`, `${name} must contain at most ${maximum} non-empty values`); return values as string[]; }
 function boundedQueryText(value: unknown, name: string, maximum: number): string | undefined { const result = stringQuery(value); if (result && result.length > maximum) throw new RecordServiceError(400, `INVALID_${name.toUpperCase()}`, `${name} must not exceed ${maximum} characters`); return result; }
 function catalogQueryCode(value: unknown, name: string): string { if (typeof value !== "string" || !/^[a-z][a-z0-9_.-]{0,126}$/.test(value)) throw new RecordServiceError(400, queryCodeError(name), `${name} must be a catalog code`); return value; }
-function queryCodeError(name: string): string { if (name.startsWith("filter")) return "INVALID_FILTER"; if (name.startsWith("sort")) return "INVALID_SORT"; if (name.startsWith("fields")) return "INVALID_FIELDS"; return "INVALID_GROUP"; }
+function queryCodeError(name: string): string { if (name.startsWith("filter")) return "INVALID_FILTER"; if (name.startsWith("sort")) return "INVALID_SORT"; if (name.startsWith("fields")) return "INVALID_FIELDS"; if (name === "rank") return "INVALID_RANK"; return "INVALID_GROUP"; }
 function oneOfQuery<const T extends readonly string[]>(value: unknown, choices: T, name: string): T[number] { if (typeof value !== "string" || !choices.includes(value as T[number])) throw new RecordServiceError(400, `INVALID_${name.split(".")[0]!.split("[")[0]!.toUpperCase()}`, `${name} is invalid`); return value as T[number]; }

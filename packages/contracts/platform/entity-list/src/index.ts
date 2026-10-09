@@ -7,6 +7,7 @@ export * from "./calendar";
 export * from "./gantt";
 export * from "./tree";
 export * from "./compare";
+export * from "./matrix";
 export * from "./experience";
 export * from "./parsers";
 export * from "./url-state";

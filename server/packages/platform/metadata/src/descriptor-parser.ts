@@ -13,6 +13,7 @@ import {
   parsePublishedListGantt,
   validatePublishedListGantt,
 } from "./list-gantt-descriptor.js";
+import { parsePublishedListMatrix, validatePublishedListMatrix } from "./list-matrix-descriptor.js";
 import { parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
 import {
   validateEntityLiveReadContractV1,
@@ -984,6 +985,9 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(item["gantt"] === undefined
       ? {}
       : { gantt: parsePublishedListGantt(item["gantt"]) }),
+    ...(item["matrix"] === undefined
+      ? {}
+      : { matrix: parsePublishedListMatrix(item["matrix"]) }),
   };
 }
 
@@ -1086,6 +1090,7 @@ function validateListPresentation(
   validatePublishedListBoard(presentation, byKey);
   validatePublishedListCalendar(presentation, byKey);
   validatePublishedListGantt(presentation, byKey);
+  validatePublishedListMatrix(presentation, byKey);
   for (const key of Object.keys(presentation.localizedLabels?.fields ?? {}))
     requireField(key, "listPresentation.localizedLabels.fields");
   const columns =

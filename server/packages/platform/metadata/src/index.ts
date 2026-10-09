@@ -20,3 +20,4 @@ export * from "./entity-readiness-inventory.js";
 export * from "./split-read-runtime.js";
 export * from "./runtime-operation-coverage.js";
 export { hierarchyMovableFinding, hierarchyParentKeyFinding } from "./entity-hierarchy-descriptor.js";
+export { matrixKeyFinding } from "./list-matrix-descriptor.js";

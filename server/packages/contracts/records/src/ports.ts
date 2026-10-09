@@ -225,6 +225,25 @@ export interface RecordRepositoryListInput {
   /** Trusted constraints emitted only by a registered server-side scope resolver. */
   readonly collectionScope: readonly RecordCollectionScopeConstraint[];
   readonly viewRelationships?: readonly StandardViewRelationshipConstraint[];
+  /** Matrix rank (Matrix blueprint section 8): one window over every record
+   * the conditions above admit, partitioned by the row key (and declared
+   * pivot dimensions). `output` narrows only the returned rows. */
+  readonly rank?: RecordRankInput;
+}
+
+export interface RecordRankInput {
+  readonly field: string;
+  readonly better: "lower" | "higher";
+  readonly partition: readonly string[];
+  readonly output?: { readonly field: string; readonly values: readonly string[] };
+  /** Only facts whose column record is in an eligible state are ranked; the
+   * column Entity's own table, tenant and stored predicates. */
+  readonly eligibility?: {
+    readonly field: string;
+    readonly column: EntityRuntimeDescriptor;
+    readonly columnField: string;
+    readonly values: readonly string[];
+  };
 }
 
 /** Measures a stored hierarchy for a move (Tree blueprint B4): the depth of

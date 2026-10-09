@@ -2,9 +2,9 @@ import { assembleTreeMatches } from "./tree-matches.js";
 import { LIST_GROUP_LIMIT, addDecimals, averageDecimals, compareDecimals, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
-import type { RecordFilter, RecordRepository, RecordRepositoryListInput, RecordSort } from "@athyper/server-contract-records";
+import type { RecordFilter, RecordRank, RecordRepository, RecordRepositoryListInput, RecordSort } from "@athyper/server-contract-records";
 import type { RecordTransactionCoordinator } from "@athyper/server-contract-records";
 import { decodeRecordCursor, encodeRecordCursor, type DecodedRecordCursor } from "./record-cursor.js";
 
@@ -100,6 +100,11 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const groups = grouped?.buckets;
       if (input.groupsOnly && groups)
         return { data: [], groups, ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+      // Matrix rank: over every admitted record, before the participant page
+      // narrows the returned rows (as the SQL does).
+      const rankSet = input.rank ? rankedSet(input, input.rank, rows, transaction?.state ?? state, table) : undefined;
+      const output = input.rank?.output;
+      if (output) rows = rows.filter((row) => output.values.includes(String(value(row, input.descriptor, output.field))));
       const cursor = decodeRecordCursor(input);
       if (cursor) rows = rows.filter((row) => afterCursor(row, input.descriptor, input.sort ?? [], cursor));
       const candidates = rows.slice(0, input.limit + 1);
@@ -109,7 +114,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       const projected = page.map((row) => project(input.descriptor, row, input.projection));
       const hasChildren = hierarchy ? page.map((row) => visibleSet.some((child) => parentOf(child) === idOf(row) && scopeOf(child) === scopeOf(row) && childMatches(child))) : undefined;
       const last = projected.at(-1);
-      return { data: projected, ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
+      const ranks = rankSet ? page.map((row) => rankSet.ranks.get(String(idOf(row))) ?? null) : undefined;
+      return { data: projected, ...(ranks && rankSet ? { ranks, rankRevision: rankSet.revision } : {}), ...(groups ? { groups } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...(hasChildren ? { hasChildren } : {}), pagination: { pageSize: page.length, hasMore, ...(hasMore && last ? { nextCursor: encodeRecordCursor(input, last) } : {}), ...(input.countMode === "exact" ? { total } : {}), countMode } };
     },
     async get(descriptor, tenantId, recordId, projection, transaction) { const row = table(descriptor, tenantId, transaction?.state).get(recordId); return row && visible(descriptor, row) ? project(descriptor, row, projection) : null; },
     async create(descriptor, tenantId, input, transaction) {
@@ -258,3 +264,50 @@ function ordered(a: unknown, b: unknown, sort: RecordSort): number { const aNull
 function compare(a: unknown, b: unknown): number { if (a === b) return 0; if (a === null || a === undefined) return -1; if (b === null || b === undefined) return 1; return a < b ? -1 : 1; }
 function clone(source: State): State { return new Map([...source].map(([key, rows]) => [key, new Map([...rows].map(([id, row]) => [id, { ...row }]))])); }
 function project(descriptor: EntityRuntimeDescriptor, row: Row, projection: readonly string[]): Row { const output: Row = {}; for (const key of projection) { const field = descriptor.fields.find((item) => item.key === key); if (field) output[key] = row[field.storagePath]; } for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField].filter((item): item is string => Boolean(item))) if (!(key in output)) output[key] = row[key]; return output; }
+
+/** The in-memory Matrix rank, the SQL's rules in exact decimals: ties share
+ * a rank, empty values and ineligible column records are not ranked, and
+ * difference to best is absent at the best value and when the best is zero. */
+function rankedSet(
+  input: RecordRepositoryListInput,
+  rank: NonNullable<RecordRepositoryListInput["rank"]>,
+  rows: readonly Row[],
+  state: State,
+  table: (descriptor: EntityRuntimeDescriptor, tenantId: string, target?: State) => Map<string, Row>,
+): { readonly ranks: ReadonlyMap<string, RecordRank>; readonly revision: string } {
+  const { descriptor } = input;
+  const eligibility = rank.eligibility;
+  const eligible = eligibility
+    ? new Set(
+        [...table(eligibility.column, input.tenantId, state).values()]
+          .filter((row) => visible(eligibility.column, row) && eligibility.values.includes(String(value(row, eligibility.column, eligibility.columnField))))
+          .map((row) => String(row[eligibility.column.storage.idField])),
+      )
+    : undefined;
+  const ranked = rows.filter((row) => {
+    const amount = value(row, descriptor, rank.field);
+    return amount !== null && amount !== undefined && (!eligible || eligible.has(String(value(row, descriptor, eligibility!.field))));
+  });
+  const partitions = new Map<string, Row[]>();
+  for (const row of ranked) {
+    const key = JSON.stringify(rank.partition.map((field) => value(row, descriptor, field)));
+    partitions.set(key, [...(partitions.get(key) ?? []), row]);
+  }
+  const ranks = new Map<string, RecordRank>();
+  const sign = rank.better === "lower" ? 1 : -1;
+  for (const members of partitions.values()) {
+    const amount = (row: Row) => String(value(row, descriptor, rank.field));
+    const sorted = [...members].sort((a, b) => sign * compareDecimals(amount(a), amount(b)));
+    const best = amount(sorted[0]!);
+    sorted.forEach((row) => {
+      const position = 1 + sorted.filter((other) => sign * compareDecimals(amount(other), amount(row)) < 0).length;
+      const zero = compareDecimals(best, "0") === 0;
+      const atBest = compareDecimals(amount(row), best) === 0;
+      const difference = zero || atBest ? undefined : (Math.round((Math.abs(Number(amount(row)) - Number(best)) * 1000) / Math.abs(Number(best))) / 10).toFixed(1);
+      ranks.set(String(row[descriptor.storage.idField]), Object.freeze({ rank: position, count: members.length, best, ...(difference ? { difference } : {}) }));
+    });
+  }
+  const version = descriptor.storage.versionField;
+  const marks = ranked.map((row) => `${String(row[descriptor.storage.idField])}:${version ? String(row[version] ?? "") : ""}:${String(value(row, descriptor, rank.field))}`).sort();
+  return { ranks, revision: createHash("md5").update(marks.join(",")).digest("hex") };
+}
