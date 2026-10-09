@@ -98,7 +98,7 @@ export function createNativePublicationStartup(options: {
             if (!database.isTransaction)
               throw Error("LOCAL_PUBLICATION_TRANSACTION_REQUIRED");
             const tx = database as Transaction<Record<string, never>>;
-            await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_tenant_id',${local.tenantId},true),
+            await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_actor_type','service_account',true),set_config('app.current_tenant_id',${local.tenantId},true),
         set_config('app.current_principal_id',${local.publisher.principalId},true)`.execute(
               tx,
             );

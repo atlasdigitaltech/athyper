@@ -181,6 +181,13 @@ it("production composition resolves through the workload reader under the caller
     await expect(
       installed.readLocalNativeSource!(request.hash),
     ).rejects.toThrow("WORKLOAD_REVOKED");
+    expect(
+      query.mock.calls.some(([text]) =>
+        text.includes(
+          "set_config('app.current_actor_type','service_account',true)",
+        ),
+      ),
+    ).toBe(true);
     expect(() =>
       createNativePublicationStartup({
         ...options,
