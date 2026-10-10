@@ -2974,6 +2974,20 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/61_native_relation_target_guard.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_worker_component_installation.sql",
+      "path": "scripts/operations/repair/native-publication/20261010_native_worker_component_installation.sql",
+      "sha256": "b9265f56a2885e8f6e14820aadb84f0ccbfeb89f1cde1b16606025d9a41eb820",
+      "planes": [],
+      "disposition": "operational-repair",
+      "callers": [
+        "tooling/scripts/verification/apply-native-publication-chain.dev.py"
+      ],
+      "reason": "Repair an incomplete local foundation with a newer worker-source reader already installed. Install only its missing component reader; normal ordered installations already create this routine. Retain applied SQL bytes.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/37_native_worker_source.sql"
+      ]
     }
   ]
 }
