@@ -55,13 +55,13 @@ describe("shell activity center", () => {
     const drawer = document.body.querySelector<HTMLElement>('#athyper-activity-center')!;
     assert.ok(drawer);
     // Both are app bar panels in the one right-edge slot: Notifications replaces Quick access.
-    assert.equal(document.body.querySelector('#athyper-quick-access'), null);
-    assert.equal(host.querySelector('#athyper-activity-center'), null);
+    assert.ok(!document.body.querySelector('#athyper-quick-access'), "no #athyper-quick-access");
+    assert.ok(!host.querySelector('#athyper-activity-center'), "no #athyper-activity-center");
     assert.match(drawer.textContent ?? "", /Invoice approved/);
     // Browser alerts live in Notification preferences, not the panel.
     assert.doesNotMatch(drawer.textContent ?? "", /Enable alerts/);
     // No section tabs: the app bar's Inbox switches the open panel to its section.
-    assert.equal(drawer.querySelector('[role="tab"][id^="athyper-activity-tab-"]'), null);
+    assert.ok(!drawer.querySelector('[role="tab"][id^="athyper-activity-tab-"]'), "no activity tabs");
     const inbox = host.querySelector<HTMLButtonElement>('button[data-slot="inbox"]')!;
     inbox.focus();
     await click(inbox);
@@ -71,9 +71,9 @@ describe("shell activity center", () => {
     // Escape and focus return are covered in a real browser (shared-shell,
     // activity-header-switch); here the panel closes through its close button.
     await click(switched.querySelector<HTMLButtonElement>('button[aria-label="Close activity center"]')!);
-    assert.equal(document.body.querySelector('#athyper-activity-center'), null);
+    assert.ok(!document.body.querySelector('#athyper-activity-center'), "no #athyper-activity-center");
     // Focus returns to the app bar control used last.
-    assert.equal(document.activeElement, inbox);
+    assert.ok(document.activeElement === inbox, "focus on inbox");
   });
 
   it("counts recent work in the scope row and makes clearing recoverable", async () => {

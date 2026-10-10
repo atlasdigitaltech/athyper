@@ -25,7 +25,7 @@ test("surface recovery keeps page input mounted and redacts the render error", a
     fail = false;
     await act(async () => dom.window.document.querySelector("button")!.click());
     assert.match(dom.window.document.body.textContent!, /Recovered surface/);
-    assert.equal(dom.window.document.querySelector("input"), input);
+    assert.ok(dom.window.document.querySelector("input") === input, "the same input stays mounted");
   } finally {
     await act(async () => root.unmount());
     for (const [key, descriptor] of previous) descriptor ? Object.defineProperty(globalThis, key, descriptor) : delete (globalThis as Record<string, unknown>)[key];

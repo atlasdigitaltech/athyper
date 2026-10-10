@@ -242,7 +242,7 @@ test("missing fields disclosure, copy controls and retry work with keyboard-nati
         />,
       ),
     );
-    assert.equal(host.querySelector("button"), null);
+    assert.ok(!host.querySelector("button"), "no button");
   } finally {
     await act(async () => root.unmount());
     dom.window.close();

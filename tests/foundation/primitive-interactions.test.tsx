@@ -80,7 +80,7 @@ describe("primitive interactions", () => {
       ),
     );
     assert.equal(tabs[0]?.getAttribute("aria-selected"), "true");
-    assert.equal(document.activeElement, tabs[0]);
+    assert.ok(document.activeElement === tabs[0], "focus on tabs[0]");
   });
 
   it("reports controlled tab changes without mutating the supplied value", async () => {
@@ -123,7 +123,7 @@ describe("primitive interactions", () => {
     await click(trigger);
     assert.ok(host.querySelector('[role="menu"]'));
     await click(host.querySelector('[role="menuitem"]')!);
-    assert.equal(host.querySelector('[role="menu"]'), null);
+    assert.ok(!host.querySelector('[role="menu"]'), "no menu");
     let requested = false;
     await act(async () =>
       root.render(
@@ -140,7 +140,7 @@ describe("primitive interactions", () => {
     );
     await click(host.querySelector('[aria-haspopup="menu"]')!);
     assert.equal(requested, true);
-    assert.equal(host.querySelector('[role="menu"]'), null);
+    assert.ok(!host.querySelector('[role="menu"]'), "no menu");
   });
 
   it("dismisses an open menu when the user interacts outside it", async () => {
@@ -162,7 +162,7 @@ describe("primitive interactions", () => {
     await click(host.querySelector('[aria-haspopup="menu"]')!);
     assert.ok(host.querySelector('[role="menu"]'));
     await pointerDown(host.querySelector("#outside")!);
-    assert.equal(host.querySelector('[role="menu"]'), null);
+    assert.ok(!host.querySelector('[role="menu"]'), "no menu");
   });
 
   it("keeps only one toolbar menu open and preserves composed trigger handlers", async () => {
@@ -235,8 +235,8 @@ describe("primitive interactions", () => {
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       ),
     );
-    assert.equal(host.querySelector('[role="dialog"]'), null);
-    assert.equal(document.activeElement, trigger);
+    assert.ok(!host.querySelector('[role="dialog"]'), "no dialog");
+    assert.ok(document.activeElement === trigger, "focus on trigger");
   });
 
   it("preserves the active dialog control when controlled content rerenders", async () => {
@@ -256,7 +256,7 @@ describe("primitive interactions", () => {
     const value = host.querySelector<HTMLButtonElement>("#value")!;
     value.focus();
     await act(async () => root.render(renderDialog("Updated")));
-    assert.equal(document.activeElement, value);
+    assert.ok(document.activeElement === value, "focus on value");
   });
 
   it("renders an accessible drawer and dismisses it from the scrim", async () => {
@@ -276,7 +276,7 @@ describe("primitive interactions", () => {
     await click(
       document.body.querySelector<HTMLButtonElement>(".a-dialog-scrim")!,
     );
-    assert.equal(document.body.querySelector(".a-drawer"), null);
+    assert.ok(!document.body.querySelector(".a-drawer"), "no .a-drawer");
   });
 
   it("composes a tabbed framework drawer with fixed regions and lazy panels", async () => {

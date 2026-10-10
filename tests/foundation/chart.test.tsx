@@ -80,7 +80,7 @@ test("one tab stop; the arrow keys move between points and Enter selects", async
     points()[0]!.focus();
     const svg = container.querySelector("svg")!;
     await act(async () => { svg.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); });
-    assert.equal(window.document.activeElement, points()[1]);
+    assert.ok(window.document.activeElement === points()[1], "focus on points()[1]");
     assert.deepEqual(points().map((point) => point.getAttribute("tabindex")), ["-1", "0", "-1"]);
     await act(async () => { svg.dispatchEvent(new window.KeyboardEvent("keydown", { key: "End", bubbles: true })); });
     await act(async () => { svg.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })); });
@@ -97,12 +97,12 @@ test("the data table is a disclosure over the same data, with Others and the tot
     const rows = [...container.querySelectorAll(".a-chart__data tr")].map((row) => [...row.children].map((cell) => cell.textContent));
     assert.deepEqual(rows, [["Stage", "Records"], ["Open", "#5"], ["Won", "#3"], ["Lost", "#2"], ["On hold", "Records suppressed"], ["Others", "#2"], ["Total", "#12"]]);
   });
-  await render({ data: stages, dataTable: false }, {}, ({ container }) => assert.equal(container.querySelector(".a-chart__table"), null));
+  await render({ data: stages, dataTable: false }, {}, ({ container }) => assert.ok(!container.querySelector(".a-chart__table"), "no data table"));
 });
 
 test("an unavailable type shows its reason, never an empty chart", async () => {
   await render({ data: stages, type: "line" }, {}, ({ container }) => {
-    assert.equal(container.querySelector("svg"), null);
+    assert.ok(!container.querySelector("svg"), "no svg");
     assert.equal(container.querySelector("[role=status]")?.textContent, "A line needs a sequence, such as dates or periods.");
   });
 });

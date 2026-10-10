@@ -220,7 +220,7 @@ test("access changes, failures and a single available record are stated, with no
     await render(location([id(1), id(2)]));
     await act(async () => requests[0]!.reject(new ApiTransportError("http", "Forbidden", 400, { type: "about:blank", title: "Bad request", status: 400, code: "PROJECTION_FIELD_NOT_ALLOWED" })));
     assert.match(container.textContent!, /Your access to this list changed\. Reload to compare\./);
-    assert.equal(container.querySelector("table"), null);
+    assert.ok(!container.querySelector("table"), "no table");
   });
   await withPanel(async ({ container, requests, render }) => {
     await render(location([id(1), id(9)]));
@@ -302,7 +302,7 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
     assert.equal(listQueries.length, before + 1, "one standalone request, no list refetch");
     assert.deepEqual(listQueries.at(-1)!.recordIds, [id(1), id(3)]);
     assert.equal(dom.window.document.querySelector(".a-entity-compare h2")!.textContent, "Comparing 2 Materials");
-    assert.equal(dom.window.document.querySelector(".a-entity-list__pagination"), null);
+    assert.ok(!dom.window.document.querySelector(".a-entity-list__pagination"), "no .a-entity-list__pagination");
     // Close goes back through the one pushed history entry.
     const close = [...dom.window.document.querySelectorAll<HTMLButtonElement>(".a-entity-compare button")].find((button) => button.textContent === "Close")!;
     await act(async () => {
@@ -310,7 +310,7 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     assert.equal(new URL(dom.window.location.href).searchParams.get("compare"), null);
-    assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
+    assert.ok(!dom.window.document.querySelector(".a-entity-compare"), "no .a-entity-compare");
     // Opened, then Back by the browser: the marker went with its entry, so a
     // later comparison opened from a link closes in place, not by going back.
     await act(async () => boxes()[0]!.click());
@@ -320,7 +320,7 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
       dom.window.history.back();
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
+    assert.ok(!dom.window.document.querySelector(".a-entity-compare"), "no .a-entity-compare");
     let backs = 0;
     const back = dom.window.history.back.bind(dom.window.history);
     dom.window.history.back = () => {
@@ -337,7 +337,7 @@ test("in the list: Compare is offered for 2 to 4 selected records, opens from th
     });
     assert.equal(new URL(dom.window.location.href).searchParams.get("compare"), null);
     assert.equal(backs, 0, "closing in place, not going back");
-    assert.equal(dom.window.document.querySelector(".a-entity-compare"), null);
+    assert.ok(!dom.window.document.querySelector(".a-entity-compare"), "no .a-entity-compare");
     // A shared link opens the comparison directly, with the baseline.
     await act(async () => root.unmount());
     dom.window.history.replaceState(null, "", `/app/material?compare=${id(2)},${id(1)}&compareBaseline=${id(1)}`);
@@ -390,7 +390,7 @@ test("the panel shows Best marks, tie-aware summary chips and the mixed-currency
   await withPanel(async ({ container, requests, render }) => {
     await render(location([id(1), id(2), id(3)]), false, ranked);
     await act(async () => requests[0]!.resolve(result(rows)));
-    assert.equal(container.querySelector(".a-entity-compare__summaries"), null);
+    assert.ok(!container.querySelector(".a-entity-compare__summaries"), "no .a-entity-compare__summaries");
     assert.match(container.textContent!, /Mixed currencies/);
     assert.equal(container.querySelectorAll("td[data-best]").length, 0);
   });

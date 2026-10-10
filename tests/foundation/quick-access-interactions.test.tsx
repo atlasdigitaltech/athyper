@@ -47,7 +47,7 @@ describe("shell quick access", () => {
   it("opens from the app bar on the right, promotes a deep record to favourites, and restores focus on Escape", async () => {
     await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" accountLoginId="user.one" navigation={navigation}><section><h1>Purchase invoice</h1></section></ShellChrome>));
     // The rail only navigates; Quick access lives with the other app bar panels.
-    assert.equal(host.querySelector(".athyper-shell__quick-actions"), null);
+    assert.ok(!host.querySelector(".athyper-shell__quick-actions"), "no .athyper-shell__quick-actions");
     const trigger = host.querySelector<HTMLButtonElement>('.athyper-shell__actions > button[data-slot="quick-access"]')!;
     assert.equal(trigger.getAttribute("aria-controls"), "athyper-quick-access");
     trigger.focus();
@@ -58,9 +58,9 @@ describe("shell quick access", () => {
     assert.ok(panel.classList.contains("a-tool-panel"));
     assert.equal(panel.getAttribute("role"), "dialog");
     // The Notifications anatomy: header, scope row with count, search, section chips, grouped list.
-    assert.equal(panel.querySelector(".a-panel-header small"), null);
+    assert.ok(!panel.querySelector(".a-panel-header small"), "no .a-panel-header small");
     assert.match(panel.querySelector(".a-panel-context")?.textContent ?? "", /Your saved and recent work.*1 recent/);
-    assert.equal(panel.querySelector('[role="tab"]'), null);
+    assert.ok(!panel.querySelector('[role="tab"]'), "no tabs");
     const chip = (label: string) => [...panel.querySelectorAll<HTMLButtonElement>(".a-filter-chip")].find((button) => button.textContent?.startsWith(label))!;
     // Recent is the first section until the user chooses another.
     assert.equal(chip("Recent").getAttribute("aria-pressed"), "true");
@@ -74,8 +74,8 @@ describe("shell quick access", () => {
     const stored = JSON.stringify(dom.window.localStorage);
     assert.doesNotMatch(stored, /User One|user\.one/);
     await act(async () => panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
-    assert.equal(document.body.querySelector("#athyper-quick-access"), null);
-    assert.equal(document.activeElement, trigger);
+    assert.ok(!document.body.querySelector("#athyper-quick-access"), "no #athyper-quick-access");
+    assert.ok(document.activeElement === trigger, "focus on trigger");
     // It reopens on the section used last.
     await click(trigger);
     assert.equal(document.body.querySelector('#athyper-quick-access .a-filter-chip[aria-pressed="true"]')?.textContent?.startsWith("Favourites"), true);

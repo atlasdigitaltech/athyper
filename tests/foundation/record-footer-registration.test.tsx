@@ -83,7 +83,7 @@ test("footer ownership survives stale cleanup and clears on scope/access changes
       root.render(<App old={false} next={false} scope="record-b" />),
     );
     assert.doesNotMatch(dom.window.document.body.textContent!, /Data source/);
-    assert.equal(dom.window.document.querySelector("input"), input);
+    assert.ok(dom.window.document.querySelector("input") === input, "the same input stays mounted");
     assert.equal(input?.value, "Unsaved draft");
   } finally {
     await act(async () => root.unmount());

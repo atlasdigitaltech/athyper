@@ -245,14 +245,8 @@ test("runtime uses scoped authorized data, linked views, and suppresses results 
       ".a-entity-pulse__metric",
     );
     assert.equal(metrics.length, 0);
-    assert.equal(
-      dom.window.document.querySelector(".a-entity-pulse__hero"),
-      null,
-    );
-    assert.equal(
-      dom.window.document.querySelector(".a-entity-pulse__toolbar"),
-      null,
-    );
+    assert.ok(!dom.window.document.querySelector(".a-entity-pulse__hero"), "no .a-entity-pulse__hero");
+    assert.ok(!dom.window.document.querySelector(".a-entity-pulse__toolbar"), "no .a-entity-pulse__toolbar");
     const shortcut = dom.window.document.querySelectorAll<HTMLAnchorElement>(
       ".a-entity-pulse__shortcuts a",
     )[1]!;

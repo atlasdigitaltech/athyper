@@ -298,7 +298,7 @@ test("measures are capped at five and kept in declared order; a sixth cannot be 
 
 test("narrow screens list one group per row and keep the total visible", async () => {
   await withSummary({ narrow: true }, async ({ container }) => {
-    assert.equal(container.querySelector("table"), null);
+    assert.ok(!container.querySelector("table"), "no table");
     const items = [...container.querySelectorAll(".a-entity-aggregate__item")];
     assert.equal(items.length, 3);
     assert.match(items[0]!.textContent!, /^Total/);
@@ -476,7 +476,7 @@ test("Chart shows the opening response with no further request, and a point dril
   await withSummary({ state: chartState() }, async ({ container, calls, drills }) => {
     const window = container.ownerDocument.defaultView!;
     assert.equal(calls.length, 1);
-    assert.equal(container.querySelector("table[role=treegrid]"), null);
+    assert.ok(!container.querySelector("table[role=treegrid]"), "no table[role=treegrid]");
     const points = [...container.querySelectorAll("[data-chart-point]")];
     assert.deepEqual(points.map((point) => point.getAttribute("aria-label")), ["1000 Cash, Records: 2, 40%", "2000 Payables, Records: 3, 60%"]);
     // Unavailable types are disabled with their reasons.
@@ -532,7 +532,7 @@ test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No va
     const rows = [...container.querySelectorAll("tbody tr[aria-level='1']")];
     assert.deepEqual(rows.map((row) => row.querySelector("[data-tree-open]")?.textContent), ["2000 Payables", "1000 Cash", "No value"]);
     assert.equal(rows[2]!.querySelector(".a-entity-aggregate__unranked")?.textContent, "Not ranked");
-    assert.equal(rows[0]!.querySelector(".a-entity-aggregate__unranked"), null);
+    assert.ok(!rows[0]!.querySelector(".a-entity-aggregate__unranked"), "no .a-entity-aggregate__unranked");
     // Decision 36: the Total row stands outside the ranking and says so.
     assert.equal(container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked")?.textContent, "Not ranked");
     // The key order's "Showing the first 50" notice is not shown under an order,
@@ -546,7 +546,7 @@ test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No va
   });
   // Without an order the Total row carries no label.
   await withSummary({}, async ({ container }) => {
-    assert.equal(container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked"), null);
+    assert.ok(!container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked"), "no .a-entity-aggregate__total .a-entity-aggregate__unranked");
   });
   await withSummary({ state: orderedState({ measure: "period_net:sum", direction: "asc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
     assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "All 2 GL account by Period net total, lowest first");
@@ -563,7 +563,7 @@ test("A6: an expansion is never ordered, and a measure that cannot rank this lev
   });
   // Grouped by its own time field, the balance can order.
   await withSummary({ state: { aggregate: { rows: ["period"], measures: ["closing_net:sum"] } } }, async ({ container }) => {
-    assert.equal(container.querySelector(".a-entity-aggregate__reasons"), null);
+    assert.ok(!container.querySelector(".a-entity-aggregate__reasons"), "no .a-entity-aggregate__reasons");
   });
 });
 

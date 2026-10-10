@@ -370,10 +370,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     });
     assert.equal(firstList.signal?.aborted, true);
     assert.match(dom.window.document.body.textContent ?? "", /ORG2-BP-001/);
-    assert.equal(
-      dom.window.document.querySelector(".a-entity-list__context-row"),
-      null,
-    );
+    assert.ok(!dom.window.document.querySelector(".a-entity-list__context-row"), "no .a-entity-list__context-row");
     assert.equal(dom.window.document.querySelectorAll("h1").length, 1);
     assert.equal(
       dom.window.document.querySelector("h1")?.textContent,
@@ -399,10 +396,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
       "Choose an organization first.",
     );
     assert.ok(dom.window.document.querySelector(".a-entity-list__query-row"));
-    assert.equal(
-      dom.window.document.querySelector(".athyper-page-header__context"),
-      null,
-    );
+    assert.ok(!dom.window.document.querySelector(".athyper-page-header__context"), "no .athyper-page-header__context");
     assert.doesNotMatch(
       dom.window.document.querySelector("header")?.textContent ?? "",
       /Read-only/,
@@ -443,7 +437,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
       ".a-entity-list__row-menu",
     );
     assert.match(rowMenu?.textContent ?? "", /View.*Copy/);
-    assert.equal(rowMenu?.closest(".a-entity-list__table-wrap"), null);
+    assert.ok(!rowMenu?.closest(".a-entity-list__table-wrap"), "not inside .a-entity-list__table-wrap");
     await act(async () =>
       rowActions?.dispatchEvent(
         new dom.window.MouseEvent("click", { bubbles: true }),
@@ -1039,12 +1033,12 @@ for (const mode of ["table", "compact"] as const)
       const calls = requests;
       await act(async () => button().click());
       assert.equal(button().getAttribute("aria-expanded"), "false");
-      assert.equal(record(), null);
+      assert.ok(!record(), "no record rows while collapsed");
       // Count mode is none, so the heading shows no count: rows on this page
       // never stand in for a group total (layout foundation section 5).
       const heading = button().closest(".a-entity-tree__heading")!;
       assert.match(heading.textContent ?? "", /Active/);
-      assert.equal(heading.querySelector(".a-entity-tree__count"), null);
+      assert.ok(!heading.querySelector(".a-entity-tree__count"), "no .a-entity-tree__count");
       await act(async () => button().click());
       assert.equal(button().getAttribute("aria-expanded"), "true");
       assert.ok(record());
@@ -1264,10 +1258,7 @@ test("unexpected application failure replaces loading header with safe themed re
       dom.window.document.querySelector('[role="alert"]')?.textContent ?? "",
       /The requested platform operation is not allowlisted/,
     );
-    assert.equal(
-      dom.window.document.querySelector("details[open]"),
-      null,
-    );
+    assert.ok(!dom.window.document.querySelector("details[open]"), "no details[open]");
     assert.ok(
       dom.window.document.querySelector(".a-entity-list__state--empty"),
     );
@@ -2620,7 +2611,7 @@ test("presentation context updates keep list reads and rows steady, while scope 
     assert.ok(row);
     await act(async () => render("Controls again"));
     assert.equal(reads.length, 1, "settled rows must not refetch on presentation updates");
-    assert.equal(dom.window.document.querySelector("tbody tr"), row);
+    assert.ok(dom.window.document.querySelector("tbody tr") === row, "the same row stays mounted");
     assert.ok(dom.window.document.querySelector('[aria-label="Controls again"]'), "presentation still updates");
     assert.equal(descriptors, 1);
     await act(async () => render("Controls again", "org-2"));

@@ -168,7 +168,7 @@ describe("Shared metadata record header", () => {
         />,
       ),
     );
-    assert.equal(host.querySelector('[aria-label="Record sections"]'), null);
+    assert.ok(!host.querySelector('[aria-label="Record sections"]'), "no Record sections navigation");
     assert.equal(host.querySelectorAll("h1").length, 1);
   });
   it("rejects unknown bindings and removes unreadable header fields and unpermitted actions", () => {
