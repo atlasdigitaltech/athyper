@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 10 (10 October 2026).
+**Status:** approved, revision 11 (10 October 2026).
+- **Decision 35 approved and built (10 October 2026):** "The decision on 35 and the A5.3 fix also approved". A measure that declares `minimumGroupSize` never gets "Others" in the chart. Its own commit, independent of A6 (13.9, build note 3).
 - **A5.3 built (10 October 2026), on synthetic fixtures:** "go ahead with Next: A5.3". Summary has its Table | Chart toggle, its chart adapter and decision 14's published choice order. Section 13.9 records the build. No real Entity uses Summary yet, because A0 and A3 wait for the metadata cleanup.
 - **The shared chart moved to its own blueprint (10 October 2026).** On the owner's instruction ("go ahead"), the reusable chart moved verbatim to the [Chart blueprint](../chart/blueprint.md) in a move-only commit (`6d9510f29`). That covers its data contract, component, colour tokens, "Others" rule and other consumers, with decisions 9, 10, 11, 13 and 15. This document keeps how Summary uses it: 13.6, A5.3, decisions 12 and 14, and A6. **Coupled:** a change to the chart contract that Summary relies on updates both documents together.
 - **Decision 15 amended, A5 approved as amended (10 October 2026).** After audit round 10, the owner approved the contract with decision 15 in its separated form, in these words: "Approved". The category axis of a categorical dimension mirrors with the document direction. A time axis stays earliest on the left in every locale. Labels are localized and bidi-correct either way (13.3). Revision 8 also links each unavailable-type reason to its message (13.3) and states A6's inherited authorization constraint (section 17).
@@ -566,6 +567,10 @@ The status block of this document records each step as it is built.
 **Build notes**
 
 1. **One unit per chart.** When the charted values span more than one currency, every value point is shown as "In more than one currency" and nothing is charted. Plotting MYR and EUR on one axis would be wrong, and the grid still shows each row's own figure.
+3. **Decision 35: no "Others" for a measure with a floor (fix, 10 October 2026).**
+   - The remainder (total minus the shown groups) can be exactly one held-back group. "Others" would then draw that group's hidden value, labelled, doing the differencing that section 9.3 accepts only as something a viewer might work out alone.
+   - The adapter therefore gives no `rest` when the measure declares `minimumGroupSize`. It is a condition on the declaration, decided before any arithmetic, so the same measure always behaves the same way.
+   - A truncated pie of such a measure is unavailable (`CHART_TRUNCATED`). The test is "decision 35: no Others for a measure with a floor".
 2. **The chart is laid out at its measured width,** with a `ResizeObserver` in the shared component (recorded in the Chart blueprint, 13.4a.13). Before this, the SVG scaled with the page, and at desktop width its text doubled in size.
 
 **Verified**
@@ -615,6 +620,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 **Raised for A5 (revision 6; all seven approved on 10 October 2026, status block):**
 
 12. **Top / Bottom N as its own phase, A6, after A5.** It is a server capability that orders groups by a measure across every group the viewer can read. Matrix's deferred "Lowest on n items" needs the same capability, so it is designed once for both (section 17). Until then, a chart shows the first groups by key, says so, and offers no "top N".
+35. **No "Others" for a measure that declares `minimumGroupSize`** (approved and built, 10 October 2026; 13.9, build note 3). It closes a live exposure in A5.3 and also governs A6.
 14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
 
 ## 15. Studio authoring and registration inventory

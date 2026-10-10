@@ -396,6 +396,20 @@ test("Others is the server's total minus the given points, exactly, and only whe
   assert.deepEqual([fee.data.points[0]![0], fee.data.series[0]!.rest, typeReason(fee, "pie")], [{ kind: "mixedCurrency" }, undefined, "CHART_WITHHELD"]);
 });
 
+test("decision 35: no Others for a measure with a floor, so a held-back group's value is never drawn", () => {
+  const [level] = summaryLevels(parsed, descriptor, ["account"]);
+  const floored = { ...summaryMeasures(parsed, ["period_net:sum"])[0]!, minimumGroupSize: 3 };
+  // Two groups shown, one held back past the cut: total minus shown would be that group's value.
+  const chart = summaryChartData({
+    level: level!, levelLabel: "GL account", rows: summaryRows(accounts as never, level!), rowLabel: (row) => row.label,
+    parent: { count: 6, aggregates: { "period_net:sum": 200 }, aggregateCurrencies: { "period_net:sum": "MYR" } } as never,
+    truncated: true, measure: floored, measureLabel: "Period net",
+  });
+  assert.deepEqual([chart.data.series[0]!.partOfWhole, chart.data.series[0]!.rest], [true, undefined]);
+  // A truncated pie without an exact Others is unavailable, so the remainder is never drawn.
+  assert.equal(typeReason(chart, "pie"), "CHART_TRUNCATED");
+});
+
 test("values in more than one currency are never charted on one axis", () => {
   const chart = chartOf("period_net:sum", {
     groups: [

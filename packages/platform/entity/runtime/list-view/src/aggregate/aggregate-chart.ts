@@ -83,9 +83,11 @@ export function summaryChartData(input: SummaryChartInput): SummaryChart {
     const total = item.total ? settle(item.total) : undefined;
     const partOfWhole = additive && !mixed && total !== undefined;
     // "Others" (Chart 13.5): exact only for a part-of-whole series whose given
-    // points are all values (or empty) and whose total is a value.
+    // points are all values (or empty) and whose total is a value. Never for a
+    // measure with a floor: the remainder could be one held-back group, and
+    // "Others" would draw its hidden value (Aggregate decision 35).
     let rest: ChartPointV1 | undefined;
-    if (partOfWhole && input.truncated && total.kind === "value" && points.every((entry) => entry.kind === "value" || entry.kind === "empty")) {
+    if (partOfWhole && !measure.minimumGroupSize && input.truncated && total.kind === "value" && points.every((entry) => entry.kind === "value" || entry.kind === "empty")) {
       const remainder = addDecimals([total.value, ...points.flatMap((entry) => (entry.kind === "value" ? [negate(entry.value)] : []))]);
       if (compareDecimals(remainder, 0) >= 0) rest = { kind: "value", value: remainder };
     }
