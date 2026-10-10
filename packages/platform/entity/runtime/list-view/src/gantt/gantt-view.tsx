@@ -29,6 +29,7 @@ import {
   type CalendarWindow,
 } from "@athyper/platform-temporal";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { listText, nameText } from "../composite-text";
 import { ChevronDownIcon, ChevronRightIcon } from "@athyper/platform-icons";
 import { Button, SegmentedControl } from "@athyper/platform-ui";
 import { resolveCardLayout } from "../card-content";
@@ -712,7 +713,7 @@ function GanttRow({
   // Gantt's row label is the readable identity and, when declared, the title
   // (blueprint section 8); Calendar's title-first label is a different rule.
   const { identity, title } = datedRowParts(row, descriptor);
-  const label = [identity, title].filter(Boolean).join(" ");
+  const label = nameText(intl, identity, title);
   // The title tooltip repeats the label on every row, truncated or not:
   // detecting truncation would need a layout read per row for a cosmetic
   // difference. Accepted deliberately; the accessible name and the focus
@@ -765,7 +766,7 @@ function GanttRow({
               ? instant(String(row.values[field.end] ?? ""), entry.lastDay)
               : when(entry.lastDay),
         });
-  const name = [
+  const name = listText(intl, [
     label,
     status || undefined,
     dates,
@@ -774,9 +775,7 @@ function GanttRow({
           percent: intl.number(percent / 100, { style: "percent" }),
         })
       : undefined,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  ]);
   const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (
       onOpenRecord &&

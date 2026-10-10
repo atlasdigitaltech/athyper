@@ -29,6 +29,7 @@ import {
 } from "@athyper/platform-temporal";
 import { ArrowRightIcon } from "@athyper/platform-icons";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { listText } from "../composite-text";
 import {
   Button,
   Dialog,
@@ -507,7 +508,7 @@ function MonthGrid({
           >
             {row.map((day, column) => {
               const count = byDay.get(day)?.length ?? 0;
-              const name = [
+              const name = listText(intl, [
                 formatDay(intl, day, {
                   weekday: "long",
                   day: "numeric",
@@ -517,9 +518,7 @@ function MonthGrid({
                   ? intl.message("list.calendar.dayRecords", { count })
                   : undefined,
                 day === today ? intl.message("list.calendar.today") : undefined,
-              ]
-                .filter(Boolean)
-                .join(", ");
+              ]);
               return (
                 <div
                   key={day}
@@ -612,13 +611,11 @@ function Bar({
   );
   const props = {
     className: "a-entity-calendar__chip",
-    "aria-label": [
+    "aria-label": listText(intl, [
       text,
       time,
       entry.openEnded ? intl.message("list.calendar.openEnded") : undefined,
-    ]
-      .filter(Boolean)
-      .join(", "),
+    ]),
     "data-tone": datedTone(entry.row, field),
     "data-continues-before": bar.continuesBefore || undefined,
     "data-continues-after": bar.continuesAfter || undefined,

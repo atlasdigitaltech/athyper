@@ -25,6 +25,7 @@ import {
   type ComparisonTableSection,
 } from "@athyper/platform-entity-comparison";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { listText, separatedText } from "../composite-text";
 import { SegmentedControl } from "@athyper/platform-ui";
 import { formatFieldValue } from "../field-format";
 import { CompareCollection } from "./compare-collection";
@@ -295,11 +296,11 @@ export function ComparePanel(props: ComparePanelProps) {
       emptyMessage: intl.message("list.compare.sectionEmpty"),
     };
   });
-  const summary = [
+  const summary = separatedText(intl, [
     intl.message("list.compare.summary", { differs: model.differs, fields: model.fields }),
     ...(model.notCompared ? [intl.message("list.compare.summaryNotCompared", { count: model.notCompared })] : []),
     ...(model.available < location.records.length ? [intl.message("list.compare.summaryAvailable", { count: model.available })] : []),
-  ].join(" · ");
+  ]);
   // Line items are counted in their own sections, so "everything matches" speaks only for a comparison without them.
   const everythingMatches = !location.all && model.differs === 0 && model.notCompared === 0 && !compare.collections?.length;
 
@@ -343,7 +344,7 @@ export function ComparePanel(props: ComparePanelProps) {
             <li key={summary.label}>
               {intl.message(summary.columns.length > 1 ? "list.compare.summaryChipTie" : "list.compare.summaryChip", {
                 label: summary.label,
-                records: summary.columns.map((index) => recordName(index)).join(", "),
+                records: listText(intl, summary.columns.map((index) => recordName(index))),
                 value: summary.display,
               })}
             </li>
@@ -360,7 +361,7 @@ export function ComparePanel(props: ComparePanelProps) {
                 disabled={slot === 0 && baseline >= 0}
                 options={model.columns.map((column, index) => ({
                   value: String(index),
-                  label: [recordName(index), column.title].filter(Boolean).join(" · "),
+                  label: separatedText(intl, [recordName(index), column.title]),
                   disabled: index === shown[slot === 0 ? 1 : 0],
                 }))}
                 onValueChange={(next) => {
@@ -392,7 +393,7 @@ export function ComparePanel(props: ComparePanelProps) {
           collection={collection}
           records={location.records}
           headerRows={new Map(load.rows.map((row) => [row.id, row]))}
-          names={model.columns.map((_, index) => [recordName(index), model.columns[index]!.title].filter(Boolean).join(" · "))}
+          names={model.columns.map((_, index) => separatedText(intl, [recordName(index), model.columns[index]!.title]))}
           shown={shown}
           baseline={baseline}
           all={location.all === true}

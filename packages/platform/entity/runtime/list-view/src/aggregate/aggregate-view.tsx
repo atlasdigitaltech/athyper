@@ -45,6 +45,7 @@ import {
   type SummaryRow,
 } from "./aggregate-model";
 import { summaryChartData } from "./aggregate-chart";
+import { amountText, listText, pathText } from "../composite-text";
 
 // The Aggregate Layout, shown as Summary (Entity list Aggregate blueprint
 // sections 7, 11 and 12): grouped rows at up to three levels, the declared
@@ -176,7 +177,7 @@ export function measureLabel(measure: ListAggregateMeasureV1, intl: EntityIntl):
 function valueText(value: number | string, measure: ListAggregateMeasureV1, intl: EntityIntl, currency?: string): string {
   if (measure.aggregate === "count" || measure.aggregate === "countDistinct") return intl.number(Number(value));
   const field = { key: measure.field ?? measure.key, label: measure.label ?? "", valueKind: measure.valueKind ?? "decimal" } as ListFieldDescriptorV1;
-  return [formatFieldValue(value, field, intl), currency].filter(Boolean).join(" ");
+  return amountText(intl, formatFieldValue(value, field, intl), currency, "currencyLast");
 }
 
 /** Why a cell has no value, in the Summary's own words; the chart's withheld
@@ -184,7 +185,7 @@ function valueText(value: number | string, measure: ListAggregateMeasureV1, intl
 function stateText(kind: Exclude<ChartPointState, "empty">, measure: ListAggregateMeasureV1, intl: EntityIntl): string {
   switch (kind) {
     case "notSummable":
-      return intl.message("list.aggregate.notSummable", { fields: (measure.timeFields ?? []).map((item) => item.label).join(", ") });
+      return intl.message("list.aggregate.notSummable", { fields: listText(intl, (measure.timeFields ?? []).map((item) => item.label)) });
     case "suppressed":
       return intl.message("list.aggregate.suppressed");
     case "mixedCurrency":
@@ -404,7 +405,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
               <li key={item.measure.key}>
                 {intl.message("list.aggregate.orderUnavailable", {
                   measure: measureLabel(item.measure, intl),
-                  reason: intl.message(`list.aggregate.orderRefused.${item.reason}`, { fields: (item.measure.timeFields ?? []).map((time) => time.label).join(", ") }),
+                  reason: intl.message(`list.aggregate.orderRefused.${item.reason}`, { fields: listText(intl, (item.measure.timeFields ?? []).map((time) => time.label)) }),
                 })}
               </li>
             ))}
@@ -592,14 +593,14 @@ export function EntityAggregate(props: EntityAggregateProps) {
       <div className="a-entity-aggregate__scroll">
         <table className="a-entity-aggregate__table" role="treegrid" aria-label={intl.message("list.mode.aggregate")} onKeyDown={handleTreeKeyDown}>
           <caption className="a-visually-hidden">
-            {intl.message("list.aggregate.caption", { entity: descriptor.entity.pluralLabel, levels: levels.map((level) => levelName(level, intl)).join(" › ") })}
+            {intl.message("list.aggregate.caption", { entity: descriptor.entity.pluralLabel, levels: pathText(intl, levels.map((level) => levelName(level, intl))) })}
           </caption>
           <thead>
             {context.columns ? (
               <>
                 <tr>
                   <th scope="col" rowSpan={2} className="a-entity-aggregate__corner">
-                    {levels.map((level) => levelName(level, intl)).join(" › ")}
+                    {pathText(intl, levels.map((level) => levelName(level, intl)))}
                   </th>
                   {context.columns.map((item) => (
                     <th key={item.key} scope="colgroup" colSpan={measures.length} className="a-entity-aggregate__column">
@@ -619,7 +620,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
             ) : (
               <tr>
                 <th scope="col" className="a-entity-aggregate__corner">
-                  {levels.map((level) => levelName(level, intl)).join(" › ")}
+                  {pathText(intl, levels.map((level) => levelName(level, intl)))}
                 </th>
                 {measures.map((measure) => (
                   <th key={measure.key} scope="col">{measureLabel(measure, intl)}</th>
@@ -688,7 +689,7 @@ function MeasureCells({ totals, context, label, drill }: {
             <span>{content}</span>
           </div>
         ) : (
-          <td key={measure.key} aria-label={`${label}, ${measureLabel(measure, context.intl)} ${text}`} data-state={kind === "value" ? undefined : kind}>
+          <td key={measure.key} aria-label={context.intl.message("list.aggregate.cellName", { group: label, measure: measureLabel(measure, context.intl), value: text })} data-state={kind === "value" ? undefined : kind}>
             {content}
           </td>
         );
@@ -703,7 +704,7 @@ function Cells({ totals, context, label, filters }: { readonly totals: ListGroup
   const total = context.intl.message("list.aggregate.total");
   const blocks = context.columns.map((column, index) => {
     const cell = totals.cells?.[index];
-    const name = `${label}, ${rowLabel(column, context.columnLevel!, context.intl)}`;
+    const name = listText(context.intl, [label, rowLabel(column, context.columnLevel!, context.intl)]);
     const drill = cell?.count
       ? {
           label: context.intl.message("list.aggregate.showCellRecords", { count: cell.count, group: label, column: rowLabel(column, context.columnLevel!, context.intl) }),
@@ -720,7 +721,7 @@ function Cells({ totals, context, label, filters }: { readonly totals: ListGroup
       <React.Fragment key={column.key}>{cells}</React.Fragment>
     );
   });
-  const own = <MeasureCells totals={totals} context={context} label={`${label}, ${total}`} />;
+  const own = <MeasureCells totals={totals} context={context} label={listText(context.intl, [label, total])} />;
   return (
     <>
       {blocks}
@@ -891,7 +892,7 @@ function SummaryNode({
                 measure: measureLabel(nested.measure, intl),
                 dimension: levelName(next!, intl),
                 group: label,
-                reason: intl.message(`list.aggregate.orderRefused.${refusal}`, { fields: (nested.measure.timeFields ?? []).map((time) => time.label).join(", ") }),
+                reason: intl.message(`list.aggregate.orderRefused.${refusal}`, { fields: listText(intl, (nested.measure.timeFields ?? []).map((time) => time.label)) }),
               })}
             />
           ) : null}

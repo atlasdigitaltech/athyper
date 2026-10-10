@@ -15,6 +15,8 @@ import {
   type ComparisonTableRow,
 } from "@athyper/platform-entity-comparison";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { nameText } from "../composite-text";
+
 import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { SearchableSelect } from "@athyper/platform-ui";
 import {
@@ -30,6 +32,9 @@ import {
   type LineRowModel,
   type MasterRow,
 } from "./compare-lines";
+
+/** A master row's part as text; empty values take no place in its name. */
+const shownPart = (value: unknown) => (value === undefined || value === null || value === "" ? undefined : String(value));
 
 // One C4 line-item collection in the comparison panel (Entity list Compare
 // blueprint 5.8 and 10a). It opens collapsed with its counts, narrows first
@@ -105,10 +110,7 @@ export function CompareCollection(props: CompareCollectionProps) {
         if (result.pagination.nextCursor && !cursors[page + 1]) setCursors((previous) => [...previous.slice(0, page + 1), result.pagination.nextCursor]);
         masterRows = result.rows.map((row) => ({
           id: row.id,
-          label: [row.displayValues?.[master.identityField] ?? row.values[master.identityField], master.titleField ? row.displayValues?.[master.titleField] ?? row.values[master.titleField] : undefined]
-            .filter((part) => part !== undefined && part !== null && part !== "")
-            .map(String)
-            .join(" "),
+          label: nameText(intl, shownPart(row.displayValues?.[master.identityField] ?? row.values[master.identityField]), master.titleField ? shownPart(row.displayValues?.[master.titleField] ?? row.values[master.titleField]) : undefined),
         }));
       }
       const lines = new Map<string, readonly EntityListRowV1[]>();
@@ -118,7 +120,7 @@ export function CompareCollection(props: CompareCollectionProps) {
           if (master) {
             if (!masterRows!.length) return lines.set(id, []);
             const result: EntityListResultV1 = await request(collection.targetEntity, lineQuery(collection, descriptor.entity.code, id, masterRows!.map((row) => row.id)));
-            issue ??= checkLineRead(collection, id, result.rows, result.pagination.hasNext);
+            issue ??= checkLineRead(collection, id, result.rows, result.pagination.hasNext, intl);
             lines.set(id, result.rows);
             return;
           }
@@ -135,7 +137,7 @@ export function CompareCollection(props: CompareCollectionProps) {
             }
             cursor = result.pagination.nextCursor;
           }
-          issue ??= checkLineRead(collection, id, rows, false);
+          issue ??= checkLineRead(collection, id, rows, false, intl);
           lines.set(id, rows);
         }),
       );

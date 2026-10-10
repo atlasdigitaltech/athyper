@@ -25,6 +25,7 @@ import {
   type ListTreeV1,
 } from "@athyper/contract-platform-entity-list";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { labelledText, nameText } from "../composite-text";
 import { datedRowParts } from "../date-range/date-range-parts";
 import { formatFieldValue } from "../field-format";
 import {
@@ -593,7 +594,7 @@ export function treeNodeLabel(
   const parts = datedRowParts(row, descriptor);
   return {
     ...parts,
-    text: [parts.identity, parts.title].filter(Boolean).join(" "),
+    text: nameText(undefined, parts.identity, parts.title),
   };
 }
 
@@ -744,7 +745,7 @@ export function TreeNodeLabel({
     branch === undefined || !nodeKind
       ? undefined
       : nodeKind.kind === "boolean"
-        ? `${kindField?.label ?? ""}: ${formatFieldValue(kindValue as boolean, kindField, intl)}`
+        ? labelledText(intl, kindField?.label ?? "", formatFieldValue(kindValue as boolean, kindField, intl))
         : String(
             row.displayValues?.[nodeKind.field] ??
               formatFieldValue(kindValue as string, kindField, intl),

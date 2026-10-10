@@ -206,6 +206,7 @@
 .a-entity-list__filter-range>.a-entity-list__filter-label{grid-column:1/-1}
 .a-entity-list__filter-no-value{color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
 .a-entity-list__filter-remove{align-self:center;color:var(--a-muted-foreground)}
+/* --a-filter-columns is local to the filter list (its column template), not a theme token; a theme token of that name would collide with it. */
 .a-entity-list__filter-list--quick{--a-filter-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.5fr)}
 .a-entity-list__additional-filters>button{padding:0;border:0;background:transparent;color:var(--a-primary);font:inherit;text-decoration:underline;cursor:pointer}
 .a-entity-list__additional-filters{margin:0;padding:var(--a-space-2) var(--a-space-3);border-radius:var(--a-radius-md);background:var(--a-muted);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}

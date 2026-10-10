@@ -16,6 +16,7 @@ import {
   type ComparisonOutcome,
 } from "@athyper/platform-entity-comparison";
 import type { IntlRuntime } from "@athyper/platform-i18n";
+import { amountText, perUnitText, separatedText } from "../composite-text";
 import { formatFieldValue } from "../field-format";
 
 // C4 line items (Entity list Compare blueprint 5.8 and 10a): request shapes
@@ -147,22 +148,23 @@ export function checkLineRead(
   record: string,
   rows: readonly EntityListRowV1[],
   hasNext: boolean,
+  intl?: IntlRuntime,
 ): LineReadIssue | undefined {
   if (hasNext) return collection.master ? { kind: "incomplete", record } : { kind: "too_many", record };
   const seen = new Set<string>();
   for (const row of rows) {
     const key = tupleKey(row, collection.matchKey.map((field) => field.key));
-    if (seen.has(key)) return { kind: "duplicate", record, label: lineLabel(collection, row) };
+    if (seen.has(key)) return { kind: "duplicate", record, label: lineLabel(collection, row, intl) };
     seen.add(key);
   }
   return undefined;
 }
 
-function lineLabel(collection: ListCompareCollectionV1, row: EntityListRowV1): string {
-  return collection.matchKey
-    .map((field) => row.displayValues?.[field.key] ?? (field.valueKind === "reference" ? "" : String(row.values[field.key] ?? "")))
-    .filter(Boolean)
-    .join(" · ");
+function lineLabel(collection: ListCompareCollectionV1, row: EntityListRowV1, intl?: IntlRuntime): string {
+  return separatedText(
+    intl,
+    collection.matchKey.map((field) => row.displayValues?.[field.key] ?? (field.valueKind === "reference" ? "" : String(row.values[field.key] ?? ""))),
+  );
 }
 
 /** Builds the line rows of one loaded page, in master order (master-list
@@ -196,13 +198,13 @@ export function buildLineRows(input: {
       if (!seconds.length) addTuple(JSON.stringify([master.id, ...keys.slice(1).map(() => null)]), master.label);
       for (const [tuple, row] of seconds) {
         const second = keys.length > 1 ? row.displayValues?.[keys[1]!] ?? "" : "";
-        addTuple(tuple, second ? `${master.label} · ${second}` : master.label);
+        addTuple(tuple, separatedText(input.intl, [master.label, second]));
       }
     }
   } else {
     const all = byRecord.flatMap((map) => (map ? [...map.entries()] : []));
     for (const [tuple, row] of all.sort(([, a], [, b]) => lineLabel(collection, a).localeCompare(lineLabel(collection, b), undefined, { numeric: true })))
-      addTuple(tuple, lineLabel(collection, row));
+      addTuple(tuple, lineLabel(collection, row, input.intl));
   }
   const absenceUnknown = collection.accessIndependent === true;
   const rows: LineRowModel[] = [];
@@ -243,8 +245,8 @@ export function buildLineRows(input: {
           displays.push("");
         } else {
           let shown = row.displayValues?.[field.key] ?? formatFieldValue(value, listField, input.intl);
-          if (field.valueKind === "money" && typeof currency === "string" && currency) shown = `${currency} ${shown}`;
-          if (field.unitField && row.values[field.unitField]) shown = `${shown} / ${String(row.values[field.unitField])}`;
+          if (field.valueKind === "money" && typeof currency === "string" && currency) shown = amountText(input.intl, shown, currency, "currencyFirst");
+          if (field.unitField && row.values[field.unitField]) shown = perUnitText(input.intl, shown, String(row.values[field.unitField]));
           cells.push({ state: "value", value: value as JsonValue, display: shown });
           displays.push(shown);
         }
@@ -270,7 +272,7 @@ export function buildLineRows(input: {
       }
       rows.push({
         key: `${tuple}:${field.key}`,
-        label: collection.fields.length > 1 ? `${labels.get(tuple)} · ${field.label}` : labels.get(tuple)!,
+        label: collection.fields.length > 1 ? separatedText(input.intl, [labels.get(tuple), field.label]) : labels.get(tuple)!,
         field,
         ...(masterId ? { masterId } : {}),
         cells,

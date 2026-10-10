@@ -18,6 +18,7 @@ import {
   type ComparisonWordSegment,
 } from "@athyper/platform-entity-comparison";
 import type { IntlRuntime } from "@athyper/platform-i18n";
+import { amountText } from "../composite-text";
 import { formatFieldValue } from "../field-format";
 
 // Record comparison model (Entity list Compare blueprint sections 7 and 8):
@@ -146,7 +147,7 @@ export function buildCompareModel(input: {
     let shown = display(row, field.key, listField);
     if (field.valueKind === "money" && field.currencyField && !field.currencyMasked) {
       const currency = row.values[field.currencyField];
-      if (typeof currency === "string" && currency) shown = `${currency} ${shown}`;
+      if (typeof currency === "string" && currency) shown = amountText(input.intl, shown, currency, "currencyFirst");
     }
     return { state: "value", value: value as JsonValue, display: shown };
   };

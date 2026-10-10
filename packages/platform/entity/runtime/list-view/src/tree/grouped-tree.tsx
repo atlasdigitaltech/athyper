@@ -22,6 +22,7 @@ import type {
   ListFilterV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
+import { amountText, listText } from "../composite-text";
 import type { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { useListPages } from "../list-pages";
 import { formatFieldValue } from "../field-format";
@@ -218,7 +219,7 @@ function headingAggregates(
           </span>{" "}
           <span className="a-entity-tree__aggregate-value">
             {state === "notSummable"
-              ? intl.message("list.aggregate.notSummable", { fields: (field.sumWithin ?? []).map((time) => time.label).join(", ") })
+              ? intl.message("list.aggregate.notSummable", { fields: listText(intl, (field.sumWithin ?? []).map((time) => time.label)) })
               : intl.message("list.aggregate.suppressed")}
           </span>
         </span>
@@ -237,7 +238,7 @@ function headingAggregates(
             ? intl.message("list.group.mixedCurrencies")
             : unknown
               ? intl.message("list.group.unknownCurrency")
-              : `${formatFieldValue(value, field, intl)}${currency ? ` ${currency}` : ""}`}
+              : amountText(intl, formatFieldValue(value, field, intl), currency, "currencyLast")}
         </span>
       </span>
     );

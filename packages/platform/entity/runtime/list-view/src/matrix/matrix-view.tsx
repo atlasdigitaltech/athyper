@@ -24,6 +24,7 @@ import {
   type ListMatrixV1,
 } from "@athyper/contract-platform-entity-list";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { amountText, labelledText, listText, perUnitText, separatedText } from "../composite-text";
 import { Button, SegmentedControl } from "@athyper/platform-ui";
 import { ComparePanel } from "../compare/compare-panel";
 import { formatFieldValue } from "../field-format";
@@ -136,7 +137,8 @@ function measureText(row: EntityListRowV1, measure: ListMatrixMeasureV1, intl: E
   const shown = row.displayValues?.[measure.key] ?? formatFieldValue(row.values[measure.key], field, intl);
   const currency = measure.currencyField ? text(row.values[measure.currencyField]) : undefined;
   const unit = measure.unitField ? text(row.values[measure.unitField]) : undefined;
-  return [currency, shown, unit ? `/ ${unit}` : undefined].filter(Boolean).join(" ");
+  const amount = amountText(intl, shown, currency, "currencyFirst");
+  return unit ? perUnitText(intl, amount, unit) : amount;
 }
 
 export function EntityMatrix(props: EntityMatrixProps) {
@@ -287,7 +289,7 @@ export function EntityMatrix(props: EntityMatrixProps) {
   const failed = rows.status === "failed" || columns.status === "failed" || (cells.key === cellsKey && cells.failed);
   const loading = !failed && (rows.status === "loading" || columns.status === "loading" || (rowIds.length > 0 && columnIds.length > 0 && !block));
   const currency = block ? basisCurrency(block, rank) : undefined;
-  const basis = rank ? [currency, matrix.basisLabel].filter(Boolean).join(" · ") : undefined;
+  const basis = rank ? separatedText(intl, [currency, matrix.basisLabel]) : undefined;
   const rowTotal = rows.status === "ready" ? rows.page.pagination.total : undefined;
   const columnTotal = columns.status === "ready" ? columns.page.pagination.total : undefined;
   // A page past the end (after the filters narrowed) settles on the last one.
@@ -306,7 +308,11 @@ export function EntityMatrix(props: EntityMatrixProps) {
     if (!cell.rank) return undefined;
     if (differ) return intl.message("list.matrix.unitsDiffer");
     if (cell.rank.rank === 1) return intl.message(rank.better === "lower" ? "list.matrix.lowest" : "list.matrix.highest");
-    return [intl.message("list.matrix.rankOf", { rank: cell.rank.rank, count: cell.rank.count }), cell.rank.difference ? `+${cell.rank.difference}%` : undefined].filter(Boolean).join(" · ");
+    // Difference to best is exact to one decimal (Matrix section 8); shown as a locale percent.
+    const difference = cell.rank.difference
+      ? intl.number(Number(cell.rank.difference) / 100, { style: "percent", signDisplay: "always", minimumFractionDigits: cell.rank.difference.includes(".") ? 1 : 0, maximumFractionDigits: 1 })
+      : undefined;
+    return separatedText(intl, [intl.message("list.matrix.rankOf", { rank: cell.rank.rank, count: cell.rank.count }), difference]);
   };
 
   const cellContent = (rowId: string, rowName: string, column: MatrixColumnModel, columnName: string, first: boolean, differ: boolean) => {
@@ -314,17 +320,17 @@ export function EntityMatrix(props: EntityMatrixProps) {
     if (!cell) return { label: "", body: null };
     if (cell.kind === "declined") {
       const label = intl.message("list.matrix.declined");
-      return { label: `${rowName}, ${columnName}, ${label}`, body: first ? <span className="a-entity-matrix__declined">{label}</span> : <span className="a-visually-hidden">{label}</span>, declined: true };
+      return { label: intl.message("list.matrix.cellName", { row: rowName, column: columnName, value: label }), body: first ? <span className="a-entity-matrix__declined">{label}</span> : <span className="a-visually-hidden">{label}</span>, declined: true };
     }
     if (cell.kind !== "value") {
       const label = cell.kind === "absent" ? (matrix.absentLabel ?? intl.message("list.matrix.absent")) : "—";
-      return { label: `${rowName}, ${columnName}, ${cell.kind === "absent" ? label : intl.message("list.matrix.noValueShown")}`, body: <span className="a-entity-matrix__empty">{label}</span> };
+      return { label: intl.message("list.matrix.cellName", { row: rowName, column: columnName, value: cell.kind === "absent" ? label : intl.message("list.matrix.noValueShown") }), body: <span className="a-entity-matrix__empty">{label}</span> };
     }
     const values = measures.map((measure) => ({ measure, shown: measureText(cell.row, measure, intl) }));
     const line = rankLine(cell, column, differ);
     const best = cell.rank?.rank === 1 && !column.ineligible && !differ;
     return {
-      label: [rowName, columnName, ...values.map((item) => (item.measure === measures[0] ? item.shown : `${item.measure.label} ${item.shown}`)), line].filter(Boolean).join(", "),
+      label: listText(intl, [rowName, columnName, ...values.map((item) => (item.measure === measures[0] ? item.shown : labelledText(intl, item.measure.label, item.shown))), line]),
       body: (
         <>
           <span className="a-entity-matrix__primary">{values[0]?.shown}</span>
