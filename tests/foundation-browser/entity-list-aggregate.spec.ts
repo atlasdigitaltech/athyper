@@ -21,17 +21,23 @@ const script = buildSync({
     import {entityListDescriptorOperation,entityListOperation} from './packages/platform/foundation/api-client/src/entity-list';
     const uuid=(group,i)=>'6a1b2c3d-4e5f-4a6b-8c'+group+'-'+String(100000000000+i).slice(-12);
     const field=(key,label,valueKind,extra={})=>({key,label,valueKind,defaultVisible:true,defaultOrder:0,filterOperators:['eq','in','is_null','gte','lt'],sortable:true,groupable:true,aggregations:[],...extra});
-    const accounts=[['1000','Cash'],['2000','Payables'],['3000','Revenue']].map(([code,name],i)=>({id:uuid('7d',i),label:code+' '+name}));
+    // The ranked tests opt into a larger fixture (window.summaryFixture), as
+    // the Gantt spec does, so the shared three accounts stay as every other
+    // test asserts them: 40 more one-record accounts and one No value record.
+    const extended=Boolean(window.summaryFixture&&window.summaryFixture.extended);
+    const accounts=[['1000','Cash'],['2000','Payables'],['3000','Revenue'],...(extended?Array.from({length:40},(_,i)=>[String(4000+i*10),'Sundry '+(i+1)]):[])].map(([code,name],i)=>({id:uuid('7d',i),label:code+' '+name}));
     const periods=['P01','P02','P03'];
     // One balance per account and period; account 3000 has only P03, with a
     // single preparer, so its salary average falls below the floor of 3.
     const facts=[];
     accounts.forEach((account,a)=>periods.forEach((period,p)=>{
       if(a===2&&p<2)return;
-      const net=(a+1)*100+p*10;
+      if(a>2&&p>0)return;
+      const net=a>2?100+(a-3)*5:(a+1)*100+p*10;
       facts.push({id:uuid('9d',a*10+p),values:{code:'TB-'+(a*10+p),account:account.id,period,posted:'2026-0'+(p+1)+'-28',currency:'MYR',
         period_net:String(net)+'.00',closing_net:String(net*(p+1))+'.00',salary:String(1000+a*100+p*10)+'.00',preparer:['ana','ben','cy'][(a+p)%3]}});
     }));
+    if(extended)facts.push({id:uuid('9d',999),values:{code:'TB-NONE',account:null,period:'P01',posted:'2026-01-28',currency:'MYR',period_net:'5.00',closing_net:'5.00',salary:'900.00',preparer:'ana'}});
     const lineFields=[field('code','Code','string',{groupable:false}),field('account','GL account','reference',{filterOptions:accounts.map(a=>({value:a.id,label:a.label}))}),
       field('period','Fiscal period','enum',{filterOptions:periods.map((value,i)=>({value,label:'Period '+(i+1)}))}),field('posted','Posted on','date'),
       field('currency','Currency','string',{groupable:false}),field('period_net','Period net','money',{groupable:false,aggregations:['count','sum']}),field('closing_net','Closing net','money',{groupable:false,aggregations:['count','sum'],sumWithin:[{key:'period',label:'Fiscal period'}]}),
@@ -84,7 +90,7 @@ const script = buildSync({
         const pinned=new Set(applied.filter(f=>f.operator==='eq').map(f=>f.field));
         const keyOf=r=>unit?r.values[group].slice(0,7):r.values[group];
         const buckets=new Map();for(const r of rows)buckets.set(keyOf(r),[...(buckets.get(keyOf(r))??[]),r]);
-        const label=v=>accounts.find(a=>a.id===v)?.label??v;
+        const label=v=>v==null?'—':accounts.find(a=>a.id===v)?.label??v;
         // The column dimension (A2): kept values, or the first 12 in order.
         const pivot=q.pivot,given=[].concat(q.pivotValue??[]).map(v=>JSON.parse(v));
         const columns=pivot?(given.length?given:[...new Set(rows.map(r=>r.values[pivot]))].sort().slice(0,12)):undefined;
@@ -134,7 +140,7 @@ const script = buildSync({
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 type Request = { filter?: string[] | string; limit?: number | string; group?: string; groupsOnly?: string; totals?: string; aggregate?: string[] | string };
 
-async function mount(page: Page, width: number, path = "", dir?: "rtl") {
+async function mount(page: Page, width: number, path = "", dir?: "rtl", fixture?: { extended: true }) {
   await page.setViewportSize({ width, height: 1000 });
   await page.route("https://list.test/**", (route) =>
     route.fulfill({
@@ -143,6 +149,7 @@ async function mount(page: Page, width: number, path = "", dir?: "rtl") {
     }),
   );
   await page.goto(`https://list.test/lines${path}`);
+  if (fixture) await page.evaluate((value) => Object.assign(window, { summaryFixture: value }), fixture);
   await page.addStyleTag({ content: planeStyles("neon") + "\nbody{margin:0}*{box-sizing:border-box}" });
   await page.addScriptTag({ content: script });
 }
@@ -366,5 +373,32 @@ test("a ranked chart follows the ranking, and a phone keeps no horizontal scroll
   await mount(page, 390, "?aggregate.orderBy=period_net%3Asum&aggregate.direction=desc&aggregate.top=10");
   await expect(region(page).locator(".a-entity-aggregate__ranking")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("on a larger fixture: Top 10 of 43, No value and the Total marked Not ranked, and a held-back group distinct from a suppressed cell", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.orderBy=period_net%3Asum&aggregate.direction=desc&aggregate.top=10", undefined, { extended: true });
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveText("Top 10 of 43 GL account by Period net total");
+  // 11 rows: ten ranked, then No value, which holds records but takes no position.
+  await expect(level1(page)).toHaveCount(11);
+  await expect(level1(page).first()).toHaveText("2000 Payables");
+  await expect(level1(page).last()).toHaveText("No value");
+  const rows = region(page).locator("tbody tr[aria-level='1']");
+  await expect(rows.last().locator(".a-entity-aggregate__unranked")).toHaveText("Not ranked");
+  await expect(rows.first().locator(".a-entity-aggregate__unranked")).toHaveCount(0);
+  // Decision 36: the Total row stands outside the ranking and says so.
+  await expect(region(page).locator(".a-entity-aggregate__total .a-entity-aggregate__unranked")).toHaveText("Not ranked");
+  // Account 3000 ranks third by Period net, while its Salary average cell is
+  // suppressed: the floor applies to the ordered measure only.
+  const revenue = rows.filter({ hasText: "3000 Revenue" });
+  await expect(revenue).toContainText("Too few records");
+  await expect(region(page)).not.toContainText("too small to rank");
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-ranked-top.png", fullPage: true });
+  // Ordered by Salary average (floor 3), the one-record accounts are held
+  // back: counted, never rows.
+  await chooseOption(region(page).getByRole("combobox", { name: "Order rows" }), "salary:average:desc");
+  await expect(region(page)).toContainText("41 groups are too small to rank.");
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveText("All 2 GL account by Salary average, highest first");
+  await expect(level1(page)).toHaveText(["2000 Payables", "1000 Cash", "No value"]);
 });
 
