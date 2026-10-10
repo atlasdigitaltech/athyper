@@ -19,9 +19,10 @@ export function EntityReadSurface({
   readonly recordId?: string;
   readonly own?: true;
 }) {
-  if (own) return <OwnRecordRedirect entityCode={entityCode} />;
+  // Hooks before the early return, so every render calls them in the same order.
   const client = useApiClient();
   const navigation = useApplicationNavigation();
+  if (own) return <OwnRecordRedirect entityCode={entityCode} />;
   return <EntityNavigationProvider navigate={navigation.push}>{recordId ? (
     <EntityDetailRuntime entityCode={entityCode} recordId={recordId} />
   ) : (
