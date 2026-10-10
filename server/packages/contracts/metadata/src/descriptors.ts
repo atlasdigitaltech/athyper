@@ -1,5 +1,9 @@
 import type { EntityAuthorizationRuntime } from "./entity-authorization-runtime.js";
 import type { PlaneKey } from "@athyper/server-foundation/context";
+import {
+  LIST_AUDIT_ROLES,
+  type ListAuditRole,
+} from "@athyper/contract-platform-entity-list";
 
 export const ENTITY_FIELD_TYPES = [
   "string",
@@ -36,9 +40,11 @@ export type EntityListFilterOperator =
 export type EntityListViewMode =
   import("@athyper/contract-platform-entity-list").ListViewMode;
 export type EntityListDensity = "compact" | "comfortable" | "spacious";
-/** The declared audit stamps a list field can carry (shared list layout foundation, gap 7). */
-export const ENTITY_LIST_AUDIT_ROLES = ["createdAt", "createdBy", "updatedAt", "updatedBy"] as const;
-export type EntityListAuditRole = (typeof ENTITY_LIST_AUDIT_ROLES)[number];
+/** The declared audit stamps a list field can carry (shared list layout
+ * foundation, gap 7): the browser contract's one vocabulary, so the server and
+ * browser parsers validate against the same list. */
+export const ENTITY_LIST_AUDIT_ROLES = LIST_AUDIT_ROLES;
+export type EntityListAuditRole = ListAuditRole;
 
 const PRESENCE_FILTER_OPERATORS = ["is_null", "is_not_null"] as const;
 
@@ -340,7 +346,10 @@ export interface EntityListMatrixDescriptor {
     /** Column Entity fields shown in its header, at most 3. */
     readonly headerFields?: readonly string[];
     /** Column Entity state meaning "declined to participate". */
-    readonly declined?: { readonly field: string; readonly values: readonly string[] };
+    readonly declined?: {
+      readonly field: string;
+      readonly values: readonly string[];
+    };
     /** Fixed at 5 for revision 1; rows × columns ≤ the 100-row page. */
     readonly pageSize?: number;
   };
@@ -355,10 +364,16 @@ export interface EntityListMatrixDescriptor {
   }[];
   readonly absentLabel?: string;
   /** Column Entity state that may be ranked (section 5.3). */
-  readonly rankEligibility?: { readonly field: string; readonly values: readonly string[] };
+  readonly rankEligibility?: {
+    readonly field: string;
+    readonly values: readonly string[];
+  };
   readonly basisLabel?: string;
   /** Column Entity sort, for example items quoted desc, total asc. */
-  readonly columnOrder?: readonly { readonly field: string; readonly direction: "asc" | "desc" }[];
+  readonly columnOrder?: readonly {
+    readonly field: string;
+    readonly direction: "asc" | "desc";
+  }[];
 }
 
 export type EntityFieldAdditivity =
@@ -380,7 +395,9 @@ export interface EntityListAggregateDescriptor {
   readonly measures: readonly {
     /** Absent only for the record count. */
     readonly field?: string;
-    readonly aggregates: readonly ("count" | "countDistinct" | "sum" | "average" | "minimum" | "maximum")[];
+    readonly aggregates: readonly (
+      "count" | "countDistinct" | "sum" | "average" | "minimum" | "maximum"
+    )[];
     /** A declared floor (section 9.3), 2–100. */
     readonly minimumGroupSize?: number;
   }[];
@@ -554,7 +571,10 @@ export interface EntityHierarchyDescriptor {
    * parent field is refused. */
   readonly movable?: true;
   /** At most 5; sum or count over visible descendants (Phase B3). */
-  readonly rollups?: readonly { readonly field: string; readonly aggregate: "sum" | "count" }[];
+  readonly rollups?: readonly {
+    readonly field: string;
+    readonly aggregate: "sum" | "count";
+  }[];
 }
 
 export interface EntityRuntimeDescriptor {

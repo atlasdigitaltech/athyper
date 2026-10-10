@@ -22,13 +22,16 @@ const packageRules = {
   icons: { allowed: ["react"] },
   ui: {
     // react-day-picker is an accepted third-party calendar primitive; the
-    // stylesheet import rides the same specifier prefix.
+    // stylesheet import rides the same specifier prefix. The chart-data
+    // contract is the one data shape the design-system Chart draws (Shared
+    // chart blueprint); it declares no dependencies, so it creates no cycle.
     allowed: [
       "react",
       "react-dom",
       "react-day-picker",
       "@athyper/platform-theme",
       "@athyper/platform-icons",
+      "@athyper/contract-platform-chart",
     ],
   },
   "surface-kit": {
@@ -51,7 +54,11 @@ const sourceFiles = (directory) =>
   );
 
 for (const [name, rule] of Object.entries(packageRules)) {
-  for (const file of sourceFiles(join(foundation, name, "src"))) {
+  // Colocated tests (AGENTS.md) import the test runner; they are not shipped,
+  // so they are not the package's dependencies.
+  for (const file of sourceFiles(join(foundation, name, "src")).filter(
+    (path) => !/\.test\.tsx?$/.test(path),
+  )) {
     for (const specifier of importSpecifiers(readFileSync(file, "utf8"))) {
       if (
         specifier.startsWith(".") ||

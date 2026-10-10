@@ -619,9 +619,9 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 /* Grouped panel list: one surface with sticky group bands (label, count) and divided
    rows. Shared by Notifications, Inbox and Quick access in the panel and on full pages. */
 .a-panel-list{display:grid;min-inline-size:0}
-/* A scroll area with top padding sets --a-panel-scroll-padding-top so a stuck band covers it
+/* A scroll area with top padding sets --panel-scroll-padding-top so a stuck band covers it
    (otherwise rows show through the strip above the band while scrolling). */
-.a-panel-list__group>header{position:sticky;inset-block-start:calc(-1 * var(--a-panel-scroll-padding-top, 0px));z-index:1;display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2) var(--a-density-panel-gutter);background:var(--a-selection-subtle);color:var(--a-foreground)}
+.a-panel-list__group>header{position:sticky;inset-block-start:calc(-1 * var(--panel-scroll-padding-top, 0px));z-index:1;display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2) var(--a-density-panel-gutter);background:var(--a-selection-subtle);color:var(--a-foreground)}
 .a-panel-list__group+.a-panel-list__group>header{border-block-start:var(--a-border-width) solid var(--a-border)}
 .a-panel-list__group>header strong{overflow:hidden;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-strong);text-overflow:ellipsis;white-space:nowrap}
 .a-panel-list__group>header span{color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);font-variant-numeric:tabular-nums}
