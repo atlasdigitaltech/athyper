@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013`
 - Approval: **pending**
-- Cataloged database tables: 780
+- Cataloged database tables: 774
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 2
@@ -33,7 +33,7 @@ or multiply classified runtime objects.
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
 | ddl_catalog_reference | 128 |
-| derived_projection | 24 |
+| derived_projection | 22 |
 | derived_runtime_projection | 13 |
 | document_metadata | 159 |
 | document_object | 2 |
@@ -46,11 +46,11 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 61 |
+| metadata_authority | 59 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
-| published_definition_authority | 11 |
+| published_definition_authority | 9 |
 | secret | 1 |
 | session_token | 2 |
 | tenant_business_context_non_authorizing | 1 |
@@ -736,8 +736,6 @@ or multiply classified runtime objects.
 | `metadata.entity_surface_view` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_view_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_target` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
-| `metadata.publication_recovery_archive` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
-| `metadata.publication_recovery_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.ui_component_contract` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `onboarding.onboarding_case` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
 | `onboarding.onboarding_case_check` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
@@ -773,8 +771,6 @@ or multiply classified runtime objects.
 | `public.schema_provisions` | provisioning_ledger | recreate_empty_then_rebuild_from_executed_manifest | exact_table_override |
 | `publication.artifact` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.artifact_compilation` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.business_partner_case_contract_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.business_partner_definition_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_acknowledgement` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_event` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
@@ -813,8 +809,6 @@ or multiply classified runtime objects.
 | `snapshot.bank_account_disclosure` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.bom` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.bom_component` | derived_projection | rebuild_from_authoritative_data | schema_default |
-| `snapshot.business_partner_case_contract_revision` | derived_projection | rebuild_from_authoritative_data | schema_default |
-| `snapshot.business_partner_definition_revision` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.compiled_artifact` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.content_item_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.entity_case_snapshot_lineage` | derived_projection | rebuild_from_authoritative_data | schema_default |

@@ -4,11 +4,11 @@
   "policyHash": "c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 780,
+    "discoveredTables": 774,
     "externalObjects": 12,
     "exactTableOverrides": 16,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 761,
+    "schemaDefaultedTables": 755,
     "byDataClass": {
       "ai_governance_and_runtime": 31,
       "audit_log": 17,
@@ -20,7 +20,7 @@
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
       "ddl_catalog_reference": 128,
-      "derived_projection": 24,
+      "derived_projection": 22,
       "derived_runtime_projection": 13,
       "document_metadata": 159,
       "document_object": 2,
@@ -33,11 +33,11 @@
       "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 61,
+      "metadata_authority": 59,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
-      "published_definition_authority": 11,
+      "published_definition_authority": 9,
       "secret": 1,
       "session_token": 2,
       "tenant_business_context_non_authorizing": 1,
@@ -65,15 +65,15 @@
       "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 31,
-      "migrate_published_artifacts_and_release_history": 11,
-      "migrate_published_authority_and_rebuild_projections": 61,
+      "migrate_published_artifacts_and_release_history": 9,
+      "migrate_published_authority_and_rebuild_projections": 59,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
       "migrate_with_referenced_objects": 159,
       "provision_and_migrate_in_mesh_db_only": 43,
       "rebind_or_rotate_never_export": 1,
-      "rebuild_from_authoritative_data": 24,
+      "rebuild_from_authoritative_data": 22,
       "rebuild_from_published_authority": 13,
       "recreate_empty_in_mesh_then_rebuild_from_executed_manifest": 1,
       "recreate_empty_then_rebuild_from_executed_manifest": 1,
@@ -12280,42 +12280,6 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "metadata.publication_recovery_archive",
-      "schema": "metadata",
-      "table": "publication_recovery_archive",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
-          "line": 2
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "metadata_authority",
-      "disposition": "migrate_published_authority_and_rebuild_projections",
-      "retention": "published metadata and governance history retention",
-      "evidence": "release hashes, source counts, and projection rebuild parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "metadata.publication_recovery_revocation",
-      "schema": "metadata",
-      "table": "publication_recovery_revocation",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
-          "line": 18
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "metadata_authority",
-      "disposition": "migrate_published_authority_and_rebuild_projections",
-      "retention": "published metadata and governance history retention",
-      "evidence": "release hashes, source counts, and projection rebuild parity",
-      "approvalStatus": "pending"
-    },
-    {
       "id": "metadata.ui_component_contract",
       "schema": "metadata",
       "table": "ui_component_contract",
@@ -12918,7 +12882,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 54
+          "line": 42
         }
       ],
       "decisionSource": "schema_default",
@@ -12936,43 +12900,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 84
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "publication.business_partner_case_contract_release_link",
-      "schema": "publication",
-      "table": "business_partner_case_contract_release_link",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 168
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "publication.business_partner_definition_release_link",
-      "schema": "publication",
-      "table": "business_partner_definition_release_link",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 42
+          "line": 72
         }
       ],
       "decisionSource": "schema_default",
@@ -12990,7 +12918,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 104
+          "line": 92
         }
       ],
       "decisionSource": "schema_default",
@@ -13008,7 +12936,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 146
+          "line": 134
         }
       ],
       "decisionSource": "schema_default",
@@ -13026,7 +12954,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
-          "line": 134
+          "line": 122
         }
       ],
       "decisionSource": "schema_default",
@@ -13667,42 +13595,6 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "snapshot.business_partner_case_contract_revision",
-      "schema": "snapshot",
-      "table": "business_partner_case_contract_revision",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 455
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "derived_projection",
-      "disposition": "rebuild_from_authoritative_data",
-      "retention": "discard after certified rebuild unless held as evidence",
-      "evidence": "rebuild version and authoritative source-count comparison",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "snapshot.business_partner_definition_revision",
-      "schema": "snapshot",
-      "table": "business_partner_definition_revision",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 98
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "derived_projection",
-      "disposition": "rebuild_from_authoritative_data",
-      "retention": "discard after certified rebuild unless held as evidence",
-      "evidence": "rebuild version and authoritative source-count comparison",
-      "approvalStatus": "pending"
-    },
-    {
       "id": "snapshot.compiled_artifact",
       "schema": "snapshot",
       "table": "compiled_artifact",
@@ -13710,7 +13602,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 137
+          "line": 98
         }
       ],
       "decisionSource": "schema_default",
@@ -13772,7 +13664,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 206
+          "line": 167
         }
       ],
       "decisionSource": "schema_default",
@@ -13790,7 +13682,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 314
+          "line": 275
         }
       ],
       "decisionSource": "schema_default",
@@ -13808,7 +13700,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 273
+          "line": 234
         }
       ],
       "decisionSource": "schema_default",
@@ -13826,7 +13718,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 477
+          "line": 416
         }
       ],
       "decisionSource": "schema_default",
@@ -13844,7 +13736,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 352
+          "line": 313
         }
       ],
       "decisionSource": "schema_default",
@@ -13862,7 +13754,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
-          "line": 417
+          "line": 378
         }
       ],
       "decisionSource": "schema_default",
