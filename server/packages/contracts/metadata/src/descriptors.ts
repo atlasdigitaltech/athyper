@@ -139,6 +139,11 @@ export interface EntityFieldDescriptor {
      * aggregates other than count need it, and a group whose rows span more
      * than one currency shows no total (Tree blueprint A2). */
     readonly currencyField?: string;
+    /** Whether a sum of this field means anything (Entity list Aggregate
+     * blueprint 5.2). Declared, never inferred: a field without it is never
+     * summed by a Summary. A semi-additive field (a balance) sums only across
+     * records that share one value of every time field. */
+    readonly additivity?: EntityFieldAdditivity;
   };
   /** Compare C3 (Entity list Compare blueprint 5.6): which direction is the
    * best value, and an optional summary-chip label. Authored, never inferred. */
@@ -349,6 +354,38 @@ export interface EntityListMatrixDescriptor {
   readonly columnOrder?: readonly { readonly field: string; readonly direction: "asc" | "desc" }[];
 }
 
+export type EntityFieldAdditivity =
+  | { readonly kind: "additive" }
+  | { readonly kind: "semiAdditive"; readonly timeFields: readonly string[] }
+  | { readonly kind: "nonAdditive" };
+
+/** Published Aggregate Layout, shown as Summary (Entity list Aggregate
+ * blueprint 5.1): declared dimensions and measures of this Entity's records,
+ * grouped and totalled by the server. */
+export interface EntityListAggregateDescriptor {
+  readonly dimensions: readonly {
+    readonly field: string;
+    /** Required for a date field; never on another type. */
+    readonly buckets?: readonly ("month" | "quarter")[];
+    /** May be the column dimension (A2). */
+    readonly column?: true;
+  }[];
+  readonly measures: readonly {
+    /** Absent only for the record count. */
+    readonly field?: string;
+    readonly aggregates: readonly ("count" | "countDistinct" | "sum" | "average" | "minimum" | "maximum")[];
+    /** A declared floor (section 9.3), 2–100. */
+    readonly minimumGroupSize?: number;
+  }[];
+  readonly defaults: {
+    /** 1–3 entries: `field` or `field:month|quarter`. */
+    readonly rows: readonly string[];
+    readonly column?: string;
+    /** 1–5 entries: `count`, or `field:aggregate`. */
+    readonly measures: readonly string[];
+  };
+}
+
 /** Compiled projection of the surface's binding_kind = summary placements. */
 export interface EntityListCardContentDescriptor {
   readonly fields: readonly {
@@ -386,6 +423,7 @@ export interface EntityListPresentationDescriptor {
   readonly calendar?: EntityListCalendarDescriptor;
   readonly gantt?: EntityListGanttDescriptor;
   readonly matrix?: EntityListMatrixDescriptor;
+  readonly aggregate?: EntityListAggregateDescriptor;
   readonly cardContent?: EntityListCardContentDescriptor;
   /** @deprecated Use limits.defaultPageSize. */
   readonly defaultPageSize?: number;

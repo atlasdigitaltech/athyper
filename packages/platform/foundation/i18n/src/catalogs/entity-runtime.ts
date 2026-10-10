@@ -2422,4 +2422,144 @@ export const entityRuntimeMessages = {
     "tiada nilainya tersedia untuk anda.",
     "لا تتوفر لك أي من قيمه.",
   ],
+  "list.mode.aggregate": [
+    "Summary",
+    "Ringkasan",
+    "ملخص",
+  ],
+  "list.aggregate.rows": [
+    "Rows",
+    "Baris",
+    "الصفوف",
+  ],
+  "list.aggregate.level": [
+    "Level {level, number}",
+    "Tahap {level, number}",
+    "المستوى {level, number}",
+  ],
+  "list.aggregate.levelNone": [
+    "None",
+    "Tiada",
+    "بلا",
+  ],
+  "list.aggregate.measures": [
+    "Measures",
+    "Ukuran",
+    "المقاييس",
+  ],
+  "list.aggregate.measureLimit": [
+    "Choose up to {count, number} measures.",
+    "Pilih sehingga {count, number} ukuran.",
+    "اختر حتى {count, number} مقاييس.",
+  ],
+  "list.aggregate.measure.count": [
+    "Records",
+    "Rekod",
+    "السجلات",
+  ],
+  "list.aggregate.measure.countDistinct": [
+    "Distinct {field}",
+    "{field} berbeza",
+    "{field} المميزة",
+  ],
+  "list.aggregate.total": [
+    "Total",
+    "Jumlah",
+    "الإجمالي",
+  ],
+  "list.aggregate.notSummable": [
+    "Not summed across {fields}",
+    "Tidak dijumlahkan merentas {fields}",
+    "لا يُجمع عبر {fields}",
+  ],
+  "list.aggregate.suppressed": [
+    "Too few records",
+    "Terlalu sedikit rekod",
+    "سجلات قليلة جدًا",
+  ],
+  "list.aggregate.showRecords": [
+    "Show the {count, number} records in {group}",
+    "Tunjukkan {count, number} rekod dalam {group}",
+    "اعرض {count, number} سجلات في {group}",
+  ],
+  "list.aggregate.showAllRecords": [
+    "Show all {count, number} records",
+    "Tunjukkan semua {count, number} rekod",
+    "اعرض كل السجلات وعددها {count, number}",
+  ],
+  "list.aggregate.expand": [
+    "Show {dimension} under {group}",
+    "Tunjukkan {dimension} di bawah {group}",
+    "اعرض {dimension} ضمن {group}",
+  ],
+  "list.aggregate.collapse": [
+    "Hide {dimension} under {group}",
+    "Sembunyikan {dimension} di bawah {group}",
+    "أخفِ {dimension} ضمن {group}",
+  ],
+  "list.aggregate.truncated": [
+    "Showing the first {count, number} values of {dimension}. Filter {dimension} to narrow.",
+    "Memaparkan {count, number} nilai pertama {dimension}. Tapis {dimension} untuk menyempitkan.",
+    "يُعرض أول {count, number} قيمة من {dimension}. صفِّ {dimension} للتضييق.",
+  ],
+  "list.aggregate.loading": [
+    "Loading the summary…",
+    "Memuatkan ringkasan…",
+    "جارٍ تحميل الملخص…",
+  ],
+  "list.aggregate.levelLoading": [
+    "Loading…",
+    "Memuatkan…",
+    "جارٍ التحميل…",
+  ],
+  "list.aggregate.failed": [
+    "The summary couldn't be loaded.",
+    "Ringkasan tidak dapat dimuatkan.",
+    "تعذّر تحميل الملخص.",
+  ],
+  "list.aggregate.levelFailed": [
+    "This level couldn't be loaded.",
+    "Tahap ini tidak dapat dimuatkan.",
+    "تعذّر تحميل هذا المستوى.",
+  ],
+  "list.aggregate.retry": [
+    "Try again",
+    "Cuba lagi",
+    "حاول مرة أخرى",
+  ],
+  "list.aggregate.noRecords": [
+    "No records to summarise.",
+    "Tiada rekod untuk diringkaskan.",
+    "لا توجد سجلات لتلخيصها.",
+  ],
+  "list.aggregate.changed": [
+    "Values changed since this summary opened. Refresh to see current totals.",
+    "Nilai berubah sejak ringkasan ini dibuka. Muat semula untuk melihat jumlah semasa.",
+    "تغيّرت القيم منذ فتح هذا الملخص. حدّث لرؤية الإجماليات الحالية.",
+  ],
+  "list.aggregate.refresh": [
+    "Refresh",
+    "Muat semula",
+    "تحديث",
+  ],
+  "list.aggregate.fieldsRestricted": [
+    "Some dimensions or measures aren't available to you.",
+    "Sesetengah dimensi atau ukuran tidak tersedia untuk anda.",
+    "بعض الأبعاد أو المقاييس غير متاحة لك.",
+  ],
+  "list.aggregate.caption": [
+    "{entity} summarised by {levels}",
+    "{entity} diringkaskan mengikut {levels}",
+    "{entity} ملخّصة حسب {levels}",
+  ],
+  "list.mode.reason.aggregateDimensionUnavailable": [
+    "none of its dimensions is available to you.",
+    "tiada dimensinya tersedia untuk anda.",
+    "لا يتوفر لك أي من أبعاده.",
+  ],
+  "list.mode.reason.aggregateMeasureUnavailable": [
+    "none of its measures is available to you.",
+    "tiada ukurannya tersedia untuk anda.",
+    "لا يتوفر لك أي من مقاييسه.",
+  ],
 } as const;

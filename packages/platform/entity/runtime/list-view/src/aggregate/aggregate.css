@@ -1,0 +1,32 @@
+/* Summary (Entity list Aggregate blueprint sections 11 and 12). Every cell
+   state that is not a value is text; colour only supports it. Rows reuse the
+   tree's indentation guides and toggle. */
+.a-entity-aggregate{display:grid;gap:var(--a-space-3);min-inline-size:0}
+.a-entity-aggregate__toolbar{display:grid;gap:var(--a-space-2)}
+.a-entity-aggregate__toolbar fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2);min-inline-size:0;margin:0;padding:0;border:0}
+.a-entity-aggregate__toolbar legend{float:inline-start;margin-inline-end:var(--a-space-2);padding:0;line-height:var(--a-control-height);font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium);color:var(--a-muted-foreground)}
+.a-entity-aggregate__level{flex:0 1 14rem;min-inline-size:10rem}
+.a-entity-aggregate__measure{display:inline-flex;align-items:center;gap:var(--a-space-1);font-size:var(--a-font-size-sm)}
+.a-entity-aggregate__hint{margin:0;font-size:var(--a-font-size-xs);color:var(--a-muted-foreground)}
+.a-entity-aggregate__notice{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2) var(--a-space-3);border-radius:var(--a-radius-md);background:var(--a-warning-subtle);color:var(--a-warning-subtle-foreground);font-size:var(--a-font-size-sm)}
+.a-entity-aggregate__state{display:grid;justify-items:start;gap:var(--a-space-2);padding:var(--a-space-4);border:var(--a-border-width) dashed var(--a-border);border-radius:var(--a-radius-lg)}
+.a-entity-aggregate__state p{margin:0;font-weight:var(--a-font-weight-medium)}
+.a-entity-aggregate__scroll{max-block-size:70vh;overflow:auto;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg)}
+.a-entity-aggregate__table{border-collapse:separate;border-spacing:0;min-inline-size:100%;font-size:var(--a-font-size-sm);font-variant-numeric:tabular-nums}
+.a-entity-aggregate__table th,.a-entity-aggregate__table td{padding:var(--a-space-2) var(--a-space-3);border-block-end:var(--a-border-width) solid var(--a-border);text-align:end;vertical-align:middle;white-space:nowrap}
+.a-entity-aggregate__table th[scope=row],.a-entity-aggregate__table .a-entity-aggregate__corner{text-align:start}
+.a-entity-aggregate__table thead th{position:sticky;inset-block-start:0;z-index:2;background:var(--a-surface);font-weight:var(--a-font-weight-strong)}
+.a-entity-aggregate__table tbody th{position:sticky;inset-inline-start:0;z-index:1;background:var(--a-surface);font-weight:var(--a-font-weight-medium)}
+.a-entity-aggregate__corner{z-index:3}
+.a-entity-aggregate__table tr:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:-2px}
+.a-entity-aggregate__table .a-entity-aggregate__total th,.a-entity-aggregate__table .a-entity-aggregate__total td{background:var(--a-muted);font-weight:var(--a-font-weight-strong)}
+.a-entity-aggregate__heading{display:inline-flex;align-items:center;gap:var(--a-space-1)}
+.a-entity-aggregate__drill{padding:0;border:0;background:none;color:var(--a-primary);font:inherit;font-weight:inherit;text-align:start;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.a-entity-aggregate__drill:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:1px}
+.a-entity-aggregate [data-state]{color:var(--a-muted-foreground);font-style:italic}
+.a-entity-aggregate__narrow{display:grid;gap:var(--a-space-2)}
+.a-entity-aggregate__item{display:grid;gap:var(--a-space-1);padding:var(--a-space-2) var(--a-space-3);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md)}
+.a-entity-aggregate__item[data-total]{background:var(--a-muted)}
+.a-entity-aggregate__item:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:1px}
+.a-entity-aggregate__pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--a-space-2);font-size:var(--a-font-size-sm)}
+.a-entity-aggregate__pair>span:last-child{text-align:end;font-variant-numeric:tabular-nums}

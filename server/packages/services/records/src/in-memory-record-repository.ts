@@ -96,10 +96,10 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
         return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(input.countMode === "exact" ? { total } : {}), countMode: input.countMode === "exact" ? "exact" as const : "none" as const } };
       }
       // Group counts only under exact counts (layout foundation section 5).
-      const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates) : undefined;
+      const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates, input.groupTotals === true) : undefined;
       const groups = grouped?.buckets;
       if (input.groupsOnly && groups)
-        return { data: [], groups, ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+        return { data: [], groups, ...(grouped?.total ? { parentGroup: grouped.total } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       // Matrix rank: over every admitted record, before the participant page
       // narrows the returned rows (as the SQL does).
       const rankSet = input.rank ? rankedSet(input, input.rank, rows, transaction?.state ?? state, table) : undefined;
@@ -203,7 +203,7 @@ export function relativeDateMatches(actual: unknown, relative: unknown): boolean
   };
   return timestamp >= bound(range.from) && timestamp < bound(range.to);
 }
-function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = []) {
+function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = [], totals = false) {
   // As the SQL does: a date bucket (A3) is the year and month or quarter, in
   // the viewer's zone for a datetime; aggregates (A2) per bucket.
   const type = descriptor.fields.find((item) => item.key === field)?.type;
@@ -219,6 +219,9 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
   // Exact decimals, as the SQL does: no floating-point sums.
   const decimals = (list: Row[], key: string) => list.map((row) => value(row, descriptor, key)).filter(isExactDecimal);
   const compute = (list: Row[], item: NonNullable<RecordRepositoryListInput["groupAggregates"]>[number]): number | string | null => {
+    // A distinct count over the base rows, as count(DISTINCT …) does.
+    if (item.aggregate === "countDistinct")
+      return new Set(list.map((row) => value(row, descriptor, item.field)).filter((entry) => entry !== null && entry !== undefined).map((entry) => JSON.stringify(entry))).size;
     const values = decimals(list, item.field);
     if (!values.length) return null;
     if (item.aggregate === "sum") return exactAggregate(addDecimals(values));
@@ -229,9 +232,7 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
   const ordered = [...groups].sort(([left], [right]) => (left === null ? 1 : right === null ? -1 : compare(left, right)));
   const nonNull = ordered.filter(([item]) => item !== null);
   const kept = [...nonNull.slice(0, LIST_GROUP_LIMIT), ...ordered.filter(([item]) => item === null)];
-  return {
-    truncated: nonNull.length > LIST_GROUP_LIMIT,
-    buckets: Object.freeze(kept.map(([item, list]) => {
+  const summarize = (list: Row[]) => {
       const currencies: Record<string, string> = {};
       const mixed: string[] = [];
       const unknown: string[] = [];
@@ -247,15 +248,19 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
         }
         return [name, compute(list, aggregate)];
       }));
-      return Object.freeze({
-        value: item,
+      return {
         count: list.length,
         ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
         ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
         ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
         ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
-      });
-    })),
+      };
+  };
+  return {
+    truncated: nonNull.length > LIST_GROUP_LIMIT,
+    buckets: Object.freeze(kept.map(([item, list]) => Object.freeze({ value: item, ...summarize(list) }))),
+    // A Summary's total over every group, from the base rows (GROUPING SETS).
+    ...(totals ? { total: Object.freeze(rows.length ? summarize([...rows]) : { count: 0 }) } : {}),
   };
 }
 function compareRows(a: Row, b: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[]): number { for (const item of sort) { const result = ordered(value(a, descriptor, item.field), value(b, descriptor, item.field), item); if (result) return result; } return compare(String(a[descriptor.storage.idField]), String(b[descriptor.storage.idField])); }

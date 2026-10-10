@@ -127,6 +127,7 @@ import { TreeStrip } from "./tree/tree-parts";
 import { ganttRange } from "./gantt/gantt-model";
 import { EntityGantt } from "./gantt/gantt-view";
 import { EntityMatrix } from "./matrix/matrix-view";
+import { EntityAggregate } from "./aggregate/aggregate-view";
 import { dateRangePageState } from "./date-range/date-range-model";
 import { EntityCalendar } from "./calendar/calendar-view";
 import {
@@ -1189,9 +1190,10 @@ function EntityCollectionRuntime({
           state.mode === "tree"
             ? // Tree: the roots query (Tree blueprint section 7.2).
               treePageState(state, descriptor)
-            : state.mode === "matrix"
-            ? // Matrix reads its own rows, columns and cells; the page query
-              // only confirms the list's authority, at its smallest.
+            : state.mode === "matrix" || state.mode === "aggregate"
+            ? // Matrix and Summary read their own rows, columns, cells and
+              // groups; the page query only confirms the list's authority, at
+              // its smallest.
               { ...state, groups: undefined, pageSize: 1, columns: [descriptor.entity.identityField] }
             : listModeTraits(state.mode).ownGrouping
             ? dateRangePageState(
@@ -1920,6 +1922,43 @@ function EntityCollectionRuntime({
                 onMatrixChange={(change) =>
                   update({ ...state, ...change }, "replace")
                 }
+              />
+            ) : // Summary reads its own groups, so like Matrix it never waits for
+            // (or is unmounted by) the list's own page query.
+            state.mode === "aggregate" &&
+              descriptor.surface.aggregate &&
+              hostLayouts(host).aggregate ? (
+              <EntityAggregate
+                key={authorityKey}
+                client={client}
+                descriptor={descriptor}
+                aggregate={descriptor.surface.aggregate}
+                state={state}
+                {...(scopeCoordinate ? { scope: scopeCoordinate } : {})}
+                widthTier={widthTier}
+                refreshKey={`${authorityKey}:${refreshAttempt}`}
+                timeZone={localization.timeZone}
+                onAggregateChange={(change) =>
+                  update({ ...state, ...change }, "replace")
+                }
+                onDrillDown={(filters) => {
+                  // A cell's records in Table (or Cards), with exactly the
+                  // filters the cell counted; back returns to the Summary.
+                  const mode = descriptor.surface.supportedModes.find(
+                    (candidate) => candidate === "table" || candidate === "compact",
+                  );
+                  if (!mode) return;
+                  update(
+                    {
+                      ...state,
+                      mode,
+                      filters: [...state.filters, ...filters],
+                      cursor: undefined,
+                      pageIndex: undefined,
+                    },
+                    "push",
+                  );
+                }}
               />
             ) : loading && !page ? (
               <LoadingTable columns={fields.length} />
@@ -5906,6 +5945,12 @@ function modeUnavailableReasonKey(code: string): string {
     return "list.mode.reason.matrixMeasureUnavailable";
   if (code === "LIST_MATRIX_SCOPE_UNBOUND")
     return "list.mode.reason.scopeUnbound";
+  if (code === "LIST_AGGREGATE_COUNTS_UNAVAILABLE")
+    return "list.mode.reason.countsUnavailable";
+  if (code === "LIST_AGGREGATE_DIMENSION_UNAVAILABLE")
+    return "list.mode.reason.aggregateDimensionUnavailable";
+  if (code === "LIST_AGGREGATE_MEASURE_UNAVAILABLE")
+    return "list.mode.reason.aggregateMeasureUnavailable";
   return "list.mode.reason.unsupported";
 }
 function listCountLabel(

@@ -42,7 +42,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 404: { description: "Record not found" }, 423: { description: "Record lock required" }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, rank: { type: "string", minLength: 1, maxLength: 127 }, matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, totals: { type: "string", enum: ["true"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, rank: { type: "string", minLength: 1, maxLength: 127 }, matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({
     method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get",
     summary: "Get a record", tags: ["Records"], authenticated: true,
@@ -82,9 +82,9 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   // Per-group aggregates (A2): repeated field:aggregate values.
   const groupAggregates = queryValues(query["aggregate"], "aggregate", 5).map((value) => {
     const [field, aggregate, ...rest] = value.split(":");
-    if (rest.length || !field || !["sum", "average", "minimum", "maximum"].includes(aggregate ?? ""))
-      throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "aggregate must be field:sum, field:average, field:minimum or field:maximum");
-    return Object.freeze({ field: catalogQueryCode(field, "aggregate"), aggregate: aggregate as "sum" | "average" | "minimum" | "maximum" });
+    if (rest.length || !field || !["countDistinct", "sum", "average", "minimum", "maximum"].includes(aggregate ?? ""))
+      throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "aggregate must be field:countDistinct, field:sum, field:average, field:minimum or field:maximum");
+    return Object.freeze({ field: catalogQueryCode(field, "aggregate"), aggregate: aggregate as "countDistinct" | "sum" | "average" | "minimum" | "maximum" });
   });
   const filters = queryValues(query["filter"], "filter", MAX_LIST_FILTERS).map(parseFilter);
   // Admission is capped here at the contract maximum; the Entity descriptor
@@ -96,6 +96,11 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   // counts it did not (Tree blueprint section 5.1).
   if (groupsOnly && (!group || countMode !== "exact" || cursor))
     throw new RecordServiceError(400, "LIST_GROUPS_ONLY_INVALID", "groupsOnly requires group and countMode=exact, without a cursor");
+  // A Summary request (Entity list Aggregate blueprint 5.4): groups only, with
+  // the total over every group; admitted against the declaration by the service.
+  const groupTotals = query["totals"] === undefined ? false : oneOfQuery(query["totals"], ["true"] as const, "totals") === "true";
+  if (groupTotals && !groupsOnly)
+    throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", "totals requires groupsOnly");
   const hierarchy = query["hierarchy"] === undefined ? undefined : oneOfQuery(query["hierarchy"], ["nodes", "orphans", "matches"] as const, "hierarchy");
   // A tree level is never also grouped.
   if (hierarchy && group) throw new RecordServiceError(400, "LIST_HIERARCHY_INVALID", "hierarchy cannot be combined with group");
@@ -118,6 +123,7 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     ...(groupBucket ? { groupBucket } : {}),
     ...(groupAggregates.length ? { groupAggregates: Object.freeze(groupAggregates) } : {}),
     ...(groupsOnly ? { groupsOnly } : {}),
+    ...(groupTotals ? { groupTotals } : {}),
     ...(hierarchy ? { hierarchy } : {}),
     ...(filters.length ? { filters } : {}),
     ...(sort.length ? { sort } : {}),

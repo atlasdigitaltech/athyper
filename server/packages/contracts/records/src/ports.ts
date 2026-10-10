@@ -207,6 +207,9 @@ export interface RecordRepositoryListInput {
   })[];
   /** Skip the row query and return only the group buckets. */
   readonly groupsOnly?: boolean;
+  /** Also return the total over every group, computed in the same statement
+   * from base rows (GROUPING SETS; Entity list Aggregate blueprint 8.1). */
+  readonly groupTotals?: boolean;
   /** Record hierarchy: child existence per row, or orphans only. */
   readonly hierarchy?: {
     readonly mode: "nodes" | "orphans" | "matches";

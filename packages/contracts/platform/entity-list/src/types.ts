@@ -183,6 +183,7 @@ export interface SaveableListStateV1 {
   readonly calendar?: import("./calendar").ListCalendarStateV1;
   readonly gantt?: import("./gantt").ListGanttStateV1;
   readonly matrix?: import("./matrix").ListMatrixStateV1;
+  readonly aggregate?: import("./aggregate").ListAggregateStateV1;
 }
 
 export interface ListLocationStateV1 extends SaveableListStateV1 {
@@ -338,6 +339,8 @@ export interface EntityListDescriptorV1 {
     readonly tree?: import("./tree").ListTreeV1;
     /** The pivot this viewer can use; present only when Matrix is supported. */
     readonly matrix?: import("./matrix").ListMatrixV1;
+    /** The dimensions and measures this viewer can summarise; present only when Summary is supported. */
+    readonly aggregate?: import("./aggregate").ListAggregateV1;
     /** The comparison this viewer can open from the selection bar (Compare
      * blueprint section 5.3); present only when the surface declares one. */
     readonly compare?: import("./compare").ListCompareV1;
@@ -436,25 +439,36 @@ export interface EntityListResultV1 {
       }[]
     >
   >;
-  readonly groups?: readonly {
+  readonly groups?: readonly (ListGroupTotalsV1 & {
     readonly value: JsonValue;
     readonly label: string;
-    readonly count?: number;
-    /** Keyed `field:aggregate`, only when requested (Tree blueprint A2). */
-    readonly aggregates?: Readonly<Record<string, number | string | null>>;
-    /** The one currency of a money aggregate's rows, by aggregate key. */
-    readonly aggregateCurrencies?: Readonly<Record<string, string>>;
-    /** Money aggregates left out because the group's rows span currencies. */
-    readonly mixedCurrencies?: readonly string[];
-    /** Money aggregates left out because some amounts have no recorded currency. */
-    readonly unknownCurrencies?: readonly string[];
-  }[];
+  })[];
+  /** Only on a Summary request (`totals`): the total over every group of this
+   * request, computed from base rows in the same statement (Aggregate
+   * blueprint section 8.1). */
+  readonly parentGroup?: ListGroupTotalsV1;
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: true;
   /** Only on a Matrix `rank` request: each ranked row's place, by row id. */
   readonly ranks?: Readonly<Record<string, import("./matrix").ListMatrixRankV1>>;
   /** Only on a Matrix `rank` request: a digest of the ranked set. */
   readonly rankRevision?: string;
+}
+
+/** A group's count and aggregates (Tree blueprint A2; Aggregate blueprint 5.5). */
+export interface ListGroupTotalsV1 {
+  readonly count?: number;
+  /** Keyed `field:aggregate`, only when requested (Tree blueprint A2). */
+  readonly aggregates?: Readonly<Record<string, number | string | null>>;
+  /** The one currency of a money aggregate's rows, by aggregate key. */
+  readonly aggregateCurrencies?: Readonly<Record<string, string>>;
+  /** Money aggregates left out because the group's rows span currencies. */
+  readonly mixedCurrencies?: readonly string[];
+  /** Money aggregates left out because some amounts have no recorded currency. */
+  readonly unknownCurrencies?: readonly string[];
+  /** Summary aggregates shown as text instead of a value: a semi-additive sum
+   * across its time fields, or a group below a measure's floor. */
+  readonly states?: Readonly<Record<string, import("./aggregate").ListAggregateCellState>>;
 }
 
 export interface EntityApplicationDescriptorV1 {

@@ -1,10 +1,26 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 3 (10 October 2026).
+**Status:** approved, revision 4 (10 October 2026).
+- **Build authority (10 October 2026).** After section 14 was approved, the owner gave the build instruction: "go ahead". Under decision 6, that authorizes A1 on synthetic fixtures. A0 still waits for the metadata cleanup and its dimension Entities.
+- **Delivery (10 October 2026): A1 built, on synthetic fixtures.** Section 5.7 records what the build decided. What is verified and what is not:
+  - **Verified by tests:**
+    - publication parsing and the section 6 codes, and field additivity (`list-aggregate-descriptor.test.ts`, 6 tests);
+    - per-viewer projection, admission, totals from base rows, the semi-additive rule and the floor, end to end on the in-memory repository (`list-aggregate.test.ts`, 9 tests);
+    - `GROUPING SETS` totals, distinct counts, mixed currencies, the zoned date bucket and the authorized ID set restricting groups and total alike, on real PostgreSQL 16 temporary tables (`aggregate-summary.postgres.test.ts`, 4 tests). These are not the Neon DDL;
+    - the browser contract, the checked response bound and URL state (`entity-list-aggregate-contract.test.ts`, 6 tests);
+    - the model and a rendered Summary with a fake client (`entity-list-aggregate.test.tsx`, 9 tests).
+  - **Verified in a real browser:** `tests/foundation-browser/entity-list-aggregate.spec.ts`, 5 tests, registered in `test:country-browser` beside the Matrix spec. It runs the real list runtime and Neon CSS against a fixture that plays the server's part. It checks:
+    - one Summary request on opening (`data-aggregate-requests` = 1), with the list's own page query at a limit of one;
+    - the total row first, withheld values as text, and no identifier on the page;
+    - expansion with the ancestor's value, and the tree-grid keyboard model;
+    - drill-down to Table and Back;
+    - the pickers and the URL;
+    - the phone layout with no horizontal scroll.
+  - **Not verified:** a real Entity (none publishes a Summary until A0), and the server's real responses in a browser. The fixture plays the server.
 - **Section 14 approved (10 October 2026).** The project owner approved decisions 1–7 in these words: "approved decisions 1–7 with the five already-checked decisions unchanged and decision 7 adopted as written". The owner added one recorded precondition, which changes no decision. The owner said nothing in section 5 is to be built until it is in this status block. It is:
   - **Precondition: fact size under uncovered record authorization.** When a list's per-record authorization is not covered by its SQL scope (`aggregateAuthorizationCovered` is false), `executeAuthorizedAggregate` pages through the whole matching set 100 IDs at a time and authorizes every ID under one 5-second deadline. Its cost is linear in the matching set, and past the deadline it returns 503 rather than a total. A fact is therefore aggregate-eligible at volume only when its list's record authorization is SQL-covered; otherwise the authorized-aggregate path bounds the fact's size. A0 and A3 each check this for their fact before they are called done.
+  - **Correction found at the A1 build (revision 4):** the bound is also a hard capacity. The same function refuses a matching set larger than 2,000 records with 503 `ENTITY_AGGREGATE_CAPACITY`, whatever the deadline. Under uncovered record authorization, a fact is therefore limited to 2,000 matching records per Summary request. The precondition's conclusion is unchanged, and stricter.
 - **Revision 3** records that approval and the precondition (here, in section 9.2 and in A0's and A3's acceptance). Revision 2 was committed first as proposed (`a1b518a5f`), so the approval is a separate, auditable step, as Compare did at revision 2.
-- **Build:** no build instruction is recorded yet. When one is given, A1 runs on fixtures (decision 6). A0 waits for the metadata cleanup and its dimension Entities.
 - **What revision 2 adds** (audit round 3, section 19):
   - the response bound stated as a checked constant, `LIST_AGGREGATE_MAX_CELLS` (section 7.2). It corrects the audit's reading that a Summary response counts against `MAX_LIST_PAGE_SIZE`;
   - section 9.2 rewritten. The A1 discovery the audit asked for is answered from the code: today's group aggregates already compute over an authorized identity set when record authorization is not covered in SQL. The Summary inherits that path instead of the refusal revision 1 proposed (decision 7);
@@ -207,6 +223,49 @@ type AggregateCell = Readonly<Record<string,                 // key: measure ent
 - **Saved:** `aggregate.rows` (1–3 dimension entries), `aggregate.column`, `aggregate.measures`. URL keys `aggregate.rows`, `aggregate.column`, `aggregate.measures`. Invalid or undeclared entries are dropped by the parser, as `groups` entries are today.
 - **Location only:** expanded groups (`aggregate.open`, a bounded list of value paths), so a shared link reopens the same expansions within the request budget.
 
+### 5.7 Build record (A1, 10 October 2026)
+
+What the build decided inside the approved contract, so a reviewer can check each point against the code.
+
+1. **The response extends the list response, rather than adding an `aggregate` object.**
+   - Section 5.5's content travels in the shape grouped Table already parses. Each group gains `states` (aggregate key → `notSummable` or `suppressed`). The result gains `parentGroup`, the total over every group of the request.
+   - **Additions to the shared group result are expected to be rare and named.** Every layout that groups reads this one shape. A new per-group attribute needs a named owner in its blueprint and a parser entry, so the shape does not become the union of several layouts' concerns.
+   - There is no `revision` digest. A digest of one level's set cannot be compared with another level's, so section 7.4 is implemented by comparing an expansion's `parentGroup` with the row already drawn (`sameTotals`). A difference shows the refresh notice.
+   - `asOf` arrives with A4.
+2. **Request.**
+   - `totals=true` on the list operation (`entityList.list` and `records.list`) is valid only with `groupsOnly`; otherwise 400 `LIST_AGGREGATE_INVALID`.
+   - `countDistinct` is accepted only on a Summary request; otherwise `LIST_GROUP_AGGREGATE_INVALID`.
+   - The record count is every group's own `count`, so it is never sent as an aggregate.
+3. **Admission order** (`admitAggregateRequest`, `list-aggregate.ts`).
+   - The list's own grouping rules run first. An ungroupable field is `GROUP_FIELD_NOT_ALLOWED`; a date without a bucket is `LIST_GROUP_INVALID`.
+   - Then the declaration: an undeclared dimension, bucket or measure is `LIST_AGGREGATE_INVALID`; an unreadable or masked one is `LIST_AGGREGATE_DIMENSION_UNAVAILABLE` or `LIST_AGGREGATE_MEASURE_UNAVAILABLE`; no exact counts is `LIST_AGGREGATE_COUNTS_UNAVAILABLE`.
+   - A sum on a field whose additivity is undeclared or non-additive is refused again at request time, in case a descriptor slipped past publication.
+4. **Withheld values are removed on the server.** `applyAggregateRules` runs in the query service before the response projection. It deletes the value, its currency and its mixed or unknown marker, and records the state, so a withheld number never leaves the server.
+5. **What pins a time field.** An `eq` or `is_null` filter pins it; ancestor levels arrive as these. So does the request's group by value; a date bucket never does. A locked record scope on the time field is not yet read as a pin, so such cells show "Not summed across …". That fails safe.
+6. **The floor** applies to every aggregate of its measure. The record count is never suppressed.
+7. **SQL.** Only a Summary request uses the `GROUPING SETS` statement, with the key computed once in a subquery so `GROUPING()` names the grouped expression even with a bound time zone. A grouped request without `totals` takes the single-level statement, unchanged. The anchor is the source-string assertions in `server/packages/services/records/src/kysely-record-repository.test.ts` (the A3 quarter-bucket test, which asserts `sum("amount") AS "__aggregate_0"` and the currency columns on the plain statement), together with `list-group-aggregates.test.ts` for grouped Table's results.
+8. **Rows and labels.**
+   - Every bucket is a row, in server order with No value last. Nothing is folded into Unmapped values, because a reference dimension has no published choice list.
+   - Labels come from the server's authorized label service. A choice value uses its published choice label, and a bucket is formatted as a month or quarter.
+9. **No identifier on the page, even in an attribute.** Rows are keyed by position (`/1/2`), never by value. The jsdom test found the first draft putting filter values, record IDs among them, into `data-tree-key`.
+10. **Accessibility.** The grid is a `treegrid` driven by the shared tree keyboard model (`handleTreeKeyDown`):
+    - rows carry `aria-level`, `aria-setsize`, `aria-posinset` and, when expandable, `aria-expanded`;
+    - Enter drills down through `data-tree-open`;
+    - the Total row stays outside the roving focus and keeps its own tabbable drill-down button.
+11. **Drill-down** switches to Table, or to Cards when the surface offers no Table, with the row's filters added. It pushes history, so Back returns to the Summary. A surface offering neither shows no drill-down.
+12. **Pickers.**
+    - Three `ChoiceSelect` controls for the row levels. Levels 2 and 3 offer None, and a field is offered once.
+    - One design-system `Checkbox` per measure, at most five, kept in declared order.
+13. **Not built in A1:**
+    - the location key `aggregate.open` (section 5.6). Expansions reset whenever the levels, measures or filters change;
+    - the column dimension (A2);
+    - Studio authoring (section 15, after the cleanup). `field.list.additivity` is parsed from published metadata, and its Studio column is not yet built.
+14. **Left as found; decision 8 asks for it.** Grouped Table's own A2 sums still follow `field.list.aggregations` and ignore additivity. On a fact with a semi-additive balance, "Closing net total" in grouped Table is a wrong number today, while Summary withholds it. Applying additivity there changes behaviour the owner approved under the Tree blueprint, so the build did not do it (section 14, decision 8).
+15. **Test runs outside this work, at the build.**
+    - `tree.postgres.test.ts` was run here against the provisioned `athyper_neon` database as its owner: 18 pass, and one fails. The failure is the move test's foreign-key error-shape assertion, which this work does not touch; it was not investigated.
+    - The Matrix PostgreSQL test's typecheck error (`ids.bids.indexOf`, a typed-UUID array) was fixed with the A1 commit.
+    - Four foundation files fail: two reference provisioning files removed by other sessions' commits, and two are Atlas tests.
+
 ## 6. Validation, availability and finding codes
 
 | Code | When |
@@ -222,6 +281,7 @@ type AggregateCell = Readonly<Record<string,                 // key: measure ent
 | `LIST_AGGREGATE_DIMENSION_UNAVAILABLE`, `LIST_AGGREGATE_MEASURE_UNAVAILABLE` (per viewer) | Section 5.3 |
 | `LIST_AGGREGATE_INVALID` (request) | An undeclared dimension, measure or aggregate; `pivot` on a dimension without `column`; more than `LIST_AGGREGATE_MAX_COLUMNS` `pivotValues` |
 | `ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE` (request, existing, 503) | Record authorization not covered in SQL could not authorize the matching set within its budget (section 9.2) |
+| `ENTITY_AGGREGATE_CAPACITY` (request, existing, 503) | The same path found more than 2,000 matching records (status block, correction) |
 
 ## 7. Query semantics, loading and request budget
 
@@ -307,7 +367,7 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 - When per-record authorization is not covered by that SQL (`aggregateAuthorizationCovered` is false), the Summary uses the path today's group aggregates already use: `executeAuthorizedAggregate`.
   - It enumerates the matching IDs and authorizes each one.
   - The `GROUPING SETS` statement then aggregates over exactly that authorized ID set.
-  - Past its 5-second budget it fails closed with 503 `ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE`.
+  - Past its 5-second budget it fails closed with 503 `ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE`, and above 2,000 matching records with 503 `ENTITY_AGGREGATE_CAPACITY` (found at the A1 build; status block).
 
   A total over the wrong set is never computed, either way.
 - **Why not refuse, as Tree and Matrix do.** Their computations (child existence, orphans, rank partitions) run in SQL shapes that the ID set does not restrict. A grouped aggregate is exactly the shape the ID restriction was built for, and refusing would make the Summary stricter than the Table's own group counts on the same list.
@@ -407,7 +467,11 @@ Decisions (all seven approved on 10 October 2026; status block):
 6. **A1 runs on fixtures in parallel with A0.** This is the same pattern as Board, Calendar, Gantt, Tree and Matrix: the runtime is proven on fixtures, and the real Entity waits for the metadata cleanup and for its dimension Entities (section 17).
 7. **Record authorization not covered in SQL uses the existing authorized-aggregate path, not a refusal** (section 9.2; revision 2). This replaces revision 1's `LIST_AGGREGATE_RECORD_AUTHORIZATION_UNSUPPORTED`.
 
-Audit round 3 recommended approving decisions 1–6 unchanged; the owner approved 1–7. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
+Audit round 3 recommended approving decisions 1–6 unchanged; the owner approved 1–7.
+
+**Open for the owner (raised at the A1 build, before A2):**
+
+8. **Apply additivity to grouped Table's sums.** It is the same field property, the same rule and the same withheld-value rendering ("Not summed across …"). Today the same list can show a closing-balance total in grouped Table that Summary withholds as meaningless; the surface showing the wrong number is the one that appears to work. Recommended: decide this before A2, as a small change to the Tree blueprint's A2 behaviour. The alternatives are recording grouped Table's semi-additive sums as known-wrong in the Tree blueprint's status, or deferring the decision; both leave the wrong sum reachable. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
 
 ## 15. Studio authoring and registration inventory
 
@@ -447,6 +511,8 @@ Foundation section 9's policy gates run before each commit.
 | **A5** | Chart (section 13), after its contract is approved | A2 |
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
+
+**Status (10 October 2026).** A1 is built on fixtures (status block; section 5.7). A0, A3, A2, A4 and A5 are not started.
 
 **Acceptance for every phase:**
 - unit and real-PostgreSQL tests for each new repository path;
@@ -506,3 +572,9 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 3 | Committing the documents as proposed is safe | Committed as revision 2, proposed (`a1b518a5f`), with its three companions in one commit |
 | Audit round 4 | Both round-3 notes withdrawn as corrected; `executeAuthorizedAggregate` is linear in the matching set under one 5-second deadline, so it bounds the fact size when record authorization is not SQL-covered | Adopted as a recorded precondition at the owner's request: status block, section 9.2, A0 and A3 acceptance. It changes no decision |
 | Owner (10 October 2026) | Section 14 decisions 1–7 | Approved; status block |
+| Owner (10 October 2026) | "go ahead" | A1 built on fixtures; status block and section 5.7 |
+| Audit round 5 (A1 build review) | The 2,000-record capacity correction; whether a view's authorization is SQL-covered decides if the ceiling applies at all | Confirmed in the status block; A0's acceptance already asks it first |
+| Audit round 5 | Grouped Table sums ignore additivity, so two surfaces disagree | Raised as decision 8 (section 14), recommended before A2; not implemented without the owner |
+| Audit round 5 | The "unchanged statement" claim needs an anchor that cannot be deleted | The cited test exists; the build record now names `kysely-record-repository.test.ts` and `list-group-aggregates.test.ts` explicitly (5.7 point 7) |
+| Audit round 5 | Additions to the shared group result should be rare and named | Recorded in 5.7 point 1 |
+| Audit round 5 | Fix the Matrix PostgreSQL typecheck error before committing | Fixed (5.7 point 15) |

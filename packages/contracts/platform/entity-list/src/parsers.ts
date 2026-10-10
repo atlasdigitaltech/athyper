@@ -53,6 +53,7 @@ import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
 import { isListMatrixPage, parseListMatrix, parseListMatrixRanks, parseListMatrixState, type ListMatrixV1 } from "./matrix";
+import { parseListAggregate, parseListAggregateState, type ListAggregateV1 } from "./aggregate";
 import { isListCompareLocation, parseListCompare } from "./compare";
 import {
   parseListBoard,
@@ -245,6 +246,12 @@ export function parseEntityListDescriptor(
       : parseListMatrix(surfaceRecord.matrix, fieldByKey);
   if (Boolean(matrix) !== supportedModes.includes("matrix"))
     throw new TypeError("surface.matrix is required exactly when Matrix is supported");
+  const aggregate =
+    surfaceRecord.aggregate === undefined
+      ? undefined
+      : parseListAggregate(surfaceRecord.aggregate, fieldByKey);
+  if (Boolean(aggregate) !== supportedModes.includes("aggregate"))
+    throw new TypeError("surface.aggregate is required exactly when Summary is supported");
   // Compare is a selection action, not a mode: present or absent on its own.
   const compare =
     surfaceRecord.compare === undefined
@@ -265,6 +272,7 @@ export function parseEntityListDescriptor(
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
     ...(matrix ? { matrix } : {}),
+    ...(aggregate ? { aggregate } : {}),
     maxSortLevels,
     allowedPageSizes: new Set(allowedPageSizes),
     defaultPageSize,
@@ -365,6 +373,7 @@ export function parseEntityListDescriptor(
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
       ...(matrix ? { matrix } : {}),
+      ...(aggregate ? { aggregate } : {}),
       ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({
@@ -744,6 +753,10 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     record.groups === undefined
       ? undefined
       : parseBuckets(record.groups, "groups");
+  const parentGroup =
+    record.parentGroup === undefined
+      ? undefined
+      : parseGroupTotals(object(record.parentGroup, "parentGroup"), "parentGroup");
   return Object.freeze({
     schemaVersion: 1,
     descriptorHash: digest(record.descriptorHash, "descriptorHash"),
@@ -811,6 +824,7 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     }),
     ...(facets ? { facets } : {}),
     ...(groups ? { groups } : {}),
+    ...(parentGroup ? { parentGroup } : {}),
   });
 }
 
@@ -846,6 +860,7 @@ function stateRules(
     ...(descriptor.surface.gantt ? { gantt: descriptor.surface.gantt } : {}),
     ...(descriptor.surface.tree ? { tree: true } : {}),
     ...(descriptor.surface.matrix ? { matrix: descriptor.surface.matrix } : {}),
+    ...(descriptor.surface.aggregate ? { aggregate: descriptor.surface.aggregate } : {}),
     ...(descriptor.surface.compare ? { compare: true } : {}),
     maxSortLevels: descriptor.limits.maxSortLevels,
     allowedPageSizes: new Set(descriptor.limits.allowedPageSizes),
@@ -865,6 +880,7 @@ interface StateRules {
   readonly gantt?: ListGanttV1;
   readonly tree?: true;
   readonly matrix?: ListMatrixV1;
+  readonly aggregate?: ListAggregateV1;
   /** The surface offers Compare, so an open comparison is location state. */
   readonly compare?: true;
   readonly maxSortLevels: number;
@@ -984,6 +1000,9 @@ function parseState(
   const matrix = rules.matrix
     ? parseListMatrixState(record.matrix, rules.matrix)
     : undefined;
+  const aggregate = rules.aggregate
+    ? parseListAggregateState(record.aggregate, rules.aggregate)
+    : undefined;
   const base = {
     ...(optionalCode(record.standardViewKey, "standardViewKey")
       ? {
@@ -1007,6 +1026,7 @@ function parseState(
     ...(calendar ? { calendar } : {}),
     ...(gantt ? { gantt } : {}),
     ...(matrix ? { matrix } : {}),
+    ...(aggregate ? { aggregate } : {}),
   };
   if (!rules.includeLocation) return Object.freeze(base);
   const pageSize =
@@ -1328,39 +1348,55 @@ function parseBuckets(value: unknown, name: string) {
   return Object.freeze(
     array(value, name).map((candidate, index) => {
       const item = object(candidate, `${name}[${index}]`);
-      const count = optionalInteger(item.count, `${name}[${index}].count`, 0);
-      let aggregates: Record<string, number | string | null> | undefined;
-      if (item.aggregates !== undefined) {
-        aggregates = {};
-        for (const [key, raw] of Object.entries(object(item.aggregates, `${name}[${index}].aggregates`))) {
-          if (!/^[a-z][a-z0-9_]*:(sum|average|minimum|maximum)$/.test(key)) throw new TypeError(`${name}[${index}].aggregates key is invalid`);
-          if (raw !== null && typeof raw !== "number" && !(typeof raw === "string" && /^-?\d+(\.\d+)?$/.test(raw))) throw new TypeError(`${name}[${index}].aggregates value is invalid`);
-          aggregates[key] = raw as number | string | null;
-        }
-      }
-      const aggregateKey = (key: string) => {
-        if (!/^[a-z][a-z0-9_]*:(sum|average|minimum|maximum)$/.test(key)) throw new TypeError(`${name}[${index}] aggregate key is invalid`);
-        return key;
-      };
-      const currencies = item.aggregateCurrencies === undefined
-        ? undefined
-        : Object.freeze(Object.fromEntries(Object.entries(object(item.aggregateCurrencies, `${name}[${index}].aggregateCurrencies`)).map(([key, code]) => [aggregateKey(key), text(code, `${name}[${index}].aggregateCurrencies.${key}`)])));
-      const keys = (raw: unknown, label: string) => raw === undefined
-        ? undefined
-        : Object.freeze(array(raw, `${name}[${index}].${label}`).map((key) => aggregateKey(text(key, `${name}[${index}].${label}`))));
-      const mixed = keys(item.mixedCurrencies, "mixedCurrencies");
-      const unknown = keys(item.unknownCurrencies, "unknownCurrencies");
       return Object.freeze({
         value: json(item.value, `${name}[${index}].value`),
         label: text(item.label, `${name}[${index}].label`),
-        ...(count !== undefined ? { count } : {}),
-        ...(aggregates ? { aggregates: Object.freeze(aggregates) } : {}),
-        ...(currencies ? { aggregateCurrencies: currencies } : {}),
-        ...(mixed ? { mixedCurrencies: mixed } : {}),
-        ...(unknown ? { unknownCurrencies: unknown } : {}),
+        ...parseGroupTotals(item, `${name}[${index}]`),
       });
     }),
   );
+}
+
+const GROUP_AGGREGATE_KEY = /^[a-z][a-z0-9_]*:(countDistinct|sum|average|minimum|maximum)$/;
+
+/** A group's count, aggregates and their currency and Summary states. */
+function parseGroupTotals(item: Readonly<Record<string, unknown>>, at: string) {
+  const count = optionalInteger(item.count, `${at}.count`, 0);
+  const aggregateKey = (key: string) => {
+    if (!GROUP_AGGREGATE_KEY.test(key)) throw new TypeError(`${at} aggregate key is invalid`);
+    return key;
+  };
+  let aggregates: Record<string, number | string | null> | undefined;
+  if (item.aggregates !== undefined) {
+    aggregates = {};
+    for (const [key, raw] of Object.entries(object(item.aggregates, `${at}.aggregates`))) {
+      if (!GROUP_AGGREGATE_KEY.test(key)) throw new TypeError(`${at}.aggregates key is invalid`);
+      if (raw !== null && typeof raw !== "number" && !(typeof raw === "string" && /^-?\d+(\.\d+)?$/.test(raw))) throw new TypeError(`${at}.aggregates value is invalid`);
+      aggregates[key] = raw as number | string | null;
+    }
+  }
+  const currencies = item.aggregateCurrencies === undefined
+    ? undefined
+    : Object.freeze(Object.fromEntries(Object.entries(object(item.aggregateCurrencies, `${at}.aggregateCurrencies`)).map(([key, code]) => [aggregateKey(key), text(code, `${at}.aggregateCurrencies.${key}`)])));
+  const keys = (raw: unknown, label: string) => raw === undefined
+    ? undefined
+    : Object.freeze(array(raw, `${at}.${label}`).map((key) => aggregateKey(text(key, `${at}.${label}`))));
+  const mixed = keys(item.mixedCurrencies, "mixedCurrencies");
+  const unknown = keys(item.unknownCurrencies, "unknownCurrencies");
+  const states = item.states === undefined
+    ? undefined
+    : Object.freeze(Object.fromEntries(Object.entries(object(item.states, `${at}.states`)).map(([key, state]) => {
+        if (state !== "notSummable" && state !== "suppressed") throw new TypeError(`${at}.states.${key} is invalid`);
+        return [aggregateKey(key), state] as const;
+      })));
+  return {
+    ...(count !== undefined ? { count } : {}),
+    ...(aggregates ? { aggregates: Object.freeze(aggregates) } : {}),
+    ...(currencies ? { aggregateCurrencies: currencies } : {}),
+    ...(mixed ? { mixedCurrencies: mixed } : {}),
+    ...(unknown ? { unknownCurrencies: unknown } : {}),
+    ...(states ? { states } : {}),
+  };
 }
 
 function jsonObject(value: unknown, name: string): JsonObject {

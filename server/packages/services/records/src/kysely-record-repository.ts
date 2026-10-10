@@ -100,9 +100,9 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.hierarchy?.mode === "matches" && tree) return listTreeMatches(input, conditions, tree, executor, scopeCompilers);
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
-        const { buckets, truncated } = await groupBuckets(input, conditions, executor);
-        const total = truncated ? await countRows(input, conditions, executor) : buckets.reduce((sum, bucket) => sum + bucket.count, 0);
-        return { data: [], groups: buckets, ...(truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+        const { buckets, truncated, total: parentGroup } = await groupBuckets(input, conditions, executor);
+        const total = parentGroup ? parentGroup.count : truncated ? await countRows(input, conditions, executor) : buckets.reduce((sum, bucket) => sum + bucket.count, 0);
+        return { data: [], groups: buckets, ...(parentGroup ? { parentGroup } : {}), ...(truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       }
       const order = orderBy(input);
       const cursor = decodeRecordCursor(input);
@@ -396,9 +396,15 @@ export function relativeDateCondition(ref: RawBuilder<unknown>, value: unknown):
 }
 /** Group buckets with their counts and, when requested, aggregates (Tree
  * blueprint A2), grouping a date field by month or quarter (A3) through
- * date_trunc in the viewer's zone for a datetime field. One GROUP BY, capped
+ * date_trunc in the viewer's zone for a datetime field. One statement, capped
  * at 50 groups plus the No value group; a money aggregate also counts its
- * currencies, so a group spanning currencies shows no total. */
+ * currencies, so a group spanning currencies shows no total. With
+ * `groupTotals` (a Summary request, Aggregate blueprint 8.1) the same
+ * statement also returns the total over every group through GROUPING SETS,
+ * so an average or a distinct count is computed from base rows, never from
+ * group rows. There the grouping key is computed once in a subquery, so
+ * GROUPING() names exactly the grouped expression; other requests keep the
+ * single-level statement unchanged. */
 async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
   const field = input.descriptor.fields.find((item) => item.key === input.group);
   if (!field) throw new Error(`Unknown descriptor field: ${input.group}`);
@@ -412,55 +418,77 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
         return sql`to_char(date_trunc(${unit}, ${local}), ${format})`;
       })()
     : sql`${ref}`;
+  const totals = input.groupTotals === true;
   const aggregates = (input.groupAggregates ?? []).map((item, index) => {
-    const target = sql.ref(fieldPath(input.descriptor, item.field));
-    const fn = { sum: sql`sum`, average: sql`avg`, minimum: sql`min`, maximum: sql`max` }[item.aggregate];
-    const currency = item.currencyField ? sql.ref(fieldPath(input.descriptor, item.currencyField)) : undefined;
+    const source = sql.ref(fieldPath(input.descriptor, item.field));
+    const target = totals ? sql.ref(`__input_${index}`) : source;
+    const fn = {
+      countDistinct: sql`count(DISTINCT ${target})`,
+      sum: sql`sum(${target})`,
+      average: sql`avg(${target})`,
+      minimum: sql`min(${target})`,
+      maximum: sql`max(${target})`,
+    }[item.aggregate];
+    const currencySource = item.currencyField ? sql.ref(fieldPath(input.descriptor, item.currencyField)) : undefined;
+    const currency = totals ? sql.ref(`__currency_input_${index}`) : currencySource;
     return {
       name: `${item.field}:${item.aggregate}`,
-      select: sql`, ${fn}(${target}) AS ${sql.ref(`__aggregate_${index}`)}${currency ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}, count(*) FILTER (WHERE ${target} IS NOT NULL AND ${currency} IS NULL) AS ${sql.ref(`__uncurrenced_${index}`)}` : sql``}`,
-      money: Boolean(currency),
+      input: sql`, ${source} AS ${target}${currencySource ? sql`, ${currencySource} AS ${currency}` : sql``}`,
+      select: sql`, ${fn} AS ${sql.ref(`__aggregate_${index}`)}${currencySource ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}, count(*) FILTER (WHERE ${target} IS NOT NULL AND ${currency} IS NULL) AS ${sql.ref(`__uncurrenced_${index}`)}` : sql``}`,
+      money: Boolean(currencySource),
     };
   });
-  const result = await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint }>`
-    SELECT ${key} AS value, count(*) AS count${sql.join(aggregates.map((item) => item.select), sql``)}
+  const groupKey = sql.ref("__group_key");
+  const selects = sql.join(aggregates.map((item) => item.select), sql``);
+  const result = totals
+    ? await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
+    SELECT ${groupKey} AS value, count(*) AS count${selects}, GROUPING(${groupKey}) AS "__total"
+      FROM (SELECT ${key} AS ${groupKey}${sql.join(aggregates.map((item) => item.input), sql``)} FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}) AS "__group_source"
+     GROUP BY GROUPING SETS ((${groupKey}), ())
+     ORDER BY "__total" DESC, 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 3}`.execute(executor)
+    : await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
+    SELECT ${key} AS value, count(*) AS count${selects}
       FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
      GROUP BY 1 ORDER BY 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 2}`.execute(executor);
+  const totalRow = totals ? result.rows.find((row) => Number(row.__total) === 1) : undefined;
+  const grouped = totals ? result.rows.filter((row) => Number(row.__total) !== 1) : result.rows;
   // The No value group sorts first so the cap never drops it; it is drawn last.
-  const none = result.rows.filter((row) => row.value === null);
-  const values = result.rows.filter((row) => row.value !== null);
+  const none = grouped.filter((row) => row.value === null);
+  const values = grouped.filter((row) => row.value !== null);
   const truncated = values.length > LIST_GROUP_LIMIT;
   const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
+  const summarize = (row: Record<string, unknown> & { count: string | number | bigint }) => {
+    const currencies: Record<string, string> = {};
+    const mixed: string[] = [];
+    const unknown: string[] = [];
+    const values = Object.fromEntries(aggregates.map((item, index) => {
+      if (item.money) {
+        if (Number(row[`__currencies_${index}`] ?? 0) > 1) {
+          mixed.push(item.name);
+          return [item.name, null];
+        }
+        // An amount without a recorded currency makes the total's currency unknown.
+        if (Number(row[`__uncurrenced_${index}`] ?? 0) > 0) {
+          unknown.push(item.name);
+          return [item.name, null];
+        }
+        if (typeof row[`__currency_${index}`] === "string") currencies[item.name] = row[`__currency_${index}`] as string;
+      }
+      return [item.name, aggregateValue(row[`__aggregate_${index}`])];
+    }));
+    return {
+      count: Number(row.count),
+      ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
+      ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
+      ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
+      ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
+    };
+  };
   return {
     truncated,
-    buckets: Object.freeze(rows.map((row) => {
-      const currencies: Record<string, string> = {};
-      const mixed: string[] = [];
-      const unknown: string[] = [];
-      const values = Object.fromEntries(aggregates.map((item, index) => {
-        if (item.money) {
-          if (Number(row[`__currencies_${index}`] ?? 0) > 1) {
-            mixed.push(item.name);
-            return [item.name, null];
-          }
-          // An amount without a recorded currency makes the total's currency unknown.
-          if (Number(row[`__uncurrenced_${index}`] ?? 0) > 0) {
-            unknown.push(item.name);
-            return [item.name, null];
-          }
-          if (typeof row[`__currency_${index}`] === "string") currencies[item.name] = row[`__currency_${index}`] as string;
-        }
-        return [item.name, aggregateValue(row[`__aggregate_${index}`])];
-      }));
-      return Object.freeze({
-        value: row.value,
-        count: Number(row.count),
-        ...(aggregates.length ? { aggregates: Object.freeze(values) } : {}),
-        ...(Object.keys(currencies).length ? { aggregateCurrencies: Object.freeze(currencies) } : {}),
-        ...(mixed.length ? { mixedCurrencies: Object.freeze(mixed) } : {}),
-        ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
-      });
-    })),
+    buckets: Object.freeze(rows.map((row) => Object.freeze({ value: row.value, ...summarize(row) }))),
+    // An empty set has no rows to group, so its total is zero records.
+    ...(totals ? { total: Object.freeze(totalRow ? summarize(totalRow) : { count: 0 }) } : {}),
   };
 }
 async function countRows(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction): Promise<number> {

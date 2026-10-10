@@ -115,7 +115,7 @@ const input = (extra: Partial<RecordRepositoryListInput> = {}): RecordRepository
 });
 const byBid = (result: Awaited<ReturnType<ReturnType<typeof createKyselyRecordRepository>["list"]>>, item: string) =>
   Object.fromEntries(
-    result.data.flatMap((row, index) => (row["item_id"] === item ? [[ids.bids.indexOf(String(row["bid_id"])) + 1, result.ranks![index]]] : [])),
+    result.data.flatMap((row, index) => (row["item_id"] === item ? [[(ids.bids as readonly string[]).indexOf(String(row["bid_id"])) + 1, result.ranks![index]]] : [])),
   );
 
 describe.skipIf(!enabled)("Matrix rank on real PostgreSQL", () => {

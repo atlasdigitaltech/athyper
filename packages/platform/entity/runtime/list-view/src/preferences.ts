@@ -51,6 +51,8 @@ export function saveableViewState(
     ...(state.gantt ? { gantt: state.gantt } : {}),
     // Matrix measures and pinned participants are saved; its pages never are.
     ...(state.matrix ? { matrix: state.matrix } : {}),
+    // Summary rows and measures are saved; its expansions never are.
+    ...(state.aggregate ? { aggregate: state.aggregate } : {}),
   });
 }
 

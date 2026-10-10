@@ -55,6 +55,10 @@ export interface ListRecordsQuery {
   /** Groups only, no rows (Tree blueprint section 5.1). Valid only with
    * `group` and exact counts and no cursor. */
   readonly groupsOnly?: boolean;
+  /** A Summary request (Entity list Aggregate blueprint 5.4): also return the
+   * total over every group. Valid only with `groupsOnly`; the group and the
+   * aggregates must be declared by the surface's published Summary. */
+  readonly groupTotals?: boolean;
   /** A record-hierarchy request (Tree blueprint section 5.3): `nodes` adds
    * hasChildren to every row; `orphans` selects visible records whose parent
    * the viewer cannot read; `matches` returns the records that match the
@@ -101,7 +105,24 @@ export interface RecordGroupBucket {
 }
 export interface RecordGroupAggregate {
   readonly field: string;
-  readonly aggregate: "sum" | "average" | "minimum" | "maximum";
+  /** `countDistinct` only on a Summary request (Aggregate blueprint 8.1). */
+  readonly aggregate: "countDistinct" | "sum" | "average" | "minimum" | "maximum";
+}
+
+/** A group's count and aggregates (Tree blueprint A2; Aggregate blueprint 5.5). */
+export interface RecordGroupTotals {
+  readonly count: number;
+  /** Keyed `field:aggregate` (A2). */
+  readonly aggregates?: Readonly<Record<string, number | string | null>>;
+  /** The one currency of a money aggregate's rows, by aggregate key. */
+  readonly aggregateCurrencies?: Readonly<Record<string, string>>;
+  /** Money aggregates left out because the group's rows span currencies. */
+  readonly mixedCurrencies?: readonly string[];
+  /** Money aggregates left out because some amounts have no recorded currency. */
+  readonly unknownCurrencies?: readonly string[];
+  /** Summary aggregates withheld, with the reason shown in their place: a
+   * semi-additive sum across its time fields, or a group below a floor. */
+  readonly states?: Readonly<Record<string, "notSummable" | "suppressed">>;
 }
 
 export interface RecordListResult {
@@ -116,18 +137,9 @@ export interface RecordListResult {
   readonly matchesTruncated?: boolean;
   /** Matches whose path does not reach a root within the maximum depth (not returned). */
   readonly matchesBeyondDepth?: number;
-  readonly groups?: readonly Readonly<{
-    readonly value: unknown;
-    readonly count: number;
-    /** Keyed `field:aggregate` (A2). */
-    readonly aggregates?: Readonly<Record<string, number | string | null>>;
-    /** The one currency of a money aggregate's rows, by aggregate key. */
-    readonly aggregateCurrencies?: Readonly<Record<string, string>>;
-    /** Money aggregates left out because the group's rows span currencies. */
-    readonly mixedCurrencies?: readonly string[];
-    /** Money aggregates left out because some amounts have no recorded currency. */
-    readonly unknownCurrencies?: readonly string[];
-  }>[];
+  readonly groups?: readonly Readonly<RecordGroupTotals & { readonly value: unknown }>[];
+  /** A Summary request's total over every group (`groupTotals`). */
+  readonly parentGroup?: RecordGroupTotals;
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: boolean;
   /** Per row of a rank request: its rank, or null when it is not ranked

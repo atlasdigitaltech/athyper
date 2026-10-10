@@ -14,6 +14,7 @@ import {
   validatePublishedListGantt,
 } from "./list-gantt-descriptor.js";
 import { parsePublishedListMatrix, validatePublishedListMatrix } from "./list-matrix-descriptor.js";
+import { parseFieldAdditivity, parsePublishedListAggregate, validateFieldAdditivity, validatePublishedListAggregate } from "./list-aggregate-descriptor.js";
 import { parseEntityHierarchy, validateEntityHierarchy } from "./entity-hierarchy-descriptor.js";
 import {
   validateEntityLiveReadContractV1,
@@ -140,6 +141,7 @@ export function parseEntityRuntimeDescriptor(
     listPresentation?.supportedModes,
     new Map(fields.map((field) => [field.key, field])),
   );
+  validateFieldAdditivity(fields);
   for (const field of fields) {
     const currency = field.list?.currencyField;
     if (currency === undefined) continue;
@@ -988,6 +990,9 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(item["matrix"] === undefined
       ? {}
       : { matrix: parsePublishedListMatrix(item["matrix"]) }),
+    ...(item["aggregate"] === undefined
+      ? {}
+      : { aggregate: parsePublishedListAggregate(item["aggregate"]) }),
   };
 }
 
@@ -1091,6 +1096,7 @@ function validateListPresentation(
   validatePublishedListCalendar(presentation, byKey);
   validatePublishedListGantt(presentation, byKey);
   validatePublishedListMatrix(presentation, byKey);
+  validatePublishedListAggregate(presentation, byKey);
   for (const key of Object.keys(presentation.localizedLabels?.fields ?? {}))
     requireField(key, "listPresentation.localizedLabels.fields");
   const columns =
@@ -1311,6 +1317,9 @@ function parseField(raw: unknown): EntityFieldDescriptor {
         ...(listValue["currencyField"] === undefined
           ? {}
           : { currencyField: code(listValue["currencyField"], "field.list.currencyField") }),
+        ...(listValue["additivity"] === undefined
+          ? {}
+          : { additivity: parseFieldAdditivity(listValue["additivity"], "field.list.additivity") }),
         ...(listValue["aggregations"] === undefined
           ? {}
           : {

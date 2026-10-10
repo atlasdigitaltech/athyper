@@ -7,6 +7,7 @@ import { lockedScope, resolveListTree } from "./list-tree.js";
 import { resolveListCompare } from "./list-compare.js";
 import { resolveCompareCollections } from "./list-compare-collections.js";
 import { resolveListMatrix, resolveMatrixAxes, type MatrixAxes } from "./list-matrix.js";
+import { resolveListAggregate } from "./list-aggregate.js";
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import {
   createEntityReferenceReader,
@@ -83,6 +84,7 @@ import type {
   ListRecordsQuery,
   RecordCollectionScopeResolution,
   RecordCollectionScopeResolver,
+  RecordGroupTotals,
   RecordQueryService,
 } from "@athyper/server-contract-records";
 import { RecordServiceError } from "./errors.js";
@@ -1185,6 +1187,7 @@ export function createEntityListService(options: {
           sort: query.sort ?? [],
           group: query.group ?? null,
           groupsOnly: query.groupsOnly === true,
+          groupTotals: query.groupTotals === true,
           groupBucket: query.groupBucket ?? null,
           groupAggregates: query.groupAggregates ?? [],
           hierarchy: query.hierarchy ?? null,
@@ -1235,19 +1238,29 @@ export function createEntityListService(options: {
                     label: groupLabels
                       ? (groupLabels[index]?.[groupField!.key] ?? "—")
                       : formatGroupLabel(group.value),
-                    count: group.count,
-                    ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),
-                    ...(group.aggregateCurrencies ? { aggregateCurrencies: Object.freeze({ ...group.aggregateCurrencies }) } : {}),
-                    ...(group.mixedCurrencies?.length ? { mixedCurrencies: Object.freeze([...group.mixedCurrencies]) } : {}),
-                    ...(group.unknownCurrencies?.length ? { unknownCurrencies: Object.freeze([...group.unknownCurrencies]) } : {}),
+                    ...groupTotalsResponse(group),
                   }),
                 ),
               ),
             }
           : {}),
+        // A Summary request's total over every group (Aggregate blueprint 8.1).
+        ...(result.parentGroup ? { parentGroup: Object.freeze(groupTotalsResponse(result.parentGroup)) } : {}),
       });
     },
   });
+}
+
+/** A group's count, aggregates, currencies and Summary states, as sent. */
+function groupTotalsResponse(group: RecordGroupTotals) {
+  return {
+    count: group.count,
+    ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),
+    ...(group.aggregateCurrencies ? { aggregateCurrencies: Object.freeze({ ...group.aggregateCurrencies }) } : {}),
+    ...(group.mixedCurrencies?.length ? { mixedCurrencies: Object.freeze([...group.mixedCurrencies]) } : {}),
+    ...(group.unknownCurrencies?.length ? { unknownCurrencies: Object.freeze([...group.unknownCurrencies]) } : {}),
+    ...(group.states && Object.keys(group.states).length ? { states: Object.freeze({ ...group.states }) } : {}),
+  };
 }
 
 async function requireOperation(
@@ -1669,6 +1682,21 @@ export function compileEntityListDescriptor(
     matrixResolution && "matrix" in matrixResolution
       ? matrixResolution.matrix
       : undefined;
+  const aggregateResolution = descriptor.listPresentation?.aggregate
+    ? resolveListAggregate({
+        aggregate: descriptor.listPresentation.aggregate,
+        fields: ordered,
+        entityFields: descriptor.fields,
+        masked,
+        technical: technicalFieldKeys(descriptor),
+        exactCounts:
+          (configuredLimits?.countMode ?? descriptor.listPresentation.countMode) === "exact",
+      })
+    : undefined;
+  const aggregate =
+    aggregateResolution && "aggregate" in aggregateResolution
+      ? aggregateResolution.aggregate
+      : undefined;
   // Compare is a selection action, not a mode (Compare blueprint section 5.3).
   const compare = descriptor.listPresentation?.compare
     ? resolveListCompare({
@@ -1711,6 +1739,12 @@ export function compileEntityListDescriptor(
         matrixResolution && "unavailable" in matrixResolution
           ? matrixResolution.unavailable
           : matrix
+            ? undefined
+            : "LIST_MODE_UNSUPPORTED",
+      aggregate:
+        aggregateResolution && "unavailable" in aggregateResolution
+          ? aggregateResolution.unavailable
+          : aggregate
             ? undefined
             : "LIST_MODE_UNSUPPORTED",
     },
@@ -1767,6 +1801,7 @@ export function compileEntityListDescriptor(
     ...(gantt ? { gantt } : {}),
     ...(tree ? { tree } : {}),
     ...(matrix ? { matrix } : {}),
+    ...(aggregate ? { aggregate } : {}),
     ...(compare ? { compare } : {}),
     ...(cardContent ? { cardContent } : {}),
     minimumQueryLength,
@@ -1832,6 +1867,7 @@ export function compileEntityListDescriptor(
       ...(gantt ? { gantt } : {}),
       ...(tree ? { tree } : {}),
       ...(matrix ? { matrix } : {}),
+      ...(aggregate ? { aggregate } : {}),
       ...(compare ? { compare } : {}),
       ...(cardContent ? { cardContent } : {}),
       search: Object.freeze({

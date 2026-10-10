@@ -315,6 +315,7 @@ const query = {
     aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] },
     timeZone: { type: "string", minLength: 1, maxLength: 64 },
     groupsOnly: { type: "string", enum: ["true"] },
+    totals: { type: "string", enum: ["true"] },
     hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] },
     filter: {
       oneOf: [

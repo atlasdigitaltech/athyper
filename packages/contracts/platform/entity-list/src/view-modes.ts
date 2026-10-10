@@ -10,6 +10,7 @@ export const ENTITY_LIST_VIEW_MODES = Object.freeze([
   "gantt",
   "tree",
   "matrix",
+  "aggregate",
 ] as const);
 
 /** Modes that have a shared renderer and server projection today. Authoring

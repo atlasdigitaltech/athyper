@@ -192,6 +192,18 @@ export function decodeListLocationState(
       },
     });
   }
+  if (state.aggregate && (parameters.has("aggregate.rows") || parameters.has("aggregate.measures"))) {
+    const listed = (key: string, fallback: readonly string[]) => {
+      const raw = parameters.get(key);
+      return raw === null ? fallback : raw.split(",").filter(Boolean);
+    };
+    apply({
+      aggregate: {
+        rows: listed("aggregate.rows", state.aggregate.rows),
+        measures: listed("aggregate.measures", state.aggregate.measures),
+      },
+    });
+  }
   for (const [key, property] of [["matrix.rows", "matrixRowPage"], ["matrix.cols", "matrixColumnPage"]] as const)
     if (parameters.has(key)) apply({ [property]: Number(parameters.get(key)) });
   // An invalid comparison is dropped here; the runtime reports it.
@@ -286,6 +298,12 @@ export function encodeListLocationState(
     if (!equal(normalized.matrix.columns, base.matrix.columns))
       parameters.set("matrix.columns", normalized.matrix.columns.join(","));
   }
+  if (normalized.aggregate && base.aggregate) {
+    if (!equal(normalized.aggregate.rows, base.aggregate.rows))
+      parameters.set("aggregate.rows", normalized.aggregate.rows.join(","));
+    if (!equal(normalized.aggregate.measures, base.aggregate.measures))
+      parameters.set("aggregate.measures", normalized.aggregate.measures.join(","));
+  }
   if (normalized.matrixRowPage) parameters.set("matrix.rows", String(normalized.matrixRowPage));
   if (normalized.matrixColumnPage) parameters.set("matrix.cols", String(normalized.matrixColumnPage));
   if (normalized.compare) writeCompareLocation(parameters, normalized.compare);
@@ -330,6 +348,7 @@ export function toSaveableListState(
     ...(state.calendar ? { calendar: state.calendar } : {}),
     ...(state.gantt ? { gantt: state.gantt } : {}),
     ...(state.matrix ? { matrix: state.matrix } : {}),
+    ...(state.aggregate ? { aggregate: state.aggregate } : {}),
   });
 }
 

@@ -84,6 +84,9 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
   readonly group?: string;
   /** Groups only, no rows; valid only with `group` and exact counts. */
   readonly groupsOnly?: boolean;
+  /** A Summary request (Entity list Aggregate blueprint 5.4): also the total
+   * over every group, from base rows. Valid only with `groupsOnly`. */
+  readonly totals?: boolean;
   readonly hierarchy?: "nodes" | "orphans" | "matches";
   /** Per-group aggregates as `field:aggregate` (Tree blueprint A2). */
   readonly aggregates?: readonly string[];
@@ -104,6 +107,7 @@ export function entityListQuery(state: EntityListQueryState, descriptor: EntityL
     ...(state.columns.length ? { fields: Object.freeze([...state.columns]) } : {}),
     ...(state.group ? { group: state.group } : {}),
     ...(state.groupsOnly ? { groupsOnly: "true" } : {}),
+    ...(state.groupsOnly && state.totals ? { totals: "true" } : {}),
     ...(state.group && state.aggregates?.length ? { aggregate: Object.freeze([...state.aggregates]) } : {}),
     ...(state.group && state.timeZone ? { timeZone: state.timeZone } : {}),
     ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),

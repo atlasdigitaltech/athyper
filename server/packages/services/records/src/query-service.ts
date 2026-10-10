@@ -1,5 +1,6 @@
 import { lockedScope } from "./list-tree.js";
 import { resolveMatrixRank } from "./list-matrix-rank.js";
+import { admitAggregateRequest, applyAggregateRules } from "./list-aggregate.js";
 import { LIST_TREE_MATCHES_LIMIT } from "./tree-matches.js";
 import {
   withEntityEffectiveRead,
@@ -171,6 +172,9 @@ export function createRecordListExecutor<Transaction = unknown>(
         readableKeys,
         loadColumn: (code) => descriptorFor(options.metadata, query.context, code),
       });
+      // A Summary request is admitted against the published declaration
+      // (Entity list Aggregate blueprint 5.4), not the field-level aggregations.
+      const summary = admitAggregateRequest({ descriptor, query, readableKeys });
       const responseFields = responseProjection(
         descriptor,
         readableFields,
@@ -406,6 +410,7 @@ export function createRecordListExecutor<Transaction = unknown>(
                     }
                   : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
+                ...(summary ? { groupTotals: true } : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
                       hierarchy: {
@@ -503,7 +508,8 @@ export function createRecordListExecutor<Transaction = unknown>(
         }
       }
       const result = restrictResponseProjection(
-        repositoryResult,
+        // Withheld Summary values are removed here, before any response.
+        summary ? applyAggregateRules(repositoryResult, summary, query) : repositoryResult,
         descriptor,
         responseFields,
         enforced,
@@ -822,7 +828,13 @@ function validateQueryFields(
       throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "Group aggregates need a group and exact counts");
     for (const item of query.groupAggregates) {
       const field = fields.find((candidate) => candidate.key === item.field);
-      if (!field || !readable.has(item.field) || !["integer", "decimal", "money"].includes(field.type) || !(field.list?.aggregations ?? []).includes(item.aggregate))
+      // A Summary request's aggregates were admitted against its declaration
+      // (list-aggregate.ts); a distinct count needs no numeric field.
+      if (query.groupTotals && field && readable.has(item.field)) {
+        if (item.aggregate === "countDistinct") continue;
+      } else if (item.aggregate === "countDistinct")
+        throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "countDistinct belongs to a Summary request");
+      if (!field || !readable.has(item.field) || !["integer", "decimal", "money"].includes(field.type) || !(query.groupTotals || (field.list?.aggregations ?? []).includes(item.aggregate)))
         throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", `Aggregate is not published: ${item.field}:${item.aggregate}`);
       // A money total needs the row's currency, readable, so a group whose
       // rows span currencies can show no total rather than a meaningless one.
