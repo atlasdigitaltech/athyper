@@ -274,7 +274,14 @@ export async function startControlApi() {
       : {};
     const productLabelEnrollment = config.productCommands
       ? await createControlProductCommandRuntime({
-          ...nativeBootstrap,
+          ...(config.nativeBootstrapConfigurationFile
+            ? {
+                nativeBootstrapProposals:
+                  nativeBootstrap.nativeBootstrapProposals!,
+                nativeBootstrapResources:
+                  nativeBootstrap.nativeBootstrapResources!,
+              }
+            : {}),
           governanceDatabase: database,
           issuerDatabase: await commandConnection(
             config.productCommands.issuerDatabaseUrlFile,
@@ -344,6 +351,11 @@ export async function startControlApi() {
             : {}),
         })
       : undefined;
+    if (
+      config.nativeBootstrapConfigurationFile &&
+      !productLabelEnrollment?.referenceEnrollment?.nativeBootstrap
+    )
+      throw Error("CONTROL_NATIVE_BOOTSTRAP_RUNTIME_REQUIRED");
     const localPublicationConfiguration = loadPublicationWorkloadConfiguration(
       process.env,
       "local",
@@ -373,8 +385,8 @@ export async function startControlApi() {
                 },
               }
             : {}),
-          ...(nativeBootstrap.nativeSource
-            ? { nativeSource: nativeBootstrap.nativeSource }
+          ...(config.nativeBootstrapConfigurationFile
+            ? { nativeSource: nativeBootstrap.nativeSource! }
             : {}),
           database,
           audit,

@@ -167,11 +167,12 @@ it("production entrypoint constructs and passes native composition to the actual
       wired = Boolean(
         arg &&
         ts.isObjectLiteralExpression(arg) &&
-        arg.properties.some(
-          (p) =>
-            ts.isSpreadAssignment(p) &&
-            p.expression.getText(source) === "nativeBootstrap",
-        ),
+        arg
+          .getText(source)
+          .includes("nativeBootstrap.nativeBootstrapProposals") &&
+        arg
+          .getText(source)
+          .includes("nativeBootstrap.nativeBootstrapResources"),
       );
     }
     if (
