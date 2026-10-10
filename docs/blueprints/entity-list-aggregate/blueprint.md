@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 7 (10 October 2026).
+**Status:** approved, revision 8 (10 October 2026).
+- **Decision 15 amended, A5 approved as amended (10 October 2026).** After audit round 10, the owner approved the contract with decision 15 in its separated form, in these words: "Approved". The category axis of a categorical dimension mirrors with the document direction. A time axis stays earliest on the left in every locale. Labels are localized and bidi-correct either way (13.3). Revision 8 also links each unavailable-type reason to its message (13.3) and states A6's inherited authorization constraint (section 17).
 - **A5 contract approved (10 October 2026).** The owner approved section 14 decisions 9–15 in these words: "Decisions (section 14, 9–15): Approved". Section 13 is the approved A5 contract. No build instruction for A5 is recorded yet; when one is given, A5.1 (chart colour tokens) comes first (13.8).
 - **Delivery (10 October 2026): A2 built, on synthetic fixtures, before A3.** Section 5.9 records the build, including the measured response size and statement time A2's acceptance asks for. A3 remains the gate before any real Entity publishes a pivot. Still not verified: a real Entity, and the server's real responses in a browser.
 - **Revision 6 (10 October 2026): A5 contract proposed.** Section 13 now holds the A5 contract for review: a reusable chart in three layers, and Summary's use of it. Decisions 9–15 in section 14 ask for approval. Nothing in section 13 is approved or built. The 5.9 build record now names the test that refutes the rejected source restriction.
@@ -605,7 +606,20 @@ export type ChartPointV1 =
 />
 ```
 
-- **Type availability** comes from one exported function, `chartTypes(data)`, which returns each type as available or unavailable with a reason code. The consumer's type picker shows unavailable types disabled with their reason, the same pattern as the list's unavailable modes.
+- **Type availability** comes from one exported function, `chartTypes(data)`, which returns each type as available or unavailable with a reason code. The consumer's type picker shows unavailable types disabled with their reason, the same pattern as the list's unavailable modes. The codes and their messages are published here, not invented in the build:
+
+  | Code | Message (English; `chart.unavailable.*`, three locales) |
+  | --- | --- |
+  | `CHART_NO_VALUES` | "There are no values to chart." |
+  | `CHART_UNORDERED` | "A line needs a sequence, such as dates or periods." |
+  | `CHART_SERIES_COUNT` | "Choose between 2 and 8 columns to compare." |
+  | `CHART_NOT_PART_OF_WHOLE` | "These values aren't parts of one total." This covers averages, minimums, maximums, distinct counts, balances and mixed currencies |
+  | `CHART_NEGATIVE` | "A pie can't show negative values." |
+  | `CHART_WITHHELD` | "Some values are withheld, so shares can't be shown." |
+  | `CHART_TOO_MANY_SLICES` | "Too many values for a pie; choose a column chart." |
+  | `CHART_TRUNCATED` | "Only the first values are shown, so shares can't be shown." |
+
+  A point's own state (`notSummable`, `suppressed`, `mixedCurrency`, `unknownCurrency`) keeps the Summary's existing messages, passed through `stateLabel`. The chart codes say why a chart *type* is unavailable, and never restate why a *value* is withheld.
 
   | Type | Available when | Otherwise |
   | --- | --- | --- |
@@ -619,7 +633,12 @@ export type ChartPointV1 =
 - **Axes.**
   - A value axis for column, bar and line starts at zero, so a bar's length is its value.
   - Ticks are "nice" round values computed from the given points.
-  - The category axis follows the document direction: in right-to-left locales, columns run from the right (decision 15).
+  - **Direction (decision 15, as amended):**
+    - The chart's chrome mirrors with the document direction: plot origin, value-axis side and label padding, legend position, tooltip anchoring.
+    - A categorical axis mirrors too: in a right-to-left locale the first category is on the right.
+    - A **time axis** (`categoryAxis.ordered`) runs earliest on the left in every locale. A time axis's direction is a physical convention cued by its label, not reading order.
+    - Labels are localized and bidi-correct either way.
+    - The chart's data table follows the document direction, as the Summary grid does.
 - **Withheld points.** A point that is not a value is not drawn, and is not a zero. The chart lists each one under it in the consumer's words, for example "Cash: Closing net total, not summed across Fiscal period".
 - **Truncation.** When `truncated` is set, a notice under the chart says the chart shows the first categories or series, and nothing implies completeness. A pie is unavailable unless an exact `rest` is given.
 - **Legend.** It is shown for multiple series and for pies. Long labels end in an ellipsis; the full label is in the tooltip and the data table. There is no "legend length" setting.
@@ -659,6 +678,7 @@ export type ChartPointV1 =
 - **Drill-down.** Selecting a point opens Table with the row's filters (and the column's, for a column series), exactly as the grid's cell does.
 - **Withheld values** use the Summary's own messages (`list.aggregate.notSummable`, `.suppressed`, `list.group.mixedCurrencies`), passed through `stateLabel`.
 - **Narrow screens** draw the chart at full width, with bar instead of column when categories exceed what fits, and the legend below.
+- **Right to left.** The Summary spec asserts decision 15 as amended: in Arabic, a categorical column chart's first category is on the right, and a month-bucket line's earliest month is on the left. That rule silently inverts if someone later "fixes RTL" by flipping a container.
 
 ### 13.7 Other consumers (not in A5)
 
@@ -708,7 +728,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 12. **Top / Bottom N as its own phase, A6, after A5.** It is a server capability that orders groups by a measure across every group the viewer can read. Matrix's deferred "Lowest on n items" needs the same capability, so it is designed once for both (section 17). Until then, a chart shows the first groups by key, says so, and offers no "top N".
 13. **Chart colour tokens as A5's first step,** validated in the theme's tests (13.4).
 14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
-15. **Right-to-left charts follow the document direction,** for categorical and time axes alike. The alternative is keeping time axes left to right in every locale.
+15. **Right to left, separated (amended and approved, revision 8):** the chart's chrome and a categorical axis mirror with the document direction; a time axis stays earliest on the left in every locale; labels are localized and bidi-correct in both (13.3). As first written, it mirrored time axes too.
 
 ## 15. Studio authoring and registration inventory
 
@@ -746,7 +766,7 @@ Foundation section 9's policy gates run before each commit.
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated`. Built before A3 by the owner's approval (status block), with three conditions: a real-PostgreSQL test of its own SQL path; acceptance that measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS` and the statement's cost; and A3 kept as the gate before any real Entity publishes a pivot | A1. A3 gates publication on a real Entity, not the build |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
 | **A5** | The reusable chart and Summary's use of it, in three steps: chart colour tokens, the chart contract and component, Summary adoption with the published choice order (section 13.8) | A2; section 14 decisions 9–15 approved |
-| **A6** | Top / Bottom N: a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. Matrix's deferred "Lowest on n items" uses the same capability | A5; its own approval, acceptance criteria and real-PostgreSQL test |
+| **A6** | Top / Bottom N: a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. Matrix's deferred "Lowest on n items" uses the same capability. **It inherits the aggregate's authorization constraint:** on an Entity whose record authorization is not SQL-covered, it runs on the authorized-aggregate path, with its 2,000-record capacity refusal. Its acceptance states which path each adopting Entity takes | A5; its own approval, acceptance criteria and real-PostgreSQL test |
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
 
@@ -836,3 +856,6 @@ The status block distinguishes what is built, published and verified at runtime.
 | Author, on audit round 9 | No chart colour tokens exist; exact text for display but numbers for geometry; Top / Bottom N shares a capability with Matrix's "Lowest on n items"; Summary rows should follow the published choice order; a new package needs its ownership row | Decisions 13 and 14; 13.1–13.3; A6; 13.8 (A5.2) |
 | Author | The experience surfaces' `chart` block (`number[]`, rendered as text) is an existing would-be consumer | Recorded (13.1, 13.7); not changed in A5 |
 | Owner (10 October 2026) | "Decisions (section 14, 9–15): Approved" | Status block; section 13 approved |
+| Audit round 10 | Decision 15: separate the axis from the content, mirroring chrome and categorical axes but keeping time axes earliest on the left; the spec should assert it | Approved by the owner ("Approved"); 13.3, 13.6, decision 15 |
+| Audit round 10 | List the unavailable-type reason codes in the blueprint, not only in code | The codes were already in the 13.3 availability table; revision 8 adds their messages and separates them from value states |
+| Audit round 10 | A6 inherits the aggregate's authorization constraint and 2,000-record capacity | Recorded in A6's row (section 17) |
