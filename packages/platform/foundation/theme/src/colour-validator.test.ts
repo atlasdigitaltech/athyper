@@ -124,11 +124,12 @@ test("a pale fill takes dark label ink, or puts its label outside", () => {
 });
 
 test("the relief rule: a pale series fill is relieved, a pale tone is not, and the grid keeps its reference", () => {
-  // Amber at 2.2:1 as a sequence colour: allowed, reported as relieved.
-  const pale = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 3 ? "#eda100" : colour)), neutral: "#b0b0b0" });
+  // Amber at 2.2:1 as a sequence colour (in place of the coral, so every
+  // pair stays distinct): allowed, reported as relieved.
+  const pale = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 1 ? "#eda100" : colour)), neutral: "#b0b0b0" });
   assert.equal(pale.pass, true);
-  assert.deepEqual(pale.relieved, ["sequence 4", "neutral"]);
-  const amber = pale.fills.find((fill) => fill.element === "sequence 4")!;
+  assert.deepEqual(pale.relieved, ["sequence 2", "neutral"]);
+  const amber = pale.fills.find((fill) => fill.element === "sequence 2")!;
   assert.equal(amber.role, "series");
   assert.ok(amber.relieved && amber.contrast < 3);
   // Its marks need direct labels; dark ink reaches 4.5:1 on it, so they sit inside.
@@ -159,4 +160,17 @@ test("decision 21: a status tone stands apart from every sequence colour under e
   // A colour distinct for normal vision but lost under deuteranopia is caught too.
   const lost = validateChartColours({ ...passing, tones: { ...passing.tones, danger: "#b42318" }, sequence: passing.sequence.map((colour, index) => (index === 3 ? "#3d7a00" : colour)) });
   assert.ok(lost.findings.some((item) => item.code === "CHART_TONE_DISTANCE" && item.vision !== "normal"));
+});
+
+test("decision 23: every pair of sequence colours is distinct, not only neighbours", () => {
+  // Eight alternating dark and light reds pass a neighbours-only rule, but
+  // positions 1 and 3 are nearly the same colour.
+  const reds = validateChartColours({ ...passing, sequence: ["#5c2323", "#cd7a7a", "#691616", "#df7368", "#5c2923", "#f4662a", "#691f16", "#c1855c"] });
+  assert.ok(reds.findings.some((item) => item.code === "CHART_NEIGHBOUR_DISTANCE" && item.element === "sequence 1 and 3" && item.vision === "normal"));
+  // Okabe-Ito's colours pass every pair (its contrast and tones aside).
+  const okabeIto = ["#0072b2", "#e69f00", "#009e73", "#cc79a7", "#56b4e9", "#d55e00", "#f0e442", "#000000"];
+  const report = validateChartColours({ ...passing, sequence: okabeIto });
+  assert.ok(!report.findings.some((item) => item.code === "CHART_NEIGHBOUR_DISTANCE"));
+  assert.equal(report.closestPairs.tritanopia.element, "sequence 2 and 4");
+  assert.equal(report.closestPairs.normal.distance.toFixed(1), "21.7");
 });

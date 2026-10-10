@@ -135,9 +135,10 @@ export const CHART_COLOUR_CRITERIA = Object.freeze({
   axisContrast: 3,
   /** Label text drawn on a fill (WCAG 1.4.3). */
   labelContrast: 4.5,
-  /** Neighbouring series, normal colour vision. */
+  /** Every pair of sequence colours, normal colour vision (decision 23:
+   * colours are keyed, so any two can be drawn side by side). */
   neighbourDistance: 15,
-  /** Neighbouring series, under each simulated deficiency. */
+  /** Every pair of sequence colours, under each simulated deficiency. */
   neighbourDistanceDeficient: 10,
   /** The floor under relief: a relieved series fill still reaches this, so
    * its marks are visible at all (decision 22). */
@@ -204,8 +205,8 @@ export interface ChartColourReport {
   readonly fills: readonly ChartFillReport[];
   /** Series fills under 3:1 that the relief rule allows (see `relieved`). */
   readonly relieved: readonly string[];
-  /** The smallest neighbour distance found, per vision. */
-  readonly closestNeighbours: Readonly<Record<ColourVision, { readonly element: string; readonly distance: number }>>;
+  /** The closest pair of sequence colours, per vision (decision 23). */
+  readonly closestPairs: Readonly<Record<ColourVision, { readonly element: string; readonly distance: number }>>;
   readonly axisContrast: number;
   readonly gridContrast: number;
 }
@@ -245,12 +246,15 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
   const closest = {} as Record<ColourVision, { element: string; distance: number }>;
   for (const vision of COLOUR_VISIONS) {
     const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
-    for (let index = 0; index + 1 < set.sequence.length; index += 1) {
-      const element = `sequence ${index + 1} and ${index + 2}`;
-      const distance = colourDistance(set.sequence[index]!, set.sequence[index + 1]!, vision);
-      if (!closest[vision] || distance < closest[vision].distance) closest[vision] = { element, distance };
-      if (distance < required) findings.push({ code: "CHART_NEIGHBOUR_DISTANCE", element, vision, measured: distance, required });
-    }
+    // Every pair, not only palette neighbours: colours are assigned by key
+    // (decision 19), so any two can be drawn side by side (decision 23).
+    for (let first = 0; first < set.sequence.length; first += 1)
+      for (let second = first + 1; second < set.sequence.length; second += 1) {
+        const element = `sequence ${first + 1} and ${second + 1}`;
+        const distance = colourDistance(set.sequence[first]!, set.sequence[second]!, vision);
+        if (!closest[vision] || distance < closest[vision].distance) closest[vision] = { element, distance };
+        if (distance < required) findings.push({ code: "CHART_NEIGHBOUR_DISTANCE", element, vision, measured: distance, required });
+      }
   }
   // Status tones stand apart from every sequence colour under every vision,
   // so a toned category never looks like an arbitrary one (decision 21).
@@ -275,7 +279,7 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
     findings: Object.freeze(findings),
     fills: Object.freeze(fills),
     relieved: Object.freeze(fills.filter((fill) => fill.relieved).map((fill) => fill.element)),
-    closestNeighbours: Object.freeze(closest),
+    closestPairs: Object.freeze(closest),
     axisContrast,
     gridContrast,
   });

@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built, with decisions 21 and 22; revision 7 (10 October 2026).
+**Status:** approved; A5.1a built through decision 23; revision 8 (10 October 2026).
+- **Decision 23 approved and built (10 October 2026):** "Decision 23: approved". Every pair of sequence colours is checked, not only palette neighbours (13.4a.9). Decisions 24–27 are proposed for A5.1b.
 - **Decisions 20–22 approved (10 October 2026)** in the owner's words "Three proposals - Approved":
   - 21 (tones against series colours) and 22 (the 2:1 floor under relief) are built into the validator;
   - 20 (the runtime check of drawn pairs) belongs to the A5.2 component.
@@ -354,7 +355,51 @@ A search also found 8-colour sets at 3:1 on white that pass all pairs and clear 
 
 **Proposed, not approved:**
 
-23. **Every pair of sequence colours is distinct, not only neighbours,** at the same thresholds (15 normal, 10 under each deficiency). It is the palette-time form of decision 20's guarantee, and Okabe-Ito shows it is attainable. Decision 20's runtime check stays as the guard for adapters. Until 23 is approved, the validator keeps the approved neighbour rule.
+23. **Every pair of sequence colours is distinct, not only neighbours,** at the same thresholds (15 normal, 10 under each deficiency). It is the palette-time form of decision 20's guarantee, and Okabe-Ito shows it is attainable. Decision 20's runtime check stays as the guard for the pairs a particular chart draws. **Approved and built** (13.4a.9).
+
+#### 13.4a.9 Decision 23 built, a worked example, and what A5.1b inherits
+
+**Built:**
+- `CHART_NEIGHBOUR_DISTANCE` now covers all 28 pairs. A finding names both positions, for example "sequence 1 and 3".
+- The report's `closestPairs` gives the closest pair per vision.
+- A new test: eight alternating reds fail on positions 1 and 3, and Okabe-Ito's colours pass every pair (closest 21.7 normal; tritanopia's closest pair is 2 and 4). 11 tests pass.
+- The relief test now relieves position 2. A pale amber at position 4 sat too close to the fixture's coral once every pair counted, which is the rule working.
+
+**The deficiency bounds now bind.** The rule does not tighten normal vision; it extends the colour-blind bounds to every pair, where hue-only differences collapse. Okabe-Ito's closest pairs show the margins: 6.7 to spare for normal vision, 0.9 under tritanopia. A5.1b is choosing against the colour-blind floors.
+
+**A worked example that passes everything** (the test fixture; light surface `#ffffff`; the theme's own light tones; found by search). It is evidence that the criteria can be met together, not the proposed palette:
+
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Colour | `#4d1a1a` | `#cc8066` | `#a18a17` | `#1a4d3b` | `#008f83` | `#0070e0` | `#002a66` | `#0038e0` |
+| Contrast on white | 14.21 | 3.07 | 3.41 | 9.68 | 3.99 | 4.78 | 13.79 | 7.95 |
+
+Its closest pairs:
+- normal vision: 17.1 (7 and 8);
+- protanopia: 11.5 (1 and 4);
+- deuteranopia: 10.0 (2 and 3);
+- tritanopia: 10.3 (5 and 6).
+
+No colour is relieved, and every colour clears every tone. Two blues at 6 and 8, and a narrow 10.0 under deuteranopia, show how tight the search is. A5.1b should look for something wider and more even.
+
+**A correction to audit round 14:** Okabe-Ito has **three** colours below 3:1 on white (orange 2.25, sky 2.31, yellow 1.32), not five. Its point stands: part of Okabe-Ito's separation comes from colours a light chart cannot use at 3:1.
+
+**Proposed for A5.1b (not approved):**
+
+24. **The neutral tone does two jobs; separate them.** Audit round 14 proposed excluding the neutral tone from decision 21, since it is deliberately unobtrusive. Measured, the collision it predicted is real: the theme's neutral tone (`#5b6578`) and a typical "Others" grey (`#6b6b75`) are only **6.0** apart for normal vision. A pie of statuses with a neutral status and an "Others" slice would show two indistinguishable greys. Recommended:
+    - exclude the neutral tone from decision 21, as the audit proposes;
+    - add a check that the neutral tone and `--a-chart-neutral` ("Others") are distinct at 15/10, so "Others" takes a clearly lighter grey. As a series colour, relief applies to it.
+25. **Status against status.** Measured on the theme's real tokens, the three meaningful tones are not all distinct:
+    - in light mode (both families), warning and danger are 10.8 apart for normal vision and **4.7 under deuteranopia**;
+    - in dark mode, success and danger are 8.2 under deuteranopia;
+    - high contrast passes.
+
+    The tones are the design system's, used across the product, where badges also carry text. Recommended: the validator reports tone pairs below 15/10 (`CHART_TONE_PAIR_DISTANCE`, informational). A chart showing two such tones together direct-labels those marks, as relief does, so meaning never rests on hue alone. Re-choosing the status tokens themselves is a design-system decision for the owner, outside A5.
+26. **Accepted sets are locked in the theme's tests.** Once a set passes, its values are asserted in a test as the accepted set for that family and mode, so a later edit cannot quietly break it. This is the ratchet discipline of the design-system gate.
+27. **Default palettes do not use relief, and high contrast is its own set:**
+    - The six default sets aim for eight colours at 3:1. Relief stays a safety valve for later custom sets or consumers that need a specific pale fill, not a budget for the defaults.
+    - High-contrast sets are recorded separately rather than derived. They may hold fewer colours (recommended 5), so they clear the all-pairs bounds with room to spare.
+    - Under high contrast the chart then caps its series at that count, and `CHART_SERIES_COUNT` gives the reason. That cap is the honest price, and it affects A5.2.
 
 ### 13.5 "Others"
 
@@ -434,3 +479,9 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Author | Relief has no lower bound | Proposed as decision 22 (13.4a.7) |
 | Owner (10 October 2026) | "Three proposals - Approved" (decisions 20–22) | 21 and 22 built; 20 is A5.2's (13.4a.8) |
 | Author, building 21 | The neighbour rule checks positions while colours are keyed; a degenerate palette passes | Measured and proposed as decision 23 (13.4a.8) |
+| Owner (10 October 2026) | "Decision 23: approved" | Built (13.4a.9) |
+| Audit round 14 | Exclude the neutral tone from decision 21 | Measured: the neutral tone and "Others" grey are 6.0 apart. Proposed as decision 24, with a neutral-vs-Others check |
+| Audit round 14 | Add a status-against-status check | Measured: the theme's warning and danger are 4.7 apart under deuteranopia (light). Proposed as decision 25 (informational, plus direct labels) |
+| Audit round 14 | Lock accepted sets; no relief in the defaults; separate high-contrast sets with fewer colours | Proposed as decisions 26 and 27 |
+| Audit round 14 | Record the found set | Recorded as the worked example (13.4a.9) |
+| Audit round 14 | "Okabe-Ito has five colours below 3:1" | Corrected: three (13.4a.9) |
