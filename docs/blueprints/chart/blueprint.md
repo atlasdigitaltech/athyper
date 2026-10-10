@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved, not built; revision 2 (10 October 2026).
+**Status:** approved, not built; revision 3 (10 October 2026).
+- **Revision 3 proposes amendments to 13.4 (colour)** after audit round 12: section 13.4a, decisions 16–19. Approved 13.4 text is not edited. 13.4a says which of its lines it would replace. Until the owner approves 13.4a, A5.1 is not buildable as specified, because its validator does not exist (13.4a.1).
 - **Revision 2** (audit round 11, section "Review disposition"):
   - closes the data-shape gap for the experience surfaces' `chart` block (Consumers);
   - folds 13.7 into the Consumers table, so there is one list of consumers;
@@ -176,6 +177,77 @@ export type ChartPointV1 =
 - **Colour supports, never carries, meaning.** Series also differ by legend order and label, and in a stacked column by position; a withheld point is text.
 - **The gates** (`policy:design-system`, `policy:style-tokens:strict`) stay clean: the component uses only tokens.
 
+### 13.4a Colour: amendments to 13.4 (proposed, revision 3; decisions 16–19)
+
+**Why.** Approved 13.4 names "the dataviz skill's validator" as the check that runs in the theme's tests. Neither exists in the repository:
+- the theme package has no test script and no tests;
+- no code computes contrast, luminance or colour-vision separation;
+- the dataviz skill is an authoring aid available to the assistant, not a repository test.
+
+A palette checked by nothing ships on judgement. This amendment makes the check a deliverable and settles how colours are chosen in both Atlas families.
+
+#### 13.4a.1 The validator comes first (replaces 13.4's sentence naming the dataviz validator)
+
+- **A5.1 splits in two:**
+  - **A5.1a**, a colour validator module;
+  - **A5.1b**, the token sets, which must pass it.
+- **Where it lives.** The validator lives in the design system's theme package (`@athyper/platform-theme`), not the chart package, because it outlives charts. The theme package gains a test script, and the validator runs over every token set.
+- **What it does.** It is a pure module with deterministic inputs:
+  - WCAG relative luminance and contrast ratio;
+  - simulated protanopia, deuteranopia and tritanopia;
+  - a perceptual distance (CIEDE2000). Its threshold is fixed in the module, and recorded in this document at the build with the reason for its value.
+- **The criteria, per element class** (one ratio for everything would let grid lines pass at a contrast that dominates the data):
+
+  | Element | Criterion |
+  | --- | --- |
+  | Each series fill, the single-series colour and the tone colours | At least 3:1 against the plot background |
+  | Neighbouring series | Distinguishable from each other under each simulated deficiency, at the module's perceptual distance |
+  | Axis lines | At least 3:1 against the background |
+  | Grid lines | Lower contrast than every series fill, so the data dominates (an upper bound, not a minimum) |
+  | Label text drawn on a fill | At least 4.5:1. Where a fill cannot carry a label, the label is drawn outside it |
+
+- **Scope.** All six sets (Atlas Modern and Atlas Mono, each light, dark and high contrast) must pass. Forced colours uses system colours and is exempt, which is why direct labels are mandatory there (13.4a.4).
+
+#### 13.4a.2 One colour role per job, as tokens (refines 13.4's token list)
+
+| Token | Atlas Modern | Atlas Mono |
+| --- | --- | --- |
+| `--a-chart-single` (one series) | from the brand token | the family's ink (near black in light, near white in dark) |
+| `--a-chart-1` … `--a-chart-8` (several series) | validated categorical hues | validated categorical hues, **not greys** (decision 16) |
+| `--a-chart-neutral` ("Others") | neutral grey | neutral grey |
+| `--a-chart-grid`, `--a-chart-axis` | greys within 13.4a.1 | greys within 13.4a.1 |
+| Tones: neutral, success, warning, danger | the existing status tokens | the existing status tokens, already in colour in Mono |
+
+- The values are hexes inside the six token sets.
+- A mode or family switch is a token override, never a component branch.
+- Dark mode is tuned on its own values, not inverted.
+- High contrast uses fewer, more widely separated hues with heavier strokes.
+
+#### 13.4a.3 Which colour a series or category gets (replaces 13.4's silence on assignment)
+
+- **The three sources of colour.** Colour reaches a chart from exactly three sources: the theme's sequence, the brand token for a single series, and published metadata for meaning. It never comes from a user or tenant preference (decision 18).
+- **Colour by meaning (decision 17).** A category or series that is a value of a field publishing `statusTones` takes its tone colour, decided by the resolver every other surface uses (`resolveEntityStatusTone`, `contract-platform-entity-runtime`). Badges, Board lanes, comparison chips and charts therefore cannot disagree.
+  - **One correction to how it is used:** the resolver returns `"neutral"` both for a declared neutral tone and for a value with no tone. The adapter therefore first checks that the field's `statusTones` has the value as its own key. A value with no tone keeps its sequence colour; only a declared tone uses a tone colour.
+  - A tone belongs to the field that declares it. Another field with a choice of the same name is not toned.
+- **Carrying the tone to the component.** The chart-data format stays shape-only, with no tone field in `ChartDataV1`. The component gains one optional prop, `toneOf(key) => "neutral" | "success" | "warning" | "danger" | undefined`, defined in the chart contract with the same four tones and no Entity import. Summary's adapter implements it from the resolver. This amends 13.3's prop list (decision 17); a tone field in the data format was the alternative, with its field-and-value provenance.
+- **Stable sequence colours (decision 19).** A series or category is coloured by its **key**, never by its position in the array, so filtering one away does not recolour the rest.
+  - **Where a fixed reference list exists**, the key keeps one colour for good. A choice or boolean value takes the colour of its position in the field's published choice order (wrapping after 8).
+  - **Where none exists** (a reference or a date bucket), colours follow the key's position among the keys the producer gives, in the producer's order. They stay the same as long as that set of keys stays the same; filtering can recolour, and the legend says which is which. A hash of the key was rejected: with 8 colours, two keys in one chart would collide.
+- **Drawing order** stays the producer's order in every case. Colour and order are separate properties.
+
+#### 13.4a.4 Direct labels everywhere (extends 13.3)
+
+- Data points carry direct labels wherever they fit: a value or share on or beside the mark, and series names at line ends.
+- This is what makes a chart readable without colour, so it is the strongest help for colour-blind readers in every mode.
+- It is mandatory under forced colours, where the chart's hues are replaced by system colours.
+- The legend remains, and colour is never the only cue.
+
+#### 13.4a.5 Atlas Mono
+
+- **Decision 16** gives Mono chromatic chart series: data joins status as the second place Mono keeps colour, because a series told apart by colour carries meaning, and greys stop being distinguishable after three or four series.
+- **The rule's source is amended with it.** At the A5.1b build, `atlas-mono.ts`'s comment changes from "chroma reserved for status colors" to "chroma reserved for status colours and validated chart series". The constraint and its exception then live in one file, and this document cites it.
+- **The alternative, rejected but reasonable:** keep Mono absolutely greyscale by limiting its charts to one series (in ink) and pointing to the data table for more. It was rejected because it removes grouped and stacked charts from one theme only. The same link would then show a different chart, or none, depending on the viewer's theme.
+
 ### 13.5 "Others"
 
 - `rest` is exact only for a count, or a sum of an additive field in one unit: the server's total minus the given points, by exact decimal subtraction.
@@ -205,6 +277,13 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 13. **Chart colour tokens as A5's first step,** validated in the theme's tests (13.4).
 15. **Right to left, separated (amended and approved, revision 8):** the chart's chrome and a categorical axis mirror with the document direction; a time axis stays earliest on the left in every locale; labels are localized and bidi-correct in both (13.3). As first written, it mirrored time axes too.
 
+## Decisions proposed in revision 3 (13.4a; for the owner)
+
+16. **Atlas Mono gets validated chromatic chart series,** amending `atlas-mono.ts`'s rule at the build. The rejected alternative is greyscale with one series.
+17. **Colour by meaning** comes from each field's published `statusTones`, through `resolveEntityStatusTone` plus an own-key check. It reaches the component through an optional `toneOf` prop, with no field in `ChartDataV1`. This amends 13.3's prop list.
+18. **The three sources of colour:** the theme's sequence, the brand token for a single series, and metadata for meaning. No palette preference and no free colour picking, for users or tenants.
+19. **The validator first,** in the theme package with a test script: A5.1a, then the token sets in A5.1b, against the per-element criteria in 13.4a.1. Colours are keyed, not positional, as 13.4a.3 states.
+
 ## Rejected options (moved from Aggregate section 18)
 
 | Option | Why not |
@@ -231,3 +310,8 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 11 | 13.7 duplicates the Consumers table | 13.7 folded into the table, keeping only what the table does not carry |
 | Owner (10 October 2026) | "approved which covers the moved text" | Status block: the Aggregate A5 approval covers this document's moved sections |
 | Audit round 11 | A dashboard block's declared visualization must be a request, not an instruction | Recorded in the dashboard row: `chartTypes(data)` decides and an unavailable type shows its reason |
+| Audit round 12 | The validator named in 13.4 does not exist; the theme package has no tests | Confirmed. 13.4a.1 makes it A5.1a in the theme package, before any colour; decision 19 |
+| Audit round 12 | Positional colours reshuffle when a series is filtered away | Confirmed, and refined: keying by key is stable for good only where a fixed reference list exists (published choice order). Otherwise colours follow the given keys' order, and a hash was rejected for collisions (13.4a.3) |
+| Audit round 12 | Colour by meaning needs no change to the approved data format: reuse `resolveEntityStatusTone` | Adopted for the decision: the resolver decides. Corrected in two places: the resolver cannot tell "no tone" from "neutral", so an own-key check precedes it; and the tone still has to reach the component, so an optional `toneOf` prop amends 13.3 (decision 17) |
+| Audit round 12 | Amend Mono's source comment, and record the greyscale alternative | 13.4a.5; decision 16 |
+| Audit round 12 | Tokens, not raw hexes, in the deliverable; scope the 3:1 criterion per element; direct labels as a rule, not a fallback | 13.4a.2, 13.4a.1, 13.4a.4 |
