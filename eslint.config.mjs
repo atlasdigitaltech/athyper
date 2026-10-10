@@ -71,6 +71,8 @@ export default tseslint.config(
       "packages/contracts/platform/entity-runtime/**/*.{ts,tsx}",
       "packages/platform/entity/**/*.{ts,tsx}",
     ],
+    // The same source files as the block above, where the plugin is registered.
+    ignores: ["**/*.d.ts", "**/__tests__/**", "**/*.test.{ts,tsx}", "**/*.config.ts", "**/scripts/**"],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
     },
