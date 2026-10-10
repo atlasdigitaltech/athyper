@@ -1,3 +1,4 @@
+import { localSuccessorPin } from "./local-successor-pin.js";
 import {
   assertLocalPublicationRequest,
   type LocalPublicationRequest,
@@ -355,9 +356,14 @@ export function createCompiledRuntimePublication(options: {
           recoveryEvidence = recovery.evidence;
         } else if (successor && !humanTargets)
           assertPublicationCompilerIdentity(successor.compiler);
-        const expectedPredecessor =
-          localRequest?.inputs.targets.find((t) => t.plane === plane)
-            ?.predecessor ?? successor?.targets.find((t) => t.plane === plane);
+        const expectedPredecessor = localRequest
+          ? localSuccessorPin(
+              localRequest,
+              plane,
+              row.release_key,
+              Number(row.release_no),
+            )
+          : successor?.targets.find((t) => t.plane === plane);
         if (
           successor &&
           (!expectedPredecessor ||
