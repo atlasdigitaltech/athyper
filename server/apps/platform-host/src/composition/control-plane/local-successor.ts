@@ -89,7 +89,7 @@ async function predecessor(
     JOIN publication.entity_release_link l ON l.entity_release_id=er.id
     JOIN publication.release pr ON pr.id=l.publication_release_id AND pr.tenant_id=${tenantId}::uuid
     WHERE er.entity_id=${entityId}::uuid AND er.tenant_id IS NULL AND pr.status IN ('approved','published')
-    ORDER BY er.release_no DESC,pr.release_no DESC LIMIT 2`.execute(tx);
+    ORDER BY er.release_no DESC,pr.release_no DESC LIMIT 1`.execute(tx);
   if (rows.rows.length !== 1) {
     throw new HttpError(
       409,
