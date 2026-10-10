@@ -96,6 +96,7 @@ export function FieldCataloguePicker({
   readonly checkboxLabel: (field: ListFieldDescriptorV1) => string;
   readonly limitReached?: boolean;
 }) {
+  const intl = useEntityI18n();
   const [search, setSearch] = useState(""),
     [systemOpen, setSystemOpen] = useState(false),
     searchId = useId(),
@@ -146,7 +147,7 @@ export function FieldCataloguePicker({
       <div className="a-entity-list__field-catalogue-heading">
         <h3 id={`${searchId}-heading`}>{heading}</h3>
         <Button variant="ghost" size="small" onClick={onClose}>
-          Close
+          {intl.message("list.chrome.close")}
         </Button>
       </div>
       <FieldSearchInput
@@ -191,16 +192,15 @@ export function FieldCataloguePicker({
       </div>
       {matching.length > shown.length ? (
         <p className="a-entity-list__field-catalogue-hint">
-          Showing the first {shown.length} of {matching.length} fields. Refine
-          your search to find another field.
+          {intl.message("list.chrome.fieldsShowingFirst", { shown: shown.length, total: matching.length })}
         </p>
       ) : null}
       {!matching.length ? (
         <div className="a-entity-list__field-catalogue-empty">
-          <p>No matching fields.</p>
+          <p>{intl.message("list.chrome.noMatchingFields")}</p>
           {search ? (
             <Button variant="ghost" size="small" onClick={() => setSearch("")}>
-              Clear search
+              {intl.message("list.chrome.clearSearch")}
             </Button>
           ) : null}
         </div>

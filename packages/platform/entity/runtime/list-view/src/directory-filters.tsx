@@ -6,6 +6,7 @@ import {
   ScopePickerToolbar,
   type CompanyChoice,
 } from "@athyper/platform-ui";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 export type DirectorySelection = Readonly<
   Record<string, string | readonly string[] | undefined> & {
     operatingOrganizationIds?: readonly string[];
@@ -46,6 +47,7 @@ export function DirectoryFilterEditor({
   onChange: (value: DirectorySelection) => void;
   kinds: readonly string[];
 }) {
+  const intl = useEntityI18n();
   const [query, setQuery] = useState("");
   const companyIds = value.companyCodeIds ?? [],
     organizationIds = value.operatingOrganizationIds ?? [];
@@ -57,7 +59,7 @@ export function DirectoryFilterEditor({
   return (
     <>
       {adapter.unavailable ? (
-        <p role="alert">Access is unavailable. Reload the page to retry.</p>
+        <p role="alert">{intl.message("list.chrome.accessUnavailable")}</p>
       ) : null}
       <div className="a-directory-filter a-directory-filter--single">
         {kinds.includes("organization") ? (
@@ -66,8 +68,8 @@ export function DirectoryFilterEditor({
               showControls={false}
               query={query}
               onQueryChange={setQuery}
-              searchLabel="Search organizations"
-              allLabel="All permitted organizations"
+              searchLabel={intl.message("list.chrome.searchOrganizations")}
+              allLabel={intl.message("list.chrome.allOrganizations")}
               allSelected={!organizationIds.length}
               onAll={() => onChange({ ...value, operatingOrganizationIds: [] })}
               selectedCount={organizationIds.length}
@@ -107,7 +109,7 @@ export function DirectoryFilterEditor({
               ))}
             </div>
             {!organizations.length ? (
-              <p role="status">No permitted organizations match your search.</p>
+              <p role="status">{intl.message("list.chrome.noOrganizations")}</p>
             ) : null}
           </div>
         ) : null}
@@ -221,6 +223,7 @@ export function ScopeQuickFilters({
   adapter: DirectoryFilterAdapter;
   onChange: (value: DirectorySelection) => void;
 }) {
+  const intl = useEntityI18n();
   return (
     <div className="a-entity-list__scope-quick-filters">
       {filters.map((filter) => {
@@ -250,7 +253,7 @@ export function ScopeQuickFilters({
               ]}
             />
             {!ready ? (
-              <small>Select the required filters and compatible scope.</small>
+              <small>{intl.message("list.chrome.selectRequiredFilters")}</small>
             ) : null}
           </label>
         );

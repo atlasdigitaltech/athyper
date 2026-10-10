@@ -19,10 +19,16 @@ export function visibleListFields(descriptor: EntityListDescriptorV1, state: Lis
 export {filterValueFromInput, filterInputValue} from "@athyper/platform-collection-controls";
 import {filterInputValue} from "@athyper/platform-collection-controls";
 
-export function describeFilter(filter: ListFilterV1, descriptor: EntityListDescriptorV1): string {
+/** An applied filter as one phrase ("Status is Open"). With a runtime the
+ * phrase is a message per operator, so word order follows the locale; without
+ * one (pure callers) the English phrase is returned. */
+export function describeFilter(filter: ListFilterV1, descriptor: EntityListDescriptorV1, intl?: { message(id: string, values?: Record<string, string | number>): string }): string {
   const field = descriptor.fields.find((candidate) => candidate.key === filter.field), label = field?.label ?? filter.field;
   const operator: Record<ListFilterOperator, string> = { eq: "is", ne: "is not", in: "is any of", contains: "contains", starts_with: "starts with", gt: "is greater than", gte: "is at least", lt: "is less than", lte: "is at most", between: "is between", is_null: "is empty", is_not_null: "is not empty", relative: "is" };
   const raw = filterInputValue(filter, field?.valueKind);
-  const value = filter.operator === "relative" ? raw.replaceAll("_", " ") : (Array.isArray(filter.value) ? filter.value : [filter.value]).map(item => field?.filterOptions?.find(option => option.value === item)?.label ?? (field?.valueKind === "boolean" && typeof item === "boolean" ? item ? "Yes" : "No" : filterInputValue({ ...filter, value: item }, field?.valueKind))).join(filter.operator === "between" ? " – " : ", ");
+  const yes = intl ? intl.message("list.chrome.yes") : "Yes", no = intl ? intl.message("list.chrome.no") : "No";
+  const values = filter.operator === "relative" ? [raw.replaceAll("_", " ")] : (Array.isArray(filter.value) ? filter.value : [filter.value]).map(item => field?.filterOptions?.find(option => option.value === item)?.label ?? (field?.valueKind === "boolean" && typeof item === "boolean" ? item ? yes : no : filterInputValue({ ...filter, value: item }, field?.valueKind)));
+  const value = filter.operator === "between" ? values.join(" – ") : intl ? values.filter(Boolean).reduce<string>((first, second) => (first ? intl.message("list.text.listed", { first, second }) : second), "") : values.join(", ");
+  if (intl) return intl.message(`list.filterChip.${filter.operator}`, { field: label, value });
   return `${label} ${operator[filter.operator]}${value ? ` ${value}` : ""}`;
 }

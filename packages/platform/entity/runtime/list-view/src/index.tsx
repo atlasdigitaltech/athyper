@@ -314,12 +314,13 @@ export function EntityApplicationSection({
   readonly sectionKey?: string;
   readonly initialDensity?: EntityListRuntimeProps["initialDensity"];
 }) {
+  const intl = useEntityI18n();
   const app = useEntityApplication();
   if (!app) return null;
   const key = sectionKey ?? app.descriptor.application?.defaultSectionKey;
   const section = app.descriptor.navigation?.find((item) => item.key === key);
   if (!section?.content)
-    return <div role="status">This section is unavailable.</div>;
+    return <div role="status">{intl.message("list.chrome.sectionUnavailable")}</div>;
   if (section.content.kind === "overview")
     return (
       <EntityOverviewRuntime
@@ -355,7 +356,7 @@ export function EntityApplicationSection({
         initialDensity={initialDensity}
       />
     );
-  return <div role="status">This section is unavailable.</div>;
+  return <div role="status">{intl.message("list.chrome.sectionUnavailable")}</div>;
 }
 
 /** A record lookup (picker): the list chooses records for a field or action.
@@ -633,7 +634,7 @@ function EntityApplicationContent({
           <PageFrame width="wide">{scopeControl}</PageFrame>
         ) : null}
         <ListFrame
-          title="Loading application"
+          title={entityIntl.message("list.chrome.loadingApplication")}
           loading={!error}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
@@ -1509,7 +1510,7 @@ function EntityCollectionRuntime({
           contentOnly={contentOnly}
           headerOnly={applicationOnly}
           density={densityOverride ?? initialDensity}
-          title="Loading list"
+          title={entityIntl.message("list.chrome.loadingList")}
           entityName={
             inherited?.descriptor.surface.header
               ? resolveEntityText(
@@ -1857,7 +1858,7 @@ function EntityCollectionRuntime({
                     savedViewStorageKey(descriptor),
                     descriptor,
                   ).find((view) => view.id === state.savedViewId)?.name ??
-                  "Default view"
+                  entityIntl.message("list.chrome.defaultView")
                 }
                 onStatus={(text) =>
                   setActionNotice(listNotice("list.notice.text", { text }))
@@ -2496,8 +2497,8 @@ function ListChrome({
           .filter((filter) => directory.value[filter.key])
           .map((filter) => ({
             key: filter.key,
-            label: `${filter.label}: ${filter.options.find((option) => option.value === directory.value[filter.key])?.label ?? directory.value[filter.key]}`,
-            removeLabel: `Remove ${filter.label} filter`,
+            label: entityIntl.message("list.text.labelled", { label: filter.label, value: filter.options.find((option) => option.value === directory.value[filter.key])?.label ?? String(directory.value[filter.key]) }),
+            removeLabel: entityIntl.message("list.chrome.removeNamedFilter", { filter: filter.label }),
             onRemove: () =>
               applyDirectorySelection({
                 ...directory.value,
@@ -2507,7 +2508,7 @@ function ListChrome({
       : []),
     ...state.filters.map((filter, index) => ({
       key: `field-${filter.field}-${index}`,
-      label: describeFilter(filter, descriptor),
+      label: describeFilter(filter, descriptor, entityIntl),
       onRemove: () =>
         onChange(
           { filters: state.filters.filter((_, i) => i !== index) },
@@ -2517,8 +2518,9 @@ function ListChrome({
     ...(directory && directoryKinds.includes("organization")
       ? (directory.value.operatingOrganizationIds ?? []).map((id) => ({
           key: `organization-${id}`,
-          label: `Organization: ${directory.organizations.find((org) => org.id === id)?.displayName ?? "Selected organization"}`,
-          removeLabel: `Remove organization filter ${id}`,
+          // The chip names the organization; its identifier never reaches the page.
+          label: entityIntl.message("list.text.labelled", { label: entityIntl.message("list.chrome.organization"), value: directory.organizations.find((org) => org.id === id)?.displayName ?? entityIntl.message("list.chrome.selectedOrganization") }),
+          removeLabel: entityIntl.message("list.chrome.removeNamedFilter", { filter: directory.organizations.find((org) => org.id === id)?.displayName ?? entityIntl.message("list.chrome.selectedOrganization") }),
           onRemove: () =>
             applyDirectorySelection({
               ...directory.value,
@@ -2536,11 +2538,11 @@ function ListChrome({
           );
           return {
             key: `company-${id}`,
-            label: `Company: ${company?.code ?? "Selected company"}`,
+            label: entityIntl.message("list.text.labelled", { label: entityIntl.message("list.chrome.company"), value: company?.code ?? entityIntl.message("list.chrome.selectedCompany") }),
             title: company
-              ? `${company.code} · ${company.displayName}`
-              : "Selected company",
-            removeLabel: `Remove company filter ${id}`,
+              ? entityIntl.message("list.text.separated", { first: company.code, second: company.displayName })
+              : entityIntl.message("list.chrome.selectedCompany"),
+            removeLabel: entityIntl.message("list.chrome.removeNamedFilter", { filter: company?.code ?? entityIntl.message("list.chrome.selectedCompany") }),
             onRemove: () =>
               applyDirectorySelection({
                 ...directory.value,
@@ -2749,7 +2751,7 @@ function ListChrome({
                 <ListMenuItem
                   className="a-entity-list__mobile-only a-entity-list__control-context"
                   icon={<Building2Icon size={16} />}
-                  label={scopeLabel?.label ?? "Directory filters"}
+                  label={scopeLabel?.label ?? entityIntl.message("list.chrome.directoryFilters")}
                   value={scopeLabel?.value}
                   onClick={() => setScopeOpen(true)}
                 />
@@ -3019,9 +3021,9 @@ function ListChrome({
           >
             <Drawer.Header
               icon={<Building2Icon />}
-              title={scopeLabel?.label ?? "Organization"}
-              description="Choose the authorized context for this list."
-              closeLabel="Close organization selector"
+              title={scopeLabel?.label ?? entityIntl.message("list.chrome.organization")}
+              description={entityIntl.message("list.chrome.chooseContext")}
+              closeLabel={entityIntl.message("list.chrome.closeOrganization")}
             />
             <Drawer.Body>
               <div className="a-entity-list__mobile-scope-panel">
@@ -3070,15 +3072,16 @@ function ResetConfigurationDialog({
   readonly onOpenChange: (open: boolean) => void;
   readonly onReset: () => void;
 }) {
+  const intl = useEntityI18n();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title="Reset list settings?"
-        description="This will discard the current filters, sorting, grouping, columns, layout, and density. Your saved views will not be deleted."
+        title={intl.message("list.chrome.resetTitle")}
+        description={intl.message("list.chrome.resetDescription")}
       >
         <div className="a-entity-list__dialog-actions">
           <DialogClose className="a-button a-button--secondary a-button--small">
-            Cancel
+            {intl.message("list.chrome.cancel")}
           </DialogClose>
           <Button
             variant="danger"
@@ -3088,7 +3091,7 @@ function ResetConfigurationDialog({
               onOpenChange(false);
             }}
           >
-            Reset list settings
+            {intl.message("list.chrome.resetConfirm")}
           </Button>
         </div>
       </DialogContent>
@@ -3275,17 +3278,17 @@ function FilterDialog({
           )
         }
       >
-        <Drawer.Navigation aria-label="Filter views">
+        <Drawer.Navigation aria-label={filterIntl.message("list.chrome.filterViews")}>
           <Drawer.TabList>
-            <Drawer.Tab value="common">Quick filters</Drawer.Tab>
+            <Drawer.Tab value="common">{filterIntl.message("list.chrome.quickFilters")}</Drawer.Tab>
             <Drawer.Tab value="all">
-              All filters{draft.length ? ` · ${draft.length}` : ""}
+              {draft.length ? filterIntl.message("list.text.separated", { first: filterIntl.message("list.chrome.allFilters"), second: filterIntl.number(draft.length) }) : filterIntl.message("list.chrome.allFilters")}
             </Drawer.Tab>
             {hasDirectory && directoryKinds.includes("organization") ? (
-              <Drawer.Tab value="organization">Organization</Drawer.Tab>
+              <Drawer.Tab value="organization">{filterIntl.message("list.chrome.organization")}</Drawer.Tab>
             ) : null}
             {hasDirectory && directoryKinds.includes("company") ? (
-              <Drawer.Tab value="company">Company</Drawer.Tab>
+              <Drawer.Tab value="company">{filterIntl.message("list.chrome.company")}</Drawer.Tab>
             ) : null}
           </Drawer.TabList>
         </Drawer.Navigation>
@@ -3320,9 +3323,9 @@ function FilterDialog({
                     className="a-entity-list__filter-header"
                     aria-hidden="true"
                   >
-                    <span>Field</span>
-                    <span>Operator</span>
-                    <span>Value</span>
+                    <span>{filterIntl.message("list.chrome.field")}</span>
+                    <span>{filterIntl.message("list.chrome.operator")}</span>
+                    <span>{filterIntl.message("list.chrome.value")}</span>
                   </div>
                   {quickFields.map(({ field, defaultOperator }, index) => {
                     const existing = draft.find(
@@ -3341,11 +3344,11 @@ function FilterDialog({
                         <div className="a-entity-list__filter-heading">
                           <strong>{field.label}</strong>
                           <FilterOperatorMenu
-                            label={`Operator for quick ${field.label} filter`}
+                            label={filterIntl.message("list.chrome.quickOperatorFor", { field: field.label })}
                             value={operator}
                             operators={field.filterOperators}
                             labelFor={(candidate) =>
-                              operatorLabel(candidate, field)
+                              operatorLabel(candidate, field, filterIntl)
                             }
                             onChange={(next) => {
                               setQuickOperators({
@@ -3372,19 +3375,15 @@ function FilterDialog({
                 </div>
               ) : (
                 <p className="a-entity-list__filter-guidance">
-                  This entity does not publish quick filters. Use All filters to
-                  choose from every filterable field.
+                  {filterIntl.message("list.chrome.noQuickFilters")}
                 </p>
               )}
               {additionalCount ? (
                 <p className="a-entity-list__additional-filters">
-                  {additionalCount} additional{" "}
-                  {additionalCount === 1 ? "filter is" : "filters are"}{" "}
-                  configured under{" "}
+                  {filterIntl.message("list.chrome.additionalFilters", { count: additionalCount })}{" "}
                   <button type="button" onClick={() => setActiveTab("all")}>
-                    All filters
+                    {filterIntl.message("list.chrome.openAllFilters")}
                   </button>
-                  .
                 </p>
               ) : null}
             </div>
@@ -3398,10 +3397,10 @@ function FilterDialog({
                       className="a-entity-list__filter-header"
                       aria-hidden="true"
                     >
-                      <span>Field</span>
-                      <span>Operator</span>
-                      <span>Value</span>
-                      <span>Action</span>
+                      <span>{filterIntl.message("list.chrome.field")}</span>
+                      <span>{filterIntl.message("list.chrome.operator")}</span>
+                      <span>{filterIntl.message("list.chrome.value")}</span>
+                      <span>{filterIntl.message("list.chrome.action")}</span>
                     </div>
                     {draft.map((item, index) => {
                       const field =
@@ -3425,10 +3424,10 @@ function FilterDialog({
                         >
                           <div className="a-entity-list__filter-control">
                             <span className="a-entity-list__filter-label">
-                              Field
+                              {filterIntl.message("list.chrome.field")}
                             </span>
                             <SearchableFieldSelect
-                              label={`Field for filter ${index + 1}`}
+                              label={filterIntl.message("list.chrome.fieldFor", { number: index + 1 })}
                               fields={availableFields}
                               value={item.field}
                               onChange={(selected) =>
@@ -3443,14 +3442,14 @@ function FilterDialog({
                           </div>
                           <div className="a-entity-list__filter-control a-entity-list__filter-operator-control">
                             <span className="a-entity-list__filter-label">
-                              Operator
+                              {filterIntl.message("list.chrome.operator")}
                             </span>
                             <FilterOperatorMenu
-                              label={`Operator for ${field?.label ?? `filter ${index + 1}`}`}
+                              label={field?.label ? filterIntl.message("list.chrome.operatorFor", { field: field.label }) : filterIntl.message("list.chrome.operatorForNumber", { number: index + 1 })}
                               value={item.operator}
                               operators={operators}
                               labelFor={(operator) =>
-                                operatorLabel(operator, field)
+                                operatorLabel(operator, field, filterIntl)
                               }
                               onChange={(operator) =>
                                 replaceItem({ ...item, operator, value: "" })
@@ -3475,8 +3474,8 @@ function FilterDialog({
                             className="a-entity-list__filter-remove"
                             variant="ghost"
                             size="icon"
-                            aria-label={`Remove ${field?.label ?? "filter"}`}
-                            title={`Remove ${field?.label ?? "filter"}`}
+                            aria-label={field?.label ? filterIntl.message("list.chrome.removeFilter", { field: field.label }) : filterIntl.message("list.chrome.removeFilterUnnamed")}
+                            title={field?.label ? filterIntl.message("list.chrome.removeFilter", { field: field.label }) : filterIntl.message("list.chrome.removeFilterUnnamed")}
                             onClick={() =>
                               setDraft(
                                 draft.filter(
@@ -3496,13 +3495,13 @@ function FilterDialog({
                     <span aria-hidden="true">
                       <FilterIcon />
                     </span>
-                    <strong>No filters configured</strong>
-                    <p>Add a filter to narrow the authorized result set.</p>
+                    <strong>{filterIntl.message("list.chrome.noFilters")}</strong>
+                    <p>{filterIntl.message("list.chrome.noFiltersHint")}</p>
                   </div>
                 ) : null}
                 {filterPickerOpen ? (
                   <FieldCataloguePicker
-                    heading="Add a filter field"
+                    heading={filterIntl.message("list.chrome.addFilterField")}
                     fields={filterable}
                     selected={draft.map((item) => item.field)}
                     placeholder={filterIntl.message("list.fields.search")}
@@ -3524,7 +3523,7 @@ function FilterDialog({
                     onClick={() => setFilterPickerOpen(true)}
                     disabled={!remainingFilterFields.length}
                   >
-                    Add filter
+                    {filterIntl.message("list.chrome.addFilter")}
                   </Button>
                 )}
               </div>
@@ -3564,13 +3563,13 @@ function FilterDialog({
             setDirectoryDraft({});
           }}
           onApply={apply}
-          resetLabel="Reset filters"
+          resetLabel={filterIntl.message("list.chrome.resetFilters")}
           applyLabel={
             <>
               <span className="a-entity-list__apply-desktop">
-                Apply filters
+                {filterIntl.message("list.chrome.applyFilters")}
               </span>
-              <span className="a-entity-list__apply-mobile">Show results</span>
+              <span className="a-entity-list__apply-mobile">{filterIntl.message("list.chrome.showResults")}</span>
             </>
           }
         />
@@ -3705,7 +3704,7 @@ function SortDialog({
                 }
                 onClick={() => setDraft(descriptor.surface.defaultState.sort)}
               >
-                Reset sort
+                {sortIntl.message("list.chrome.resetSort")}
               </Button>
               <Button
                 size="small"
@@ -3715,7 +3714,7 @@ function SortDialog({
                   onOpenChange(false);
                 }}
               >
-                Apply sort
+                {sortIntl.message("list.chrome.applySort")}
               </Button>
             </Drawer.FooterActions>
           </Drawer.Footer>
@@ -3800,7 +3799,7 @@ function ColumnsDialog({
   const add = (field: ListFieldDescriptorV1) => {
     if (columns.length >= ENTITY_LIST_MAX_VISIBLE_COLUMNS) {
       setAnnouncement(
-        `A maximum of ${ENTITY_LIST_MAX_VISIBLE_COLUMNS} visible fields is supported.`,
+        columnsIntl.message("list.chrome.columnsMaximum", { count: ENTITY_LIST_MAX_VISIBLE_COLUMNS }),
       );
       return;
     }
@@ -3849,12 +3848,12 @@ function ColumnsDialog({
         <div className="a-entity-list__column-browser">
           <section aria-labelledby="visible-columns-heading">
             <div className="a-entity-list__column-section-heading">
-              <h3 id="visible-columns-heading">Visible columns</h3>
-              <span>{columns.length} selected</span>
+              <h3 id="visible-columns-heading">{columnsIntl.message("list.chrome.visibleColumns")}</h3>
+              <span>{columnsIntl.message("list.chrome.selectedCount", { count: columns.length })}</span>
             </div>
             {columns.length > 20 ? (
               <p className="a-entity-list__column-warning">
-                More than 20 visible columns may require horizontal scrolling.
+                {columnsIntl.message("list.chrome.manyColumns", { count: 20 })}
               </p>
             ) : null}
             <div className="a-entity-list__column-list a-entity-list__column-list--visible">
@@ -3874,8 +3873,8 @@ function ColumnsDialog({
                       type="button"
                       className="a-entity-list__column-grip"
                       draggable
-                      aria-label={`Drag ${field.label} to reorder`}
-                      title="Drag to reorder"
+                      aria-label={columnsIntl.message("list.chrome.dragField", { field: field.label })}
+                      title={columnsIntl.message("list.chrome.dragToReorder")}
                       onDragStart={(event) => dragStart(event, field.key)}
                       onDragEnd={() => setDrag(undefined)}
                     >
@@ -3891,7 +3890,7 @@ function ColumnsDialog({
                       </span>
                     ) : (
                       <Checkbox
-                        aria-label={`Show ${field.label}`}
+                        aria-label={columnsIntl.message("list.chrome.showField", { field: field.label })}
                         checked
                         onChange={() => remove(field)}
                       />
@@ -3919,14 +3918,14 @@ function ColumnsDialog({
             {!matchingVisibleFields.length ? (
               <ColumnSearchEmpty
                 search={search}
-                section="visible columns"
+                section={columnsIntl.message("list.chrome.sectionVisible")}
                 onClear={() => setSearch("")}
               />
             ) : null}
           </section>
           <section aria-labelledby="available-columns-heading">
             <div className="a-entity-list__column-section-heading">
-              <h3 id="available-columns-heading">Available fields</h3>
+              <h3 id="available-columns-heading">{columnsIntl.message("list.chrome.availableFields")}</h3>
               <span>
                 {availableFields.length}
                 {normalizedSearch
@@ -3936,8 +3935,7 @@ function ColumnsDialog({
             </div>
             {columns.length >= ENTITY_LIST_MAX_VISIBLE_COLUMNS ? (
               <p className="a-entity-list__column-warning">
-                Maximum {ENTITY_LIST_MAX_VISIBLE_COLUMNS} visible fields
-                reached. Hide a field before adding another.
+                {columnsIntl.message("list.chrome.columnsLimitReached", { count: ENTITY_LIST_MAX_VISIBLE_COLUMNS })}
               </p>
             ) : null}
             {availableGroups.map((group) => {
@@ -3972,7 +3970,7 @@ function ColumnsDialog({
                       {group.fields.map((field) => (
                         <label key={field.key}>
                           <Checkbox
-                            aria-label={`Show ${field.label}`}
+                            aria-label={columnsIntl.message("list.chrome.showField", { field: field.label })}
                             checked={false}
                             disabled={
                               columns.length >= ENTITY_LIST_MAX_VISIBLE_COLUMNS
@@ -3993,7 +3991,7 @@ function ColumnsDialog({
             {!availableGroups.length ? (
               <ColumnSearchEmpty
                 search={search}
-                section="available fields"
+                section={columnsIntl.message("list.chrome.sectionAvailable")}
                 onClear={() => setSearch("")}
               />
             ) : null}
@@ -4020,10 +4018,10 @@ function ColumnsDialog({
             disabled={JSON.stringify(columns) === JSON.stringify(defaults)}
             onClick={() => {
               setColumns(defaults);
-              setAnnouncement("Default columns restored.");
+              setAnnouncement(columnsIntl.message("list.chrome.columnsRestored"));
             }}
           >
-            Reset columns
+            {columnsIntl.message("list.chrome.resetColumns")}
           </Button>
           <Button
             size="small"
@@ -4033,7 +4031,7 @@ function ColumnsDialog({
               onOpenChange(false);
             }}
           >
-            Apply columns
+            {columnsIntl.message("list.chrome.applyColumns")}
           </Button>
         </Drawer.FooterActions>
       </Drawer.Footer>
@@ -4050,12 +4048,13 @@ function ColumnSearchEmpty({
   readonly section: string;
   readonly onClear: () => void;
 }) {
+  const intl = useEntityI18n();
   return (
     <div className="a-entity-list__column-empty">
-      <p>{search.trim() ? `No matching ${section}.` : `No ${section}.`}</p>
+      <p>{intl.message(search.trim() ? "list.chrome.noMatchingIn" : "list.chrome.noneIn", { section })}</p>
       {search.trim() ? (
         <Button variant="ghost" size="small" onClick={onClear}>
-          Clear search
+          {intl.message("list.chrome.clearSearch")}
         </Button>
       ) : null}
     </div>
@@ -4130,13 +4129,13 @@ function SavedViewsDialog({
           (view) => view.id === result.createdId,
         );
         if (created) apply(created);
-      } else setMessage("View preferences saved.");
+      } else setMessage(entityIntl.message("list.chrome.viewsSaved"));
       return true;
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Unable to save view preferences",
+          : entityIntl.message("list.chrome.viewsSaveFailed"),
       );
       return false;
     } finally {
@@ -4170,7 +4169,7 @@ function SavedViewsDialog({
   const rows: readonly SavedListView[] = [
     {
       id: "system",
-      name: "System default",
+      name: entityIntl.message("list.chrome.systemDefault"),
       state: saveableViewState(descriptor.surface.defaultState),
       scope: "system" as const,
     },
@@ -4207,7 +4206,7 @@ function SavedViewsDialog({
       message={message || undefined}
       createShared={Boolean(descriptor.serverViews && caps?.createShared)}
       manageShared={Boolean(caps?.manageShared)}
-      saveSummary="Includes filters, sorting, grouping, columns, layout, and density. Search and work context are not saved."
+      saveSummary={entityIntl.message("list.chrome.viewSaveSummary")}
       nameInputId="entity-list-view-name"
       onApply={(id) =>
         apply(id === undefined || id === "system" ? undefined : viewOf(id))
@@ -4420,7 +4419,7 @@ function DisplaySettingsDialog({
             ) : null}
             <Drawer.FooterActions>
               <Button variant="ghost" size="small" onClick={reset}>
-                Reset settings
+                {displayIntl.message("list.chrome.resetSettings")}
               </Button>
               <Button
                 size="small"
@@ -4445,7 +4444,7 @@ function DisplaySettingsDialog({
                   onOpenChange(false);
                 }}
               >
-                Save settings
+                {displayIntl.message("list.chrome.saveSettings")}
               </Button>
             </Drawer.FooterActions>
           </Drawer.Footer>
@@ -5300,10 +5299,12 @@ function EntityRows({
                           active,
                           sortIndex,
                           sort.length,
+                          intl,
                         )}
                         title={sortHeaderTitle(
                           active,
                           descriptor.limits.maxSortLevels,
+                          intl,
                         )}
                         onClick={(event) => onSort(field.key, event.shiftKey)}
                       >
@@ -5425,14 +5426,13 @@ function SelectionBar({
     <div className="a-entity-list__selection-bar" role="status">
       <div className="a-entity-list__selection-summary">
         <strong>
-          {intl.number(effectiveCount)}
-          {allMatching ? " matching records selected" : " selected"}
+          {intl.message(allMatching ? "list.chrome.matchingSelected" : "list.chrome.selectedCount", { count: effectiveCount })}
         </strong>
         <span>
           {allMatching
-            ? "Selection includes all pages."
+            ? intl.message("list.chrome.selectionAllPages")
             : selectedCount === page?.rows.length
-              ? `${selectedCount} records on this page selected.`
+              ? intl.message("list.chrome.selectionPage", { count: selectedCount })
               : ""}
         </span>
       </div>
@@ -5441,7 +5441,7 @@ function SelectionBar({
       total > selectedCount &&
       descriptor.dataOperations?.export.filtered.state === "enabled" ? (
         <Button size="small" variant="secondary" onClick={onSelectAllMatching}>
-          Select all {intl.number(total)} matching records
+          {intl.message("list.chrome.selectAllMatching", { count: total })}
         </Button>
       ) : null}
       <div className="a-entity-list__selection-actions">
@@ -5449,7 +5449,7 @@ function SelectionBar({
           <Menu>
             <MenuTrigger>
               <StarIcon size={16} />
-              Favourites <ChevronDownIcon size={14} />
+              {intl.message("list.chrome.favourites")} <ChevronDownIcon size={14} />
             </MenuTrigger>
             <MenuContent
               portal
@@ -5458,13 +5458,13 @@ function SelectionBar({
               {bookmarkedCount < selectedRows.length ? (
                 <MenuItem onClick={() => onBookmarks("add")}>
                   <StarIcon size={16} />
-                  Add selected to favourites
+                  {intl.message("list.chrome.addFavourites")}
                 </MenuItem>
               ) : null}
               {bookmarkedCount > 0 ? (
                 <MenuItem onClick={() => onBookmarks("remove")}>
                   <StarIcon size={16} />
-                  Remove selected from favourites
+                  {intl.message("list.chrome.removeFavourites")}
                 </MenuItem>
               ) : null}
             </MenuContent>
@@ -5491,11 +5491,11 @@ function SelectionBar({
         {onExport ? (
           <Button size="small" variant="secondary" onClick={onExport}>
             <DownloadIcon size={16} />
-            Export
+            {intl.message("list.chrome.export")}
           </Button>
         ) : null}
         <Button size="small" variant="ghost" onClick={onClear}>
-          Clear selection
+          {intl.message("list.chrome.clearSelection")}
         </Button>
       </div>
     </div>
@@ -5625,6 +5625,7 @@ function ColumnFilter({
   readonly filters: readonly ListFilterV1[];
   readonly onApply: (filters: readonly ListFilterV1[]) => void;
 }) {
+  const intl = useEntityI18n();
   const [open, setOpen] = useState(false),
     trigger = useRef<HTMLButtonElement>(null),
     panel = useRef<HTMLDivElement>(null),
@@ -5706,8 +5707,8 @@ function ColumnFilter({
         ref={trigger}
         type="button"
         className={`a-entity-list__column-filter${current.length ? " a-entity-list__column-filter--active" : ""}`}
-        aria-label={`Filter ${field.label}${current.length ? `, ${current.length} active` : ""}`}
-        title={`Filter ${field.label}`}
+        aria-label={intl.message(current.length ? "list.chrome.filterFieldActive" : "list.chrome.filterField", { field: field.label, count: current.length })}
+        title={intl.message("list.chrome.filterField", { field: field.label })}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -5733,21 +5734,21 @@ function ColumnFilter({
               ref={panel}
               id={id}
               role="dialog"
-              aria-label={`Filter ${field.label}`}
+              aria-label={intl.message("list.chrome.filterField", { field: field.label })}
               className="a-entity-list__column-filter-popover"
               style={position}
             >
-              <strong>Filter {field.label}</strong>
+              <strong>{intl.message("list.chrome.filterField", { field: field.label })}</strong>
               {draft.map((item, index) => (
                 <div
                   className="a-entity-list__column-filter-rule"
                   key={item.id}
                 >
                   <FilterOperatorMenu
-                    label={`Operator for ${field.label} filter ${index + 1}`}
+                    label={intl.message("list.chrome.operatorForCondition", { field: field.label, number: index + 1 })}
                     value={item.operator}
                     operators={field.filterOperators}
-                    labelFor={(operator) => operatorLabel(operator, field)}
+                    labelFor={(operator) => operatorLabel(operator, field, intl)}
                     onChange={(operator) =>
                       setDraft(
                         draft.map((row) =>
@@ -5780,7 +5781,7 @@ function ColumnFilter({
                         setDraft(draft.filter((row) => row.id !== item.id))
                       }
                     >
-                      Remove condition {index + 1}
+                      {intl.message("list.chrome.removeCondition", { number: index + 1 })}
                     </Button>
                   ) : null}
                 </div>
@@ -5792,10 +5793,10 @@ function ColumnFilter({
                   disabled={!current.length}
                   onClick={() => apply([])}
                 >
-                  Clear
+                  {intl.message("list.chrome.clear")}
                 </Button>
                 <Button variant="secondary" size="small" onClick={close}>
-                  Cancel
+                  {intl.message("list.chrome.cancel")}
                 </Button>
                 <Button
                   size="small"
@@ -5815,7 +5816,7 @@ function ColumnFilter({
                     )
                   }
                 >
-                  Apply
+                  {intl.message("list.chrome.apply")}
                 </Button>
               </div>
             </div>,
@@ -5854,27 +5855,19 @@ function sortHeaderLabel(
   active: ListSortV1 | undefined,
   index: number,
   levels: number,
+  intl: Pick<ReturnType<typeof useEntityI18n>, "message">,
 ): string {
-  const action = !active
-    ? "sort ascending"
-    : active.direction === "asc"
-      ? "sort descending"
-      : "clear sorting";
-  if (!active) return `${label}, not sorted. Activate to ${action}.`;
-  return `${label}, sorted ${active.direction === "asc" ? "ascending" : "descending"}${levels > 1 ? `, priority ${index + 1}` : ""}. Activate to ${action}.`;
+  const next = !active ? "ascending" : active.direction === "asc" ? "descending" : "clear";
+  if (!active) return intl.message("list.chrome.sortHeaderNone", { field: label, next });
+  return intl.message(levels > 1 ? "list.chrome.sortHeaderPriority" : "list.chrome.sortHeader", { field: label, direction: active.direction, priority: index + 1, next });
 }
 function sortHeaderTitle(
   active: ListSortV1 | undefined,
   maximum: number,
+  intl: Pick<ReturnType<typeof useEntityI18n>, "message">,
 ): string {
-  const action = !active
-    ? "Sort ascending"
-    : active.direction === "asc"
-      ? "Sort descending"
-      : "Clear sorting";
-  return maximum > 1
-    ? `${action}. Shift-click to manage multi-column sorting.`
-    : action;
+  const next = !active ? "ascending" : active.direction === "asc" ? "descending" : "clear";
+  return intl.message(maximum > 1 ? "list.chrome.sortTitleMulti" : "list.chrome.sortTitle", { next });
 }
 
 async function copyText(value: string): Promise<boolean> {
@@ -6023,34 +6016,13 @@ function moveItem<T>(
 }
 function operatorLabel(
   operator: ListFilterOperator,
-  field?: ListFieldDescriptorV1,
+  field: ListFieldDescriptorV1 | undefined,
+  intl: Pick<ReturnType<typeof useEntityI18n>, "message">,
 ): string {
-  if (field && ["date", "datetime"].includes(field.valueKind)) {
-    const label = {
-      eq: field.valueKind === "date" ? "On" : "At",
-      ne: field.valueKind === "date" ? "Not on" : "Not at",
-      gt: "After",
-      gte: "On or after",
-      lt: "Before",
-      lte: "On or before",
-    }[operator as "eq"];
-    if (label) return label;
-  }
-  return {
-    eq: "Equals",
-    ne: "Does not equal",
-    in: "Any of",
-    contains: "Contains",
-    starts_with: "Starts with",
-    gt: "Greater than",
-    gte: "At least",
-    lt: "Less than",
-    lte: "At most",
-    between: "Between",
-    is_null: "Is empty",
-    is_not_null: "Is not empty",
-    relative: "Relative period",
-  }[operator];
+  // A date reads "On" and "After"; a datetime "At"; other kinds "Equals".
+  if (field && (field.valueKind === "date" || field.valueKind === "datetime") && ["eq", "ne", "gt", "gte", "lt", "lte"].includes(operator))
+    return intl.message(`list.operator.${field.valueKind}.${operator}`);
+  return intl.message(`list.operator.${operator}`);
 }
 function writeLocation(
   state: ListLocationStateV1,
@@ -6094,6 +6066,7 @@ function ListFrame({
   readonly applicationName?: string;
   readonly entityName?: string;
 }) {
+  const intl = useEntityI18n();
   return (
     <PageFrame
       width="wide"
@@ -6108,7 +6081,7 @@ function ListFrame({
           title={
             loading ? (
               <>
-                <span className="a-visually-hidden">Loading list</span>
+                <span className="a-visually-hidden">{intl.message("list.chrome.loadingList")}</span>
                 <span
                   aria-hidden="true"
                   className="a-skeleton a-entity-list__skeleton-title"

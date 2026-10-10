@@ -96,23 +96,19 @@ export function EntityOverview({
   const clear =
     focus.length > 0 && numbered.length === focus.length && !actionable.length;
   const headline = actionable.length
-    ? `${actionable.length} ${actionable.length === 1 ? "area needs" : "areas need"} attention`
+    ? intl.message("overview.attention", { count: actionable.length })
     : clear
-      ? "You’re up to date"
-      : "A clear view. Your next move.";
-  const summary = actionable.length
-    ? "Your work queues are ready. Start with the items that need a decision."
-    : clear
-      ? "No items are flagged in your available work queues."
-      : "Explore your records, pick up your work, and keep things moving.";
+      ? intl.message("overview.upToDate")
+      : intl.message("overview.clearView");
+  const summary = intl.message(actionable.length ? "overview.summaryReady" : clear ? "overview.summaryClear" : "overview.summaryExplore");
   return (
-    <section className="a-entity-pulse" aria-label="Entity overview">
+    <section className="a-entity-pulse" aria-label={intl.message("overview.label")}>
       {showSummary ? (
         <>
           <div className="a-entity-pulse__toolbar">
             <span>
               <span className="a-entity-pulse__dot" />
-              Entity pulse
+              {intl.message("overview.pulse")}
               {scopeLabel ? (
                 <span className="a-entity-pulse__scope">{scopeLabel}</span>
               ) : null}
@@ -123,10 +119,10 @@ export function EntityOverview({
                 size="small"
                 disabled={loading}
                 onClick={onRefresh}
-                aria-label="Refresh overview"
+                aria-label={intl.message("overview.refreshLabel")}
               >
                 <RefreshCwIcon size={15} />
-                Refresh
+                {intl.message("overview.refresh")}
               </Button>
             ) : null}
           </div>
@@ -136,7 +132,7 @@ export function EntityOverview({
             </div>
             <div className="a-entity-pulse__hero-copy">
               <span className="a-entity-pulse__eyebrow">
-                YOUR WORK, AT A GLANCE
+                {intl.message("overview.eyebrow")}
               </span>
               <h2>{headline}</h2>
               <p>{summary}</p>
@@ -146,7 +142,7 @@ export function EntityOverview({
                 className="a-button a-button--primary"
                 href={(actionable[0] ?? shortcuts[0] ?? focus[0])!.href}
               >
-                {actionable.length ? "View work queue" : "Explore records"}
+                {intl.message(actionable.length ? "overview.viewQueue" : "overview.explore")}
                 <ChevronRightIcon size={16} />
               </a>
             ) : null}
@@ -163,13 +159,13 @@ export function EntityOverview({
           {error}
           {onRefresh ? (
             <button type="button" onClick={onRefresh} disabled={loading}>
-              Try again
+              {intl.message("overview.tryAgain")}
             </button>
           ) : null}
         </div>
       ) : null}
       {showSummary && metrics.length ? (
-        <div className="a-entity-pulse__metrics" aria-label="Record metrics">
+        <div className="a-entity-pulse__metrics" aria-label={intl.message("overview.metrics")}>
           {metrics.map((metric, index) => (
             <a
               className="a-entity-pulse__metric"
@@ -190,13 +186,13 @@ export function EntityOverview({
               {metric.loading ? (
                 <span
                   className="a-skeleton a-entity-pulse__number-skeleton"
-                  aria-label="Loading count"
+                  aria-label={intl.message("overview.loadingCount")}
                 />
               ) : (
                 <strong>{metric.value ?? "—"}</strong>
               )}
               <span className="a-entity-pulse__metric-bottom">
-                <span>{metric.description ?? "Open view"}</span>
+                <span>{metric.description ?? intl.message("overview.openView")}</span>
                 <ChevronRightIcon size={16} />
               </span>
             </a>
@@ -228,9 +224,7 @@ export function EntityOverview({
                     <strong>{item.label}</strong>
                     <small>
                       {item.description ??
-                        (item.count === 0
-                          ? "Nothing flagged. Open to see your queue."
-                          : "Open your queue to see available work.")}
+                        intl.message(item.count === 0 ? "overview.nothingFlagged" : "overview.openQueue")}
                     </small>
                   </span>
                   {item.count !== undefined ? (
@@ -303,7 +297,7 @@ export function EntityOverview({
             <div
               className="a-entity-pulse__loading"
               role="status"
-              aria-label="Loading records"
+              aria-label={intl.message("overview.loadingRecords")}
             >
               {[0, 1, 2].map((key) => (
                 <div
@@ -497,6 +491,7 @@ export function EntityOverviewRuntime({
 }) {
   const locale = useOptionalI18n()?.localization.uiLocale;
   const message = useOverviewMessage();
+  const intl = useEntityI18n();
   const sections = application.navigation ?? [];
   const collection =
     sections.find(
@@ -610,16 +605,16 @@ export function EntityOverviewRuntime({
     ? [
         {
           key: "all",
-          label: "All records",
+          label: intl.message("overview.allRecords"),
           href: href(),
           value: data?.page ? overviewCount(data.page, locale) : undefined,
           loading: pending,
           description:
             data?.page?.pagination.countMode === "cached"
-              ? "Recently calculated count"
+              ? intl.message("overview.countCached")
               : data?.page && overviewCount(data.page, locale) === undefined
-                ? "Count unavailable · explore records"
-                : "Across your current scope",
+                ? intl.message("overview.countUnavailable")
+                : intl.message("overview.acrossScope"),
         },
         ...(data?.descriptor.standardViews ?? []).slice(0, 3).map((view) => ({
           key: view.key,
@@ -630,8 +625,8 @@ export function EntityOverviewRuntime({
             : undefined,
           description:
             data?.views[view.key]?.pagination.countMode === "cached"
-              ? "Recently calculated count"
-              : "Open view",
+              ? intl.message("overview.countCached")
+              : intl.message("overview.openView"),
         })),
       ]
     : [];

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { Building2Icon } from "@athyper/platform-icons";
 import { ChoiceSelect, announceOverlayOpened, overlayOpenedEvent } from "@athyper/platform-ui";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 export interface ListScopeOption {
   readonly value: string;
@@ -26,6 +27,7 @@ export interface ListScopeControlProps {
 
 /** Shared, access-aware scope selector used by every plane list adapter. */
 export function ListScopeControl(props: ListScopeControlProps) {
+  const intl = useEntityI18n();
   const summary = useRef<HTMLDetailsElement>(null);
   const selected = props.options.find((option) => option.value === props.value);
   useEffect(() => {
@@ -70,9 +72,9 @@ export function ListScopeControl(props: ListScopeControlProps) {
       <details ref={summary} className="a-entity-list__scope-summary">
         <summary aria-label={props.summaryLabel} title={props.label}><Building2Icon size={17}/></summary>
         <div className="a-entity-list__scope-popover">
-          <strong>Authorized context</strong>
+          <strong>{intl.message("list.chrome.authorizedContext")}</strong>
           {props.summaryDetails?.map((detail) => <small key={detail}>{detail}</small>)}
-          <span><strong>{props.label}:</strong> {selected.label}</span>
+          <span>{intl.message("list.text.labelled", { label: props.label, value: selected.label })}</span>
           {props.accessLabel ? <small>{props.accessLabel}</small> : null}
         </div>
       </details>
@@ -87,7 +89,7 @@ export function ListScopeControl(props: ListScopeControlProps) {
 
   return (
     <div className="a-entity-list__scope">
-      <span className="a-visually-hidden">Authorized</span>
+      <span className="a-visually-hidden">{intl.message("list.chrome.authorized")}</span>
       <span className="a-entity-list__scope-icon" aria-hidden="true"><Building2Icon size={17}/></span>
       <label htmlFor={props.id}><strong>{props.label}</strong></label>
       <ChoiceSelect

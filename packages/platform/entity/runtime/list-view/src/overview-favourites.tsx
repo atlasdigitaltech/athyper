@@ -1,5 +1,6 @@
 "use client";
 import { useOverviewMessage } from "./overview-messages";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import React, { useEffect, useRef, useState } from "react";
 import {
   addRecordBookmarksOperation,
@@ -42,6 +43,7 @@ export function EntityFavourites({
   onRetry,
 }: EntityFavouritesProps) {
   const message = useOverviewMessage();
+  const intl = useEntityI18n();
   const [expanded, setExpanded] = useState(false);
   return (
     <section
@@ -63,7 +65,7 @@ export function EntityFavourites({
             aria-expanded={expanded}
             onClick={() => setExpanded((value) => !value)}
           >
-            {expanded ? "Show fewer" : "View favourites"}
+            {intl.message(expanded ? "favourites.showFewer" : "favourites.view")}
             <ChevronRightIcon size={15} />
           </button>
         ) : null}
@@ -73,7 +75,7 @@ export function EntityFavourites({
           {error}
           {onRetry ? (
             <button type="button" onClick={onRetry} disabled={loading || busy}>
-              Try again
+              {intl.message("overview.tryAgain")}
             </button>
           ) : null}
         </div>
@@ -82,7 +84,7 @@ export function EntityFavourites({
         <div
           className="a-entity-pulse__loading"
           role="status"
-          aria-label="Loading favourites"
+          aria-label={intl.message("favourites.loading")}
         >
           {[0, 1, 2].map((key) => (
             <div
@@ -99,7 +101,7 @@ export function EntityFavourites({
                 <button
                   className="a-entity-pulse__favourite-star"
                   type="button"
-                  aria-label={`Remove ${record.label} from favourites`}
+                  aria-label={intl.message("favourites.remove", { record: record.label })}
                   disabled={busy}
                   onClick={() => onRemove(record.id)}
                 >
@@ -154,12 +156,12 @@ export function EntityFavourites({
       ) : null}
       {expanded && records.length >= 200 ? (
         <p className="a-entity-pulse__footnote">
-          Showing up to 200 recent favourites in this scope.
+          {intl.message("favourites.limit", { count: 200 })}
         </p>
       ) : null}
       {removedLabel ? (
         <div className="a-entity-pulse__undo" role="status">
-          <span>{removedLabel} removed from favourites.</span>
+          <span>{intl.message("favourites.removed", { record: removedLabel })}</span>
           {onUndo ? (
             <Button
               variant="ghost"
@@ -167,7 +169,7 @@ export function EntityFavourites({
               disabled={busy}
               onClick={onUndo}
             >
-              Undo
+              {intl.message("favourites.undo")}
             </Button>
           ) : null}
         </div>

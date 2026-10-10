@@ -2148,11 +2148,11 @@ test("directory filters are metadata-gated and stage company changes until Apply
     );
     assert.match(
       dom.window.document
-        .querySelector('[aria-label="Remove company filter company"]')!
+        .querySelector('[aria-label="Remove DE01 filter"]')!
         .getAttribute("title")!,
       /Germany Operations/,
     );
-    await click('[aria-label="Remove company filter company"]');
+    await click('[aria-label="Remove DE01 filter"]');
     assert.equal(calls, 2);
     configured.scope.filterKinds =
       [] as unknown as typeof configured.scope.filterKinds;
