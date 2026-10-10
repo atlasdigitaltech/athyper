@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved through A2; A5 contract proposed, revision 6 (10 October 2026).
+**Status:** approved, revision 7 (10 October 2026).
+- **A5 contract approved (10 October 2026).** The owner approved section 14 decisions 9–15 in these words: "Decisions (section 14, 9–15): Approved". Section 13 is the approved A5 contract. No build instruction for A5 is recorded yet; when one is given, A5.1 (chart colour tokens) comes first (13.8).
 - **Delivery (10 October 2026): A2 built, on synthetic fixtures, before A3.** Section 5.9 records the build, including the measured response size and statement time A2's acceptance asks for. A3 remains the gate before any real Entity publishes a pivot. Still not verified: a real Entity, and the server's real responses in a browser.
 - **Revision 6 (10 October 2026): A5 contract proposed.** Section 13 now holds the A5 contract for review: a reusable chart in three layers, and Summary's use of it. Decisions 9–15 in section 14 ask for approval. Nothing in section 13 is approved or built. The 5.9 build record now names the test that refutes the rejected source restriction.
 - **A2 before A3 approved (10 October 2026).** The owner approved building A2 on fixtures ahead of A3, whose prerequisites (the metadata cleanup and the business partner, item and commodity Entities) are no design dependency of A2. The approved order existed to prove the pivot at volume before it ships, which is about what may ship, not what may be built. Four conditions, recorded in section 17 (the fourth added by audit round 8):
@@ -509,9 +510,9 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 - Every cell state is text. Colour only supports it.
 - Expand controls say what they load ("Show fiscal periods under Office supplies").
 
-## 13. Chart (A5): a reusable chart, and Summary's use of it (proposed, revision 6)
+## 13. Chart (A5): a reusable chart, and Summary's use of it (approved, revision 7)
 
-**Status of this section:** proposed. It is the A5 contract, written for review. Nothing in it is approved or built. Decisions 9–15 in section 14 ask for approval.
+**Status of this section:** approved (decisions 9–15, 10 October 2026; status block). Not built.
 
 **Shape.** A chart is not a Summary feature but a platform component that Summary is the first to use. There are three layers, and only the third knows about Entities:
 
@@ -696,7 +697,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 
 8. **Approved and built: apply additivity to grouped Table's sums.** It is the same field property, the same rule and the same withheld-value rendering ("Not summed across …"). Before it, the same list could show a closing-balance total in grouped Table that Summary withholds as meaningless, and the surface showing the wrong number was the one that appeared to work. The owner approved it, as its own change before A2: "decision 8 approved". Section 5.8 records the build.
 
-**Raised for A5 (revision 6, proposed):**
+**Raised for A5 (revision 6; all seven approved on 10 October 2026, status block):**
 
 9. **A reusable chart in three layers:** a platform chart-data contract, `@athyper/contract-platform-chart` (not in the Entity list contracts), a design-system `Chart` component, and one adapter per consumer (section 13).
 10. **Hand-written SVG with theme tokens,** no chart library (13.1, 13.3).
@@ -834,3 +835,4 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 9 | A5: three layers, SVG, the type set with pie and "Others" guardrails, Top / Bottom N later, the contract as a platform contract | Section 13; decisions 9–12 |
 | Author, on audit round 9 | No chart colour tokens exist; exact text for display but numbers for geometry; Top / Bottom N shares a capability with Matrix's "Lowest on n items"; Summary rows should follow the published choice order; a new package needs its ownership row | Decisions 13 and 14; 13.1–13.3; A6; 13.8 (A5.2) |
 | Author | The experience surfaces' `chart` block (`number[]`, rendered as text) is an existing would-be consumer | Recorded (13.1, 13.7); not changed in A5 |
+| Owner (10 October 2026) | "Decisions (section 14, 9–15): Approved" | Status block; section 13 approved |
