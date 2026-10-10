@@ -393,7 +393,7 @@ packages/platform/foundation/temporal/src/date-scale.test.ts   colocated; the pa
 packages/contracts/platform/entity-list/src/calendar.ts           browser types + parser (wired into parsers.ts, url-state.ts)
 packages/platform/entity/runtime/list-view/src/calendar/
   calendar-view.tsx  calendar-month.tsx  calendar-agenda.tsx
-  calendar-model.ts  calendar-data.ts  calendar.css
+  calendar-model.ts  calendar.css
 server/packages/contracts/metadata/src/descriptors.ts             calendar on EntityListPresentationDescriptor
 server/packages/platform/metadata/src/list-calendar-descriptor.ts (+ .test.ts)  called by parseListPresentation
 server/packages/services/records/src/list-calendar.ts             per-viewer resolution (+ .test.ts)
@@ -405,6 +405,8 @@ tests/foundation-browser/entity-list-calendar.spec.ts              registered in
 ```
 
 *Reconciled (10 October 2026):* this module was proposed as `calendar-math.ts`; Gantt's P-G2 renamed it to `date-scale.ts`, and the paths above use the shipped name.
+
+*Reconciled (11 October 2026):* the listing also proposed `calendar/calendar-data.ts`, Calendar's paging hook. Gantt's P-G1 moved it to `date-range/date-range-data.ts` (`9bef62cfd`), and the shared secondary paging hook `useListPages` (`list-view/src/list-pages.ts`, `8dfb17ec3`) then replaced that; the listing above omits it. Calendar's generic date-range helpers live in `list-view/src/date-range/`.
 
 `calendar.css` is added to `LIST_STYLESHEETS` in the breakpoint policy. The temporal package's `test` script currently runs only `src/index.test.ts`; it becomes `node --import tsx --test src/index.test.ts src/date-scale.test.ts`. Its `tsconfig.json` already excludes `src/**/*.test.ts`, so no tsconfig change is needed.
 
