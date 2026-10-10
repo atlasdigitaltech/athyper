@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built; revision 5 (10 October 2026).
+**Status:** approved; A5.1a built, with the relief rule; revision 6 (10 October 2026).
+- **Relief rule approved (10 October 2026)** in the owner's words "approved yes to the relief rule", in the scope audit round 13 gave it (13.4a.7). A series fill below 3:1 is allowed only with direct labels and the data table. Status tones, the axis and the grid's reference always meet 3:1. Built into the validator, with the grid rule corrected. Decisions 20–22 are proposed, not approved (13.4a.7).
 - **A5.1a built (10 October 2026)** on the owner's instruction "go ahead and start build A5.1a", with reference to the [Neon Chart Prototype](../../prototypes/Neon%20Chart%20Prototype.html). The colour validator is in the theme package with its own tests (13.4a.6). No chart colour tokens exist yet: that is A5.1b, and the prototype's palette does not pass the validator (13.4a.6, point 5).
 - **13.4a approved (10 October 2026).** The owner approved decisions 16–19 in these words: "16, 17, 18 and 19 approved". Where 13.4a and 13.4 differ, 13.4a governs:
   - the validator is A5.1a, built before the token sets (A5.1b);
@@ -282,19 +283,44 @@ A palette checked by nothing ships on judgement. This amendment makes the check 
    The CIEDE2000 implementation matches Sharma, Wu and Dalal's (2005) published test data to four decimals.
 5. **The prototype's palettes, run through it** (input to A5.1b, not a finding against A5.1a):
 
-   | Set (prototype values) | Result |
+   | Set (prototype values) | Result, re-run with the relief rule and named elements (revision 6) |
    | --- | --- |
-   | Atlas Modern light | Fails. Three fills under 3:1 (2.8, 2.2, 2.7) and the warning tone (1.8); sequence 4 and 5 at 8.2 under tritanopia |
-   | Atlas Modern dark | Passes |
-   | Atlas Mono light | Fails. Only the warning tone (1.8) |
-   | Atlas Mono dark | Fails. Sequence 4 and 5 at 9.3 under tritanopia |
+   | Atlas Modern light | Sequence 3 (2.8), sequence 4 (2.2) and sequence 5 (2.7) are now **relieved**. Fails on the prototype's warning tone (1.8), and on sequence 4 and 5 at 8.2 under tritanopia |
+   | Atlas Modern dark | Passes; nothing relieved |
+   | Atlas Mono light | Fails only on the prototype's warning tone (1.8) |
+   | Atlas Mono dark | Fails on sequence 4 and 5 at 9.3 under tritanopia |
+
+   **The tone failures are the prototype's, not the theme's.** 13.4a.2 makes chart tones the theme's existing status tokens, and those all pass in every family and mode. Warning `#b54708` measures 5.43:1 on white, and the lowest tone anywhere is 5.43:1. No tone needs re-choosing in A5.1b. A5.1b must still re-choose sequence 4 or 5 in both families, for tritanopia.
 
    A5.1b must therefore choose values, not copy the prototype's. The light-mode fill result is the one the prototype's review raised. Two of its proposals bear on it, and neither is built because neither is approved:
    - a relief rule (a fill under 3:1 allowed only with a direct label and the data table);
    - a tone-against-sequence distance check.
 
    The other prototype review items (line series, mixed units in the parser, stacked guards, category caps, zero totals, percent rounding, line gaps, key collisions, chart roles, `--a-chart-ring`) are proposals for A5.2, recorded in the prototype and awaiting the owner.
-6. **Verified:** 7 tests (luminance and contrast, the published CIEDE2000 data, Lab and greys under every deficiency, the calibration pairs, a passing set and a deterministic report, each finding code, label ink). Package typecheck and the design-system, UI-system, style-token and deployment-profile gates are clean.
+6. **Verified (first build):** 7 tests (luminance and contrast, the published CIEDE2000 data, Lab and greys under every deficiency, the calibration pairs, a passing set and a deterministic report, each finding code, label ink). Package typecheck and the design-system, UI-system, style-token and deployment-profile gates are clean.
+
+#### 13.4a.7 The relief rule (approved, revision 6) and what it leaves open
+
+**The rule.** A fill below 3:1 is allowed only when all three hold:
+- it is a **series** fill (a sequence colour, the single-series colour or "Others");
+- every mark drawn in it carries a **direct label**;
+- the **data table** is available.
+
+**Status tones** identify by meaning, and the same tone appears on badges and Board lanes, which have no labels and no data table, so tones always meet 3:1. So do the **axis** and the **grid's reference**. Relief exists so pale yellows, oranges and pinks can identify series on light surfaces, where 3:1 against white would exclude them.
+
+**In the validator (built):**
+- each fill has a `role` (`series` or `tone`);
+- a series fill under 3:1 is reported in `relieved` and does not fail the set; a tone under 3:1 fails with `CHART_FILL_CONTRAST`;
+- **the grid rule is corrected.** The grid is measured against the 3:1 criterion, not against the weakest actual fill. The first build used the weakest fill, so a relieved 2.2:1 fill would have forced the grid below visibility (audit round 13, finding 1).
+- One new test covers relief for a series fill, refusal for the same colour as a tone, and the grid keeping its reference. 8 tests pass.
+
+**The component's side (A5.2).** Marks drawn in a relieved colour must carry direct labels: the component reads `relieved` from the set it draws with and must not hide those labels to save space. The data table is always available already (13.3).
+
+**Proposed, not approved:**
+
+20. **Keyed colours keep their guarantee at runtime** (audit round 13, finding 4). The neighbour check covers adjacent palette positions. With colours assigned by key (decision 19), two series far apart in the palette can be drawn side by side. The component therefore checks the adjacent pairs it is actually drawing, with the same `colourDistance` and thresholds: an assertion in development builds and a test case for each adapter.
+21. **Status tones against the series colours.** Any tone must stand apart from every sequence colour, under every simulated vision, at the neighbour thresholds. Otherwise "Approved" and an arbitrary category could look alike in one chart. All the primitives exist; the check is not built.
+22. **A floor under relief.** As approved, relief has no lower bound: a near-invisible series fill would pass as relieved if its marks are labelled. Recommended: a relieved fill must still reach **2:1**, so a mark is visible at all. The prototype's relieved colours (2.2 to 2.8) pass it; Okabe-Ito's yellow (1.32 on white) would not.
 
 ### 13.5 "Others"
 
@@ -365,3 +391,10 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 12 | Tokens, not raw hexes, in the deliverable; scope the 3:1 criterion per element; direct labels as a rule, not a fallback | 13.4a.2, 13.4a.1, 13.4a.4 |
 | Owner (10 October 2026) | "16, 17, 18 and 19 approved" | Status block; 13.4a approved and governs where it differs from 13.4 |
 | Owner (10 October 2026) | "go ahead and start build A5.1a" (with the Neon Chart Prototype) | Built: 13.4a.6 |
+| Owner (10 October 2026) | "approved yes to the relief rule" | Built in the scope below (13.4a.7) |
+| Audit round 13, finding 1 | The grid rule takes the weakest actual fill as its reference, so relief would make the grid invisible | Fixed: the reference is the 3:1 criterion (13.4a.7) |
+| Audit round 13, finding 2 | Scope relief to series fills; status tones always meet 3:1; re-choose the warning tone | Scope adopted. Corrected: the theme's real warning tone passes (5.43:1); only the prototype's tone value failed, so nothing is re-chosen (13.4a.6, point 5) |
+| Audit round 13, finding 3 | Name the failing elements | Re-run and named (13.4a.6, point 5). The first record had the names in the validator's output but not in the table |
+| Audit round 13, finding 4 | Keyed colours can put non-adjacent palette colours side by side | Proposed as decision 20 (13.4a.7) |
+| Audit round 13 | Approve the tone-against-sequence check | Proposed as decision 21; the owner approved only the relief rule this round |
+| Author | Relief has no lower bound | Proposed as decision 22 (13.4a.7) |

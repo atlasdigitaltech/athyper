@@ -179,7 +179,13 @@ export interface ChartColourFinding {
 export interface ChartFillReport {
   readonly element: string;
   readonly colour: HexColour;
+  /** `series` (sequence, single, neutral): identification by colour, which
+   * the relief rule covers. `tone`: identification by meaning, always 3:1. */
+  readonly role: "series" | "tone";
   readonly contrast: number;
+  /** A series fill under 3:1, allowed by the relief rule: every mark drawn in
+   * it must carry a direct label, and the data table must be available. */
+  readonly relieved: boolean;
   /** The label ink with the highest contrast on this fill, and whether it is
    * enough to draw a label inside the mark; otherwise labels go outside. */
   readonly labelInk: HexColour;
@@ -191,32 +197,42 @@ export interface ChartColourReport {
   readonly pass: boolean;
   readonly findings: readonly ChartColourFinding[];
   readonly fills: readonly ChartFillReport[];
+  /** Series fills under 3:1 that the relief rule allows (see `relieved`). */
+  readonly relieved: readonly string[];
   /** The smallest neighbour distance found, per vision. */
   readonly closestNeighbours: Readonly<Record<ColourVision, { readonly element: string; readonly distance: number }>>;
   readonly axisContrast: number;
   readonly gridContrast: number;
 }
 
-/** Checks one chart colour set against the 13.4a.1 criteria. Pure and
- * deterministic: the same set always gives the same report. */
+/** Checks one chart colour set against the 13.4a.1 criteria with the relief
+ * rule (13.4a.7). Pure and deterministic: the same set always gives the same
+ * report.
+ *
+ * Relief: a series fill (sequence, single, neutral) below 3:1 is allowed,
+ * and reported as relieved, because its marks carry direct labels and the
+ * data table is available. Status tones identify by meaning, as badges and
+ * Board lanes do without labels, so they always meet 3:1; so do the axis and
+ * the grid's reference. */
 export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
   const findings: ChartColourFinding[] = [];
   if (set.sequence.length !== 8)
     findings.push({ code: "CHART_COLOUR_SEQUENCE_LENGTH", element: "sequence", measured: set.sequence.length, required: 8 });
   if (!set.labelInks.length) throw new TypeError("A chart colour set needs at least one label ink");
-  const filled: [string, HexColour][] = [
-    ...set.sequence.map((colour, index): [string, HexColour] => [`sequence ${index + 1}`, colour]),
-    ["single", set.single],
-    ["neutral", set.neutral],
-    ...(Object.entries(set.tones) as [string, HexColour][]).map(([tone, colour]): [string, HexColour] => [`tone ${tone}`, colour]),
+  const filled: [string, HexColour, ChartFillReport["role"]][] = [
+    ...set.sequence.map((colour, index): [string, HexColour, "series"] => [`sequence ${index + 1}`, colour, "series"]),
+    ["single", set.single, "series"],
+    ["neutral", set.neutral, "series"],
+    ...(Object.entries(set.tones) as [string, HexColour][]).map(([tone, colour]): [string, HexColour, "tone"] => [`tone ${tone}`, colour, "tone"]),
   ];
-  const fills = filled.map(([element, colour]) => {
+  const fills = filled.map(([element, colour, role]) => {
     const contrast = contrastRatio(colour, set.surface);
-    if (contrast < criteria.fillContrast) findings.push({ code: "CHART_FILL_CONTRAST", element, measured: contrast, required: criteria.fillContrast });
+    const relieved = role === "series" && contrast < criteria.fillContrast;
+    if (contrast < criteria.fillContrast && !relieved) findings.push({ code: "CHART_FILL_CONTRAST", element, measured: contrast, required: criteria.fillContrast });
     const [labelInk, labelContrast] = set.labelInks
       .map((ink): [HexColour, number] => [ink, contrastRatio(ink, colour)])
       .reduce((best, next) => (next[1] > best[1] ? next : best));
-    return Object.freeze({ element, colour, contrast, labelInk, labelContrast, labelInside: labelContrast >= criteria.labelContrast });
+    return Object.freeze({ element, colour, role, contrast, relieved, labelInk, labelContrast, labelInside: labelContrast >= criteria.labelContrast });
   });
   const closest = {} as Record<ColourVision, { element: string; distance: number }>;
   for (const vision of COLOUR_VISIONS) {
@@ -230,14 +246,17 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
   }
   const axisContrast = contrastRatio(set.axis, set.surface);
   if (axisContrast < criteria.axisContrast) findings.push({ code: "CHART_AXIS_CONTRAST", element: "axis", measured: axisContrast, required: criteria.axisContrast });
-  // Grid lines must sit below every data fill, so the data dominates.
+  // Grid lines must sit below every data fill that meets the fill criterion,
+  // so the data dominates. The reference is the criterion, not the weakest
+  // actual fill: a relieved fill is too weak to compete with anything, and
+  // measuring against it would make the grid invisible (audit round 13).
   const gridContrast = contrastRatio(set.grid, set.surface);
-  const lowestFill = Math.min(...fills.map((fill) => fill.contrast));
-  if (gridContrast >= lowestFill) findings.push({ code: "CHART_GRID_DOMINATES", element: "grid", measured: gridContrast, required: lowestFill });
+  if (gridContrast >= criteria.fillContrast) findings.push({ code: "CHART_GRID_DOMINATES", element: "grid", measured: gridContrast, required: criteria.fillContrast });
   return Object.freeze({
     pass: !findings.length,
     findings: Object.freeze(findings),
     fills: Object.freeze(fills),
+    relieved: Object.freeze(fills.filter((fill) => fill.relieved).map((fill) => fill.element)),
     closestNeighbours: Object.freeze(closest),
     axisContrast,
     gridContrast,

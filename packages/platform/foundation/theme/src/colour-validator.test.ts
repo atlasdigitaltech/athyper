@@ -82,7 +82,8 @@ test("a set meeting every criterion passes, and the report is deterministic", ()
   assert.deepEqual(report.findings, []);
   assert.equal(report.pass, true);
   assert.equal(report.fills.length, 8 + 1 + 1 + 4);
-  assert.ok(report.axisContrast >= 3 && report.gridContrast < Math.min(...report.fills.map((fill) => fill.contrast)));
+  assert.ok(report.axisContrast >= 3 && report.gridContrast < 3);
+  assert.deepEqual(report.relieved, []);
   assert.deepEqual(validateChartColours(passing), report);
   // Labels: on these dark fills white ink reaches 4.5:1, so labels sit inside.
   assert.ok(report.fills.filter((fill) => fill.element.startsWith("sequence")).every((fill) => fill.labelInside && fill.labelInk === "#ffffff"));
@@ -90,8 +91,8 @@ test("a set meeting every criterion passes, and the report is deterministic", ()
 
 test("each criterion reports its own finding", () => {
   const codes = (set: ChartColourSet) => validateChartColours(set).findings.map((finding) => `${finding.code} ${finding.element}${finding.vision ? ` ${finding.vision}` : ""}`);
-  // A pale fill under 3:1 against the plot.
-  assert.deepEqual(codes({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 3 ? "#eda100" : colour)) }), ["CHART_FILL_CONTRAST sequence 4"]);
+  // A pale tone under 3:1 fails: tones identify by meaning, without labels.
+  assert.deepEqual(codes({ ...passing, tones: { ...passing.tones, success: "#1baf7a" } }), ["CHART_FILL_CONTRAST tone success"]);
   // Neighbours too close: two blues side by side.
   assert.ok(codes({ ...passing, sequence: ["#35577d", "#3a5c83", ...passing.sequence.slice(2)] }).includes("CHART_NEIGHBOUR_DISTANCE sequence 1 and 2 normal"));
   // Red then green: fine for normal vision, lost under deuteranopia.
@@ -100,6 +101,7 @@ test("each criterion reports its own finding", () => {
   assert.ok(!redGreen.includes("CHART_NEIGHBOUR_DISTANCE sequence 1 and 2 normal"));
   // A faint axis; a grid that competes with the data; a short sequence.
   assert.deepEqual(codes({ ...passing, axis: "#d0d0d0" }), ["CHART_AXIS_CONTRAST axis"]);
+  // A grid at the fill criterion competes with the data.
   assert.deepEqual(codes({ ...passing, grid: "#6a6a75" }), ["CHART_GRID_DOMINATES grid"]);
   assert.ok(codes({ ...passing, sequence: passing.sequence.slice(0, 7) }).includes("CHART_COLOUR_SEQUENCE_LENGTH sequence"));
   // A pale tone fails like any other fill.
@@ -115,4 +117,23 @@ test("a pale fill takes dark label ink, or puts its label outside", () => {
   // This mid grey reaches 4.5:1 with neither ink, so its label is drawn outside.
   assert.ok(contrastRatio("#7d7d7d", "#ffffff") < 4.5 && contrastRatio("#7d7d7d", "#16161a") < 4.5);
   assert.equal(mid.labelInside, false);
+});
+
+test("the relief rule: a pale series fill is relieved, a pale tone is not, and the grid keeps its reference", () => {
+  // Amber at 2.2:1 as a sequence colour: allowed, reported as relieved.
+  const pale = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 3 ? "#eda100" : colour)), neutral: "#b0b0b0" });
+  assert.equal(pale.pass, true);
+  assert.deepEqual(pale.relieved, ["sequence 4", "neutral"]);
+  const amber = pale.fills.find((fill) => fill.element === "sequence 4")!;
+  assert.equal(amber.role, "series");
+  assert.ok(amber.relieved && amber.contrast < 3);
+  // Its marks need direct labels; dark ink reaches 4.5:1 on it, so they sit inside.
+  assert.equal(amber.labelInk, "#16161a");
+  // The grid is measured against the criterion, not against the relieved
+  // 2.2:1 fill, so a visible grid still passes.
+  assert.ok(pale.gridContrast > 1.2 && !pale.findings.some((finding) => finding.code === "CHART_GRID_DOMINATES"));
+  // The same amber as the warning tone fails: tones always meet 3:1.
+  const tone = validateChartColours({ ...passing, tones: { ...passing.tones, warning: "#eda100" } });
+  assert.deepEqual(tone.findings.map((finding) => finding.code), ["CHART_FILL_CONTRAST"]);
+  assert.equal(tone.fills.find((fill) => fill.element === "tone warning")!.relieved, false);
 });
