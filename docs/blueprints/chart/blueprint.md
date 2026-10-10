@@ -1,6 +1,11 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built, with the relief rule; revision 6 (10 October 2026).
+**Status:** approved; A5.1a built, with decisions 21 and 22; revision 7 (10 October 2026).
+- **Decisions 20–22 approved (10 October 2026)** in the owner's words "Three proposals - Approved":
+  - 21 (tones against series colours) and 22 (the 2:1 floor under relief) are built into the validator;
+  - 20 (the runtime check of drawn pairs) belongs to the A5.2 component.
+
+  Building them showed a gap in the approved neighbour rule; decision 23 is proposed to close it (13.4a.8).
 - **Relief rule approved (10 October 2026)** in the owner's words "approved yes to the relief rule", in the scope audit round 13 gave it (13.4a.7). A series fill below 3:1 is allowed only with direct labels and the data table. Status tones, the axis and the grid's reference always meet 3:1. Built into the validator, with the grid rule corrected. Decisions 20–22 are proposed, not approved (13.4a.7).
 - **A5.1a built (10 October 2026)** on the owner's instruction "go ahead and start build A5.1a", with reference to the [Neon Chart Prototype](../../prototypes/Neon%20Chart%20Prototype.html). The colour validator is in the theme package with its own tests (13.4a.6). No chart colour tokens exist yet: that is A5.1b, and the prototype's palette does not pass the validator (13.4a.6, point 5).
 - **13.4a approved (10 October 2026).** The owner approved decisions 16–19 in these words: "16, 17, 18 and 19 approved". Where 13.4a and 13.4 differ, 13.4a governs:
@@ -316,11 +321,40 @@ A palette checked by nothing ships on judgement. This amendment makes the check 
 
 **The component's side (A5.2).** Marks drawn in a relieved colour must carry direct labels: the component reads `relieved` from the set it draws with and must not hide those labels to save space. The data table is always available already (13.3).
 
-**Proposed, not approved:**
+**Approved on 10 October 2026 (status block):**
 
 20. **Keyed colours keep their guarantee at runtime** (audit round 13, finding 4). The neighbour check covers adjacent palette positions. With colours assigned by key (decision 19), two series far apart in the palette can be drawn side by side. The component therefore checks the adjacent pairs it is actually drawing, with the same `colourDistance` and thresholds: an assertion in development builds and a test case for each adapter.
 21. **Status tones against the series colours.** Any tone must stand apart from every sequence colour, under every simulated vision, at the neighbour thresholds. Otherwise "Approved" and an arbitrary category could look alike in one chart. All the primitives exist; the check is not built.
 22. **A floor under relief.** As approved, relief has no lower bound: a near-invisible series fill would pass as relieved if its marks are labelled. Recommended: a relieved fill must still reach **2:1**, so a mark is visible at all. The prototype's relieved colours (2.2 to 2.8) pass it; Okabe-Ito's yellow (1.32 on white) would not.
+
+#### 13.4a.8 Build record (decisions 21 and 22) and the all-pairs gap
+
+**Built:**
+- `CHART_TONE_DISTANCE`: every status tone against every sequence colour, under normal vision and each deficiency, at the neighbour thresholds (15 and 10).
+- `CHART_RELIEF_FLOOR`: a relieved series fill under 2:1 fails (`CHART_COLOUR_CRITERIA.reliefFloor`).
+- The test fixture now uses the theme's own light status tones. 10 tests pass.
+
+**Decision 21 is satisfiable.** Measured against the theme's light tones, the reference palettes miss only a few tone-to-series pairs: Okabe-Ito 6 of 128, Tableau 10 3 of 128, the prototype 7 of 128. A search found 8-colour sets at 3:1 that clear every tone under every vision. It constrains A5.1b; it does not block it.
+
+**The gap: neighbours are checked by position, but colours are assigned by key.** The approved rule compares only neighbouring sequence positions (1–2, 2–3, …). Building decision 21 surfaced it:
+- a search for a passing set returned eight alternating dark and light reds;
+- its positions 1 and 3 (`#5c2323`, `#691616`) measure 2.6 apart for normal vision, yet the set passed because they are not neighbours.
+
+With colours keyed (decision 19), any two palette colours can be drawn side by side. Decision 20's runtime check would then catch the clash only on a user's screen, not when the palette is chosen.
+
+All pairs, at the same thresholds:
+
+| Palette | Closest pair (normal / protanopia / deuteranopia / tritanopia) |
+| --- | --- |
+| Okabe-Ito | 21.7 / 12.2 / 11.6 / 10.9: passes all pairs at 15 and 10 |
+| Tableau 10 (first 8) | 18.1 / 4.1 / 0.7 / 8.0 |
+| The prototype | 13.3 / 4.7 / 5.5 / 5.5 |
+
+A search also found 8-colour sets at 3:1 on white that pass all pairs and clear every light tone. The test fixture is one.
+
+**Proposed, not approved:**
+
+23. **Every pair of sequence colours is distinct, not only neighbours,** at the same thresholds (15 normal, 10 under each deficiency). It is the palette-time form of decision 20's guarantee, and Okabe-Ito shows it is attainable. Decision 20's runtime check stays as the guard for adapters. Until 23 is approved, the validator keeps the approved neighbour rule.
 
 ### 13.5 "Others"
 
@@ -398,3 +432,5 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 13, finding 4 | Keyed colours can put non-adjacent palette colours side by side | Proposed as decision 20 (13.4a.7) |
 | Audit round 13 | Approve the tone-against-sequence check | Proposed as decision 21; the owner approved only the relief rule this round |
 | Author | Relief has no lower bound | Proposed as decision 22 (13.4a.7) |
+| Owner (10 October 2026) | "Three proposals - Approved" (decisions 20–22) | 21 and 22 built; 20 is A5.2's (13.4a.8) |
+| Author, building 21 | The neighbour rule checks positions while colours are keyed; a degenerate palette passes | Measured and proposed as decision 23 (13.4a.8) |

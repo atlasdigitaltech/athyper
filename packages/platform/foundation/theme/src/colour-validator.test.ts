@@ -64,16 +64,18 @@ test("the distance thresholds separate known-good from known-bad colour pairs", 
       );
 });
 
-// A light set that meets every criterion (a darker categorical sequence, so
-// every fill reaches 3:1 on white).
+// A light set that meets every criterion, found by search: every fill
+// reaches 3:1 on white, every pair (not only neighbours) is distinct under
+// every vision, and every colour stands apart from the theme's own light
+// status tones. A test fixture, not a proposed palette.
 const passing: ChartColourSet = {
   surface: "#ffffff",
-  sequence: ["#35577d", "#a65a2d", "#2f7d65", "#8f6d10", "#94476a", "#3a6e36", "#5b4fa0", "#a63f3f"],
+  sequence: ["#4d1a1a", "#cc8066", "#a18a17", "#1a4d3b", "#008f83", "#0070e0", "#002a66", "#0038e0"],
   single: "#234b84",
   neutral: "#6b6b75",
   grid: "#e4e4e0",
   axis: "#6a6a75",
-  tones: { neutral: "#5c5c67", success: "#126b34", warning: "#8a5200", danger: "#b02525" },
+  tones: { neutral: "#5b6578", success: "#067647", warning: "#b54708", danger: "#b42318" },
   labelInks: ["#ffffff", "#16161a"],
 };
 
@@ -85,14 +87,16 @@ test("a set meeting every criterion passes, and the report is deterministic", ()
   assert.ok(report.axisContrast >= 3 && report.gridContrast < 3);
   assert.deepEqual(report.relieved, []);
   assert.deepEqual(validateChartColours(passing), report);
-  // Labels: on these dark fills white ink reaches 4.5:1, so labels sit inside.
-  assert.ok(report.fills.filter((fill) => fill.element.startsWith("sequence")).every((fill) => fill.labelInside && fill.labelInk === "#ffffff"));
+  // Labels: each fill names the ink that reads best on it; dark fills take
+  // white, the light coral takes the dark ink.
+  assert.equal(report.fills.find((fill) => fill.element === "sequence 1")!.labelInk, "#ffffff");
+  assert.equal(report.fills.find((fill) => fill.element === "sequence 2")!.labelInk, "#16161a");
 });
 
 test("each criterion reports its own finding", () => {
   const codes = (set: ChartColourSet) => validateChartColours(set).findings.map((finding) => `${finding.code} ${finding.element}${finding.vision ? ` ${finding.vision}` : ""}`);
   // A pale tone under 3:1 fails: tones identify by meaning, without labels.
-  assert.deepEqual(codes({ ...passing, tones: { ...passing.tones, success: "#1baf7a" } }), ["CHART_FILL_CONTRAST tone success"]);
+  assert.ok(codes({ ...passing, tones: { ...passing.tones, success: "#1baf7a" } }).includes("CHART_FILL_CONTRAST tone success"));
   // Neighbours too close: two blues side by side.
   assert.ok(codes({ ...passing, sequence: ["#35577d", "#3a5c83", ...passing.sequence.slice(2)] }).includes("CHART_NEIGHBOUR_DISTANCE sequence 1 and 2 normal"));
   // Red then green: fine for normal vision, lost under deuteranopia.
@@ -105,7 +109,7 @@ test("each criterion reports its own finding", () => {
   assert.deepEqual(codes({ ...passing, grid: "#6a6a75" }), ["CHART_GRID_DOMINATES grid"]);
   assert.ok(codes({ ...passing, sequence: passing.sequence.slice(0, 7) }).includes("CHART_COLOUR_SEQUENCE_LENGTH sequence"));
   // A pale tone fails like any other fill.
-  assert.deepEqual(codes({ ...passing, tones: { ...passing.tones, warning: "#fab219" } }), ["CHART_FILL_CONTRAST tone warning"]);
+  assert.ok(codes({ ...passing, tones: { ...passing.tones, warning: "#fab219" } }).includes("CHART_FILL_CONTRAST tone warning"));
 });
 
 test("a pale fill takes dark label ink, or puts its label outside", () => {
@@ -134,6 +138,25 @@ test("the relief rule: a pale series fill is relieved, a pale tone is not, and t
   assert.ok(pale.gridContrast > 1.2 && !pale.findings.some((finding) => finding.code === "CHART_GRID_DOMINATES"));
   // The same amber as the warning tone fails: tones always meet 3:1.
   const tone = validateChartColours({ ...passing, tones: { ...passing.tones, warning: "#eda100" } });
-  assert.deepEqual(tone.findings.map((finding) => finding.code), ["CHART_FILL_CONTRAST"]);
+  assert.ok(tone.findings.some((finding) => finding.code === "CHART_FILL_CONTRAST" && finding.element === "tone warning"));
   assert.equal(tone.fills.find((fill) => fill.element === "tone warning")!.relieved, false);
+});
+
+test("decision 22: a relieved series fill still reaches the 2:1 floor", () => {
+  // Okabe-Ito's yellow is 1.32:1 on white: too faint even with a label.
+  const faint = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 2 ? "#f0e442" : colour)) });
+  const finding = faint.findings.find((item) => item.code === "CHART_RELIEF_FLOOR");
+  assert.equal(finding?.element, "sequence 3");
+  assert.equal(finding?.required, CHART_COLOUR_CRITERIA.reliefFloor);
+  assert.equal(faint.pass, false);
+});
+
+test("decision 21: a status tone stands apart from every sequence colour under every vision", () => {
+  // A sequence colour equal to the success tone fails for everyone.
+  const same = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 4 ? passing.tones.success : colour)) });
+  const visions = same.findings.filter((item) => item.code === "CHART_TONE_DISTANCE" && item.element === "tone success and sequence 5").map((item) => item.vision);
+  assert.deepEqual(visions, ["normal", "protanopia", "deuteranopia", "tritanopia"]);
+  // A colour distinct for normal vision but lost under deuteranopia is caught too.
+  const lost = validateChartColours({ ...passing, tones: { ...passing.tones, danger: "#b42318" }, sequence: passing.sequence.map((colour, index) => (index === 3 ? "#3d7a00" : colour)) });
+  assert.ok(lost.findings.some((item) => item.code === "CHART_TONE_DISTANCE" && item.vision !== "normal"));
 });

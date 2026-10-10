@@ -139,6 +139,9 @@ export const CHART_COLOUR_CRITERIA = Object.freeze({
   neighbourDistance: 15,
   /** Neighbouring series, under each simulated deficiency. */
   neighbourDistanceDeficient: 10,
+  /** The floor under relief: a relieved series fill still reaches this, so
+   * its marks are visible at all (decision 22). */
+  reliefFloor: 2,
 });
 
 /** One chart colour set: one family in one mode (13.4a.2). */
@@ -162,6 +165,8 @@ export interface ChartColourSet {
 export type ChartColourFindingCode =
   | "CHART_COLOUR_SEQUENCE_LENGTH"
   | "CHART_FILL_CONTRAST"
+  | "CHART_RELIEF_FLOOR"
+  | "CHART_TONE_DISTANCE"
   | "CHART_NEIGHBOUR_DISTANCE"
   | "CHART_AXIS_CONTRAST"
   | "CHART_GRID_DOMINATES";
@@ -213,7 +218,9 @@ export interface ChartColourReport {
  * and reported as relieved, because its marks carry direct labels and the
  * data table is available. Status tones identify by meaning, as badges and
  * Board lanes do without labels, so they always meet 3:1; so do the axis and
- * the grid's reference. */
+ * the grid's reference. A relieved fill still reaches the relief floor
+ * (2:1), and every status tone stands apart from every sequence colour
+ * under every simulated vision (decisions 21 and 22). */
 export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
   const findings: ChartColourFinding[] = [];
   if (set.sequence.length !== 8)
@@ -229,6 +236,7 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
     const contrast = contrastRatio(colour, set.surface);
     const relieved = role === "series" && contrast < criteria.fillContrast;
     if (contrast < criteria.fillContrast && !relieved) findings.push({ code: "CHART_FILL_CONTRAST", element, measured: contrast, required: criteria.fillContrast });
+    if (relieved && contrast < criteria.reliefFloor) findings.push({ code: "CHART_RELIEF_FLOOR", element, measured: contrast, required: criteria.reliefFloor });
     const [labelInk, labelContrast] = set.labelInks
       .map((ink): [HexColour, number] => [ink, contrastRatio(ink, colour)])
       .reduce((best, next) => (next[1] > best[1] ? next : best));
@@ -244,6 +252,16 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
       if (distance < required) findings.push({ code: "CHART_NEIGHBOUR_DISTANCE", element, vision, measured: distance, required });
     }
   }
+  // Status tones stand apart from every sequence colour under every vision,
+  // so a toned category never looks like an arbitrary one (decision 21).
+  for (const [tone, colour] of Object.entries(set.tones) as [string, HexColour][])
+    for (const vision of COLOUR_VISIONS) {
+      const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
+      set.sequence.forEach((series, index) => {
+        const distance = colourDistance(colour, series, vision);
+        if (distance < required) findings.push({ code: "CHART_TONE_DISTANCE", element: `tone ${tone} and sequence ${index + 1}`, vision, measured: distance, required });
+      });
+    }
   const axisContrast = contrastRatio(set.axis, set.surface);
   if (axisContrast < criteria.axisContrast) findings.push({ code: "CHART_AXIS_CONTRAST", element: "axis", measured: axisContrast, required: criteria.axisContrast });
   // Grid lines must sit below every data fill that meets the fill criterion,
