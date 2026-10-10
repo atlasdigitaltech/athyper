@@ -145,6 +145,10 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - There is one chart-data contract (`@athyper/contract-platform-chart`) and
   one design-system `Chart` component, drawn as SVG with theme tokens only.
   Do not add a chart library or a second chart component.
+- The contract owns the data shape for every chart, not only Entity list
+  charts: experience-surface chart blocks, dashboards and any other surface
+  supply `ChartDataV1` from their data source or adapter. Do not keep a
+  second chart data shape (such as a bare `number[]`) or a renderer for it.
 - The chart never computes a total or a share's denominator; it draws the
   values and totals its producer gives, as exact decimal text for anything
   shown. Producers carry readable labels only, never identifiers.

@@ -1,22 +1,30 @@
 # Shared chart — blueprint
 
-**Status:** approved, not built (10 October 2026).
+**Status:** approved, not built; revision 2 (10 October 2026).
+- **Revision 2** (audit round 11, section "Review disposition"):
+  - closes the data-shape gap for the experience surfaces' `chart` block (Consumers);
+  - folds 13.7 into the Consumers table, so there is one list of consumers;
+  - says where 13.6 and 13.8 live.
+
+  No approved decision changes.
 - **Approval.** The owner approved this contract as the Entity list Aggregate blueprint's A5 decisions 9–15, in two steps:
   - "Decisions (section 14, 9–15): Approved";
   - decision 15 amended to its separated form, "Approved" (Aggregate status block, revision 8).
 - **Moved here** on the owner's instruction ("go ahead") in a move-only commit (`6d9510f29`), verified line by line: every line removed from the Aggregate blueprint appears here unchanged. Whether that approval covers the moved text is for the owner to confirm after an independent diff check, as for the [shared list layout foundation](../entity-list-layouts/foundation.md).
 - **Build:** no build instruction is recorded. A5.1 (chart colour tokens) comes first, then A5.2 (the contract and the component).
 - **Authority.** This is shared Entity Framework work under [AGENTS.md](../../../AGENTS.md): its first consumer is the Entity list Summary. The component lives in the design system under the owner's front-end design-system authorization of 1 October 2026. This document gives no authority to adopt the chart anywhere: each consumer needs its own approved decision (Consumers, below).
-- **Numbering.** Sections 13.1–13.5 and 13.7, and decisions 9, 10, 11, 13 and 15, keep their Aggregate numbers, so approvals and citations stay valid. Update this document in place. Do not create competing chart plans.
+- **Numbering.** Sections 13.1–13.5 and 13.7, and decisions 9, 10, 11, 13 and 15, keep their Aggregate numbers, so approvals and citations stay valid. 13.6 (Summary's use of the chart) and 13.8 (A5's steps, including A5.3) remain in the [Aggregate blueprint](../entity-list-aggregate/blueprint.md); the gaps here are those sections, not omissions. Update this document in place. Do not create competing chart plans.
 
 ## Consumers
 
 Each consumer has its own adapter, its own approved decision and its own tests. The chart contract and component change only through this document, and a change that a consumer relies on updates that consumer's blueprint in the same change.
 
+**The contract owns the data shape, not only the component.** Any surface that draws a chart, Entity list or not, gives the component `ChartDataV1`. A consumer whose data arrives in another shape converts it in its adapter or its data source; it never keeps a second shape beside the contract or a second renderer for it. This matters most where the shape is not yet in any contract. The experience surfaces' `chart` block names a registry data source (`registryRef(item.dataSource, …)` in `contract-platform-dashboard`), and its `number[]` shape is known only to the runtime that supplies it (`ExperienceDataResult` in `platform/shell/dashboard`).
+
 | Consumer | Status | Where it is decided |
 | --- | --- | --- |
 | Entity list Summary | Approved (A5.3), not built | [Aggregate blueprint](../entity-list-aggregate/blueprint.md) sections 13.6 and 13.8, decisions 12 and 14 |
-| Experience surfaces' `chart` block (Home, workspace) | Candidate; not approved. Its `number[]` data would move to `ChartDataV1` | A future owner decision, recorded here |
+| Experience surfaces' `chart` block (Home, workspace) | Candidate; not approved. Conditions of adoption: its registry data source returns `ChartDataV1`, so the shape moves with the component rather than beside it, and the `number[]` result is retired. The block's declared `visualization` (`bar`, `line`, `donut`, `metric`) is a request, not an instruction: `chartTypes(data)` decides, and an unavailable type renders its reason code's message, never an empty or misleading chart. `metric` is a single number, not a chart, and is decided with the block | A future owner decision, under the design-system authorization of 1 October 2026, recorded here |
 | Board lane distribution, Matrix column comparison, a declared record-page metric section | Candidates; not approved | Each layout's own blueprint, then recorded here |
 | "Add to Dashboard" | Out of scope | Needs its own owner instruction |
 
@@ -177,10 +185,7 @@ export type ChartPointV1 =
 
 ### 13.7 Other consumers (not in A5)
 
-The component is built for reuse, but A5 adopts it only in Summary. Each later use is its own decision, with its own adapter and tests:
-- inside the Entity Framework: Board's lane distribution, Matrix's column comparison, and a declared metric section on a record page (which would need published metadata);
-- outside it: the experience surfaces' `chart` block, whose data contract (`number[]`) would move to `ChartDataV1`, under the design-system authorization of 1 October 2026;
-- "Add to Dashboard" stays out of scope.
+Folded into the Consumers table (revision 2), so there is one list. What the table does not carry: A5 adopts the chart only in Summary, and each later use needs its own adapter and tests. A record-page metric section would also need published metadata declaring it.
 
 ### Build steps (moved from Aggregate 13.8)
 
@@ -221,3 +226,7 @@ The component is built for reuse, but A5 adopts it only in Summary. Each later u
 | Owner (10 October 2026) | "Decisions (section 14, 9–15): Approved" | Status block; section 13 approved |
 | Audit round 10 | Decision 15: separate the axis from the content, mirroring chrome and categorical axes but keeping time axes earliest on the left; the spec should assert it | Approved by the owner ("Approved"); 13.3, 13.6, decision 15 |
 | Audit round 10 | List the unavailable-type reason codes in the blueprint, not only in code | The codes were already in the 13.3 availability table; revision 8 adds their messages and separates them from value states |
+| Audit round 11 | The move is verbatim and the numbering deliberate | Confirmed; the numbering note now says where 13.6 and 13.8 live |
+| Audit round 11 | "One contract" is enforceable for components but not data shapes: the dashboard's chart block names a registry data source whose `number[]` shape no contract fixes | Closed: the Consumers section states that the contract owns the data shape for any chart, and the dashboard row makes `ChartDataV1` from its data source a condition of adoption; AGENTS.md says the same |
+| Audit round 11 | 13.7 duplicates the Consumers table | 13.7 folded into the table, keeping only what the table does not carry |
+| Audit round 11 | A dashboard block's declared visualization must be a request, not an instruction | Recorded in the dashboard row: `chartTypes(data)` decides and an unavailable type shows its reason |
