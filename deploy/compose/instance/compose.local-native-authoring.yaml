@@ -1,0 +1,33 @@
+# Complete local native-authoring control-api composition. It supplies only
+# mounted pins and credentials; human approvals and command admission remain
+# database-enforced. Apply this with compose.control-api.yaml.
+services:
+  control-api:
+    environment:
+      PLATFORM_CONTROL_COMMAND_ISSUER_DATABASE_URL_FILE: /run/product-command/issuer-database-url
+      PLATFORM_CONTROL_COMMAND_APPLICATION_DATABASE_URL_FILE: /run/product-command/application-database-url
+      PLATFORM_CONTROL_COMMAND_APPLICATION_LOGIN: athyper_dev_product_command
+      PLATFORM_CONTROL_COMMAND_LABEL_POLICY_FILE: /run/product-command/label-policy.json
+      PLATFORM_CONTROL_REFERENCE_RESOURCE_POLICY_FILE: /run/reference-resources/reference-policy.json
+      PLATFORM_CONTROL_REFERENCE_TRUST_FILE: /run/reference-resources/resource-trust.json
+      PLATFORM_CONTROL_NATIVE_BOOTSTRAP_CONFIGURATION_FILE: /run/native-bootstrap/startup.json
+      PLATFORM_CONTROL_NATIVE_NEON_DATABASE_URL_FILE: /run/control-targets/neon-database-url
+      PLATFORM_CONTROL_NATIVE_MESH_DATABASE_URL_FILE: /run/control-targets/mesh-database-url
+      PLATFORM_CONTROL_RESOURCE_SOURCE_DIRECTORY: /run/resource-review
+      PLATFORM_CONTROL_RESOURCE_DESCRIPTOR_HASH: ${ATHYPER_RESOURCE_DESCRIPTOR_HASH:?set descriptor hash}
+      PUBLICATION_COMPONENT_DEPLOYMENT_ROOT: /run/component-deployment
+      PUBLICATION_COMPONENT_DEPLOYMENT_MANIFEST: component-manifest.json
+      PUBLICATION_COMPONENT_DEPLOYMENT_HASH: ${ATHYPER_COMPONENT_DEPLOYMENT_HASH:?set component manifest hash}
+      PUBLICATION_WORKLOAD_CONFIG: /run/local-publication/workload.json
+      ATHYPER_DEV_PRESET: devfull
+    volumes:
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT:?set product command credentials}/issuer-database-url:/run/product-command/issuer-database-url:ro
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT}/application-database-url:/run/product-command/application-database-url:ro
+      - ${ATHYPER_PRODUCT_COMMAND_ROOT}/label-policy.json:/run/product-command/label-policy.json:ro
+      - ${ATHYPER_REFERENCE_RESOURCE_ROOT:?set approved reference resource pins}:/run/reference-resources:ro
+      - ${ATHYPER_NATIVE_BOOTSTRAP_ROOT:?set native bootstrap configuration}:/run/native-bootstrap:ro
+      - ${ATHYPER_CONTROL_TARGET_ROOT:?set target database credentials}/neon-database-url:/run/control-targets/neon-database-url:ro
+      - ${ATHYPER_CONTROL_TARGET_ROOT}/mesh-database-url:/run/control-targets/mesh-database-url:ro
+      - ${ATHYPER_RESOURCE_SOURCE_ROOT:?set generated resource candidates}:/run/resource-review:ro
+      - ${ATHYPER_COMPONENT_DEPLOYMENT_ROOT:?set component deployment bundle}:/run/component-deployment:ro
+      - ${ATHYPER_LOCAL_PUBLICATION_WORKLOAD_ROOT:?set local publication workload}/workload.json:/run/local-publication/workload.json:ro
