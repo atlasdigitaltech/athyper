@@ -93,6 +93,12 @@ const descriptor = (withSummary: boolean) =>
     limits: { defaultPageSize: 50, allowedPageSizes: [25, 50], maxSortLevels: 3, countMode: "exact" },
   });
 
+test("a semi-additive field publishes the time fields its sum stays within (decision 8)", () => {
+  const withTime = (sumWithin: unknown) => ({ ...descriptor(false), fields: descriptor(false).fields.map((item) => (item.key === "closing_net" ? { ...item, sumWithin } : item)) });
+  assert.deepEqual(parseEntityListDescriptor(withTime([{ key: "period", label: "Fiscal period" }])).fields.find((item) => item.key === "closing_net")?.sumWithin, [{ key: "period", label: "Fiscal period" }]);
+  assert.throws(() => parseEntityListDescriptor(withTime([{ key: "Not a code", label: "x" }])), /sumWithin/);
+});
+
 test("surface.aggregate is required exactly when Summary is supported", () => {
   assert.ok(descriptor(true).surface.aggregate);
   assert.throws(() => parseEntityListDescriptor({ ...descriptor(false), surface: { ...descriptor(false).surface, supportedModes: ["table", "aggregate"] } }), /surface.aggregate is required/);

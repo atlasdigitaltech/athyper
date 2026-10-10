@@ -32,9 +32,9 @@ const script = buildSync({
       facts.push({id:uuid('9d',a*10+p),values:{code:'TB-'+(a*10+p),account:account.id,period,posted:'2026-0'+(p+1)+'-28',currency:'MYR',
         period_net:String(net)+'.00',closing_net:String(net*(p+1))+'.00',salary:String(1000+a*100+p*10)+'.00',preparer:['ana','ben','cy'][(a+p)%3]}});
     }));
-    const lineFields=[field('code','Code','string',{groupable:false}),field('account','GL account','reference'),
+    const lineFields=[field('code','Code','string',{groupable:false}),field('account','GL account','reference',{filterOptions:accounts.map(a=>({value:a.id,label:a.label}))}),
       field('period','Fiscal period','enum',{filterOptions:periods.map((value,i)=>({value,label:'Period '+(i+1)}))}),field('posted','Posted on','date'),
-      field('currency','Currency','string',{groupable:false}),field('period_net','Period net','money',{groupable:false}),field('closing_net','Closing net','money',{groupable:false}),
+      field('currency','Currency','string',{groupable:false}),field('period_net','Period net','money',{groupable:false,aggregations:['count','sum']}),field('closing_net','Closing net','money',{groupable:false,aggregations:['count','sum'],sumWithin:[{key:'period',label:'Fiscal period'}]}),
       field('salary','Salary','decimal',{groupable:false}),field('preparer','Preparer','string',{groupable:false})];
     const aggregate={
       dimensions:[{field:'account',label:'GL account'},{field:'period',label:'Fiscal period'},{field:'posted',label:'Posted on',buckets:['month','quarter']}],
@@ -47,7 +47,7 @@ const script = buildSync({
     const descriptor={schemaVersion:1,plane:'neon',
       entity:{code:'trial_balance',label:'Trial balance line',pluralLabel:'Trial balance lines',identityField:'code'},
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
-      surface:{key:'list',title:'Trial balance',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','period','period_net'],density:'comfortable',mode:'aggregate'},
+      surface:{key:'list',title:'Trial balance',defaultState:{filters:[],sort:[{field:'code',direction:'asc'}],columns:['code','period','period_net','closing_net'],density:'comfortable',mode:'aggregate'},
         supportedModes:['table','aggregate'],aggregate,search:{minimumQueryLength:1},filterPresentation:{quickFields:[],source:'metadata',allowUserPinning:true}},
       fields:lineFields.map((f,i)=>({...f,defaultOrder:i})),actions:[],
       scope:{status:'ready',labels:[{key:'access',label:'Scope',value:'All permitted tenant records'}],fingerprint:'c'.repeat(64)},
@@ -87,6 +87,14 @@ const script = buildSync({
         const label=v=>accounts.find(a=>a.id===v)?.label??v;
         return envelope({groups:[...buckets].sort(([a],[b])=>String(a).localeCompare(String(b))).map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,unit?undefined:group)})),
           parentGroup:totals(rows,measures,pinned,undefined),pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:rows.length,countMode:'exact'}});}
+      // Grouped Table: the same server rule for its sums (decision 8).
+      if(q.groupsOnly){
+        const group=q.group;const measures=[].concat(q.aggregate??[]);
+        const pinned=new Set(applied.filter(f=>f.operator==='eq').map(f=>f.field));
+        const buckets=new Map();for(const r of rows)buckets.set(r.values[group],[...(buckets.get(r.values[group])??[]),r]);
+        const label=v=>accounts.find(a=>a.id===v)?.label??v;
+        return envelope({groups:[...buckets].map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,group)})),
+          pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:rows.length,countMode:'exact'}});}
       const start=q.cursor?Number(q.cursor):0,limit=Number(q.limit),slice=rows.slice(start,start+limit),more=start+limit<rows.length;
       return envelope({rows:slice,pagination:{pageSize:slice.length,hasNext:more,...(more?{nextCursor:String(start+limit)}:{}),hasPrevious:false,total:rows.length,countMode:'exact'}});
     }};
@@ -202,4 +210,17 @@ test("phones list one group per row with the total, and no horizontal scroll", a
   expect(overflow).toBeLessThanOrEqual(0);
   expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
   await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-phone.png", fullPage: true });
+});
+
+test("grouped Table withholds a semi-additive total across its time field, in the Summary's words (decision 8)", async ({ page }) => {
+  await mount(page, 1440, "?view=table&groups=account");
+  const heading = page.locator(".a-entity-tree__group-row").first();
+  await expect(heading).toContainText("1000 Cash");
+  await expect(heading).toContainText("Closing net total Not summed across Fiscal period");
+  // The additive measure keeps its number.
+  await expect(heading).toContainText(/Period net total\s*330/);
+  // Grouped by the time field, each period's balance is a number again.
+  await page.goto("about:blank");
+  await mount(page, 1440, "?view=table&groups=period");
+  await expect(page.locator(".a-entity-tree__group-row").first()).not.toContainText("Not summed");
 });

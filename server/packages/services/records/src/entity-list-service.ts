@@ -1541,6 +1541,19 @@ export function compileEntityListDescriptor(
         (descriptor.listPresentation?.limits?.countMode ??
           descriptor.listPresentation?.countMode) === "exact",
       ),
+      // A semi-additive field's sum holds only within one value of each time
+      // field (Entity list Aggregate blueprint 5.2; decision 8): published so
+      // a withheld total names them, with the Summary's own wording.
+      ...(field.list?.additivity?.kind === "semiAdditive" && field.list.aggregations?.includes("sum")
+        ? {
+            sumWithin: Object.freeze(
+              field.list.additivity.timeFields.map((key) => {
+                const time = descriptor.fields.find((candidate) => candidate.key === key);
+                return Object.freeze({ key, label: time?.list?.label ?? humanizeIdentifier(key) });
+              }),
+            ),
+          }
+        : {}),
       // A money field publishes totals only with a readable currency field
       // (Tree blueprint A2); otherwise only its count.
       aggregations: Object.freeze(

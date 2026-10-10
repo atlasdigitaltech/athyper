@@ -32,6 +32,7 @@ import {
   groupLevel,
   headingFilters,
   limitHeadings,
+  sumsAcross,
   type GroupHeading,
   type GroupLevel,
 } from "./grouped-tree-model";
@@ -188,19 +189,40 @@ function headingLabel(
 /** A heading's aggregates (A2), labelled by field and aggregate. Values are
  * formatted like the field and without a floating-point round trip: decimal
  * text stays text. A money total shows its currency, or says the group spans
- * currencies instead of showing a meaningless sum. */
+ * currencies instead of showing a meaningless sum. A sum the server withheld
+ * because it would cross a semi-additive field's time field (decision 8)
+ * says so in the Summary's own words. */
 function headingAggregates(
   heading: GroupHeading,
   fields: readonly ListFieldDescriptorV1[],
   intl: EntityIntl,
 ): ReactNode {
-  const entries = Object.entries(heading.aggregates ?? {});
+  const entries: [string, number | string | null][] = [
+    ...Object.entries(heading.aggregates ?? {}),
+    ...Object.keys(heading.states ?? {})
+      .filter((key) => !(key in (heading.aggregates ?? {})))
+      .map((key): [string, null] => [key, null]),
+  ];
   if (!entries.length) return null;
   return entries.map(([key, value]) => {
     const [fieldKey, aggregate] = key.split(":");
     const field = fields.find((item) => item.key === fieldKey);
     const mixed = heading.mixedCurrencies?.includes(key);
     const unknown = heading.unknownCurrencies?.includes(key);
+    const state = heading.states?.[key];
+    if (field && state)
+      return (
+        <span key={key} className="a-entity-tree__aggregate" data-state={state}>
+          <span className="a-entity-tree__aggregate-label">
+            {intl.message(`list.group.aggregate.${aggregate}`, { field: field.label })}
+          </span>{" "}
+          <span className="a-entity-tree__aggregate-value">
+            {state === "notSummable"
+              ? intl.message("list.aggregate.notSummable", { fields: (field.sumWithin ?? []).map((time) => time.label).join(", ") })
+              : intl.message("list.aggregate.suppressed")}
+          </span>
+        </span>
+      );
     if (!field || (value === null && !mixed && !unknown)) return null;
     const currency = heading.aggregateCurrencies?.[key];
     return (
@@ -293,6 +315,7 @@ export function GroupedTree({
     choicesFor(fields[0]!, intl),
     source.exact ? (levelOne ?? []) : undefined,
     levels[0]!.unit,
+    sumsAcross(descriptor, source.aggregates ?? [], fields[0]!.key),
   );
   const { headings, more } = limitHeadings(all);
   return (
@@ -435,6 +458,7 @@ function GroupNode({
               choicesFor(nextField, intl),
               buckets.buckets,
               nextLevel?.unit,
+              sumsAcross(ctx.descriptor, source.aggregates ?? [], nextField.key),
             )
           : undefined
         : groupHeadings(

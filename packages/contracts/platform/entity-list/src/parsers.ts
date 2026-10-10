@@ -1228,6 +1228,19 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
       AGGREGATIONS,
       `fields[${index}].aggregations`,
     ),
+    ...(field.sumWithin === undefined
+      ? {}
+      : {
+          sumWithin: Object.freeze(
+            array(field.sumWithin, `fields[${index}].sumWithin`).map((candidate, position) => {
+              const time = object(candidate, `fields[${index}].sumWithin[${position}]`);
+              return Object.freeze({
+                key: code(time.key, `fields[${index}].sumWithin[${position}].key`),
+                label: text(time.label, `fields[${index}].sumWithin[${position}].label`),
+              });
+            }),
+          ),
+        }),
   });
 }
 

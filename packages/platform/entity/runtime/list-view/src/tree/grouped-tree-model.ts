@@ -101,6 +101,9 @@ export interface GroupHeading {
   readonly mixedCurrencies?: readonly string[];
   /** Money aggregates left out because some amounts have no recorded currency. */
   readonly unknownCurrencies?: readonly string[];
+  /** Aggregates the server withheld (decision 8): a semi-additive sum across
+   * its time fields. Shown as text, never as a number. */
+  readonly states?: Readonly<Record<string, "notSummable" | "suppressed">>;
 }
 
 /** A bucket as the server returns it. */
@@ -111,6 +114,7 @@ type Bucket = {
   readonly aggregateCurrencies?: GroupHeading["aggregateCurrencies"];
   readonly mixedCurrencies?: GroupHeading["mixedCurrencies"];
   readonly unknownCurrencies?: GroupHeading["unknownCurrencies"];
+  readonly states?: GroupHeading["states"];
 };
 const totals = (bucket: Bucket) => ({
   ...(bucket.aggregates ? { aggregates: bucket.aggregates } : {}),
@@ -123,6 +127,7 @@ const totals = (bucket: Bucket) => ({
   ...(bucket.unknownCurrencies
     ? { unknownCurrencies: bucket.unknownCurrencies }
     : {}),
+  ...(bucket.states ? { states: bucket.states } : {}),
 });
 
 /** At most this many value headings per level; more shows the "more groups" notice. */
@@ -180,6 +185,10 @@ export function groupHeadings(
   choices: readonly { readonly value: JsonValue; readonly label: string }[],
   buckets: readonly Bucket[] | undefined,
   unit?: GroupLevel["unit"],
+  /** Aggregate keys whose sum is withheld when buckets combine: a
+   * semi-additive sum whose time field is this level's field, because
+   * Unmapped values joins several of its values (decision 8). */
+  acrossValues: ReadonlySet<string> = new Set(),
 ): readonly GroupHeading[] {
   // Date buckets (A3) come only from the group query, in chronological order.
   if (unit) {
@@ -258,8 +267,8 @@ export function groupHeadings(
             kind: "unmapped" as const,
             values: unmapped.map((item) => item.value),
             count: unmapped.reduce((sum, item) => sum + item.count, 0),
-            ...(unmapped.some((item) => item.aggregates)
-              ? combineAggregates(unmapped)
+            ...(unmapped.some((item) => item.aggregates || item.states)
+              ? combineAggregates(unmapped, acrossValues)
               : {}),
           },
         ]
@@ -272,18 +281,30 @@ export function groupHeadings(
  * money total combines only when every bucket has the same one currency. */
 export function combineAggregates(
   items: readonly ReturnType<typeof totals>[],
+  /** Keys withheld whenever buckets combine (see groupHeadings). */
+  acrossValues: ReadonlySet<string> = new Set(),
 ): Pick<
   GroupHeading,
-  "aggregates" | "aggregateCurrencies" | "mixedCurrencies" | "unknownCurrencies"
+  "aggregates" | "aggregateCurrencies" | "mixedCurrencies" | "unknownCurrencies" | "states"
 > {
   const combined: Record<string, number | string | null> = {};
   const currencies: Record<string, string> = {};
   const mixed: string[] = [];
   const unknown: string[] = [];
+  // A value the server withheld in any bucket stays withheld in the
+  // combination, as does a sum that would cross its own time field.
+  const states: Record<string, "notSummable" | "suppressed"> = {};
+  for (const item of items)
+    for (const [key, state] of Object.entries(item.states ?? {}))
+      states[key] = states[key] === "suppressed" ? "suppressed" : state;
+  for (const key of new Set(
+    items.flatMap((item) => Object.keys(item.aggregates ?? {})),
+  ))
+    if (acrossValues.has(key) && !states[key]) states[key] = "notSummable";
   for (const key of new Set(
     items.flatMap((item) => Object.keys(item.aggregates ?? {})),
   )) {
-    if (key.endsWith(":average")) continue;
+    if (key.endsWith(":average") || states[key]) continue;
     const codes = new Set(
       items.flatMap((item) =>
         item.aggregateCurrencies?.[key] ? [item.aggregateCurrencies[key]!] : [],
@@ -329,7 +350,24 @@ export function combineAggregates(
       : {}),
     ...(mixed.length ? { mixedCurrencies: mixed } : {}),
     ...(unknown.length ? { unknownCurrencies: unknown } : {}),
+    ...(Object.keys(states).length ? { states } : {}),
   };
+}
+
+/** The aggregate keys whose sum cannot combine across values of `field`:
+ * sums of semi-additive fields that are summed only within one value of it
+ * (decision 8). */
+export function sumsAcross(
+  descriptor: Pick<EntityListDescriptorV1, "fields">,
+  aggregates: readonly string[],
+  field: string,
+): ReadonlySet<string> {
+  return new Set(
+    aggregates.filter((key) => {
+      const [measure, aggregate] = key.split(":");
+      return aggregate === "sum" && descriptor.fields.find((item) => item.key === measure)?.sumWithin?.some((time) => time.key === field);
+    }),
+  );
 }
 
 /** The filters that select a heading's records (ANDed with its ancestors' and

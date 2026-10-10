@@ -173,8 +173,9 @@ export function createRecordListExecutor<Transaction = unknown>(
         loadColumn: (code) => descriptorFor(options.metadata, query.context, code),
       });
       // A Summary request is admitted against the published declaration
-      // (Entity list Aggregate blueprint 5.4), not the field-level aggregations.
-      const summary = admitAggregateRequest({ descriptor, query, readableKeys });
+      // (Entity list Aggregate blueprint 5.4), not the field-level
+      // aggregations; any grouped request gets the additivity rule (decision 8).
+      const aggregatePlan = admitAggregateRequest({ descriptor, query, readableKeys });
       const responseFields = responseProjection(
         descriptor,
         readableFields,
@@ -410,7 +411,7 @@ export function createRecordListExecutor<Transaction = unknown>(
                     }
                   : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
-                ...(summary ? { groupTotals: true } : {}),
+                ...(query.groupTotals ? { groupTotals: true } : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
                       hierarchy: {
@@ -508,8 +509,8 @@ export function createRecordListExecutor<Transaction = unknown>(
         }
       }
       const result = restrictResponseProjection(
-        // Withheld Summary values are removed here, before any response.
-        summary ? applyAggregateRules(repositoryResult, summary, query) : repositoryResult,
+        // Withheld values are removed here, before any response.
+        aggregatePlan ? applyAggregateRules(repositoryResult, aggregatePlan, query) : repositoryResult,
         descriptor,
         responseFields,
         enforced,

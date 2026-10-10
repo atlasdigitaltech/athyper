@@ -132,14 +132,17 @@ export function parseFieldAdditivity(raw: unknown, path: string): EntityFieldAdd
   return Object.freeze({ kind: "semiAdditive", timeFields: Object.freeze(timeFields) });
 }
 
-/** Additivity belongs to number and money fields, and a semi-additive
- * field's time fields are other fields of the same Entity. */
+/** Additivity belongs to number and money fields, a semi-additive field's
+ * time fields are other fields of the same Entity, and a field declared
+ * non-additive never publishes a sum for grouped Table (decision 8). */
 export function validateFieldAdditivity(fields: readonly EntityFieldDescriptor[]): void {
   const byKey = new Map(fields.map((field) => [field.key, field]));
   for (const field of fields) {
     const additivity = field.list?.additivity;
     if (!additivity) continue;
     if (!NUMERIC.has(field.type)) throw new Error(`field.list.additivity is only for number and money fields: ${field.key}`);
+    if (additivity.kind === "nonAdditive" && field.list?.aggregations?.includes("sum"))
+      throw new Error(`AGGREGATE_SUM_NON_ADDITIVE: field.list.aggregations offers a sum of non-additive ${field.key}`);
     if (additivity.kind === "semiAdditive")
       for (const time of additivity.timeFields)
         if (!byKey.has(time) || time === field.key)

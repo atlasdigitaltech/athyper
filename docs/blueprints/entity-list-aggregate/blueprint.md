@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
 **Status:** approved, revision 4 (10 October 2026).
+- **Decision 8 approved and built (10 October 2026).** The owner approved applying additivity to grouped Table's sums: "decision 8 approved". It is built as its own change before A2 (section 5.8).
 - **Build authority (10 October 2026).** After section 14 was approved, the owner gave the build instruction: "go ahead". Under decision 6, that authorizes A1 on synthetic fixtures. A0 still waits for the metadata cleanup and its dimension Entities.
 - **Delivery (10 October 2026): A1 built, on synthetic fixtures.** Section 5.7 records what the build decided. What is verified and what is not:
   - **Verified by tests:**
@@ -260,11 +261,30 @@ What the build decided inside the approved contract, so a reviewer can check eac
     - the location key `aggregate.open` (section 5.6). Expansions reset whenever the levels, measures or filters change;
     - the column dimension (A2);
     - Studio authoring (section 15, after the cleanup). `field.list.additivity` is parsed from published metadata, and its Studio column is not yet built.
-14. **Left as found; decision 8 asks for it.** Grouped Table's own A2 sums still follow `field.list.aggregations` and ignore additivity. On a fact with a semi-additive balance, "Closing net total" in grouped Table is a wrong number today, while Summary withholds it. Applying additivity there changes behaviour the owner approved under the Tree blueprint, so the build did not do it (section 14, decision 8).
+14. **Left as found at A1, then decision 8.** Grouped Table's own A2 sums followed `field.list.aggregations` and ignored additivity, so on a fact with a semi-additive balance "Closing net total" in grouped Table was a wrong number while Summary withheld it. The A1 build did not change behaviour approved under the Tree blueprint; the owner then approved decision 8, built as section 5.8.
 15. **Test runs outside this work, at the build.**
     - `tree.postgres.test.ts` was run here against the provisioned `athyper_neon` database as its owner: 18 pass, and one fails. The failure is the move test's foreign-key error-shape assertion, which this work does not touch; it was not investigated.
     - The Matrix PostgreSQL test's typecheck error (`ids.bids.indexOf`, a typed-UUID array) was fixed with the A1 commit.
     - Four foundation files fail: two reference provisioning files removed by other sessions' commits, and two are Atlas tests.
+
+### 5.8 Build record (decision 8, 10 October 2026)
+
+Grouped Table's sums now follow additivity, with the Summary's rule and words.
+
+1. **Undeclared stays additive.** A field without `field.list.additivity` is untouched: its grouped totals are exactly what they were. An explicit test pins this (`list-aggregate.test.ts`, "leaves a field that declares no additivity exactly as it was"). No real Entity declares additivity yet, so no published number changes.
+2. **One server rule.** `admitAggregateRequest` adds a grouped Table request's sums of semi-additive fields to the plan, and the same `applyAggregateRules` withholds them before the response. Floors stay a Summary declaration.
+3. **A safe cell is still a number.** A sum is withheld only when a time field is neither the request's group by value nor pinned by an `eq` or `is_null` filter. Grouped by the period, each period's balance is summed; tests check this on the server and in the browser.
+4. **One wording.** The list descriptor publishes `sumWithin` (the time fields, with their labels) on a semi-additive field that offers a sum. Grouped Table renders a withheld total with the Summary's own message, `list.aggregate.notSummable`.
+5. **Unmapped values.**
+   - Grouped Table's Unmapped values heading combines several buckets in the browser. A value withheld in any bucket stays withheld.
+   - A semi-additive sum whose time field is the level's own field is withheld when buckets combine, because the combination crosses values of that field (`combineAggregates`, `sumsAcross`).
+6. **Publication.** A field declared `nonAdditive` may not offer `sum` in `field.list.aggregations` (`AGGREGATE_SUM_NON_ADDITIVE`).
+7. **Verified:**
+   - the server end to end on the in-memory repository: 4 tests, including a grouped page that also returns rows;
+   - the publication check;
+   - the browser model;
+   - the browser contract;
+   - a real-browser test in the Summary spec with grouped Table over the same fixture.
 
 ## 6. Validation, availability and finding codes
 
@@ -467,11 +487,11 @@ Decisions (all seven approved on 10 October 2026; status block):
 6. **A1 runs on fixtures in parallel with A0.** This is the same pattern as Board, Calendar, Gantt, Tree and Matrix: the runtime is proven on fixtures, and the real Entity waits for the metadata cleanup and for its dimension Entities (section 17).
 7. **Record authorization not covered in SQL uses the existing authorized-aggregate path, not a refusal** (section 9.2; revision 2). This replaces revision 1's `LIST_AGGREGATE_RECORD_AUTHORIZATION_UNSUPPORTED`.
 
-Audit round 3 recommended approving decisions 1–6 unchanged; the owner approved 1–7.
+Audit round 3 recommended approving decisions 1–6 unchanged; the owner approved 1–7. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
 
-**Open for the owner (raised at the A1 build, before A2):**
+**Raised at the A1 build:**
 
-8. **Apply additivity to grouped Table's sums.** It is the same field property, the same rule and the same withheld-value rendering ("Not summed across …"). Today the same list can show a closing-balance total in grouped Table that Summary withholds as meaningless; the surface showing the wrong number is the one that appears to work. Recommended: decide this before A2, as a small change to the Tree blueprint's A2 behaviour. The alternatives are recording grouped Table's semi-additive sums as known-wrong in the Tree blueprint's status, or deferring the decision; both leave the wrong sum reachable. Decision 7 and the checked response bound in decision 3 come from verifying that audit's two notes (section 19).
+8. **Approved and built: apply additivity to grouped Table's sums.** It is the same field property, the same rule and the same withheld-value rendering ("Not summed across …"). Before it, the same list could show a closing-balance total in grouped Table that Summary withholds as meaningless, and the surface showing the wrong number was the one that appeared to work. The owner approved it, as its own change before A2: "decision 8 approved". Section 5.8 records the build.
 
 ## 15. Studio authoring and registration inventory
 
@@ -512,7 +532,7 @@ Foundation section 9's policy gates run before each commit.
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
 
-**Status (10 October 2026).** A1 is built on fixtures (status block; section 5.7). A0, A3, A2, A4 and A5 are not started.
+**Status (10 October 2026).** A1 is built on fixtures (status block; section 5.7), and decision 8 is built (section 5.8). A0, A3, A2, A4 and A5 are not started.
 
 **Acceptance for every phase:**
 - unit and real-PostgreSQL tests for each new repository path;
@@ -578,3 +598,6 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 5 | The "unchanged statement" claim needs an anchor that cannot be deleted | The cited test exists; the build record now names `kysely-record-repository.test.ts` and `list-group-aggregates.test.ts` explicitly (5.7 point 7) |
 | Audit round 5 | Additions to the shared group result should be rare and named | Recorded in 5.7 point 1 |
 | Audit round 5 | Fix the Matrix PostgreSQL typecheck error before committing | Fixed (5.7 point 15) |
+| Owner (10 October 2026) | "decision 8 approved" | Built as its own change before A2 (section 5.8) |
+| Audit round 6 | The default stays additive, with an explicit test; a safe cell is still summed; one source for the wording | Section 5.8 points 1, 3 and 4 |
+| Audit round 6 | The lesson: grouped Table's sums were verified for arithmetic, not for meaning | Recorded in the Tree blueprint's status as the missing half of its A2 contract |

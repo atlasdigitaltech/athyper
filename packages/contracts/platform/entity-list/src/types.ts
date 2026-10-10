@@ -235,6 +235,10 @@ export interface ListFieldDescriptorV1 {
   readonly aggregations: readonly (
     "count" | "sum" | "average" | "minimum" | "maximum"
   )[];
+  /** A semi-additive field (Entity list Aggregate blueprint 5.2): its sum
+   * holds only within one value of each of these fields, and a group total
+   * across them is withheld by the server as `notSummable`. */
+  readonly sumWithin?: readonly { readonly key: string; readonly label: string }[];
 }
 
 export interface EffectiveListActionV1 {

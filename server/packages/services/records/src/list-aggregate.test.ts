@@ -38,8 +38,10 @@ const descriptor = (overrides: Record<string, unknown> = {}) =>
       { key: "period", storagePath: "period", type: "enum", required: true, writableOn: [], filterable: true, list: { groupable: true }, validation: { options: ["P01", "P02"] } },
       { key: "posted", storagePath: "posted", type: "date", required: true, writableOn: [], filterable: true, list: { groupable: true } },
       { key: "currency", storagePath: "currency", type: "string", required: true, writableOn: [] },
-      { key: "period_net", storagePath: "period_net", type: "money", required: true, writableOn: [], list: { currencyField: "currency", additivity: { kind: "additive" } } },
-      { key: "closing_net", storagePath: "closing_net", type: "money", required: true, writableOn: [], list: { currencyField: "currency", additivity: { kind: "semiAdditive", timeFields: ["period"] } } },
+      { key: "period_net", storagePath: "period_net", type: "money", required: true, writableOn: [], list: { currencyField: "currency", additivity: { kind: "additive" }, aggregations: ["count", "sum"] } },
+      { key: "closing_net", storagePath: "closing_net", type: "money", required: true, writableOn: [], list: { currencyField: "currency", additivity: { kind: "semiAdditive", timeFields: ["period"] }, aggregations: ["count", "sum"] } },
+      // Declares no additivity: grouped Table sums it exactly as before decision 8.
+      { key: "adjustment", storagePath: "adjustment", type: "decimal", required: false, writableOn: [], list: { aggregations: ["sum"] } },
       { key: "preparer", storagePath: "preparer", type: "string", required: true, writableOn: [] },
       { key: "salary", storagePath: "salary", type: "decimal", required: false, writableOn: [], list: { additivity: { kind: "additive" } } },
     ],
@@ -55,11 +57,11 @@ const context = {
 // Account 2000: P01 net 10 closing 10 (twice: two currencies' worth is not
 // used here), P02 net 30 closing 40.
 const rows = [
-  { id: id(1), code: "TB-1", account: "1000", period: "P01", posted: "2026-01-31", currency: "MYR", period_net: 100, closing_net: 100, preparer: "ana", salary: 10 },
-  { id: id(2), code: "TB-2", account: "1000", period: "P02", posted: "2026-02-28", currency: "MYR", period_net: 50, closing_net: 150, preparer: "ana", salary: 20 },
-  { id: id(3), code: "TB-3", account: "2000", period: "P01", posted: "2026-01-31", currency: "MYR", period_net: 10, closing_net: 10, preparer: "ben", salary: 30 },
-  { id: id(4), code: "TB-4", account: "2000", period: "P02", posted: "2026-02-28", currency: "MYR", period_net: 30, closing_net: 40, preparer: "cy", salary: 40 },
-  { id: id(5), code: "TB-5", account: "2000", period: "P02", posted: "2026-03-31", currency: "MYR", period_net: 6, closing_net: 46, preparer: "ben", salary: 50 },
+  { id: id(1), adjustment: "1.50", code: "TB-1", account: "1000", period: "P01", posted: "2026-01-31", currency: "MYR", period_net: 100, closing_net: 100, preparer: "ana", salary: 10 },
+  { id: id(2), adjustment: "2.25", code: "TB-2", account: "1000", period: "P02", posted: "2026-02-28", currency: "MYR", period_net: 50, closing_net: 150, preparer: "ana", salary: 20 },
+  { id: id(3), adjustment: "3", code: "TB-3", account: "2000", period: "P01", posted: "2026-01-31", currency: "MYR", period_net: 10, closing_net: 10, preparer: "ben", salary: 30 },
+  { id: id(4), adjustment: "4", code: "TB-4", account: "2000", period: "P02", posted: "2026-02-28", currency: "MYR", period_net: 30, closing_net: 40, preparer: "cy", salary: 40 },
+  { id: id(5), adjustment: "0.25", code: "TB-5", account: "2000", period: "P02", posted: "2026-03-31", currency: "MYR", period_net: 6, closing_net: 46, preparer: "ben", salary: 50 },
 ];
 
 function lists(described = descriptor()) {
@@ -182,5 +184,46 @@ describe("Summary requests (Aggregate blueprint 5.4, 8, 9)", () => {
       groupAggregates: [{ field: "preparer", aggregate: "countDistinct" }],
     });
     expect(() => parseRecordListParameters({ group: "account", totals: "true" })).toThrow(/totals requires groupsOnly/);
+  });
+});
+
+describe("grouped Table sums follow additivity (decision 8)", () => {
+  const grouped = { context, entityCode: "trial_balance", countMode: "exact" as const, groupsOnly: true };
+
+  it("leaves a field that declares no additivity exactly as it was", async () => {
+    const page = parseEntityListResult(await lists().list({ ...grouped, group: "account", groupAggregates: [{ field: "adjustment", aggregate: "sum" }] }));
+    expect(page.groups?.map((group) => [group.value, group.aggregates, group.states])).toEqual([
+      ["1000", { "adjustment:sum": 3.75 }, undefined],
+      ["2000", { "adjustment:sum": 7.25 }, undefined],
+    ]);
+    expect(page.parentGroup).toBeUndefined();
+  });
+
+  it("withholds a semi-additive sum across its time field, as a Summary does", async () => {
+    const page = parseEntityListResult(await lists().list({ ...grouped, group: "account", groupAggregates: [{ field: "period_net", aggregate: "sum" }, { field: "closing_net", aggregate: "sum" }] }));
+    for (const group of page.groups!) {
+      expect(group.states).toEqual({ "closing_net:sum": "notSummable" });
+      expect(group.aggregates?.["closing_net:sum"]).toBeUndefined();
+      expect(group.aggregates?.["period_net:sum"]).toBeDefined();
+    }
+    // The same rule on a grouped page that also returns rows.
+    const rowsAndGroups = parseEntityListResult(await lists().list({ context, entityCode: "trial_balance", countMode: "exact", group: "account", groupAggregates: [{ field: "closing_net", aggregate: "sum" }] }));
+    expect(rowsAndGroups.rows.length).toBeGreaterThan(0);
+    expect(rowsAndGroups.groups?.every((group) => group.states?.["closing_net:sum"] === "notSummable")).toBe(true);
+  });
+
+  it("still sums a cell that is safe: grouped by the time field, or with it pinned", async () => {
+    const byPeriod = parseEntityListResult(await lists().list({ ...grouped, group: "period", groupAggregates: [{ field: "closing_net", aggregate: "sum" }] }));
+    expect(byPeriod.groups?.map((group) => group.aggregates?.["closing_net:sum"])).toEqual([110, 236]);
+    expect(byPeriod.groups?.some((group) => group.states)).toBe(false);
+    const pinned = parseEntityListResult(await lists().list({ ...grouped, group: "account", filters: [{ field: "period", operator: "eq", value: "P01" }], groupAggregates: [{ field: "closing_net", aggregate: "sum" }] }));
+    expect(pinned.groups?.map((group) => group.aggregates?.["closing_net:sum"])).toEqual([100, 10]);
+  });
+
+  it("publishes the time fields a semi-additive sum stays within", async () => {
+    const published = parseEntityListDescriptor(await lists().descriptor(context, "trial_balance"));
+    expect(published.fields.find((field) => field.key === "closing_net")?.sumWithin).toEqual([{ key: "period", label: "Period" }]);
+    expect(published.fields.find((field) => field.key === "period_net")?.sumWithin).toBeUndefined();
+    expect(published.fields.find((field) => field.key === "adjustment")?.sumWithin).toBeUndefined();
   });
 });

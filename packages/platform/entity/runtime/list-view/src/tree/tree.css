@@ -86,3 +86,4 @@ a.a-entity-tree__label:hover .a-entity-tree__title{text-decoration:underline}
 .a-entity-tree__select{flex:none;margin:0}
 .a-entity-tree__aggregate{display:inline-flex;flex:none;align-items:baseline;gap:var(--a-space-1);margin-inline-start:var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-regular);white-space:nowrap}
 .a-entity-tree__aggregate-value{color:var(--a-foreground);font-family:var(--a-font-mono)}
+.a-entity-tree__aggregate[data-state] .a-entity-tree__aggregate-value{color:var(--a-muted-foreground);font-family:inherit;font-style:italic}

@@ -149,7 +149,13 @@ const masked = (descriptor: EntityRuntimeDescriptor, key: string) =>
  * declaration (section 5.4): the group is a declared dimension at a declared
  * bucket, every aggregate a declared measure, each readable and unmasked for
  * this viewer, and the list publishes exact counts. Anything else is refused,
- * never served from the field-level aggregations a grouped Table uses. */
+ * never served from the field-level aggregations a grouped Table uses.
+ *
+ * A grouped Table request (decision 8) gets the same additivity rule: its
+ * sums of semi-additive fields join the plan, so applyAggregateRules
+ * withholds them exactly as a Summary does. A field that declares no
+ * additivity is untouched, so grouped totals stay as they were unless a
+ * field opts in. Floors belong to a Summary declaration only. */
 export function admitAggregateRequest(input: {
   readonly descriptor: EntityRuntimeDescriptor;
   readonly query: ListRecordsQuery;
@@ -159,7 +165,12 @@ export function admitAggregateRequest(input: {
   if (!query.groupTotals) {
     if (query.groupAggregates?.some((item) => item.aggregate === "countDistinct"))
       throw new RecordServiceError(400, "LIST_GROUP_AGGREGATE_INVALID", "countDistinct belongs to a Summary request");
-    return undefined;
+    const semiAdditive = new Map<string, readonly string[]>();
+    for (const item of query.groupAggregates ?? []) {
+      const additivity = descriptor.fields.find((entry) => entry.key === item.field)?.list?.additivity;
+      if (item.aggregate === "sum" && additivity?.kind === "semiAdditive") semiAdditive.set(`${item.field}:sum`, additivity.timeFields);
+    }
+    return semiAdditive.size ? Object.freeze({ semiAdditive, floors: new Map<string, number>() }) : undefined;
   }
   const aggregate = descriptor.listPresentation?.aggregate;
   if (!aggregate || !descriptor.listPresentation?.supportedModes?.includes("aggregate"))

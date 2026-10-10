@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { bucketDays, combineAggregates, groupAggregates, groupChoices, groupHeadings, groupLevel, groupedPageState, headingFilters, limitHeadings } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
+import { bucketDays, combineAggregates, groupAggregates, groupChoices, groupHeadings, groupLevel, groupedPageState, headingFilters, limitHeadings, sumsAcross } from "../../packages/platform/entity/runtime/list-view/src/tree/grouped-tree-model";
 
 const status = {
   key: "status", label: "Status", valueKind: "enum", defaultVisible: true, defaultOrder: 0, sortable: false, groupable: true, aggregations: [],
@@ -93,6 +93,20 @@ describe("group aggregates and date buckets (A2, A3)", () => {
     assert.deepEqual(combineAggregates([{ aggregates: { "amount:sum": 1 }, aggregateCurrencies: { "amount:sum": "MYR" } }, { aggregates: { "amount:sum": null }, unknownCurrencies: ["amount:sum"] }]), { aggregates: { "amount:sum": null }, unknownCurrencies: ["amount:sum"] });
     const headings = groupHeadings(status, [{ value: "active", label: "Active" }], [{ value: "active", count: 1, aggregates: { "budget:sum": 10 } }, { value: "legacy", count: 1, aggregates: { "budget:sum": 4 } }, { value: "retired", count: 1, aggregates: { "budget:sum": 6 } }]);
     assert.deepEqual(headings.map((heading) => heading.aggregates), [{ "budget:sum": 10 }, { "budget:sum": 10 }]);
+  });
+
+  it("keeps a withheld sum withheld, and never combines a semi-additive sum across its own time field (decision 8)", () => {
+    // The server withheld it in one bucket: the combination stays withheld.
+    assert.deepEqual(combineAggregates([{ aggregates: { "closing:sum": 5 } }, { aggregates: {}, states: { "closing:sum": "notSummable" } }]), { aggregates: {}, states: { "closing:sum": "notSummable" } });
+    // Unmapped values joins several values of the level's field: a sum
+    // that holds only within one value of it is withheld, other sums combine.
+    assert.deepEqual(combineAggregates([{ aggregates: { "closing:sum": 5, "net:sum": 1 } }, { aggregates: { "closing:sum": 7, "net:sum": 2 } }], new Set(["closing:sum"])), { aggregates: { "net:sum": 3 }, states: { "closing:sum": "notSummable" } });
+    const descriptor = { fields: [{ key: "closing", valueKind: "money", aggregations: ["sum"], sumWithin: [{ key: "period", label: "Period" }] }, { key: "net", valueKind: "money", aggregations: ["sum"] }] } as never;
+    assert.deepEqual([...sumsAcross(descriptor, ["closing:sum", "net:sum"], "period")], ["closing:sum"]);
+    assert.deepEqual([...sumsAcross(descriptor, ["closing:sum", "net:sum"], "account")], []);
+    // Headings carry the server's states.
+    const headings = groupHeadings(status, [{ value: "active", label: "Active" }], [{ value: "active", count: 2, aggregates: {}, states: { "closing:sum": "notSummable" } }]);
+    assert.deepEqual(headings[0]!.states, { "closing:sum": "notSummable" });
   });
 
   it("sends aggregates and the zone with the level-1 groups-only request", () => {

@@ -105,5 +105,8 @@ describe("published list Summary (Aggregate blueprint 5.1, 5.2, 6)", () => {
     expect(() => parseFieldAdditivity({ kind: "always" }, "f")).toThrow(/additive, semiAdditive or nonAdditive/);
     expect(() => validateFieldAdditivity([field("code", "string", { list: { additivity: { kind: "additive" } } })])).toThrow(/only for number and money/);
     expect(() => validateFieldAdditivity([field("closing", "money", { list: { additivity: { kind: "semiAdditive", timeFields: ["missing"] } } })])).toThrow(/another field/);
+    // Decision 8: a non-additive field never offers grouped Table a sum.
+    expect(() => validateFieldAdditivity([field("rate", "decimal", { list: { additivity: { kind: "nonAdditive" }, aggregations: ["sum"] } })])).toThrow(/AGGREGATE_SUM_NON_ADDITIVE: .*rate/);
+    expect(() => validateFieldAdditivity([field("rate", "decimal", { list: { additivity: { kind: "nonAdditive" }, aggregations: ["average"] } })])).not.toThrow();
   });
 });
