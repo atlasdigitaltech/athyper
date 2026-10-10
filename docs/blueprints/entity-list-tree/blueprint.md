@@ -1,6 +1,7 @@
 # Entity list Tree — blueprint
 
 **Status:** approved, revision 3 (9 October 2026).
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 
 - **Revision 2 approval.** The project owner (nchandravel-atlas) approved decisions 1–11 in section 14 on 9 October 2026, restating each decision and then: "All approved... updated the document for final review". Authoring storage (decision 9) is approved but built behind the metadata-cleanup gate.
 - **Revision 3 approval.** After the post-build audit checked the Neon DDL, the project owner approved pilot 1, T1, T2, T3 and the B2 design entry "as per recommendation", with the auditor's amendments to T2 and B4, on 9 October 2026, in these words: "pilot 1, T1, T2, T3 and the B2 design entry as per recommendation... approved all five with with T2 and B4 amend below". These are decisions 12–17 in section 14 (decision 17 records the amended B4 direction); item 18 records deferrals and is not a decision.
@@ -194,7 +195,7 @@ SaveableListStateV1.groups?: readonly string[];   // 1–3 field keys, ordered, 
 - **New to old (degrades safely).** The state parser ignores unknown keys, so a build that predates `groups` opens such a view ungrouped. Grouping is display state, so this never widens results. Saving both `group` and `groups` for older builds is rejected (two competing sources).
 - **On read,** the list is kept in order, deduplicated and capped at 3. A field that no longer qualifies (section 2.1) is dropped and the rest move up, with the existing "view changed" notice.
 
-**Request flag `groupsOnly` (list operation, Part A).** A new optional query parameter on the existing entity list operation (`GET /api/entity-list/:entityCode`), declared in its route schema:
+**Request flag `groupsOnly` (list operation, Part A).** A new optional query parameter on the existing entity list operation (`GET /api/entity-runtime/:entityCode/list`), declared in its route schema:
 
 | Aspect             | Shape                                                                                                                                                                                                       |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -519,7 +520,7 @@ Styles stay on the breakpoint scale and use design-system tokens; indentation is
   - **Database refusals:** the deferred parent key refusing a move across charts; `project_wbs` refusing a child under a postable node; `gl_account` depth measured by the framework's walk agreeing with `level_no`.
 - **Bug found by the run and fixed:** as the application role, PostgreSQL's commit-time foreign-key detail omits the key columns. The B4 deferred-refusal mapping read only that detail, so it never mapped a real commit-time parent-key refusal. It now resolves the named constraint through the catalog (section 5.6). There are unit tests for the redacted case and a real-PostgreSQL assertion.
 - **Provisioning note:** the studio manifest needs the roles `athyper_runtime`, `athyper_control_api` and `athyper_worker` (`13_publication_policy_evidence.sql`). The local run created them. The service-layer qualification workflow creates only `athyperapp`, `athyperadmin` and `athyperadmin_atlas_maintenance`; whether its runner reaches that file has not been checked in CI.
-- Not landed: the component catalogue row for the list host (a publication gate, as for Calendar and Gantt); authoring storage (decision 9, behind the metadata-cleanup gate); B2–B5, A2 and A3 (each needs its own approval).
+- Not landed at this record: the component catalogue row for the list host (a publication gate, as for Calendar and Gantt); authoring storage (decision 9, behind the metadata-cleanup gate); B2–B5, A2 and A3 (each needed its own approval). **Reconciled (10 October 2026):** B2, B4, B5, A2 and A3 have since been approved and built (`2328f722b`); B3 and T4 remain on hold (status block).
 
 ## 13. Dependencies and risks
 

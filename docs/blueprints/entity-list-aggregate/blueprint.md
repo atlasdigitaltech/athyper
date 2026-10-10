@@ -57,7 +57,7 @@
 - **Two approved conditions were corrected by revision 1.** Section 3 verified both against the code, and audit round 3 confirmed the corrections. Section 19 records the disposition, and section 14's approval confirmed them:
   - the "bucket-unit drift" does not exist;
   - the "group-level drift" is Tree's approved per-level design, not a defect.
-- **Delivery:** nothing built.
+- **Delivery** (at revision 1, superseded): nothing was built then. **Current (reconciled 10 October 2026):** A1, decision 8, A2, A5 (chart), A6 and nested Top N are built on fixtures; A0, A3 and A4 are not started (status block and section 17).
 
 **Scope and authority.**
 
@@ -218,6 +218,8 @@ The server refuses a Summary request that names an undeclared dimension, measure
 
 ### 5.5 Response
 
+**Reconciled with the build (10 October 2026).** This is the response as proposed and approved. The A1 build (5.7 point 1) ships it as extensions of the list response instead: each group gains `states`, the result gains `parentGroup`, A2 adds `pivotColumns` and `pivotColumnsTruncated`, and A6 adds `groupOrder`, `groupCount`, `groupsUnranked` and `groupOrderTieAtCut`. **There is no `revision` digest:** section 7.4 compares an expansion's `parentGroup` with its row. Read the shape below as the approved intent, and the browser contract (`EntityListResultV1`) as the shipped shape.
+
 Added to the list response for a Summary request:
 
 ```ts
@@ -240,7 +242,7 @@ type AggregateCell = Readonly<Record<string,                 // key: measure ent
 
 ### 5.6 URL and saved state
 
-- **Saved:** `aggregate.rows` (1–3 dimension entries), `aggregate.column`, `aggregate.measures`. URL keys `aggregate.rows`, `aggregate.column`, `aggregate.measures`. Invalid or undeclared entries are dropped by the parser, as `groups` entries are today.
+- **Saved:** `aggregate.rows` (1–3 dimension entries), `aggregate.column`, `aggregate.measures`; since A5.3 also `aggregate.view` and `aggregate.chart` (13.9), and since A6 `aggregate.order` with `within` (7.5). URL keys `aggregate.rows`, `aggregate.column`, `aggregate.measures`, and those sections' keys. Invalid or undeclared entries are dropped by the parser, as `groups` entries are today.
 - **Location only:** expanded groups (`aggregate.open`, a bounded list of value paths), so a shared link reopens the same expansions within the request budget.
 
 ### 5.7 Build record (A1, 10 October 2026)
@@ -926,7 +928,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 
 **A6 (approved as revised, 10 October 2026; section 7.5; not built):**
 
-29. **A6 covers Summary only.** "Lowest on n items" returns to the Matrix blueprint as an extension of `rankWithin`, a later Matrix decision. This amends decision 12.
+29. **A6 covers Summary only.** "Lowest on n items" returns to the Matrix blueprint as an extension of `rankWithin` (the design name; it shipped as the repository list's `rank` input, Matrix section 8), a later Matrix decision. This amends decision 12.
 30. **The server orders groups across every group the viewer can read,** with `groupOrder` and `groupLimit` (5, 10, 20 or 50). Ties are broken by key. The cell bound is unchanged.
 31. **Orderable measures, and refusals for the whole level** (mixed currency, unknown currency, not summable), decided from the parent total in the same statement. The refusal is deliberately conservative.
 32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
@@ -988,7 +990,9 @@ Foundation section 9's policy gates run before each commit.
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
 
-**Status (10 October 2026).** A1 (section 5.7), decision 8 (section 5.8) and A2 (section 5.9) are built on fixtures. A0, A3, A4 and A5 are not started; A3 gates a real Entity's pivot.
+**Status (10 October 2026; reconciled).** Built on fixtures: A1 (5.7), decision 8 (5.8), A2 (5.9), A5 (Chart blueprint 13.4a.6–13.4a.13; A5.3 in 13.9), A6 and nested Top N (7.5). Not started: A0, A3 and A4; A3 gates a real Entity's pivot.
+
+**Authoring path today:** until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring; the normalized tables this document proposes are behind the metadata-cleanup gate.
 
 **Acceptance for every phase:**
 - unit and real-PostgreSQL tests for each new repository path;

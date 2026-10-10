@@ -1,6 +1,7 @@
 # Entity list Gantt — blueprint
 
 **Status:** approved for build, revision 3 (8 October 2026). Decisions 1–7 and 9–12 were approved by the project owner (nchandravel-atlas) on 8 October 2026 by the instruction to build this blueprint, in these words: "start build \\wsl.localhost\Ubuntu-24.04\home\chandravel_natarajan\src\athyper\docs\blueprints\entity-list-gantt\blueprint; prototype attached in \\wsl.localhost\Ubuntu-24.04\home\chandravel_natarajan\src\athyper\docs\prototypes\Neon Gantt Prototype". Decision 8 (authoring storage) remains open; it is needed only for the authoring step, which waits behind the metadata cleanup. Revision 3 adds the build-time clarifications from the owner-supplied prototype (section 16) with no change of intent. It incorporates two audit rounds on the proposal, two reviews of revision 1 and 2, and the prototype review.
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 
 **Scope and authority.**
 

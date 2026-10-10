@@ -1,6 +1,7 @@
 # Entity list Matrix — blueprint
 
 **Status:** approved, revision 3 (10 October 2026).
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 - **Section 14 approval.** The project owner approved section 14 in these words: "Matrix section 14 approved".
 - **Build authority.** The owner authorized the build: "Go ahead with the build ... build based on revised prototype with your recommendation".
 - **What revision 3 adds:**
@@ -271,7 +272,7 @@ What the build decided inside the approved contract, so a reviewer can check eac
 
 ## 8. Rank and difference to best (server capability; owner's decision 2)
 
-- **New repository capability, `rankWithin`,** kept in the record repository beside `measureHierarchy` (as audit 8 recommends).
+- **New repository capability, `rankWithin`,** kept in the record repository beside `measureHierarchy` (as audit 8 recommends). **Shipped name (reconciled 10 October 2026):** there is no `rankWithin` entry point. The capability shipped as the `rank` input of the repository's list operation (`RecordRepositoryListInput.rank`), executed by the private `rankRows` in `kysely-record-repository.ts` and admitted by `resolveMatrixRank` (`list-matrix-rank.ts`). Elsewhere in this document `rankWithin` names that capability.
 - **It takes the canonical predicate** (audit 8, finding 3), not a measure plus a page of IDs. The predicate is the pivot's row key and declared dimensions, the scope and the applied filter set, exactly as applied to the cell request. A rank therefore always describes the same set of records as the cells beside it.
 - **Partition.** It partitions by the row key plus every declared pivot dimension; pinned dimensions are fixed by the predicate. With `company_code` declared as a pivot dimension, ranks are per (demand, company); with it pinned by scope, per demand.
 - **What it returns, per cell:**
@@ -320,7 +321,8 @@ The registration inventory follows the same nine steps as Calendar section 10. I
 | `packages/platform/entity/runtime/list-view/src/matrix/` | Runtime grid, paging, drill-down |
 | `server/packages/platform/metadata/src/list-matrix-descriptor.ts` (+ test) | Published parsing and section 6 validation |
 | `server/packages/services/records/src/list-matrix.ts` (+ test) | Per-viewer projection |
-| `server/packages/services/records/src/kysely-record-repository.ts` | `rankWithin` (+ a real-PostgreSQL test) |
+| `server/packages/services/records/src/kysely-record-repository.ts` | The `rank` input and `rankRows` (the design's `rankWithin`) (+ a real-PostgreSQL test) |
+| `server/packages/services/records/src/list-matrix-rank.ts` | `resolveMatrixRank`: admission of a rank request |
 | `tests/foundation/entity-list-matrix.test.tsx`, `tests/foundation-browser/entity-list-matrix.spec.ts` | Model, panel and browser tests |
 
 ## 13. Delivery phases and acceptance

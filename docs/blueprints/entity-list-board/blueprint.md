@@ -1,6 +1,8 @@
 # Entity list Board (Kanban) — blueprint
 
 **Status:** approved, revision 4. Approved by the project owner (nchandravel-atlas) on 8 October 2026: all seven decisions in section 14. Approval covers the contract changes and scope in this document; each later-phase shape in section 5.7 still needs its own approval. Reviews of revisions 1–3 are resolved in section 16.
+- **Approval wording (reconciled 10 October 2026).** The owner's exact words for the 8 October approval and for the build instruction were not recorded at the time, unlike every later layout. This document records the approval and its scope (above) and cannot reconstruct the words; any later Board approval should be quoted.
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 
 **Scope and authority.**
 
@@ -210,7 +212,7 @@ The "Browser" row of this table moved verbatim on 8 October 2026 to the [shared 
 
 **Layout and accessibility.**
 
-- Lanes are about 300 px wide, with a sticky header (tone, label, exact count, collapse). Each lane scrolls vertically; the board scrolls horizontally with scroll-snap.
+- Lanes are 18.75rem wide (300 px at the default font size), with a sticky header (tone, label, exact count, collapse). Each lane scrolls vertically; the board scrolls horizontally with scroll-snap.
 - In right-to-left locales, lanes flow right to left.
 - Lanes are labelled regions and cards are focusable. Arrow keys move between cards and lanes, and a live region announces load and refresh.
 - At narrow width: one lane at a time with a lane-chip strip showing counts.
@@ -280,7 +282,7 @@ server/packages/platform/metadata/src/list-board-descriptor.ts       1   called 
 server/packages/services/records/src/list-board.ts                   1   per-viewer board, unavailableModes, unmapped rule (+ .test.ts)
 server/packages/planes/studio/meta-entity-authoring/src/native-list-board.ts  1  compile/convert (+ .test.ts)
 server/db/migrations/<dated forward upgrade>                         1   per section 10
-tests/foundation/entity-list-board.test.tsx                          1   jsdom (picked up by tests/foundation/*.test.tsx)
+tests/foundation/entity-list-board-model.test.ts                         1   node (picked up by tests/foundation/*.test.ts)
 tests/foundation-browser/entity-list-board.spec.ts                   1   added to the test:country-browser list in package.json (run by test:root in CI)
   └ includes the Country-shaped rehearsal: a required `status` enum (active, deprecated), so no "No value" lane; Deprecated as a terminal lane; card content subregion, ISO alpha-3, calling code. Covered by the approved Phase 1 contract (added 8 October 2026).
 ```

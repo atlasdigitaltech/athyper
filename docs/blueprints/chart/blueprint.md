@@ -31,7 +31,8 @@
   - "Decisions (section 14, 9–15): Approved";
   - decision 15 amended to its separated form, "Approved" (Aggregate status block, revision 8).
 - **Moved here** on the owner's instruction ("go ahead") in a move-only commit (`6d9510f29`), verified line by line: every line removed from the Aggregate blueprint appears here unchanged. **Owner confirmation (10 October 2026):** after the audit's independent check of the move, the owner confirmed that the approval covers the moved text, in these words: "approved which covers the moved text".
-- **Build:** no build instruction is recorded. A5.1 (chart colour tokens) comes first, then A5.2 (the contract and the component).
+- **Build** (as moved; superseded): no build instruction was recorded at the move. **Current:** A5.1 and A5.2 are built (13.4a.6–13.4a.13), and A5.3, Summary's adoption, is built in the [Aggregate blueprint](../entity-list-aggregate/blueprint.md) (13.9).
+- **Related documents.** The chart inherits the list's count and grouping rules from the [shared list layout foundation](../entity-list-layouts/foundation.md). A consumer's chart declaration, when one is authored, takes its storage from the [Entity Studio blueprint](../entity-studio/blueprint.md). The experience surfaces' `chart` block (`@athyper/contract-platform-dashboard`) is a candidate consumer whose data shape this contract owns (Consumers).
 - **Authority.** This is shared Entity Framework work under [AGENTS.md](../../../AGENTS.md): its first consumer is the Entity list Summary. The component lives in the design system under the owner's front-end design-system authorization of 1 October 2026. This document gives no authority to adopt the chart anywhere: each consumer needs its own approved decision (Consumers, below).
 - **Numbering.** Sections 13.1–13.5 and 13.7, and decisions 9, 10, 11, 13 and 15, keep their Aggregate numbers, so approvals and citations stay valid. 13.6 (Summary's use of the chart) and 13.8 (A5's steps, including A5.3) remain in the [Aggregate blueprint](../entity-list-aggregate/blueprint.md); the gaps here are those sections, not omissions. Update this document in place. Do not create competing chart plans.
 
@@ -52,7 +53,7 @@ Each consumer has its own adapter, its own approved decision and its own tests. 
 
 ## Shape
 
-**Status of this section:** approved (decisions 9–15, 10 October 2026; status block). Not built.
+**Status of this section:** approved (decisions 9–15, 10 October 2026; status block). Built: the contract and component in A5.2 (13.4a.13), Summary's adapter in A5.3.
 
 **Shape.** A chart is not a Summary feature but a platform component that Summary is the first to use. There are three layers, and only the third knows about Entities:
 

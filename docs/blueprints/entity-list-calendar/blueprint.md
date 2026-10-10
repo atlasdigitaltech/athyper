@@ -1,6 +1,7 @@
 # Entity list Calendar — blueprint
 
 **Status:** approved, revision 3 (8 October 2026): the project owner has approved every decision in section 14, as recorded below. It incorporates five design-review rounds (section 16). Owner decisions are listed in section 14. Decisions 1, 3 and 4 were approved by the project owner (nchandravel-atlas) on 8 October 2026: "Approve decisions 1, 3 and 4 of the Calendar blueprint". Decisions 2, 5, 6, 8 and 9 were approved by the project owner on 8 October 2026, in these words: "send decision 2 and decisions 5, 6, 8 and 9 country shaped fixture on status and calendar based on updated date as now... later we go in detail during project management.. go ahead with count mode rule commit.." Decisions 7, 10 and 12 were approved by the project owner on 8 October 2026, in these words: decision 7, "Calendar 7 (authoring contract): approved its build is gated on the cleanup regardless."; decision 10, "Calendar 10 (fixture verification until Studio can publish): approved it is the only method available and mirrors Board."; decision 12, "Calendar 12 (endNullable): ok approval...". Decision 11 was approved by the project owner on 8 October 2026, after its wording was revised at the owner's request ("fix the blueprint for approval so the pointer names a stable document"), in these words: "only Calendar 11- go ahead with recommendation...". Every decision in section 14 is now approved. The runtime contract (sections 5.1, 5.5, 5.6 and the section 6 codes) is implementation authority. The authoring contract (sections 5.2–5.4) is implementation authority from decision 7, but its build waits behind the metadata-cleanup gate.
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 
 **Scope and authority.**
 
@@ -387,8 +388,8 @@ This is the same inventory as Board section 10, applied to `entity_surface_calen
 ## 11. Folder structure and test registration
 
 ```
-packages/platform/foundation/temporal/src/calendar-math.ts        week rows, weekStart, tz day edges (DST-safe); shared with the date picker
-packages/platform/foundation/temporal/src/calendar-math.test.ts   colocated; the package "test" script is extended to run it
+packages/platform/foundation/temporal/src/date-scale.ts        week rows, weekStart, tz day edges (DST-safe); shared with the date picker
+packages/platform/foundation/temporal/src/date-scale.test.ts   colocated; the package "test" script is extended to run it
 packages/contracts/platform/entity-list/src/calendar.ts           browser types + parser (wired into parsers.ts, url-state.ts)
 packages/platform/entity/runtime/list-view/src/calendar/
   calendar-view.tsx  calendar-month.tsx  calendar-agenda.tsx
@@ -403,7 +404,9 @@ tests/foundation/entity-list-calendar-model.test.ts                windows, edge
 tests/foundation-browser/entity-list-calendar.spec.ts              registered in test:country-browser
 ```
 
-`calendar.css` is added to `LIST_STYLESHEETS` in the breakpoint policy. The temporal package's `test` script currently runs only `src/index.test.ts`; it becomes `node --import tsx --test src/index.test.ts src/calendar-math.test.ts`. Its `tsconfig.json` already excludes `src/**/*.test.ts`, so no tsconfig change is needed.
+*Reconciled (10 October 2026):* this module was proposed as `calendar-math.ts`; Gantt's P-G2 renamed it to `date-scale.ts`, and the paths above use the shipped name.
+
+`calendar.css` is added to `LIST_STYLESHEETS` in the breakpoint policy. The temporal package's `test` script currently runs only `src/index.test.ts`; it becomes `node --import tsx --test src/index.test.ts src/date-scale.test.ts`. Its `tsconfig.json` already excludes `src/**/*.test.ts`, so no tsconfig change is needed.
 
 ## 12. Delivery phases and acceptance
 

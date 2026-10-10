@@ -1,6 +1,7 @@
 # Entity list Compare — blueprint
 
 **Status:** approved, revision 6 (10 October 2026). Revision 5 sets C4's design (sections 5.8 and 5.9). Revision 6 records the build authority and the build-time specifics (section 5.8, point 10a).
+- **Authoring path today (reconciled 10 October 2026).** Until the Studio migration lands, this layout's published declaration travels in `entity_surface.layout_config`, the blob the [Entity Studio blueprint](../entity-studio/blueprint.md) forbids for new authoring. The normalized authoring tables this document proposes are behind the metadata-cleanup gate.
 
 - **Matrix drill-down (10 October 2026).** The Matrix Layout's "Compare selected" opens this panel unchanged, on the column Entity's own descriptor and `compare` declaration (Matrix blueprint 5.4 point 6 and 5.6 point 10). No comparison rule changed.
 - **Browser verification gap (10 October 2026).** C2, C1b, C3 and C4 are covered by jsdom tests in `tests/foundation/` with fake clients. None has a Playwright spec of its own in `tests/foundation-browser/`, and their behaviour in a real browser is unverified. The one exception: the Matrix browser spec opens this panel once, from "Compare selected", and checks that its heading appears and that it reads only the two chosen records.
@@ -11,7 +12,7 @@
   - **Finding 2,** folded into section 8.2: money is compared only when its currency cells are comparable values and equal; a masked, absent or unreadable currency makes the row `not_comparable` ("Currency not compared").
   - **Finding 3,** folded into section 5.1: the binding constraint is stated, and 60 is recorded as a measured budget against the candidate tables (section 3).
   - **Finding 1,** a specification clarification in section 5.3 and section 3: the masked signal's source is the authorization field policy, through the existing `maskedPresentationField`, and the existing prohibition on masked fields in queries is cited.
-- **Approved for build (implementation authority):** C1 and C2 (decision 9). C1b, C3 and C4 each need their own approval. C2 runs on synthetic fixtures until the metadata cleanup lands; publishing a real Entity's comparison waits for the authoring storage (section 12) and a pilot.
+- **Approved for build (implementation authority):** C1 and C2 (decision 9). C1b, C3 and C4 each need their own approval. **Reconciled (10 October 2026):** each has since been approved and built — C1b ("C1b approved for build..."), C3 and C4 ("also c3 and c4 approved"; C4's build authority in revision 6, 5.8 point 10a). C4's build record is in section 14. C2 runs on synthetic fixtures until the metadata cleanup lands; publishing a real Entity's comparison waits for the authoring storage (section 12) and a pilot.
 - **Revision 3 approval (10 October 2026).** After the third audit, the project owner approved decisions 11–17 in these words: "Proposals 11–17 are technically sound and approved by owner", with these conditions, each written in below:
   - "approved 11 as written; add the assertion that a not_captured row is still not_comparable, so C1's behaviour is pinned as unchanged." The assertion is in `tests/foundation/entity-comparison-model.test.ts`; decision 11 is built (section 8.3).
   - "approved 12, 14, 15 as written."
@@ -413,7 +414,7 @@ collections?: readonly {                // 0–2 per comparison
 
 Comparing 200 responses side by side is out of scope by design: side by side reads up to four, and the Matrix and the lists answer the many-way questions.
 
-## 6. Validation, availability and finding codes## 6. Validation, availability and finding codes
+## 6. Validation, availability and finding codes
 
 **Publication (refused; the declaration is not published):**
 
@@ -667,6 +668,8 @@ The comparison declaration is authored on the list surface in the existing Entit
 | --- | --- | --- |
 | `metadata.entity_surface_compare_section` | One per section of a list surface's declaration | standard draft-owned columns; `surface_id` (list surface), `section_key`, `label_id`, `sort_order`; revision 3 adds `collapsed boolean NOT NULL DEFAULT false` (decision 12) |
 | `metadata.entity_surface_compare_field` | One per field in a section | standard draft-owned columns; `compare_section_id`, `field_id`, `sort_order`; unique (`surface_id`, `field_id`) across the declaration |
+
+*Reconciled (10 October 2026):* the field table has no `surface_id` (it is on the section table), so `unique (surface_id, field_id)` cannot be declared as written. The authoring build must either carry `surface_id` on the field row, kept consistent with its section by a composite foreign key, or enforce "a field once per declaration" in validation. That choice is open; it is part of the authoring work behind the cleanup gate.
 | `metadata.entity_field.compare_better` (C3) | Column on the existing field table | `text`, check `IN ('lower','higher')`, nullable |
 | `metadata.entity_field.compare_summary_label_id` (C3, revision 3) | Column on the existing field table | nullable reference to `entity_label`; check: null unless `compare_better` is set |
 | C4 collection rows | Designed with C4 | — |
@@ -683,11 +686,11 @@ The comparison declaration is authored on the list surface in the existing Entit
 | `packages/contracts/platform/entity-list/src/compare.ts` | Constants (5.1), `surface.compare` type and parser, URL keys |
 | `packages/platform/entity/runtime/form-detail/src/activity-comparison*.ts(x)` | Snapshot adapter and view (C1) |
 | `packages/platform/entity/runtime/list-view/src/compare/` | Selection-bar action, panel, URL state wiring (C2) |
-| `server/packages/platform/metadata/src/entity-compare-descriptor.ts` (+ test) | Published declaration parsing and section 6 validation |
+| `server/packages/platform/metadata/src/list-compare-descriptor.ts` (+ test) | Published declaration parsing and section 6 validation (shipped name; proposed as `entity-compare-descriptor.ts`, renamed to the `list-*-descriptor.ts` pattern every layout uses) |
 | `server/packages/services/records/src/list-compare.ts` (+ test) | Per-viewer projection (5.3) |
 | `tests/foundation/activity-comparison-view.test.tsx` | C1 rendering test (written first) |
 | `tests/foundation/entity-comparison-model.test.ts` | Section 8 rules |
-| `tests/foundation-browser/entity-list-compare.spec.ts` | Browser spec on synthetic fixtures |
+| `tests/foundation-browser/entity-list-compare.spec.ts` | Browser spec on synthetic fixtures. **Not present (reconciled 10 October 2026):** planned; the status block's browser verification gap records that no Compare phase has a Playwright spec yet |
 
 Styles stay on the breakpoint scale and use design-system tokens.
 
@@ -699,7 +702,7 @@ Styles stay on the breakpoint scale and use design-system tokens.
 | **C1b** Snapshot on the table view | The snapshot comparison adopts the N-column table view (visible change: table semantics, section 10); with decision 17: fixed earlier-snapshot baseline and no identifiers (section 9.6) | No | Snapshot browser spec updated deliberately; accessibility checks; owner sees the change |
 | **C2** Record comparison | `compare` declaration parsing and validation, per-viewer projection, selection-bar action, panel, URL state, baseline, narrow pair picker; the section 9.2 presentation recorded in revision 3. If approved: the unavailable-column rule (decision 11), `collapsed` sections (12), the same-label marker (13) and word highlighting (14) | **Runtime and tests: no** (synthetic fixtures, as Tree did). **A real Entity: yes** (authoring storage and a pilot's publication) | Fixtures prove: projection lists only readable fields; `fieldsRestricted` without names; masked cells not compared; one request with no excluded parameters; reload from URL; unavailable record column; baseline cleared on removal; decimal and money equality; Back closes; record-section scope kept; no UUID shown anywhere |
 | **C3** Best value | `field.compare.better`, best marks, currency rule via `currencyField`; with decision 15: `summaryLabel` chips | **Runtime on fixtures: no. Authoring: yes**, because `compare_better` is new per-field authoring | Ties, empty cells, mixed currencies, no currency field |
-| **C4** Line items | Collection declaration, match-key alignment, the chosen server read; with decision 16: the `absent` and "Not in baseline" states | Yes | Its own design and approval first |
+| **C4** Line items | Collection declaration, match-key alignment, the chosen server read; with decision 16: the `absent` and "Not in baseline" states | Yes | Its own design and approval first. **Reconciled:** designed (revision 5), approved and built (section 14) |
 
 **Order of work.** C1, then C2 on fixtures, in parallel with the cleanup. After the cleanup: authoring storage (section 12), then a pilot. **Pilot proposal:** a master-data Entity already onboarded with a readable identity and enough comparable fields; the candidate is chosen with the owner when the cleanup lands. Quotation comparison waits for C3, C4 and the quotation Entities' onboarding.
 
@@ -780,6 +783,10 @@ Styles stay on the breakpoint scale and use design-system tokens.
   - The panel marks "Best" in text and shows up to six summary chips, with ties named.
   - Tests: core 8, panel and model 10, contract 4, metadata 227, records 635; foundation 80 files pass and the same 7 pre-existing failures.
   - Authoring storage waits for the cleanup.
+- **C4, built (`541699cdb`, `707d7a8f1`), on synthetic fixtures.** Owner approval: "also c3 and c4 approved"; build authority in revision 6 (5.8 point 10a). This record is reconciled from the two commits on 10 October 2026; it was missing until then.
+  - **Server, contract and core (`541699cdb`):** `MAX_LIST_FILTER_VALUES` = 100 for `in` filters; `listPresentation.compare.collections` (relationship, 1–2 match-key fields, 1–12 line fields, optional master list and `absentLabel`), checked at publication against a published "many" relationship; `field.compare` gains `unitField` and `evaluation`; per-viewer resolution of the line Entity, the master list and line access; the shared core's `comparisonLineOutcome` and `comparisonLineRelativeToBaseline`.
+  - **Browser (`707d7a8f1`):** `CompareCollection` opens collapsed with its counts, narrows by the master's search, up to three choice filters and pinned items (`compareItems` in the URL), and pages 50 master rows with 1 + N requests. Absence is claimed only from complete reads; units gate best-value marks; coverage comes from two exact counts.
+  - Not verified in a real browser (status block); authoring storage waits for the cleanup.
 - **Not verified in a real browser:** C2, C1b, C3 and the identifier follow-up are all synthetic-only so far. Their evidence is the test suites above.
 - **Identifier exposures found next to C1b (since fixed by the follow-up above):**
   - The saved-snapshot list in the activity workspace prints "Captured by: {capturedBy}", which is the principal UUID (`activity-workspace.tsx`, the capture-actor line).
