@@ -129,6 +129,8 @@ export function colourDistance(a: HexColour, b: HexColour, vision: ColourVision 
  * near-identical blues (3.3) and red against green under deuteranopia (4.6)
  * fail. */
 export const CHART_COLOUR_CRITERIA = Object.freeze({
+  /** How many sequence colours a set carries. */
+  sequenceLength: 8,
   /** Series, single-series and tone fills against the plot background (WCAG 1.4.11). */
   fillContrast: 3,
   /** Axis lines against the background (WCAG 1.4.11). */
@@ -145,11 +147,15 @@ export const CHART_COLOUR_CRITERIA = Object.freeze({
   reliefFloor: 2,
 });
 
+/** High contrast carries fewer, more widely separated colours, and a chart
+ * under it caps its series at that count (decision 27). */
+export const HIGH_CONTRAST_CHART_COLOUR_CRITERIA = Object.freeze({ ...CHART_COLOUR_CRITERIA, sequenceLength: 5 });
+
 /** One chart colour set: one family in one mode (13.4a.2). */
 export interface ChartColourSet {
   /** The plot background the marks sit on. */
   readonly surface: HexColour;
-  /** `--a-chart-1` … `--a-chart-8`, in sequence order. */
+  /** `--a-chart-1` … `--a-chart-8`, in sequence order (`--a-chart-1` … `--a-chart-5` under high contrast). */
   readonly sequence: readonly HexColour[];
   /** `--a-chart-single`. */
   readonly single: HexColour;
@@ -233,8 +239,8 @@ export interface ChartColourReport {
  * reported in `tonePairs`, without failing the set (decision 25). */
 export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
   const findings: ChartColourFinding[] = [];
-  if (set.sequence.length !== 8)
-    findings.push({ code: "CHART_COLOUR_SEQUENCE_LENGTH", element: "sequence", measured: set.sequence.length, required: 8 });
+  if (set.sequence.length !== criteria.sequenceLength)
+    findings.push({ code: "CHART_COLOUR_SEQUENCE_LENGTH", element: "sequence", measured: set.sequence.length, required: criteria.sequenceLength });
   if (!set.labelInks.length) throw new TypeError("A chart colour set needs at least one label ink");
   const filled: [string, HexColour, ChartFillReport["role"]][] = [
     ...set.sequence.map((colour, index): [string, HexColour, "series"] => [`sequence ${index + 1}`, colour, "series"]),

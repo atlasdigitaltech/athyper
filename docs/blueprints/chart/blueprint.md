@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built through decision 25; revision 9 (10 October 2026).
+**Status:** approved; A5.1a built through decision 25; A5.1b candidate sets proposed; revision 10 (10 October 2026).
+- **A5.1b started (10 October 2026):** "go ahead". The validator carries the high-contrast length (decision 27). Five candidate sets pass with no findings and nothing relieved, and await approval before they become tokens (13.4a.11). Decision 28 is proposed.
 - **Decisions 24–27 approved (10 October 2026):** "Approved". 24 and 25 are built into the validator (13.4a.10); 26 and 27 govern A5.1b, which may now proceed.
 - **Decision 23 approved and built (10 October 2026):** "Decision 23: approved". Every pair of sequence colours is checked, not only palette neighbours (13.4a.9). Decisions 24–27 were proposed with it and approved next.
 - **Decisions 20–22 approved (10 October 2026)** in the owner's words "Three proposals - Approved":
@@ -418,6 +419,55 @@ No colour is relieved, and every colour clears every tone. Two blues at 6 and 8,
 
 The high-contrast cap of five (`CHART_SERIES_COUNT`) is A5.2's; the validator's eight-colour length check gains a high-contrast length of five in A5.1b.
 
+#### 13.4a.11 A5.1b: candidate sets (proposed, not yet tokens)
+
+**Built:** `CHART_COLOUR_CRITERIA.sequenceLength` (8) and `HIGH_CONTRAST_CHART_COLOUR_CRITERIA` (5), so a high-contrast set is checked at its own length (decision 27). 14 tests pass.
+
+**How each set's fixed inputs come from the theme** (not chosen for the chart):
+
+| Input | Source |
+| --- | --- |
+| Plot surface | `--a-surface` of the family and mode |
+| Success, warning, danger tones | `--a-success`, `--a-warning`, `--a-danger` |
+| Neutral tone | `--a-muted-foreground`. The neutral badge's fill is `--a-muted`, too pale for a mark, so the chart uses the family's muted ink |
+| Label inks | `--a-surface` and `--a-foreground` |
+| Single series | Modern: the brand in light (`#234b84`), and the dark-mode primary mix in dark (`#b9c5d8`). Mono: the family's ink. High contrast: the brand (`#ffff00`) |
+
+**High contrast is one set for both families,** because the theme's high-contrast tokens are already identical across families ("an accessibility mode, not a brand"). That makes five distinct sets for the six family-and-mode combinations.
+
+**How the sets were found.** A search started from the prototype's palettes and moved each colour as little as possible. It aimed at least 10% above every floor, with each colour at 3:1 or more. Two further limits kept the results usable:
+- a ceiling on contrast, so light sets hold no near-black colours and dark sets no near-white ones;
+- a floor on chroma, so no colour reads as grey. Mono is also capped at chroma 55, so it stays quieter than Modern.
+
+The search also kept every colour apart from the set's "Others" grey. The validator does not check that yet (decision 28).
+
+| Set | Sequence | Others | Grid | Axis | Closest pair: normal / prot. / deut. / trit. |
+| --- | --- | --- | --- | --- | --- |
+| Modern light | `#054e8d` `#c18304` `#2098f6` `#89385a` `#af71b6` `#6250d6` `#e93288` `#51a062` | `#8e94a0` | `#e3e8ef` | `#8a94a6` | 16.8 / 11.0 / 11.1 / 11.1 |
+| Modern dark | `#527ffa` `#b27d06` `#eb92af` `#1f7746` `#2ca08e` `#ac9fea` `#ce0c38` `#b825ae` | `#6b7486` | `#2a3850` | `#6b7a93` | 17.4 / 11.2 / 11.0 / 11.3 |
+| Mono light | `#4365bd` `#969231` `#86214e` `#0899f4` `#b1806c` `#534280` `#906175` `#0c8a99` | `#949494` | `#e6e6e6` | `#8c8c8c` | 16.5 / 11.2 / 11.0 / 11.0 |
+| Mono dark | `#82a6f3` `#97851e` `#7c6387` `#dec5eb` `#9f664e` `#8775d4` `#159f92` `#eb8fb7` | `#707070` | `#333333` | `#7a7a7a` | 16.6 / 11.9 / 11.1 / 11.1 |
+| High contrast (both) | `#4a78d0` `#faa825` `#f8c3ff` `#b1578d` `#05a7c2` | `#9a9a9a` | `#3a3a3a` | `#ffffff` | 24.4 / 13.0 / 13.1 / 13.0 |
+
+Every set:
+- passes with no findings, and no colour is relieved;
+- has its "Others" grey at 3:1 or more, and at least 15/10 from the neutral tone (decision 24);
+- has the axis at 3:1 or more and the grid below 3:1.
+
+Sequence order is greedy: each next colour is the one farthest from those already placed, so a chart with few series gets the most separated colours. `tonePairs` holds what decision 25 measured: light warning and danger (4.7 under deuteranopia), and dark success and danger (8.2). High contrast reports none.
+
+**On approval,** the sets become tokens:
+- `--a-chart-1` … `--a-chart-8`, `--a-chart-single`, `--a-chart-neutral`, `--a-chart-grid` and `--a-chart-axis`, in `tokens.ts` and `styles.css`;
+- under high contrast, `--a-chart-6` … `--a-chart-8` are set to `initial`, so nothing inherits a light value;
+- a theme test locks each set's values and its validator report (decision 26), and checks that `styles.css` declares the same values;
+- `atlas-mono.ts`'s comment is amended (13.4a.5).
+
+`--a-chart-neutral` is the name 13.4a.2 gives the "Others" token. 13.4 and 13.5 still say `--a-chart-rest` and are read as `--a-chart-neutral`.
+
+**Proposed (not approved):**
+
+28. **"Others" stands apart from every sequence colour,** at 15/10 under every vision (`CHART_OTHERS_DISTANCE`, failing). "Others" is drawn beside the series it summarises, and a series that looks like "Others" reads as part of the remainder. The candidate sets already meet it, at 4% (Modern light) to 31% (high contrast) above the floors.
+
 ### 13.5 "Others"
 
 - `rest` is exact only for a count, or a sum of an additive field in one unit: the server's total minus the given points, by exact decimal subtraction.
@@ -503,3 +553,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 14 | Record the found set | Recorded as the worked example (13.4a.9) |
 | Audit round 14 | "Okabe-Ito has five colours below 3:1" | Corrected: three (13.4a.9) |
 | Owner (10 October 2026) | "Approved" (decisions 24–27) | 24 and 25 built (13.4a.10); 26 and 27 govern A5.1b |
+| Owner (10 October 2026) | "go ahead" (A5.1b) | High-contrast length built; five candidate sets proposed with measurements (13.4a.11); decision 28 proposed |

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CHART_COLOUR_CRITERIA,
+  HIGH_CONTRAST_CHART_COLOUR_CRITERIA,
   ciede2000,
   colourDistance,
   contrastRatio,
@@ -199,4 +200,12 @@ test("decision 25: status tones against each other are reported without failing 
   // under every vision (a dark olive of the same lightness is not).
   const distinct = validateChartColours({ ...passing, tones: { ...passing.tones, warning: "#e0a800" } });
   assert.ok(!distinct.tonePairs.some((item) => item.element === "tone warning and tone danger"));
+});
+
+test("decision 27: a high-contrast set carries five colours, a default set eight", () => {
+  const five = { ...passing, sequence: passing.sequence.slice(0, 5) };
+  assert.ok(!validateChartColours(five, HIGH_CONTRAST_CHART_COLOUR_CRITERIA).findings.some((item) => item.code === "CHART_COLOUR_SEQUENCE_LENGTH"));
+  const finding = validateChartColours(five).findings.find((item) => item.code === "CHART_COLOUR_SEQUENCE_LENGTH");
+  assert.deepEqual([finding?.measured, finding?.required], [5, 8]);
+  assert.ok(validateChartColours(passing, HIGH_CONTRAST_CHART_COLOUR_CRITERIA).findings.some((item) => item.code === "CHART_COLOUR_SEQUENCE_LENGTH"));
 });
