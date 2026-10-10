@@ -59,6 +59,13 @@ export interface ListRecordsQuery {
    * total over every group. Valid only with `groupsOnly`; the group and the
    * aggregates must be declared by the surface's published Summary. */
   readonly groupTotals?: boolean;
+  /** A Summary's column dimension (Aggregate A2): a declared column field,
+   * by `pivotBucket` when it is a date. Valid only with `groupTotals`. */
+  readonly pivot?: string;
+  readonly pivotBucket?: RecordGroupBucket;
+  /** The column values an expansion keeps (the opening's columns), as text;
+   * null is the No value column. At most 12. */
+  readonly pivotValues?: readonly (string | null)[];
   /** A record-hierarchy request (Tree blueprint section 5.3): `nodes` adds
    * hasChildren to every row; `orphans` selects visible records whose parent
    * the viewer cannot read; `matches` returns the records that match the
@@ -123,6 +130,9 @@ export interface RecordGroupTotals {
   /** Summary aggregates withheld, with the reason shown in their place: a
    * semi-additive sum across its time fields, or a group below a floor. */
   readonly states?: Readonly<Record<string, "notSummable" | "suppressed">>;
+  /** Per column of a Summary with a column dimension (A2), aligned with the
+   * result's `pivotColumns`; null where the group has no records there. */
+  readonly cells?: readonly (Omit<RecordGroupTotals, "cells"> | null)[];
 }
 
 export interface RecordListResult {
@@ -140,6 +150,10 @@ export interface RecordListResult {
   readonly groups?: readonly Readonly<RecordGroupTotals & { readonly value: unknown }>[];
   /** A Summary request's total over every group (`groupTotals`). */
   readonly parentGroup?: RecordGroupTotals;
+  /** A Summary's column values (A2), raw, in order. */
+  readonly pivotColumns?: readonly unknown[];
+  /** More column values exist than were returned. */
+  readonly pivotColumnsTruncated?: boolean;
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: boolean;
   /** Per row of a rank request: its rank, or null when it is not ranked

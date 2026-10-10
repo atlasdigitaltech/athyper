@@ -15,6 +15,7 @@
   - a field that declares none is unchanged;
   - a semi-additive sum across its time field is withheld and says "Not summed across …";
   - a group by the time field, or a filter pinning it, still shows the number.
+  - **Coupled with the Aggregate blueprint:** one server rule (`applyAggregateRules`) governs grouped Table's totals and the Summary's. A change to additivity updates both documents together.
 - **Not approved:** B3 and T4. Both are on hold (section 14, item 18).
 - **Real-PostgreSQL evidence approved (9 October 2026):** after the audit of the GL DDL, the project owner approved test-only, prerequisite-grade evidence in these words: "approved: the real-Postgres Tree tests, and the onboarding-check run against the eight candidate tables". In the same message the owner approved, optionally, a richer pilot: "master.chart_of_account alongside master.gl_account", and named the sequence "Commodity Category as the mechanical proof, then Chart of Accounts as the substantive one, with the Postgres tests run before either". Results: the delivery status (section 12.1) and the readiness evidence (section 2.4).
 - **Known gaps until the metadata cleanup lands** (both close in the same onboarding DDL-rehearsal task, which inspects the DDL):

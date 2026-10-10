@@ -69,9 +69,11 @@ test("saved state keeps declared rows and measures, up to three levels and five 
   assert.deepEqual(parseListAggregateState({ rows: ["posted:quarter", "posted:month", "code", "account", "period"], measures: ["count", "rate:sum", "count"] }, surface), {
     rows: ["posted:quarter", "account", "period"],
     measures: ["count"],
+    // The fixture declares a column dimension, so "none" is explicit state.
+    column: "",
   });
   // Nothing usable falls back to the declared defaults.
-  assert.deepEqual(parseListAggregateState({ rows: ["posted"], measures: [] }, surface), { rows: ["account", "period"], measures: ["period_net:sum", "closing_net:sum"] });
+  assert.deepEqual(parseListAggregateState({ rows: ["posted"], measures: [] }, surface), { rows: ["account", "period"], measures: ["period_net:sum", "closing_net:sum"], column: "" });
 });
 
 const field = (key: string, valueKind: string, defaultOrder: number) => ({ key, label: key, valueKind, defaultVisible: true, defaultOrder, filterOperators: ["eq", "in"], sortable: true, groupable: false, aggregations: [] });
@@ -108,11 +110,11 @@ test("rows and measures travel in the URL and saved state", () => {
   const offered = descriptor(true);
   const state = decodeListLocationState("view=aggregate&aggregate.rows=posted:quarter,account&aggregate.measures=count,unknown", offered);
   assert.equal(state.mode, "aggregate");
-  assert.deepEqual(state.aggregate, { rows: ["posted:quarter", "account"], measures: ["count"] });
+  assert.deepEqual(state.aggregate, { rows: ["posted:quarter", "account"], measures: ["count"], column: "" });
   const encoded = encodeListLocationState(state, offered);
   assert.equal(encoded.get("aggregate.rows"), "posted:quarter,account");
   assert.equal(encoded.get("aggregate.measures"), "count");
-  assert.deepEqual(toSaveableListState(state).aggregate, { rows: ["posted:quarter", "account"], measures: ["count"] });
+  assert.deepEqual(toSaveableListState(state).aggregate, { rows: ["posted:quarter", "account"], measures: ["count"], column: "" });
   // The declared defaults are not written to the URL.
   assert.equal(encodeListLocationState(decodeListLocationState("view=aggregate", offered), offered).get("aggregate.rows"), null);
   // Without Summary the keys are dropped.
@@ -130,4 +132,27 @@ test("list results carry Summary states and the parent total", () => {
   assert.deepEqual(parsed.parentGroup, { count: 5, aggregates: { "preparer:countDistinct": 3 }, states: { "closing_net:sum": "notSummable" } });
   assert.throws(() => parseEntityListResult({ ...base, parentGroup: { count: 1, states: { "closing_net:sum": "hidden" } } }), /states/);
   assert.throws(() => parseEntityListResult({ ...base, parentGroup: { count: 1, aggregates: { "closing_net:median": 1 } } }), /aggregates key/);
+});
+
+test("the column dimension (A2): saved and URL state, and cells aligned with the columns", () => {
+  const surface = parseListAggregate({ ...aggregate, defaults: { ...aggregate.defaults, rows: ["account"], column: "period" } }, listed);
+  // Absent state uses the declared default; "" chooses none and survives a round trip.
+  assert.equal(parseListAggregateState({}, surface).column, "period");
+  assert.equal(parseListAggregateState({ column: "" }, surface).column, "");
+  // A column already used by a row level, or undeclared as a column, falls back.
+  assert.equal(parseListAggregateState({ rows: ["account"], column: "account" }, surface).column, "period");
+  assert.equal(parseListAggregateState({ rows: ["period"], column: "posted:month" }, surface).column, "");
+  const base = { schemaVersion: 1, descriptorHash: "a".repeat(64), scopeFingerprint: "b".repeat(64), queryHash: "c".repeat(64), rows: [], pagination: { pageSize: 0, hasNext: false, hasPrevious: false, total: 3, countMode: "exact" } };
+  const parsed = parseEntityListResult({
+    ...base,
+    pivotColumns: [{ value: "P01", label: "P01" }, { value: null, label: "—" }],
+    pivotColumnsTruncated: true,
+    groups: [{ value: "1000", label: "Cash", count: 2, cells: [{ count: 2, aggregates: { "period_net:sum": 150 } }, null] }],
+    parentGroup: { count: 3, cells: [{ count: 2 }, { count: 1 }] },
+  });
+  assert.equal(parsed.pivotColumnsTruncated, true);
+  assert.deepEqual(parsed.groups?.[0]?.cells, [{ count: 2, aggregates: { "period_net:sum": 150 } }, null]);
+  assert.throws(() => parseEntityListResult({ ...base, pivotColumns: [{ value: "P01", label: "P01" }], groups: [{ value: "1000", label: "Cash", count: 2, cells: [] }] }), /align with pivotColumns/);
+  assert.throws(() => parseEntityListResult({ ...base, pivotColumns: [{ value: "P01", label: "P01" }], parentGroup: { count: 1, cells: [{ count: 1, cells: [] }] } }), /not allowed on a cell/);
+  assert.throws(() => parseEntityListResult({ ...base, pivotColumns: Array.from({ length: 13 }, (_, index) => ({ value: String(index), label: String(index) })) }), /at most 12/);
 });

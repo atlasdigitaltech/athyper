@@ -192,7 +192,7 @@ export function decodeListLocationState(
       },
     });
   }
-  if (state.aggregate && (parameters.has("aggregate.rows") || parameters.has("aggregate.measures"))) {
+  if (state.aggregate && (parameters.has("aggregate.rows") || parameters.has("aggregate.measures") || parameters.has("aggregate.column"))) {
     const listed = (key: string, fallback: readonly string[]) => {
       const raw = parameters.get(key);
       return raw === null ? fallback : raw.split(",").filter(Boolean);
@@ -201,6 +201,11 @@ export function decodeListLocationState(
       aggregate: {
         rows: listed("aggregate.rows", state.aggregate.rows),
         measures: listed("aggregate.measures", state.aggregate.measures),
+        ...(parameters.has("aggregate.column")
+          ? { column: parameters.get("aggregate.column") ?? "" }
+          : state.aggregate.column !== undefined
+            ? { column: state.aggregate.column }
+            : {}),
       },
     });
   }
@@ -303,6 +308,8 @@ export function encodeListLocationState(
       parameters.set("aggregate.rows", normalized.aggregate.rows.join(","));
     if (!equal(normalized.aggregate.measures, base.aggregate.measures))
       parameters.set("aggregate.measures", normalized.aggregate.measures.join(","));
+    if (normalized.aggregate.column !== base.aggregate.column)
+      parameters.set("aggregate.column", normalized.aggregate.column ?? "");
   }
   if (normalized.matrixRowPage) parameters.set("matrix.rows", String(normalized.matrixRowPage));
   if (normalized.matrixColumnPage) parameters.set("matrix.cols", String(normalized.matrixColumnPage));

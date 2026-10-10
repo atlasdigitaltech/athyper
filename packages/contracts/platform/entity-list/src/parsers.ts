@@ -53,7 +53,8 @@ import { isListTreeNode } from "./tree";
 import { parseListGantt, parseListGanttState, type ListGanttV1 } from "./gantt";
 import { parseListTree } from "./tree";
 import { isListMatrixPage, parseListMatrix, parseListMatrixRanks, parseListMatrixState, type ListMatrixV1 } from "./matrix";
-import { parseListAggregate, parseListAggregateState, type ListAggregateV1 } from "./aggregate";
+import type { ListGroupTotalsV1 } from "./types";
+import { LIST_AGGREGATE_MAX_COLUMNS, parseListAggregate, parseListAggregateState, type ListAggregateV1 } from "./aggregate";
 import { isListCompareLocation, parseListCompare } from "./compare";
 import {
   parseListBoard,
@@ -757,6 +758,21 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     record.parentGroup === undefined
       ? undefined
       : parseGroupTotals(object(record.parentGroup, "parentGroup"), "parentGroup");
+  const pivotColumns =
+    record.pivotColumns === undefined
+      ? undefined
+      : Object.freeze(
+          array(record.pivotColumns, "pivotColumns").map((candidate, index) => {
+            const item = object(candidate, `pivotColumns[${index}]`);
+            return Object.freeze({ value: json(item.value, `pivotColumns[${index}].value`), label: text(item.label, `pivotColumns[${index}].label`) });
+          }),
+        );
+  if (pivotColumns && pivotColumns.length > LIST_AGGREGATE_MAX_COLUMNS)
+    throw new TypeError(`pivotColumns must hold at most ${LIST_AGGREGATE_MAX_COLUMNS} values`);
+  const columnCount = pivotColumns?.length;
+  for (const [index, group] of (groups ?? []).entries())
+    if (group.cells && group.cells.length !== columnCount) throw new TypeError(`groups[${index}].cells must align with pivotColumns`);
+  if (parentGroup?.cells && parentGroup.cells.length !== columnCount) throw new TypeError("parentGroup.cells must align with pivotColumns");
   return Object.freeze({
     schemaVersion: 1,
     descriptorHash: digest(record.descriptorHash, "descriptorHash"),
@@ -825,6 +841,12 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
     ...(facets ? { facets } : {}),
     ...(groups ? { groups } : {}),
     ...(parentGroup ? { parentGroup } : {}),
+    ...(pivotColumns ? { pivotColumns } : {}),
+    ...(record.pivotColumnsTruncated === undefined
+      ? {}
+      : record.pivotColumnsTruncated === true
+        ? { pivotColumnsTruncated: true as const }
+        : (() => { throw new TypeError("pivotColumnsTruncated must be true when present"); })()),
   });
 }
 
@@ -1372,8 +1394,23 @@ function parseBuckets(value: unknown, name: string) {
 
 const GROUP_AGGREGATE_KEY = /^[a-z][a-z0-9_]*:(countDistinct|sum|average|minimum|maximum)$/;
 
-/** A group's count, aggregates and their currency and Summary states. */
-function parseGroupTotals(item: Readonly<Record<string, unknown>>, at: string) {
+/** A group's count, aggregates and their currency and Summary states, and
+ * its per-column cells (Aggregate A2), which carry no cells of their own. */
+function parseGroupTotals(item: Readonly<Record<string, unknown>>, at: string, nested = false): ListGroupTotalsV1 {
+  const cells =
+    item.cells === undefined
+      ? undefined
+      : nested
+        ? (() => { throw new TypeError(`${at}.cells is not allowed on a cell`); })()
+        : Object.freeze(
+            array(item.cells, `${at}.cells`).map((cell, index) =>
+              cell === null ? null : parseGroupTotals(object(cell, `${at}.cells[${index}]`), `${at}.cells[${index}]`, true),
+            ),
+          );
+  return { ...parseGroupTotalsOwn(item, at), ...(cells ? { cells } : {}) };
+}
+
+function parseGroupTotalsOwn(item: Readonly<Record<string, unknown>>, at: string) {
   const count = optionalInteger(item.count, `${at}.count`, 0);
   const aggregateKey = (key: string) => {
     if (!GROUP_AGGREGATE_KEY.test(key)) throw new TypeError(`${at} aggregate key is invalid`);

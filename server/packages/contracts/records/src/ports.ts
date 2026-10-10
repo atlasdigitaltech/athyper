@@ -210,6 +210,14 @@ export interface RecordRepositoryListInput {
   /** Also return the total over every group, computed in the same statement
    * from base rows (GROUPING SETS; Entity list Aggregate blueprint 8.1). */
   readonly groupTotals?: boolean;
+  /** A Summary's column dimension (Aggregate A2): GROUPING SETS gains the
+   * column, returning cells, row totals, column totals and the total from
+   * base rows in one statement. `values` keeps an expansion's columns. */
+  readonly pivot?: {
+    readonly field: string;
+    readonly bucket?: import("./query.js").RecordGroupBucket;
+    readonly values?: readonly (string | null)[];
+  };
   /** Record hierarchy: child existence per row, or orphans only. */
   readonly hierarchy?: {
     readonly mode: "nodes" | "orphans" | "matches";

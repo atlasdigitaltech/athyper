@@ -7,6 +7,7 @@ import {
   type EntityListDescriptorV1,
   type EntityListResultV1,
   type EntityListScopeCoordinateV1,
+  type JsonValue,
   type ListAggregateMeasureV1,
   type ListAggregateStateV1,
   type ListAggregateV1,
@@ -23,14 +24,18 @@ import { handleTreeKeyDown } from "../tree/tree-keyboard";
 import { TreeIndent, TreeToggle } from "../tree/tree-parts";
 import {
   choiceLabel,
+  columnOptions,
   levelOptions,
   sameTotals,
   summaryCell,
+  summaryColumn,
+  summaryColumns,
   summaryLevels,
   summaryMeasures,
   summaryQuery,
   summaryRows,
   summaryState,
+  type SummaryColumnValue,
   type SummaryLevel,
   type SummaryRow,
 } from "./aggregate-model";
@@ -60,7 +65,15 @@ export interface EntityAggregateProps {
 type Loaded =
   | { readonly status: "loading" }
   | { readonly status: "failed" }
-  | { readonly status: "ready"; readonly rows: readonly SummaryRow[]; readonly parent?: ListGroupTotalsV1; readonly truncated: boolean };
+  | {
+      readonly status: "ready";
+      readonly rows: readonly SummaryRow[];
+      readonly parent?: ListGroupTotalsV1;
+      readonly truncated: boolean;
+      /** With a column dimension (A2): the columns every row's cells align with. */
+      readonly columns?: readonly SummaryColumnValue[];
+      readonly columnsTruncated?: boolean;
+    };
 
 /** One level's groups under a parent: one request (section 7.1). */
 function useLevel(input: {
@@ -74,20 +87,27 @@ function useLevel(input: {
   readonly timeZone?: string;
   readonly identity: string;
   readonly count: () => void;
+  /** The column dimension (A2); an expansion keeps the opening's columns. */
+  readonly column?: SummaryLevel;
+  readonly columnValues?: readonly JsonValue[];
 }): Loaded {
   const [loaded, setLoaded] = useState<{ readonly key: string; readonly value: Loaded }>({ key: "", value: { status: "loading" } });
   const latest = useRef(input);
   latest.current = input;
-  const key = input.level ? JSON.stringify([input.identity, input.level.entry, input.filters, input.measures.map((item) => item.key)]) : "";
+  const key = input.level ? JSON.stringify([input.identity, input.level.entry, input.filters, input.measures.map((item) => item.key), input.column?.entry ?? null, input.columnValues ?? null]) : "";
   useEffect(() => {
-    const { client, descriptor, state, scope, level, filters, measures, timeZone } = latest.current;
+    const { client, descriptor, state, scope, level, filters, measures, timeZone, column, columnValues } = latest.current;
     if (!key || !level) return;
     const controller = new AbortController();
     latest.current.count();
     client
       .request(entityListOperation, {
         params: { entityCode: descriptor.entity.code },
-        query: entityListQuery(summaryQuery({ state, level, filters, measures, identityField: descriptor.entity.identityField, ...(timeZone ? { timeZone } : {}) }), descriptor, scope),
+        query: entityListQuery(
+          summaryQuery({ state, level, filters, measures, identityField: descriptor.entity.identityField, ...(timeZone ? { timeZone } : {}), ...(column ? { column } : {}), ...(column && columnValues ? { columnValues } : {}) }),
+          descriptor,
+          scope,
+        ),
         signal: controller.signal,
       })
       .then((page: EntityListResultV1) => {
@@ -101,6 +121,8 @@ function useLevel(input: {
             rows: summaryRows(page.groups ?? [], level, timeZone),
             ...(page.parentGroup ? { parent: page.parentGroup } : {}),
             truncated: page.groupsTruncated === true,
+            ...(column && page.pivotColumns ? { columns: summaryColumns(page.pivotColumns, column, timeZone) } : {}),
+            ...(page.pivotColumnsTruncated ? { columnsTruncated: true } : {}),
           },
         });
       })
@@ -120,7 +142,7 @@ function bucketLabel(value: unknown, unit: SummaryLevel["unit"], intl: EntityInt
   return undefined;
 }
 
-function rowLabel(row: SummaryRow, level: SummaryLevel, intl: EntityIntl): string {
+function rowLabel(row: Pick<SummaryRow, "kind" | "value" | "label">, level: SummaryLevel, intl: EntityIntl): string {
   if (row.kind === "none") return intl.message("list.board.noValue");
   return bucketLabel(row.value, level.unit, intl) ?? choiceLabel(level.field, row.value, row.label);
 }
@@ -164,6 +186,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
   const summary: ListAggregateStateV1 = summaryState(state, aggregate);
   const levels = useMemo(() => summaryLevels(aggregate, descriptor, summary.rows), [aggregate, descriptor, summary.rows]);
   const measures = useMemo(() => summaryMeasures(aggregate, summary.measures), [aggregate, summary.measures]);
+  const column = useMemo(() => summaryColumn(aggregate, descriptor, summary.column), [aggregate, descriptor, summary.column]);
   const [attempt, setAttempt] = useState(0);
   const [changed, setChanged] = useState(false);
   const requests = useRef(0);
@@ -171,7 +194,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
     requests.current += 1;
   };
   // Everything a level's numbers depend on; a change starts again collapsed.
-  const identity = JSON.stringify([props.refreshKey, attempt, state.filters, state.query ?? null, state.standardViewKey ?? null, summary.rows, summary.measures]);
+  const identity = JSON.stringify([props.refreshKey, attempt, state.filters, state.query ?? null, state.standardViewKey ?? null, summary.rows, summary.measures, summary.column ?? null]);
   const [expanded, setExpanded] = useState<{ readonly identity: string; readonly keys: ReadonlySet<string> }>({ identity, keys: new Set() });
   const open = expanded.identity === identity ? expanded.keys : new Set<string>();
   const toggle = (key: string) =>
@@ -181,8 +204,10 @@ export function EntityAggregate(props: EntityAggregateProps) {
       else next.add(key);
       return { identity, keys: next };
     });
-  const shared = { client: props.client, descriptor, state, ...(props.scope ? { scope: props.scope } : {}), measures, ...(props.timeZone ? { timeZone: props.timeZone } : {}), identity, count };
+  const shared = { client: props.client, descriptor, state, ...(props.scope ? { scope: props.scope } : {}), measures, ...(props.timeZone ? { timeZone: props.timeZone } : {}), identity, count, ...(column ? { column } : {}) };
   const top = useLevel({ ...shared, level: levels[0], filters: [] });
+  // Expansions keep the opening's columns, so every level aligns (section 7.1).
+  const columns = top.status === "ready" ? top.columns : undefined;
   const narrow = props.widthTier === "narrow";
   const change = (next: Partial<ListAggregateStateV1>) => {
     setChanged(false);
@@ -223,6 +248,28 @@ export function EntityAggregate(props: EntityAggregateProps) {
           );
         })}
       </fieldset>
+      {aggregate.dimensions.some((dimension) => dimension.column) ? (
+        <fieldset className="a-entity-aggregate__rows">
+          <legend>{intl.message("list.aggregate.columns")}</legend>
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.columns")}
+              value={summary.column ?? ""}
+              placeholder={intl.message("list.aggregate.levelNone")}
+              options={[
+                { value: "", label: intl.message("list.aggregate.levelNone") },
+                ...columnOptions(aggregate, summary.rows).map((option) => ({
+                  value: option.entry,
+                  label: option.unit
+                    ? intl.message(option.unit === "month" ? "list.group.byMonth" : "list.group.byQuarter", { field: option.dimension.label })
+                    : option.dimension.label,
+                })),
+              ]}
+              onChange={(entry) => change({ column: entry })}
+            />
+          </span>
+        </fieldset>
+      ) : null}
       <fieldset className="a-entity-aggregate__measures">
         <legend>{intl.message("list.aggregate.measures")}</legend>
         {aggregate.measures.map((measure) => {
@@ -254,6 +301,9 @@ export function EntityAggregate(props: EntityAggregateProps) {
   const notices = (
     <>
       {aggregate.fieldsRestricted ? <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.fieldsRestricted")}</p> : null}
+      {column && top.status === "ready" && top.columnsTruncated ? (
+        <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.columnsTruncated", { count: columns?.length ?? 0, dimension: column.dimension.label })}</p>
+      ) : null}
       {changed ? (
         <div className="a-entity-aggregate__notice" role="status">
           <span>{intl.message("list.aggregate.changed")}</span>
@@ -278,7 +328,18 @@ export function EntityAggregate(props: EntityAggregateProps) {
   else if (!top.rows.length)
     body = <div className="a-entity-aggregate__state" role="status"><p>{intl.message("list.aggregate.noRecords")}</p></div>;
   else {
-    const context: RowContext = { levels, measures, intl, open, toggle, narrow, onDrillDown: props.onDrillDown, onChanged: () => setChanged(true), shared };
+    const context: RowContext = {
+      levels,
+      measures,
+      intl,
+      open,
+      toggle,
+      narrow,
+      onDrillDown: props.onDrillDown,
+      onChanged: () => setChanged(true),
+      shared: { ...shared, ...(column && columns ? { columnValues: columns.map((item) => item.value) } : {}) },
+      ...(column && columns ? { columns, columnLevel: column } : {}),
+    };
     const total = top.parent;
     const rows = (
       <>
@@ -300,14 +361,37 @@ export function EntityAggregate(props: EntityAggregateProps) {
             {intl.message("list.aggregate.caption", { entity: descriptor.entity.pluralLabel, levels: levels.map((level) => levelName(level, intl)).join(" › ") })}
           </caption>
           <thead>
-            <tr>
-              <th scope="col" className="a-entity-aggregate__corner">
-                {levels.map((level) => levelName(level, intl)).join(" › ")}
-              </th>
-              {measures.map((measure) => (
-                <th key={measure.key} scope="col">{measureLabel(measure, intl)}</th>
-              ))}
-            </tr>
+            {context.columns ? (
+              <>
+                <tr>
+                  <th scope="col" rowSpan={2} className="a-entity-aggregate__corner">
+                    {levels.map((level) => levelName(level, intl)).join(" › ")}
+                  </th>
+                  {context.columns.map((item) => (
+                    <th key={item.key} scope="colgroup" colSpan={measures.length} className="a-entity-aggregate__column">
+                      {rowLabel(item, context.columnLevel!, intl)}
+                    </th>
+                  ))}
+                  <th scope="colgroup" colSpan={measures.length} className="a-entity-aggregate__column">{intl.message("list.aggregate.total")}</th>
+                </tr>
+                <tr>
+                  {[...context.columns, undefined].flatMap((item, index) =>
+                    measures.map((measure) => (
+                      <th key={`${item?.key ?? "total"}:${measure.key}:${index}`} scope="col">{measureLabel(measure, intl)}</th>
+                    )),
+                  )}
+                </tr>
+              </>
+            ) : (
+              <tr>
+                <th scope="col" className="a-entity-aggregate__corner">
+                  {levels.map((level) => levelName(level, intl)).join(" › ")}
+                </th>
+                {measures.map((measure) => (
+                  <th key={measure.key} scope="col">{measureLabel(measure, intl)}</th>
+                ))}
+              </tr>
+            )}
           </thead>
           <tbody>{rows}</tbody>
         </table>
@@ -334,25 +418,81 @@ interface RowContext {
   readonly onDrillDown: (filters: readonly ListFilterV1[]) => void;
   readonly onChanged: () => void;
   readonly shared: Omit<Parameters<typeof useLevel>[0], "level" | "filters">;
+  /** With a column dimension (A2): the opening's columns and their level. */
+  readonly columns?: readonly SummaryColumnValue[];
+  readonly columnLevel?: SummaryLevel;
 }
 
-function Cells({ totals, context, label }: { readonly totals: ListGroupTotalsV1; readonly context: RowContext; readonly label: string }) {
+function MeasureCells({ totals, context, label, drill }: {
+  readonly totals: Omit<ListGroupTotalsV1, "cells"> | null | undefined;
+  readonly context: RowContext;
+  readonly label: string;
+  /** A cell's drill-down (A2), on its first measure. */
+  readonly drill?: { readonly label: string; readonly onDrill: () => void };
+}) {
   return (
     <>
-      {context.measures.map((measure) => {
-        const text = cellText(totals, measure, context.intl);
-        const kind = summaryCell(totals, measure).kind;
+      {context.measures.map((measure, index) => {
+        const text = totals ? cellText(totals, measure, context.intl) : "—";
+        const kind = totals ? summaryCell(totals, measure).kind : "empty";
+        const content =
+          drill && index === 0 ? (
+            <button type="button" className="a-entity-aggregate__drill" onClick={drill.onDrill} aria-label={drill.label}>
+              {text}
+            </button>
+          ) : (
+            text
+          );
         return context.narrow ? (
           <div key={measure.key} className="a-entity-aggregate__pair" data-state={kind === "value" ? undefined : kind}>
             <span>{measureLabel(measure, context.intl)}</span>
-            <span>{text}</span>
+            <span>{content}</span>
           </div>
         ) : (
           <td key={measure.key} aria-label={`${label}, ${measureLabel(measure, context.intl)} ${text}`} data-state={kind === "value" ? undefined : kind}>
-            {text}
+            {content}
           </td>
         );
       })}
+    </>
+  );
+}
+
+/** A row's cells: per column (A2) and then its total, or its total alone. */
+function Cells({ totals, context, label, filters }: { readonly totals: ListGroupTotalsV1; readonly context: RowContext; readonly label: string; readonly filters: readonly ListFilterV1[] }) {
+  if (!context.columns) return <MeasureCells totals={totals} context={context} label={label} />;
+  const total = context.intl.message("list.aggregate.total");
+  const blocks = context.columns.map((column, index) => {
+    const cell = totals.cells?.[index];
+    const name = `${label}, ${rowLabel(column, context.columnLevel!, context.intl)}`;
+    const drill = cell?.count
+      ? {
+          label: context.intl.message("list.aggregate.showCellRecords", { count: cell.count, group: label, column: rowLabel(column, context.columnLevel!, context.intl) }),
+          onDrill: () => context.onDrillDown([...filters, ...column.filters]),
+        }
+      : undefined;
+    const cells = <MeasureCells totals={cell} context={context} label={name} {...(drill ? { drill } : {})} />;
+    return context.narrow ? (
+      <div key={column.key} className="a-entity-aggregate__column-block">
+        <span className="a-entity-aggregate__column-name">{rowLabel(column, context.columnLevel!, context.intl)}</span>
+        {cells}
+      </div>
+    ) : (
+      <React.Fragment key={column.key}>{cells}</React.Fragment>
+    );
+  });
+  const own = <MeasureCells totals={totals} context={context} label={`${label}, ${total}`} />;
+  return (
+    <>
+      {blocks}
+      {context.narrow ? (
+        <div className="a-entity-aggregate__column-block">
+          <span className="a-entity-aggregate__column-name">{total}</span>
+          {own}
+        </div>
+      ) : (
+        own
+      )}
     </>
   );
 }
@@ -373,13 +513,13 @@ function TotalRow({ totals, context }: { readonly totals: ListGroupTotalsV1; rea
     return (
       <div className="a-entity-aggregate__item" data-total="">
         <div className="a-entity-aggregate__heading">{drill}</div>
-        <Cells totals={totals} context={context} label={label} />
+        <Cells totals={totals} context={context} label={label} filters={[]} />
       </div>
     );
   return (
     <tr className="a-entity-aggregate__total">
       <th scope="row">{drill}</th>
-      <Cells totals={totals} context={context} label={label} />
+      <Cells totals={totals} context={context} label={label} filters={[]} />
     </tr>
   );
 }
@@ -460,14 +600,14 @@ function SummaryNode({
   const own = context.narrow ? (
     <div className="a-entity-aggregate__item" role="row" {...rowProps}>
       <div className="a-entity-aggregate__heading">{heading}</div>
-      <Cells totals={row.totals} context={context} label={label} />
+      <Cells totals={row.totals} context={context} label={label} filters={filters} />
     </div>
   ) : (
     <tr role="row" {...rowProps}>
       <th scope="row">
         <span className="a-entity-aggregate__heading">{heading}</span>
       </th>
-      <Cells totals={row.totals} context={context} label={label} />
+      <Cells totals={row.totals} context={context} label={label} filters={filters} />
     </tr>
   );
   if (!expanded) return own;
@@ -502,7 +642,7 @@ function Notice({ depth, context, text }: { readonly depth: number; readonly con
   if (context.narrow) return <div className="a-entity-aggregate__message">{content}</div>;
   return (
     <tr className="a-entity-aggregate__message">
-      <td colSpan={context.measures.length + 1}>{content}</td>
+      <td colSpan={context.measures.length * ((context.columns?.length ?? 0) + (context.columns ? 1 : 0) || 1) + 1}>{content}</td>
     </tr>
   );
 }

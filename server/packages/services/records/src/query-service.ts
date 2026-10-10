@@ -193,6 +193,7 @@ export function createRecordListExecutor<Transaction = unknown>(
             use: "sort",
           })),
           ...(query.group ? [{ field: query.group, use: "group" }] : []),
+          ...(query.pivot ? [{ field: query.pivot, use: "group" }] : []),
           // A rank orders by its measure within each row-key partition.
           ...(rank ? [{ field: rank.field, use: "sort" }, ...rank.partition.map((field) => ({ field, use: "group" }))] : []),
           // Aggregates are published only with group use (queryableListFields).
@@ -342,6 +343,9 @@ export function createRecordListExecutor<Transaction = unknown>(
                 ...(query.group
                   ? [{ key: query.group, use: "group" as const }]
                   : []),
+                ...(query.pivot
+                  ? [{ key: query.pivot, use: "group" as const }]
+                  : []),
                 ...(rank
                   ? [
                       { key: rank.field, use: "sort" as const },
@@ -412,6 +416,15 @@ export function createRecordListExecutor<Transaction = unknown>(
                   : {}),
                 ...(query.groupsOnly ? { groupsOnly: true } : {}),
                 ...(query.groupTotals ? { groupTotals: true } : {}),
+                ...(query.groupTotals && query.pivot
+                  ? {
+                      pivot: {
+                        field: query.pivot,
+                        ...(query.pivotBucket ? { bucket: query.pivotBucket } : {}),
+                        ...(query.pivotValues ? { values: query.pivotValues } : {}),
+                      },
+                    }
+                  : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
                       hierarchy: {

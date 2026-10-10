@@ -87,6 +87,10 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
   /** A Summary request (Entity list Aggregate blueprint 5.4): also the total
    * over every group, from base rows. Valid only with `groupsOnly`. */
   readonly totals?: boolean;
+  /** A Summary's column dimension (Aggregate A2), with `totals`: a declared
+   * column entry, and the column values an expansion keeps. */
+  readonly pivot?: string;
+  readonly pivotValues?: readonly import("@athyper/contract-platform-entity-list").JsonValue[];
   readonly hierarchy?: "nodes" | "orphans" | "matches";
   /** Per-group aggregates as `field:aggregate` (Tree blueprint A2). */
   readonly aggregates?: readonly string[];
@@ -108,6 +112,8 @@ export function entityListQuery(state: EntityListQueryState, descriptor: EntityL
     ...(state.group ? { group: state.group } : {}),
     ...(state.groupsOnly ? { groupsOnly: "true" } : {}),
     ...(state.groupsOnly && state.totals ? { totals: "true" } : {}),
+    ...(state.groupsOnly && state.totals && state.pivot ? { pivot: state.pivot } : {}),
+    ...(state.groupsOnly && state.totals && state.pivot && state.pivotValues?.length ? { pivotValue: Object.freeze(state.pivotValues.map((value) => JSON.stringify(value))) } : {}),
     ...(state.group && state.aggregates?.length ? { aggregate: Object.freeze([...state.aggregates]) } : {}),
     ...(state.group && state.timeZone ? { timeZone: state.timeZone } : {}),
     ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),

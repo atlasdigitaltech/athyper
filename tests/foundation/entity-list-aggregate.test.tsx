@@ -137,7 +137,7 @@ const accounts = [
 const total = { count: 5, aggregates: { "period_net:sum": 196, "salary:average": 30, "fee:sum": null }, aggregateCurrencies: { "period_net:sum": "MYR" }, mixedCurrencies: ["fee:sum"], states: { "closing_net:sum": "notSummable" } };
 
 async function withSummary(
-  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean },
+  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean; pivoted?: boolean },
   run: (h: { container: HTMLElement; calls: Call[]; settle: () => Promise<void>; drills: (readonly ListFilterV1[])[]; changes: unknown[] }) => Promise<void>,
 ) {
   const dom = new JSDOM("<div id='root'></div>", { url: "https://example.test/app/trial-balance" });
@@ -150,6 +150,7 @@ async function withSummary(
   const client = {
     request: async (_operation: unknown, input: { query: Record<string, unknown> }) => {
       calls.push(input.query);
+      if (input.query.pivot) return pivotResult(input.query);
       if (input.query.group === "account") return result(accounts, total);
       // Under 1000 Cash: two periods, each summable because the period is grouped by value.
       return result(
@@ -169,8 +170,8 @@ async function withSummary(
       root.render(
         <EntityAggregate
           client={client}
-          descriptor={descriptor}
-          aggregate={parsed}
+          descriptor={options.pivoted ? pivotDescriptor : descriptor}
+          aggregate={options.pivoted ? pivotDescriptor.surface.aggregate! : parsed}
           state={state}
           refreshKey="r"
           {...(options.narrow ? { widthTier: "narrow" as const } : {})}
@@ -269,5 +270,67 @@ test("narrow screens list one group per row and keep the total visible", async (
     assert.equal(items.length, 3);
     assert.match(items[0]!.textContent!, /^Total/);
     assert.match(container.textContent!, /Not summed across Fiscal period/);
+  });
+});
+
+// The column dimension (A2): GL account × fiscal period.
+const pivotDescriptor = parseEntityListDescriptor({
+  ...descriptor,
+  surface: {
+    ...descriptor.surface,
+    aggregate: {
+      ...aggregate,
+      dimensions: [aggregate.dimensions[0], { ...aggregate.dimensions[1], column: true }, aggregate.dimensions[2]],
+      defaults: { rows: ["account", "posted:month"], column: "period", measures: ["period_net:sum", "closing_net:sum"] },
+    },
+  },
+});
+const pivotResult = (query: Record<string, unknown>): EntityListResultV1 => {
+  const cell = (net: number, closing: number) => ({ count: 1, aggregates: { "period_net:sum": net, "closing_net:sum": closing }, aggregateCurrencies: { "period_net:sum": "MYR", "closing_net:sum": "MYR" } });
+  const groups = query.group === "account"
+    ? [
+        { value: id(1), label: "1000 Cash", count: 2, aggregates: { "period_net:sum": 150 }, aggregateCurrencies: { "period_net:sum": "MYR" }, states: { "closing_net:sum": "notSummable" }, cells: [cell(100, 100), cell(50, 150)] },
+        { value: id(2), label: "2000 Payables", count: 1, aggregates: { "period_net:sum": 10 }, aggregateCurrencies: { "period_net:sum": "MYR" }, states: { "closing_net:sum": "notSummable" }, cells: [cell(10, 10), null] },
+      ]
+    : [{ value: "2026-01", label: "2026-01", count: 1, aggregates: { "period_net:sum": 100 }, states: { "closing_net:sum": "notSummable" }, cells: [cell(100, 100), null] }];
+  return {
+    ...result(groups, { count: 3, aggregates: { "period_net:sum": 160 }, aggregateCurrencies: { "period_net:sum": "MYR" }, states: { "closing_net:sum": "notSummable" }, cells: [{ ...cell(110, 110), count: 2 }, cell(50, 150)] }),
+    pivotColumns: [{ value: "P01", label: "P01" }, { value: "P02", label: "P02" }],
+  } as unknown as EntityListResultV1;
+};
+
+test("a column dimension draws each column's measures and a total, with column totals from the server", async () => {
+  await withSummary({ pivoted: true }, async ({ container, calls }) => {
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.pivot, "period");
+    assert.equal(calls[0]!.pivotValue, undefined);
+    const header = container.querySelector("thead")!.textContent!;
+    // Published choice labels for the columns, then the row total.
+    assert.match(header, /Period 1.*Period 2.*Total/);
+    const rows = [...container.querySelectorAll("tbody tr")];
+    // The total row: column totals sum the balance within each period; the grand total does not.
+    assert.match(rows[0]!.textContent!, /110.*150.*Not summed across Fiscal period/);
+    // A row with no records in a column shows no value there.
+    assert.match(rows[2]!.textContent!, /—/);
+  });
+});
+
+test("an expansion keeps the opening's columns, and a cell drills down with its row's and its column's filters", async () => {
+  await withSummary({ pivoted: true }, async ({ container, calls, drills, settle }) => {
+    await act(async () => container.querySelector<HTMLButtonElement>("tbody tr[aria-level='1'] [data-tree-toggle]")!.click());
+    await settle();
+    assert.equal(calls[1]!.group, "posted:month");
+    assert.deepEqual(calls[1]!.pivotValue, ['"P01"', '"P02"']);
+    const cellButton = container.querySelector<HTMLButtonElement>("tbody tr[aria-level='1'] td button")!;
+    assert.match(cellButton.getAttribute("aria-label")!, /Show the 1 records in 1000 Cash, Period 1/);
+    await act(async () => cellButton.click());
+    assert.deepEqual(drills[0], [{ field: "account", operator: "eq", value: id(1) }, { field: "period", operator: "eq", value: "P01" }]);
+    assert.ok(!container.innerHTML.includes("6a1b2c3d"), "no identifier rendered");
+  });
+});
+
+test("the column picker offers declared columns not used by a row level, and None", async () => {
+  await withSummary({ pivoted: true }, async ({ container }) => {
+    assert.ok([...container.querySelectorAll("legend")].some((legend) => legend.textContent === "Columns"));
   });
 });

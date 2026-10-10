@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from "pg";
 import { Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import type { RecordRepositoryListInput } from "@athyper/server-contract-records";
+import { LIST_AGGREGATE_MAX_CELLS, LIST_AGGREGATE_MAX_COLUMNS, LIST_GROUP_LIMIT } from "@athyper/contract-platform-entity-list";
 import { createKyselyRecordRepository } from "./kysely-record-repository.js";
 
 // Summary totals (Entity list Aggregate blueprint section 8.1, phase A1) on
@@ -26,6 +27,8 @@ afterAll(async () => {
   await pool?.end();
 });
 
+/** The last statement the repository sent, so a test can explain it. */
+const sent: { sql: string; parameters: readonly unknown[] }[] = [];
 async function inSession<T>(work: (client: PoolClient, repository: ReturnType<typeof createKyselyRecordRepository>) => Promise<T>): Promise<T> {
   const client = await pool!.connect();
   try {
@@ -43,7 +46,10 @@ async function inSession<T>(work: (client: PoolClient, repository: ReturnType<ty
           commitTransaction: async () => undefined,
           rollbackTransaction: async () => undefined,
           acquireConnection: async () => ({
-            executeQuery: async (query: { sql: string; parameters: readonly unknown[] }) => ({ rows: (await client.query(query.sql, [...query.parameters])).rows as never[] }),
+            executeQuery: async (query: { sql: string; parameters: readonly unknown[] }) => {
+              sent.push(query);
+              return { rows: (await client.query(query.sql, [...query.parameters])).rows as never[] };
+            },
             streamQuery: () => {
               throw new Error("unused");
             },
@@ -165,5 +171,72 @@ describe.skipIf(!enabled)("Summary totals on PostgreSQL (Aggregate blueprint 8.1
       const none = await repository.list(input({ recordIds: [] }));
       expect(none.groups).toEqual([]);
       expect(none.parentGroup).toEqual({ count: 0 });
+    }));
+});
+
+describe.skipIf(!enabled)("Summary column dimension on PostgreSQL (Aggregate A2)", () => {
+  it("returns cells, row totals, column totals and the total in one statement, No value last among columns", () =>
+    inSession(async (client, repository) => {
+      await seed(client);
+      const result = await repository.list(input({ pivot: { field: "period" }, groupAggregates: [money, { field: "preparer", aggregate: "countDistinct" }] }));
+      expect(result.pivotColumns).toEqual(["P01", "P02", null]);
+      expect(result.groups?.map((group) => [group.value, group.count, group.cells?.map((cell) => cell?.count ?? null)])).toEqual([
+        ["1000", 2, [1, 1, null]],
+        ["2000", 2, [1, 1, null]],
+        ["3000", 1, [null, null, 1]],
+      ]);
+      expect(result.groups?.[0]?.cells?.[1]).toEqual({ count: 1, aggregates: { "period_net:sum": 50, "preparer:countDistinct": 1 }, aggregateCurrencies: { "period_net:sum": "MYR" } });
+      // Column totals from base rows; the total spans MYR and USD.
+      expect(result.parentGroup?.cells?.map((cell) => cell?.aggregates?.["period_net:sum"])).toEqual([110, 80, 6]);
+      expect(result.parentGroup).toMatchObject({ count: 5, aggregates: { "period_net:sum": null, "preparer:countDistinct": 3 }, mixedCurrencies: ["period_net:sum"] });
+    }));
+
+  it("keeps an expansion's columns in their order, a missing one as no cell, and restricts to an authorized set", () =>
+    inSession(async (client, repository) => {
+      await seed(client);
+      const result = await repository.list(input({ recordIds: [ids[0]!, ids[1]!, ids[4]!], pivot: { field: "period", values: ["P02", "P09", null] }, groupAggregates: [money] }));
+      expect(result.pivotColumns).toEqual(["P02", "P09", null]);
+      expect(result.groups?.map((group) => [group.value, group.cells?.map((cell) => cell?.aggregates?.["period_net:sum"] ?? null)])).toEqual([
+        ["1000", [50, null, null]],
+        ["3000", [null, null, 6]],
+      ]);
+      expect(result.parentGroup?.count).toBe(3);
+    }));
+
+  it("pivots a zoned date bucket", () =>
+    inSession(async (client, repository) => {
+      await seed(client);
+      const result = await repository.list(input({ pivot: { field: "posted_at", bucket: { unit: "month", timeZone: "Asia/Kuala_Lumpur" } } }));
+      expect(result.pivotColumns).toEqual(["2026-02", "2026-04"]);
+      expect(result.groups?.map((group) => group.cells?.map((cell) => cell?.count ?? null))).toEqual([[2, null], [null, 2], [null, 1]]);
+    }));
+
+  it("stays within the checked response bound at its caps, and reports the statement's cost", () =>
+    inSession(async (client, repository) => {
+      // 60 accounts × 20 periods, beyond both caps, with five measures.
+      await client.query(`
+        INSERT INTO summary_balance (id, tenant_id, account, period, posted_at, currency_code, period_net, preparer)
+        SELECT gen_random_uuid(), $1::uuid, 'A' || lpad(a::text, 3, '0'), 'P' || lpad(p::text, 2, '0'), now(), 'MYR', a * p, 'u' || (a % 7)
+          FROM generate_series(1, 60) AS a, generate_series(1, 20) AS p`, [tenantId]);
+      const measures = [money, { field: "period_net", aggregate: "average" as const }, { field: "period_net", aggregate: "minimum" as const }, { field: "period_net", aggregate: "maximum" as const }, { field: "preparer", aggregate: "countDistinct" as const }];
+      sent.length = 0;
+      const result = await repository.list(input({ pivot: { field: "period" }, groupAggregates: measures }));
+      expect(result.groups).toHaveLength(LIST_GROUP_LIMIT);
+      expect(result.groupsTruncated).toBe(true);
+      expect(result.pivotColumns).toHaveLength(LIST_AGGREGATE_MAX_COLUMNS);
+      expect(result.pivotColumnsTruncated).toBe(true);
+      // Totals still cover every record, not only the shown rows and columns.
+      expect(result.parentGroup?.count).toBe(1200);
+      // Measure values in the response: rows, cells and totals, each with five measures.
+      const values = (totals: { aggregates?: Readonly<Record<string, unknown>> } | null | undefined) => Object.keys(totals?.aggregates ?? {}).length;
+      const cellsIn = (group: { cells?: readonly ({ aggregates?: Readonly<Record<string, unknown>> } | null)[] } & { aggregates?: Readonly<Record<string, unknown>> }) => values(group) + (group.cells ?? []).reduce((sum, cell) => sum + values(cell), 0);
+      const total = result.groups!.reduce((sum, group) => sum + cellsIn(group), 0) + cellsIn(result.parentGroup!);
+      expect(total).toBe((LIST_GROUP_LIMIT + 1) * (LIST_AGGREGATE_MAX_COLUMNS + 1) * measures.length);
+      expect(total).toBeLessThanOrEqual(LIST_AGGREGATE_MAX_CELLS);
+      // The statement's plan and time at this size (recorded in the build record).
+      const statement = sent.at(-1)!;
+      const plan = (await client.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${statement.sql}`, [...statement.parameters])).rows[0]["QUERY PLAN"][0];
+      console.info(`A2 pivot statement: ${result.groups!.length} rows × ${result.pivotColumns!.length} columns × ${measures.length} measures = ${total} values; plan cost ${plan.Plan["Total Cost"]}, execution ${plan["Execution Time"]} ms over 1,205 records`);
+      expect(plan["Execution Time"]).toBeLessThan(2_000);
     }));
 });

@@ -2547,6 +2547,21 @@ export const entityRuntimeMessages = {
     "Sesetengah dimensi atau ukuran tidak tersedia untuk anda.",
     "بعض الأبعاد أو المقاييس غير متاحة لك.",
   ],
+  "list.aggregate.columns": [
+    "Columns",
+    "Lajur",
+    "الأعمدة",
+  ],
+  "list.aggregate.columnsTruncated": [
+    "Showing the first {count, number} values of {dimension} as columns. Filter {dimension} to choose which.",
+    "Memaparkan {count, number} nilai pertama {dimension} sebagai lajur. Tapis {dimension} untuk memilih.",
+    "يُعرض أول {count, number} قيمة من {dimension} كأعمدة. صفِّ {dimension} لاختيارها.",
+  ],
+  "list.aggregate.showCellRecords": [
+    "Show the {count, number} records in {group}, {column}",
+    "Tunjukkan {count, number} rekod dalam {group}, {column}",
+    "اعرض {count, number} سجلات في {group}، {column}",
+  ],
   "list.aggregate.caption": [
     "{entity} summarised by {levels}",
     "{entity} diringkaskan mengikut {levels}",

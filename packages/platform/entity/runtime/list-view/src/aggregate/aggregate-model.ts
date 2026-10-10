@@ -52,6 +52,51 @@ export function summaryLevels(
   return levels;
 }
 
+/** The column level a state shows (A2), or undefined for none. */
+export function summaryColumn(
+  aggregate: ListAggregateV1,
+  descriptor: Pick<EntityListDescriptorV1, "fields">,
+  column: string | undefined,
+): SummaryLevel | undefined {
+  if (!column) return undefined;
+  const [level] = summaryLevels(aggregate, descriptor, [column]);
+  return level?.dimension.column ? level : undefined;
+}
+
+/** The options of the column picker: declared column entries not used by a
+ * row level. */
+export function columnOptions(aggregate: ListAggregateV1, rows: readonly string[]): readonly { readonly entry: string; readonly dimension: ListAggregateDimensionV1; readonly unit?: ListAggregateBucket }[] {
+  const taken = new Set(rows.map((entry) => aggregateRowEntry(entry).field));
+  return aggregate.dimensions
+    .filter((dimension) => dimension.column && !taken.has(dimension.field))
+    .flatMap((dimension) =>
+      dimension.buckets
+        ? dimension.buckets.map((unit) => ({ entry: `${dimension.field}:${unit}`, dimension, unit }))
+        : [{ entry: dimension.field, dimension }],
+    );
+}
+
+/** One column of a pivoted Summary, with the filters a cell's drill-down adds. */
+export interface SummaryColumnValue {
+  readonly key: string;
+  readonly kind: "value" | "none";
+  readonly value: JsonValue;
+  readonly label: string;
+  readonly filters: readonly ListFilterV1[];
+}
+
+export function summaryColumns(
+  columns: readonly { readonly value: JsonValue; readonly label: string }[],
+  level: SummaryLevel,
+  timeZone?: string,
+): readonly SummaryColumnValue[] {
+  return columns.map((column, index) => {
+    const kind = column.value === null || column.value === "" ? ("none" as const) : ("value" as const);
+    const filters = headingFilters(level.field, kind === "none" ? { key: "", kind: "none" } : { key: "", kind: "choice", value: column.value }, level.unit, timeZone) ?? [];
+    return { key: `${index}`, kind, value: column.value, label: column.label, filters };
+  });
+}
+
 /** The measures a state shows, in the state's order. */
 export function summaryMeasures(aggregate: ListAggregateV1, keys: readonly string[]): readonly ListAggregateMeasureV1[] {
   return keys.flatMap((key) => aggregate.measures.filter((measure) => measure.key === key));
@@ -81,6 +126,9 @@ export function summaryQuery(input: {
   readonly measures: readonly ListAggregateMeasureV1[];
   readonly identityField: string;
   readonly timeZone?: string;
+  /** The column dimension (A2) and, for an expansion, the opening's columns. */
+  readonly column?: SummaryLevel;
+  readonly columnValues?: readonly JsonValue[];
 }): EntityListQueryState {
   const aggregates = input.measures.filter((measure) => measure.aggregate !== "count").map((measure) => measure.key);
   return {
@@ -94,7 +142,9 @@ export function summaryQuery(input: {
     groupsOnly: true,
     totals: true,
     ...(aggregates.length ? { aggregates } : {}),
-    ...(input.level.unit && input.timeZone ? { timeZone: input.timeZone } : {}),
+    ...((input.level.unit || input.column?.unit) && input.timeZone ? { timeZone: input.timeZone } : {}),
+    ...(input.column ? { pivot: input.column.entry } : {}),
+    ...(input.column && input.columnValues ? { pivotValues: input.columnValues } : {}),
   };
 }
 

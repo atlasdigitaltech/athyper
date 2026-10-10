@@ -316,6 +316,8 @@ const query = {
     timeZone: { type: "string", minLength: 1, maxLength: 64 },
     groupsOnly: { type: "string", enum: ["true"] },
     totals: { type: "string", enum: ["true"] },
+    pivot: { type: "string", minLength: 1, maxLength: 140 },
+    pivotValue: { oneOf: [{ type: "string" }, { type: "array", maxItems: 12, items: { type: "string" } }] },
     hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] },
     filter: {
       oneOf: [

@@ -1,5 +1,5 @@
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
-import { LIST_GROUP_LIMIT, entityListRelativeDateRange, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
+import { LIST_AGGREGATE_MAX_COLUMNS, LIST_GROUP_LIMIT, entityListRelativeDateRange, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 import { compileStandardViewRelationship } from "./standard-view-relationship-sql.js";
 import { validateFilterValue } from "./filter-value-validation.js";
 import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
@@ -98,6 +98,11 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const tree = input.hierarchy ? hierarchySql(input, scopeCompilers) : undefined;
       if (tree?.orphanCondition) conditions.push(tree.orphanCondition);
       if (input.hierarchy?.mode === "matches" && tree) return listTreeMatches(input, conditions, tree, executor, scopeCompilers);
+      if (input.groupsOnly && input.pivot && input.groupTotals) {
+        // A Summary with a column dimension (Aggregate A2): one statement.
+        const pivoted = await pivotBuckets(input, conditions, executor);
+        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(pivoted.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total: pivoted.total.count, countMode: "exact" as const } };
+      }
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
         const { buckets, truncated, total: parentGroup } = await groupBuckets(input, conditions, executor);
@@ -405,23 +410,27 @@ export function relativeDateCondition(ref: RawBuilder<unknown>, value: unknown):
  * group rows. There the grouping key is computed once in a subquery, so
  * GROUPING() names exactly the grouped expression; other requests keep the
  * single-level statement unchanged. */
-async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
-  const field = input.descriptor.fields.find((item) => item.key === input.group);
-  if (!field) throw new Error(`Unknown descriptor field: ${input.group}`);
+/** A grouping key: the field, or a date field's month or quarter through
+ * date_trunc in the viewer's zone for a datetime field (A3). */
+function groupKeyExpression(input: RecordRepositoryListInput, key: string, bucket: RecordRepositoryListInput["groupBucket"]): RawBuilder<unknown> {
+  const field = input.descriptor.fields.find((item) => item.key === key);
+  if (!field) throw new Error(`Unknown descriptor field: ${key}`);
   const ref = sql.ref(field.storagePath);
-  const bucket = input.groupBucket;
-  const key = bucket
-    ? (() => {
-        const local = field.type === "datetime" ? sql`(${ref} AT TIME ZONE ${bucket.timeZone ?? "UTC"})` : sql`${ref}::timestamp`;
-        const unit = bucket.unit === "quarter" ? sql.lit("quarter") : sql.lit("month");
-        const format = bucket.unit === "quarter" ? sql.lit('YYYY-"Q"Q') : sql.lit("YYYY-MM");
-        return sql`to_char(date_trunc(${unit}, ${local}), ${format})`;
-      })()
-    : sql`${ref}`;
-  const totals = input.groupTotals === true;
+  if (!bucket) return sql`${ref}`;
+  const local = field.type === "datetime" ? sql`(${ref} AT TIME ZONE ${bucket.timeZone ?? "UTC"})` : sql`${ref}::timestamp`;
+  const unit = bucket.unit === "quarter" ? sql.lit("quarter") : sql.lit("month");
+  const format = bucket.unit === "quarter" ? sql.lit('YYYY-"Q"Q') : sql.lit("YYYY-MM");
+  return sql`to_char(date_trunc(${unit}, ${local}), ${format})`;
+}
+
+/** The requested aggregates' select list, the inputs a subquery must carry
+ * for them (`sourced`), and how one result row becomes a group's totals: a
+ * money aggregate spanning currencies, or with amounts lacking a currency,
+ * shows no value. */
+function groupAggregateParts(input: RecordRepositoryListInput, sourced: boolean) {
   const aggregates = (input.groupAggregates ?? []).map((item, index) => {
     const source = sql.ref(fieldPath(input.descriptor, item.field));
-    const target = totals ? sql.ref(`__input_${index}`) : source;
+    const target = sourced ? sql.ref(`__input_${index}`) : source;
     const fn = {
       countDistinct: sql`count(DISTINCT ${target})`,
       sum: sql`sum(${target})`,
@@ -430,7 +439,7 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
       maximum: sql`max(${target})`,
     }[item.aggregate];
     const currencySource = item.currencyField ? sql.ref(fieldPath(input.descriptor, item.currencyField)) : undefined;
-    const currency = totals ? sql.ref(`__currency_input_${index}`) : currencySource;
+    const currency = sourced ? sql.ref(`__currency_input_${index}`) : currencySource;
     return {
       name: `${item.field}:${item.aggregate}`,
       input: sql`, ${source} AS ${target}${currencySource ? sql`, ${currencySource} AS ${currency}` : sql``}`,
@@ -438,25 +447,6 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
       money: Boolean(currencySource),
     };
   });
-  const groupKey = sql.ref("__group_key");
-  const selects = sql.join(aggregates.map((item) => item.select), sql``);
-  const result = totals
-    ? await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
-    SELECT ${groupKey} AS value, count(*) AS count${selects}, GROUPING(${groupKey}) AS "__total"
-      FROM (SELECT ${key} AS ${groupKey}${sql.join(aggregates.map((item) => item.input), sql``)} FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}) AS "__group_source"
-     GROUP BY GROUPING SETS ((${groupKey}), ())
-     ORDER BY "__total" DESC, 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 3}`.execute(executor)
-    : await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
-    SELECT ${key} AS value, count(*) AS count${selects}
-      FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
-     GROUP BY 1 ORDER BY 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 2}`.execute(executor);
-  const totalRow = totals ? result.rows.find((row) => Number(row.__total) === 1) : undefined;
-  const grouped = totals ? result.rows.filter((row) => Number(row.__total) !== 1) : result.rows;
-  // The No value group sorts first so the cap never drops it; it is drawn last.
-  const none = grouped.filter((row) => row.value === null);
-  const values = grouped.filter((row) => row.value !== null);
-  const truncated = values.length > LIST_GROUP_LIMIT;
-  const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
   const summarize = (row: Record<string, unknown> & { count: string | number | bigint }) => {
     const currencies: Record<string, string> = {};
     const mixed: string[] = [];
@@ -485,12 +475,106 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
     };
   };
   return {
+    inputs: sql.join(aggregates.map((item) => item.input), sql``),
+    selects: sql.join(aggregates.map((item) => item.select), sql``),
+    summarize,
+  };
+}
+
+async function groupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
+  const key = groupKeyExpression(input, input.group!, input.groupBucket);
+  const totals = input.groupTotals === true;
+  const { inputs, selects, summarize } = groupAggregateParts(input, totals);
+  const groupKey = sql.ref("__group_key");
+  const result = totals
+    ? await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
+    SELECT ${groupKey} AS value, count(*) AS count${selects}, GROUPING(${groupKey}) AS "__total"
+      FROM (SELECT ${key} AS ${groupKey}${inputs} FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}) AS "__group_source"
+     GROUP BY GROUPING SETS ((${groupKey}), ())
+     ORDER BY "__total" DESC, 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 3}`.execute(executor)
+    : await sql<Record<string, unknown> & { value: unknown; count: string | number | bigint; __total?: number | string }>`
+    SELECT ${key} AS value, count(*) AS count${selects}
+      FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
+     GROUP BY 1 ORDER BY 1 ASC NULLS FIRST LIMIT ${LIST_GROUP_LIMIT + 2}`.execute(executor);
+  const totalRow = totals ? result.rows.find((row) => Number(row.__total) === 1) : undefined;
+  const grouped = totals ? result.rows.filter((row) => Number(row.__total) !== 1) : result.rows;
+  // The No value group sorts first so the cap never drops it; it is drawn last.
+  const none = grouped.filter((row) => row.value === null);
+  const values = grouped.filter((row) => row.value !== null);
+  const truncated = values.length > LIST_GROUP_LIMIT;
+  const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
+  return {
     truncated,
     buckets: Object.freeze(rows.map((row) => Object.freeze({ value: row.value, ...summarize(row) }))),
     // An empty set has no rows to group, so its total is zero records.
     ...(totals ? { total: Object.freeze(totalRow ? summarize(totalRow) : { count: 0 }) } : {}),
   };
 }
+
+/** A Summary with a column dimension (Entity list Aggregate A2): one
+ * statement whose GROUPING SETS return every cell (row × column), each row's
+ * total, each column's total and the total, all from base rows. The row level
+ * keeps 50 values plus No value; the columns are an expansion's kept values,
+ * or the first 12 in order (No value last) with the rest reported as
+ * truncated. Totals still cover every record: only cells and column totals
+ * are limited to the shown columns. */
+async function pivotBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
+  const pivot = input.pivot!;
+  const { inputs, selects, summarize } = groupAggregateParts(input, true);
+  const groupKey = sql.ref("__group_key");
+  const pivotKey = sql.ref("__pivot_key");
+  const columnsCte = pivot.values
+    ? pivot.values.length
+      ? sql`"__cols" ("__column") AS (VALUES ${sql.join(pivot.values.map((value) => sql`(${value}::text)`))})`
+      : sql`"__cols" ("__column") AS (SELECT NULL::text WHERE FALSE)`
+    : sql`"__cols" ("__column") AS (SELECT ${pivotKey}::text FROM "__src" GROUP BY ${pivotKey} ORDER BY ${pivotKey} ASC NULLS LAST LIMIT ${LIST_AGGREGATE_MAX_COLUMNS + 1})`;
+  type Row = Record<string, unknown> & { value: unknown; count: string | number | bigint; __pivot_text: string | null; __total: number | string; __pivot_total: number | string };
+  const result = await sql<Row>`
+    WITH "__src" AS (
+      SELECT ${groupKeyExpression(input, input.group!, input.groupBucket)} AS ${groupKey}, ${groupKeyExpression(input, pivot.field, pivot.bucket)} AS ${pivotKey}${inputs}
+        FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
+    ),
+    "__rows" AS (SELECT ${groupKey} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1 ORDER BY 1 ASC LIMIT ${LIST_GROUP_LIMIT + 1}),
+    ${columnsCte}
+    SELECT ${groupKey} AS value, ${pivotKey}::text AS "__pivot_text", count(*) AS count${selects},
+           GROUPING(${groupKey}) AS "__total", GROUPING(${pivotKey}) AS "__pivot_total"
+      FROM "__src"
+     GROUP BY GROUPING SETS ((${groupKey}, ${pivotKey}), (${groupKey}), (${pivotKey}), ())
+    HAVING (GROUPING(${groupKey}) = 1 OR ${groupKey} IS NULL OR ${groupKey} IN (SELECT ${groupKey} FROM "__rows"))
+       AND (GROUPING(${pivotKey}) = 1 OR EXISTS (SELECT 1 FROM "__cols" WHERE "__cols"."__column" IS NOT DISTINCT FROM ${pivotKey}::text))
+     ORDER BY "__total" DESC, "__pivot_total" DESC, ${groupKey} ASC NULLS FIRST, ${pivotKey} ASC NULLS LAST`.execute(executor);
+  const flags = (row: Row) => [Number(row.__total) === 1, Number(row.__pivot_total) === 1] as const;
+  const grand = result.rows.find((row) => flags(row)[0] && flags(row)[1]);
+  const columnTotals = result.rows.filter((row) => flags(row)[0] && !flags(row)[1]);
+  const rowTotals = result.rows.filter((row) => !flags(row)[0] && flags(row)[1]);
+  const cells = result.rows.filter((row) => !flags(row)[0] && !flags(row)[1]);
+  // Column values: the expansion's, in its order, or the first 12 in order.
+  const shown = pivot.values
+    ? [...pivot.values]
+    : columnTotals.map((row) => row.__pivot_text).slice(0, LIST_AGGREGATE_MAX_COLUMNS);
+  const columnsTruncated = !pivot.values && columnTotals.length > LIST_AGGREGATE_MAX_COLUMNS;
+  const rawColumn = new Map(columnTotals.map((row) => [row.__pivot_text, row]));
+  const cellKey = (group: unknown, column: string | null) => JSON.stringify([group, column]);
+  const cellRows = new Map(cells.map((row) => [cellKey(row.value, row.__pivot_text), row]));
+  const none = rowTotals.filter((row) => row.value === null);
+  const values = rowTotals.filter((row) => row.value !== null);
+  const truncated = values.length > LIST_GROUP_LIMIT;
+  const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
+  const cellsOf = (lookup: (column: string | null) => Row | undefined) =>
+    Object.freeze(shown.map((column) => {
+      const row = lookup(column);
+      return row ? Object.freeze(summarize(row)) : null;
+    }));
+  return {
+    truncated,
+    buckets: Object.freeze(rows.map((row) => Object.freeze({ value: row.value, ...summarize(row), cells: cellsOf((column) => cellRows.get(cellKey(row.value, column))) }))),
+    total: Object.freeze({ ...(grand ? summarize(grand) : { count: 0 }), cells: cellsOf((column) => rawColumn.get(column)) }),
+    // Raw column values for labelling; a kept value with no records keeps its text.
+    columns: Object.freeze(shown),
+    columnsTruncated,
+  };
+}
+
 async function countRows(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction): Promise<number> {
   const count = await sql<{ count: string | number | bigint }>`SELECT count(*) AS count FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}`.execute(executor);
   return Number(count.rows[0]?.count ?? 0);

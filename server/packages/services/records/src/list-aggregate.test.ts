@@ -17,7 +17,7 @@ import { resolveListAggregate } from "./list-aggregate.js";
 const id = (n: number) => `7f3c2e1d-4b5a-4c6d-8e9f-${String(n).padStart(12, "0")}`;
 const tenantId = "11111111-1111-4111-8111-111111111111";
 const aggregate = {
-  dimensions: [{ field: "account" }, { field: "period" }, { field: "posted", buckets: ["month", "quarter"] }],
+  dimensions: [{ field: "account", column: true }, { field: "period", column: true }, { field: "posted", buckets: ["month", "quarter"], column: true }],
   measures: [
     { aggregates: ["count"] },
     { field: "period_net", aggregates: ["sum", "average"] },
@@ -225,5 +225,52 @@ describe("grouped Table sums follow additivity (decision 8)", () => {
     expect(published.fields.find((field) => field.key === "closing_net")?.sumWithin).toEqual([{ key: "period", label: "Period" }]);
     expect(published.fields.find((field) => field.key === "period_net")?.sumWithin).toBeUndefined();
     expect(published.fields.find((field) => field.key === "adjustment")?.sumWithin).toBeUndefined();
+  });
+});
+
+describe("Summary column dimension (Aggregate A2)", () => {
+  const measures = [{ field: "period_net", aggregate: "sum" as const }, { field: "closing_net", aggregate: "sum" as const }];
+
+  it("returns each row's cells aligned with the columns, row totals, column totals and the total from base rows", async () => {
+    const page = parseEntityListResult(await lists().list({ ...summary, group: "account", pivot: "period", groupAggregates: measures }));
+    expect(page.pivotColumns).toEqual([{ value: "P01", label: "P01" }, { value: "P02", label: "P02" }]);
+    const [cash, payables] = page.groups!;
+    expect(cash!.cells?.map((cell) => cell?.aggregates)).toEqual([{ "period_net:sum": 100, "closing_net:sum": 100 }, { "period_net:sum": 50, "closing_net:sum": 150 }]);
+    expect(payables!.cells?.map((cell) => [cell?.count, cell?.aggregates?.["closing_net:sum"]])).toEqual([[1, 10], [2, 86]]);
+    // A row total crosses periods: the balance is withheld, the movement sums.
+    expect(cash!.states).toEqual({ "closing_net:sum": "notSummable" });
+    expect(cash!.aggregates?.["period_net:sum"]).toBe(150);
+    // A column total is within one period: it sums; the grand total does not.
+    expect(page.parentGroup?.cells?.map((cell) => cell?.aggregates?.["closing_net:sum"])).toEqual([110, 236]);
+    expect(page.parentGroup?.states).toEqual({ "closing_net:sum": "notSummable" });
+    expect(page.parentGroup?.count).toBe(5);
+  });
+
+  it("keeps an expansion's columns, with no cell where a row has no records", async () => {
+    const page = parseEntityListResult(
+      await lists().list({ ...summary, group: "period", filters: [{ field: "account", operator: "eq", value: "1000" }], pivot: "account", pivotValues: ["2000", "1000"], groupAggregates: [measures[0]!] }),
+    );
+    expect(page.pivotColumns?.map((column) => column.value)).toEqual(["2000", "1000"]);
+    expect(page.groups?.map((group) => group.cells?.map((cell) => cell?.aggregates?.["period_net:sum"] ?? null))).toEqual([[null, 100], [null, 50]]);
+  });
+
+  it("applies the floor to each cell", async () => {
+    const page = parseEntityListResult(await lists().list({ ...summary, group: "account", pivot: "period", groupAggregates: [{ field: "salary", aggregate: "average" }] }));
+    // Every cell holds one or two records, below the floor of 3.
+    expect(page.groups?.flatMap((group) => group.cells?.map((cell) => cell?.states?.["salary:average"]))).toEqual(["suppressed", "suppressed", "suppressed", "suppressed"]);
+    expect(page.groups?.[1]?.aggregates?.["salary:average"]).toBe(40);
+  });
+
+  it("refuses an undeclared column, the row level's own field, or a column without totals", async () => {
+    const monthlyOnly = descriptor({ aggregate: { ...aggregate, dimensions: [{ field: "account" }, { field: "period" }] } });
+    await expect(lists(monthlyOnly).list({ ...summary, group: "account", pivot: "period" })).rejects.toMatchObject({ code: "LIST_AGGREGATE_INVALID" });
+    await expect(lists().list({ ...summary, group: "account", pivot: "account" })).rejects.toMatchObject({ code: "LIST_AGGREGATE_INVALID" });
+    await expect(lists().list({ ...summary, group: "account", pivot: "posted" })).rejects.toMatchObject({ code: "LIST_AGGREGATE_INVALID" });
+    expect(() => parseRecordListParameters({ group: "account", groupsOnly: "true", countMode: "exact", pivot: "period" })).toThrow(/pivot is a Summary column/);
+    expect(parseRecordListParameters({ group: "account", groupsOnly: "true", countMode: "exact", totals: "true", pivot: "posted:month", timeZone: "Asia/Kuala_Lumpur", pivotValue: ['"2026-01"', "null"] })).toMatchObject({
+      pivot: "posted",
+      pivotBucket: { unit: "month", timeZone: "Asia/Kuala_Lumpur" },
+      pivotValues: ["2026-01", null],
+    });
   });
 });

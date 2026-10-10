@@ -140,7 +140,20 @@ export interface AggregatePlan {
   readonly semiAdditive: ReadonlyMap<string, readonly string[]>;
   /** Floors by aggregate key (section 9.3). */
   readonly floors: ReadonlyMap<string, number>;
+  /** The column dimension's field when it groups by value (A2): a cell is
+   * grouped by it, so it can satisfy a semi-additive time field. */
+  readonly pivotField?: string;
 }
+
+const validZone = (zone: string | undefined) => {
+  if (!zone) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const masked = (descriptor: EntityRuntimeDescriptor, key: string) =>
   descriptor.authorization?.fieldPolicies.some((policy) => policy.representation === "masked" && policy.fields.includes(key)) ?? false;
@@ -186,6 +199,21 @@ export function admitAggregateRequest(input: {
     throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", `Not a declared Summary dimension: ${query.group}${unit ? `:${unit}` : ""}`);
   if (!usable(dimension.field))
     throw new RecordServiceError(400, LIST_AGGREGATE_DIMENSION_UNAVAILABLE, "This Summary dimension is not available to the viewer");
+  // The column dimension (A2): a declared column, at a declared bucket, not
+  // the row level's field, readable and unmasked.
+  let pivotField: string | undefined;
+  if (query.pivot) {
+    const column = aggregate.dimensions.find((item) => item.field === query.pivot && item.column);
+    const pivotUnit = query.pivotBucket?.unit;
+    if (!column || column.field === dimension.field || (column.buckets ? !pivotUnit || !column.buckets.includes(pivotUnit) : pivotUnit !== undefined))
+      throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", `Not a declared Summary column: ${query.pivot}${pivotUnit ? `:${pivotUnit}` : ""}`);
+    if (!usable(column.field))
+      throw new RecordServiceError(400, LIST_AGGREGATE_DIMENSION_UNAVAILABLE, "This Summary column is not available to the viewer");
+    const type = descriptor.fields.find((entry) => entry.key === column.field)?.type;
+    if (type === "datetime" && !validZone(query.pivotBucket?.timeZone))
+      throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", "A datetime column needs the viewer's time zone");
+    if (!pivotUnit) pivotField = column.field;
+  } else if (query.pivotValues?.length) throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", "pivotValue requires pivot");
   const semiAdditive = new Map<string, readonly string[]>();
   const floors = new Map<string, number>();
   for (const item of query.groupAggregates ?? []) {
@@ -206,16 +234,18 @@ export function admitAggregateRequest(input: {
     }
     if (measure.minimumGroupSize) floors.set(key, measure.minimumGroupSize);
   }
-  return Object.freeze({ semiAdditive, floors });
+  return Object.freeze({ semiAdditive, floors, ...(pivotField ? { pivotField } : {}) });
 }
 
 /** Applies the cell rules to an admitted Summary result before it leaves the
- * server. A semi-additive sum is valid in a group only when each of its time
+ * server. A semi-additive sum is valid in a cell only when each of its time
  * fields is pinned to one value by an `eq` or `is_null` filter (an ancestor
- * level or a list filter) or is this request's group by value; a date bucket
- * holds many values and never counts. The parent row's sum needs every time
- * field pinned. A group with fewer records than a measure's floor shows no
- * value for that measure. Withheld values are removed, not merely flagged. */
+ * level or a list filter) or groups that cell by value: the request's group
+ * for a row, the column dimension for a column, both for a cell (A2). A date
+ * bucket holds many values and never counts. The parent row needs every time
+ * field pinned. A group or cell with fewer records than a measure's floor
+ * shows no value for that measure. Withheld values are removed, not merely
+ * flagged. */
 export function applyAggregateRules(
   result: RecordListResult,
   plan: AggregatePlan,
@@ -225,11 +255,12 @@ export function applyAggregateRules(
   const pinned = new Set(
     (query.filters ?? []).filter((filter) => filter.operator === "eq" || filter.operator === "is_null").map((filter) => filter.field),
   );
-  const grouped = query.group && !query.groupBucket ? query.group : undefined;
-  const withhold = <T extends RecordGroupTotals>(group: T, byGroup: boolean): T => {
+  const rowField = query.group && !query.groupBucket ? query.group : undefined;
+  const columnField = plan.pivotField;
+  const withhold = <T extends Omit<RecordGroupTotals, "cells">>(group: T, grouped: readonly (string | undefined)[]): T => {
     const states: Record<string, "notSummable" | "suppressed"> = {};
     for (const [key, times] of plan.semiAdditive)
-      if (!times.every((time) => pinned.has(time) || (byGroup && time === grouped))) states[key] = "notSummable";
+      if (!times.every((time) => pinned.has(time) || grouped.includes(time))) states[key] = "notSummable";
     for (const [key, floor] of plan.floors) if (group.count < floor) states[key] = "suppressed";
     const keys = Object.keys(states);
     if (!keys.length) return group;
@@ -250,9 +281,17 @@ export function applyAggregateRules(
       states: Object.freeze(states),
     }) as T;
   };
+  const withCells = (group: RecordGroupTotals, own: readonly (string | undefined)[], cell: readonly (string | undefined)[]): RecordGroupTotals => {
+    const totals = withhold(group, own);
+    return group.cells
+      ? Object.freeze({ ...totals, cells: Object.freeze(group.cells.map((item) => (item ? withhold(item, cell) : null))) })
+      : totals;
+  };
   return Object.freeze({
     ...result,
-    ...(result.groups ? { groups: Object.freeze(result.groups.map((group) => withhold(group, true))) } : {}),
-    ...(result.parentGroup ? { parentGroup: withhold(result.parentGroup, false) } : {}),
+    ...(result.groups
+      ? { groups: Object.freeze(result.groups.map((group) => withCells(group, [rowField], [rowField, columnField]) as typeof group)) }
+      : {}),
+    ...(result.parentGroup ? { parentGroup: withCells(result.parentGroup, [], [columnField]) } : {}),
   });
 }

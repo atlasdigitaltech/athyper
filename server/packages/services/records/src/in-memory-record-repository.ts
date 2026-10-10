@@ -1,5 +1,5 @@
 import { assembleTreeMatches } from "./tree-matches.js";
-import { LIST_GROUP_LIMIT, addDecimals, averageDecimals, compareDecimals, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
+import { LIST_AGGREGATE_MAX_COLUMNS, LIST_GROUP_LIMIT, addDecimals, averageDecimals, compareDecimals, exactAggregate, isExactDecimal } from "@athyper/contract-platform-entity-list";
 import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
 import { createHash, randomUUID } from "node:crypto";
@@ -98,6 +98,11 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
       // Group counts only under exact counts (layout foundation section 5).
       const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates, input.groupTotals === true) : undefined;
       const groups = grouped?.buckets;
+      if (input.groupsOnly && groups && input.pivot && input.groupTotals && grouped) {
+        // A Summary with a column dimension (Aggregate A2), as the SQL does.
+        const pivoted = pivotCells(rows, input.descriptor, input.group!, input.groupBucket, input.pivot, groups, grouped.summarize);
+        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(grouped.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+      }
       if (input.groupsOnly && groups)
         return { data: [], groups, ...(grouped?.total ? { parentGroup: grouped.total } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       // Matrix rank: over every admitted record, before the participant page
@@ -203,6 +208,52 @@ export function relativeDateMatches(actual: unknown, relative: unknown): boolean
   };
   return timestamp >= bound(range.from) && timestamp < bound(range.to);
 }
+/** A grouping key as the SQL computes it: a date bucket (A3) is the year and
+ * month or quarter, in the viewer's zone for a datetime. */
+function bucketKey(descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"]) {
+  const type = descriptor.fields.find((item) => item.key === field)?.type;
+  return (raw: unknown): unknown => {
+    if (!bucket || raw === null || raw === undefined) return raw ?? null;
+    const instant = new Date(type === "date" ? `${String(raw).slice(0, 10)}T00:00:00Z` : String(raw));
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: type === "date" ? "UTC" : (bucket.timeZone ?? "UTC"), year: "numeric", month: "2-digit" }).formatToParts(instant);
+    const year = parts.find((part) => part.type === "year")!.value, month = Number(parts.find((part) => part.type === "month")!.value);
+    return bucket.unit === "quarter" ? `${year}-Q${Math.ceil(month / 3)}` : `${year}-${String(month).padStart(2, "0")}`;
+  };
+}
+
+/** Cells per kept column for each group, and each column's total, as the
+ * pivot statement returns them (Aggregate A2): the kept values, or the first
+ * 12 in order with No value last. */
+function pivotCells<G extends { readonly value: unknown }>(
+  rows: readonly Row[],
+  descriptor: EntityRuntimeDescriptor,
+  group: string,
+  groupBucket: RecordRepositoryListInput["groupBucket"],
+  pivot: NonNullable<RecordRepositoryListInput["pivot"]>,
+  groups: readonly G[],
+  summarize: (list: Row[]) => Record<string, unknown> & { count: number },
+) {
+  const groupOf = bucketKey(descriptor, group, groupBucket);
+  const columnOf = bucketKey(descriptor, pivot.field, pivot.bucket);
+  const text = (row: Row) => {
+    const key = columnOf(value(row, descriptor, pivot.field));
+    return key === null || key === undefined ? null : String(key);
+  };
+  const present = [...new Set(rows.map(text))].sort((left, right) => (left === null ? 1 : right === null ? -1 : compare(left, right)));
+  const columns = pivot.values ? [...pivot.values] : present.slice(0, LIST_AGGREGATE_MAX_COLUMNS);
+  const cellsOf = (members: readonly Row[]) =>
+    Object.freeze(columns.map((column) => {
+      const list = members.filter((row) => text(row) === column);
+      return list.length ? Object.freeze(summarize(list)) : null;
+    }));
+  return {
+    buckets: Object.freeze(groups.map((bucket) => Object.freeze({ ...bucket, cells: cellsOf(rows.filter((row) => (groupOf(value(row, descriptor, group)) ?? null) === bucket.value)) }))),
+    total: Object.freeze({ ...(rows.length ? summarize([...rows]) : { count: 0 }), cells: cellsOf(rows) }),
+    columns: Object.freeze(columns),
+    columnsTruncated: !pivot.values && present.length > LIST_AGGREGATE_MAX_COLUMNS,
+  };
+}
+
 function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = [], totals = false) {
   // As the SQL does: a date bucket (A3) is the year and month or quarter, in
   // the viewer's zone for a datetime; aggregates (A2) per bucket.
@@ -261,6 +312,7 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
     buckets: Object.freeze(kept.map(([item, list]) => Object.freeze({ value: item, ...summarize(list) }))),
     // A Summary's total over every group, from the base rows (GROUPING SETS).
     ...(totals ? { total: Object.freeze(rows.length ? summarize([...rows]) : { count: 0 }) } : {}),
+    summarize,
   };
 }
 function compareRows(a: Row, b: Row, descriptor: EntityRuntimeDescriptor, sort: readonly RecordSort[]): number { for (const item of sort) { const result = ordered(value(a, descriptor, item.field), value(b, descriptor, item.field), item); if (result) return result; } return compare(String(a[descriptor.storage.idField]), String(b[descriptor.storage.idField])); }

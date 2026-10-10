@@ -80,11 +80,25 @@ export interface ListAggregateV1 {
   readonly fieldsRestricted?: true;
 }
 
-/** Saved Summary state (section 5.6): row dimensions, level 1 first, and
- * the measures shown. The column dimension arrives with A2. */
+/** Saved Summary state (section 5.6): row dimensions, level 1 first, the
+ * measures shown, and the column dimension (A2). */
 export interface ListAggregateStateV1 {
   readonly rows: readonly string[];
   readonly measures: readonly string[];
+  /** A declared column dimension entry (`field` or `field:month|quarter`),
+   * or "" for none. Present only when the Summary declares a column
+   * dimension, so a chosen "none" survives a round trip. */
+  readonly column?: string;
+}
+
+/** A column entry this Summary declares: a dimension marked `column`,
+ * bucketed exactly as its declaration says. */
+export function declaredAggregateColumn(
+  aggregate: Pick<ListAggregateV1, "dimensions">,
+  entry: string,
+): boolean {
+  const field = entry.split(":")[0];
+  return declaredAggregateRow(aggregate, entry) && aggregate.dimensions.some((item) => item.field === field && item.column);
 }
 
 const BUCKETS: readonly ListAggregateBucket[] = ["month", "quarter"];
@@ -154,9 +168,30 @@ export function parseListAggregateState(
   const fallbackMeasures = aggregate.defaults.measures.filter((key) =>
     declared.has(key),
   );
+  const shownRows = rows.length ? rows : fallbackRows;
+  // The column dimension (A2): a declared column entry not used by a row
+  // level; "" chooses none; absent state falls back to the declared default.
+  const columnOffered = aggregate.dimensions.some((item) => item.column);
+  const usable = (entry: string) =>
+    declaredAggregateColumn(aggregate, entry) &&
+    !shownRows.some((row) => aggregateRowEntry(row).field === aggregateRowEntry(entry).field);
+  const defaultColumn = (() => {
+    const fallback = aggregate.defaults.column;
+    if (!fallback) return "";
+    const dimension = aggregate.dimensions.find((item) => item.field === fallback);
+    const entry = dimension?.buckets ? `${fallback}:${dimension.buckets[0]}` : fallback;
+    return usable(entry) ? entry : "";
+  })();
+  const column =
+    typeof value.column === "string"
+      ? value.column === "" || usable(value.column)
+        ? value.column
+        : defaultColumn
+      : defaultColumn;
   return Object.freeze({
-    rows: Object.freeze(rows.length ? rows : fallbackRows),
+    rows: Object.freeze(shownRows),
     measures: Object.freeze(measures.length ? measures : fallbackMeasures),
+    ...(columnOffered ? { column } : {}),
   });
 }
 

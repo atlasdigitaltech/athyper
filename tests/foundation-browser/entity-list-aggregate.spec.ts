@@ -37,7 +37,7 @@ const script = buildSync({
       field('currency','Currency','string',{groupable:false}),field('period_net','Period net','money',{groupable:false,aggregations:['count','sum']}),field('closing_net','Closing net','money',{groupable:false,aggregations:['count','sum'],sumWithin:[{key:'period',label:'Fiscal period'}]}),
       field('salary','Salary','decimal',{groupable:false}),field('preparer','Preparer','string',{groupable:false})];
     const aggregate={
-      dimensions:[{field:'account',label:'GL account'},{field:'period',label:'Fiscal period'},{field:'posted',label:'Posted on',buckets:['month','quarter']}],
+      dimensions:[{field:'account',label:'GL account'},{field:'period',label:'Fiscal period',column:true},{field:'posted',label:'Posted on',buckets:['month','quarter']}],
       measures:[{key:'count',aggregate:'count'},
         {key:'period_net:sum',aggregate:'sum',field:'period_net',label:'Period net',valueKind:'money',currencyField:'currency'},
         {key:'closing_net:sum',aggregate:'sum',field:'closing_net',label:'Closing net',valueKind:'money',currencyField:'currency',timeFields:[{key:'period',label:'Fiscal period'}]},
@@ -60,7 +60,7 @@ const script = buildSync({
       const out={count:rows.length,aggregates:{},aggregateCurrencies:{},states:{}};
       for(const key of measures){const [f,fn]=key.split(':');
         if(fn==='countDistinct'){out.aggregates[key]=new Set(rows.map(r=>r.values[f])).size;continue;}
-        if(key==='closing_net:sum'&&!(pinned.has('period')||grouped==='period')){out.states[key]='notSummable';continue;}
+        if(key==='closing_net:sum'&&!(pinned.has('period')||[].concat(grouped).includes('period'))){out.states[key]='notSummable';continue;}
         if(key==='salary:average'&&rows.length<3){out.states[key]='suppressed';continue;}
         const values=rows.map(r=>Number(r.values[f]));const sum=values.reduce((a,b)=>a+b,0);
         out.aggregates[key]=fn==='sum'?Number(decimal(sum)):Number(decimal(sum/values.length));
@@ -85,8 +85,14 @@ const script = buildSync({
         const keyOf=r=>unit?r.values[group].slice(0,7):r.values[group];
         const buckets=new Map();for(const r of rows)buckets.set(keyOf(r),[...(buckets.get(keyOf(r))??[]),r]);
         const label=v=>accounts.find(a=>a.id===v)?.label??v;
-        return envelope({groups:[...buckets].sort(([a],[b])=>String(a).localeCompare(String(b))).map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,unit?undefined:group)})),
-          parentGroup:totals(rows,measures,pinned,undefined),pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:rows.length,countMode:'exact'}});}
+        // The column dimension (A2): kept values, or the first 12 in order.
+        const pivot=q.pivot,given=[].concat(q.pivotValue??[]).map(v=>JSON.parse(v));
+        const columns=pivot?(given.length?given:[...new Set(rows.map(r=>r.values[pivot]))].sort().slice(0,12)):undefined;
+        const cellsOf=(members,groupedBy)=>columns.map(c=>{const list=members.filter(r=>r.values[pivot]===c);return list.length?totals(list,measures,pinned,[...groupedBy,pivot]):null;});
+        return envelope({groups:[...buckets].sort(([a],[b])=>String(a).localeCompare(String(b))).map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,unit?undefined:group),...(columns?{cells:cellsOf(members,unit?[]:[group])}:{})})),
+          parentGroup:{...totals(rows,measures,pinned,undefined),...(columns?{cells:cellsOf(rows,[])}:{})},
+          ...(columns?{pivotColumns:columns.map(value=>({value,label:value}))}:{}),
+          pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:rows.length,countMode:'exact'}});}
       // Grouped Table: the same server rule for its sums (decision 8).
       if(q.groupsOnly){
         const group=q.group;const measures=[].concat(q.aggregate??[]);
@@ -223,4 +229,32 @@ test("grouped Table withholds a semi-additive total across its time field, in th
   await page.goto("about:blank");
   await mount(page, 1440, "?view=table&groups=period");
   await expect(page.locator(".a-entity-tree__group-row").first()).not.toContainText("Not summed");
+});
+
+test("a column dimension (A2): one request draws each period as a column with server column totals, and a cell drills down", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.rows=account&aggregate.column=period");
+  const grid = region(page).getByRole("treegrid");
+  await expect(grid.locator("thead")).toContainText("Period 1");
+  await expect(grid.locator("thead")).toContainText("Period 3");
+  const issued = await summaries(page);
+  expect(issued).toHaveLength(1);
+  expect((issued[0] as Request & { pivot?: string }).pivot).toBe("period");
+  // Within a period the balance sums; across periods (the row total) it does not.
+  const cash = grid.locator("tbody tr[aria-level='1']").first();
+  await expect(cash).toContainText("1000 Cash");
+  await expect(cash).toContainText("Not summed across Fiscal period");
+  await expect(cash.locator("td").nth(2)).not.toHaveAttribute("data-state", /./);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-pivot.png", fullPage: true });
+  await cash.getByRole("button", { name: /Show the 1 records in 1000 Cash, Period 1/ }).click();
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page.locator(".a-entity-list table tbody tr")).toHaveCount(1);
+});
+
+test("a pivoted Summary on a phone lists each column inside its group, with no horizontal scroll", async ({ page }) => {
+  await mount(page, 390, "?aggregate.rows=account&aggregate.column=period");
+  const first = region(page).locator(".a-entity-aggregate__item").nth(1);
+  await expect(first.locator(".a-entity-aggregate__column-block")).toHaveCount(4);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
 });

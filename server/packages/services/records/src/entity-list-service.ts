@@ -1130,6 +1130,18 @@ export function createEntityListService(options: {
       const groupField = query.group
         ? descriptor.fields.find((field) => field.key === query.group)
         : undefined;
+      // A Summary's column values (A2) are labelled by the same service.
+      const pivotField = query.pivot
+        ? descriptor.fields.find((field) => field.key === query.pivot)
+        : undefined;
+      const pivotLabels =
+        result.pivotColumns && pivotField?.type === "reference"
+          ? await references.labelsMany(
+              query.context,
+              descriptor,
+              result.pivotColumns.map((value) => ({ [pivotField.key]: value })),
+            )
+          : undefined;
       const groupLabels =
         result.groups && groupField?.type === "reference"
           ? await references.labelsMany(
@@ -1188,6 +1200,9 @@ export function createEntityListService(options: {
           group: query.group ?? null,
           groupsOnly: query.groupsOnly === true,
           groupTotals: query.groupTotals === true,
+          pivot: query.pivot ?? null,
+          pivotBucket: query.pivotBucket ?? null,
+          pivotValues: query.pivotValues ?? [],
           groupBucket: query.groupBucket ?? null,
           groupAggregates: query.groupAggregates ?? [],
           hierarchy: query.hierarchy ?? null,
@@ -1246,13 +1261,37 @@ export function createEntityListService(options: {
           : {}),
         // A Summary request's total over every group (Aggregate blueprint 8.1).
         ...(result.parentGroup ? { parentGroup: Object.freeze(groupTotalsResponse(result.parentGroup)) } : {}),
+        ...(result.pivotColumns
+          ? {
+              pivotColumns: Object.freeze(
+                result.pivotColumns.map((raw, index) => {
+                  // Column values travel as text (the statement compares
+                  // them as text); a boolean column's value is a boolean again.
+                  const value = pivotField?.type === "boolean" && typeof raw === "string" ? raw === "true" : raw;
+                  return Object.freeze({
+                    value: jsonValue(value) ?? null,
+                    label: pivotLabels ? (pivotLabels[index]?.[pivotField!.key] ?? "—") : formatGroupLabel(value),
+                  });
+                }),
+              ),
+            }
+          : {}),
+        ...(result.pivotColumnsTruncated ? { pivotColumnsTruncated: true as const } : {}),
       });
     },
   });
 }
 
-/** A group's count, aggregates, currencies and Summary states, as sent. */
-function groupTotalsResponse(group: RecordGroupTotals) {
+/** A group's count, aggregates, currencies and Summary states, and its
+ * per-column cells (A2), as sent. */
+function groupTotalsResponse(group: RecordGroupTotals): Record<string, unknown> {
+  return {
+    ...groupOwnTotals(group),
+    ...(group.cells ? { cells: Object.freeze(group.cells.map((cell) => (cell ? Object.freeze(groupOwnTotals(cell)) : null))) } : {}),
+  };
+}
+
+function groupOwnTotals(group: Omit<RecordGroupTotals, "cells">) {
   return {
     count: group.count,
     ...(group.aggregates ? { aggregates: Object.freeze({ ...group.aggregates }) } : {}),

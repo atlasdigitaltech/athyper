@@ -451,6 +451,11 @@ export interface EntityListResultV1 {
    * request, computed from base rows in the same statement (Aggregate
    * blueprint section 8.1). */
   readonly parentGroup?: ListGroupTotalsV1;
+  /** Only on a Summary request with a column dimension (`pivot`, Aggregate
+   * A2): the column values, in order; every group's `cells` align with them. */
+  readonly pivotColumns?: readonly { readonly value: JsonValue; readonly label: string }[];
+  /** More column values exist than the 12 returned (section 7.2). */
+  readonly pivotColumnsTruncated?: true;
   /** More groups exist than the 50 returned (the "more groups" notice). */
   readonly groupsTruncated?: true;
   /** Only on a Matrix `rank` request: each ranked row's place, by row id. */
@@ -473,6 +478,11 @@ export interface ListGroupTotalsV1 {
   /** Summary aggregates shown as text instead of a value: a semi-additive sum
    * across its time fields, or a group below a measure's floor. */
   readonly states?: Readonly<Record<string, import("./aggregate").ListAggregateCellState>>;
+  /** Only on a Summary request with a column dimension (Aggregate A2): this
+   * group's value per column, aligned with `pivotColumns`; null where the
+   * group has no records in that column. Named owner: the Aggregate
+   * blueprint (section 5.7 point 1). */
+  readonly cells?: readonly (Omit<ListGroupTotalsV1, "cells"> | null)[];
 }
 
 export interface EntityApplicationDescriptorV1 {

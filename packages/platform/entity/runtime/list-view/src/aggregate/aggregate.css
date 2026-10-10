@@ -30,3 +30,6 @@
 .a-entity-aggregate__item:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:1px}
 .a-entity-aggregate__pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--a-space-2);font-size:var(--a-font-size-sm)}
 .a-entity-aggregate__pair>span:last-child{text-align:end;font-variant-numeric:tabular-nums}
+.a-entity-aggregate__table th.a-entity-aggregate__column{text-align:center;border-inline-start:var(--a-border-width) solid var(--a-border)}
+.a-entity-aggregate__column-block{display:grid;gap:var(--a-space-1);padding-block-start:var(--a-space-1);border-block-start:var(--a-border-width) dashed var(--a-border)}
+.a-entity-aggregate__column-name{font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium);color:var(--a-muted-foreground)}
