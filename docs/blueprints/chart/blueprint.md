@@ -1,7 +1,14 @@
 # Shared chart — blueprint
 
-**Status:** approved, not built; revision 3 (10 October 2026).
-- **Revision 3 proposes amendments to 13.4 (colour)** after audit round 12: section 13.4a, decisions 16–19. Approved 13.4 text is not edited. 13.4a says which of its lines it would replace. Until the owner approves 13.4a, A5.1 is not buildable as specified, because its validator does not exist (13.4a.1).
+**Status:** approved, not built; revision 4 (10 October 2026).
+- **13.4a approved (10 October 2026).** The owner approved decisions 16–19 in these words: "16, 17, 18 and 19 approved". Where 13.4a and 13.4 differ, 13.4a governs:
+  - the validator is A5.1a, built before the token sets (A5.1b);
+  - colours are keyed;
+  - colour by meaning comes through `resolveEntityStatusTone` plus an own-key check, reaching the component through the optional `toneOf` prop (13.3 amended);
+  - Mono gets validated chromatic series;
+  - colour comes from three sources only.
+
+  No build instruction for A5 is recorded yet.
 - **Revision 2** (audit round 11, section "Review disposition"):
   - closes the data-shape gap for the experience surfaces' `chart` block (Consumers);
   - folds 13.7 into the Consumers table, so there is one list of consumers;
@@ -177,7 +184,7 @@ export type ChartPointV1 =
 - **Colour supports, never carries, meaning.** Series also differ by legend order and label, and in a stacked column by position; a withheld point is text.
 - **The gates** (`policy:design-system`, `policy:style-tokens:strict`) stay clean: the component uses only tokens.
 
-### 13.4a Colour: amendments to 13.4 (proposed, revision 3; decisions 16–19)
+### 13.4a Colour: amendments to 13.4 (approved, revision 4; decisions 16–19)
 
 **Why.** Approved 13.4 names "the dataviz skill's validator" as the check that runs in the theme's tests. Neither exists in the repository:
 - the theme package has no test script and no tests;
@@ -277,7 +284,7 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 13. **Chart colour tokens as A5's first step,** validated in the theme's tests (13.4).
 15. **Right to left, separated (amended and approved, revision 8):** the chart's chrome and a categorical axis mirror with the document direction; a time axis stays earliest on the left in every locale; labels are localized and bidi-correct in both (13.3). As first written, it mirrored time axes too.
 
-## Decisions proposed in revision 3 (13.4a; for the owner)
+## Decisions 16–19 (13.4a; approved on 10 October 2026, status block)
 
 16. **Atlas Mono gets validated chromatic chart series,** amending `atlas-mono.ts`'s rule at the build. The rejected alternative is greyscale with one series.
 17. **Colour by meaning** comes from each field's published `statusTones`, through `resolveEntityStatusTone` plus an own-key check. It reaches the component through an optional `toneOf` prop, with no field in `ChartDataV1`. This amends 13.3's prop list.
@@ -315,3 +322,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 12 | Colour by meaning needs no change to the approved data format: reuse `resolveEntityStatusTone` | Adopted for the decision: the resolver decides. Corrected in two places: the resolver cannot tell "no tone" from "neutral", so an own-key check precedes it; and the tone still has to reach the component, so an optional `toneOf` prop amends 13.3 (decision 17) |
 | Audit round 12 | Amend Mono's source comment, and record the greyscale alternative | 13.4a.5; decision 16 |
 | Audit round 12 | Tokens, not raw hexes, in the deliverable; scope the 3:1 criterion per element; direct labels as a rule, not a fallback | 13.4a.2, 13.4a.1, 13.4a.4 |
+| Owner (10 October 2026) | "16, 17, 18 and 19 approved" | Status block; 13.4a approved and governs where it differs from 13.4 |
