@@ -14,6 +14,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--apply', action='store_true')
+parser.add_argument('--successors', action='store_true', help='Install the published-native predecessor chain instead of publication repair')
 parser.add_argument('--output', type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[3] / 'server/db/migrations'
@@ -23,6 +24,9 @@ selected = names[names.index('20261009_native_product_review.sql'):
 selected += [n for n in names if re.fullmatch(r'202610\d\d_local_(publication|rollback)_\w+\.sql', n)]
 selected = [n for n in selected if n != '20261009_native_worker_source.sql']
 selected.append('20261010_native_worker_component_installation.sql')
+if args.successors:
+    selected = names[names.index('20261009_native_identity_inheritance.sql'):
+                     names.index('20261009_local_publication_request.sql')]
 
 
 def sql(statement):
@@ -44,6 +48,30 @@ preflight = """DO $$ BEGIN
  THEN RAISE EXCEPTION 'LOCAL_NATIVE_PUBLICATION_REPAIR_PRECONDITION'; END IF;
 END $$;"""
 sql(preflight)
+if args.successors:
+    # The local request installation already supplies the inherited identity
+    # projection. Do not run an older exact-body patch over the newer readers.
+    projection = "jsonb_build_object('native_available',metadata.native_identity_available(c.id,i.id))"
+    for signature in ['publication.read_native_product_review_source(uuid,integer)',
+                      'publication.read_native_worker_source(uuid,integer)']:
+        body = sql("SELECT pg_get_functiondef('" + signature + "'::regprocedure)")
+        if projection not in body:
+            raise RuntimeError('Installed local reader lacks inherited identity projection: ' + signature)
+    selected.remove('20261009_native_inherited_identity_reads.sql')
+    current_guards = {
+        'metadata.trg_guard_entity_change_set()': (
+            ['read_native_successor_source', 'v_native_creation', "pg_has_role(current_user,'athyper_product_command_app','MEMBER')"],
+            ['20261009_native_successor_base_guard.sql', '20261009_native_base_guard_role_isolation.sql']),
+        'runtime_meta.fn_activate_release(uuid,jsonb)': (
+            ["v_expected->>'headState'='absent'", 'RELEASE_PREDECESSOR_CHANGED'],
+            ['20261009_successor_initial_target.sql']),
+    }
+    for signature, (markers, migrations) in current_guards.items():
+        body = sql("SELECT pg_get_functiondef('" + signature + "'::regprocedure)")
+        if all(marker in body for marker in markers):
+            for migration in migrations:
+                selected.remove(migration)
+
 done = dict(line.split('|') for line in sql(
     "SELECT migration_name,sha256 FROM public.athyper_schema_migration_v1 WHERE status='applied'").splitlines())
 inventory = json.loads((root / 'inventory.json').read_text())['entries']
