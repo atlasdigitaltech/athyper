@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 15 (10 October 2026).
+**Status:** approved, revision 16 (10 October 2026).
+- **Nested Top N approved (10 October 2026), not built:** "Approved 37–41 with these additions and write this into section 7.5 of the Aggregate blueprint". Expanded levels can be ranked too ("Nested Top / Bottom N" in 7.5). Decision 33 is amended, with its cost reason corrected. Building it needs its own instruction.
 - **Decision 36 approved and built (10 October 2026):** "approved both". In a ranked view the Total row is labelled "Not ranked", as No value is (7.5, "Headings and counts"). The ranked browser cases now run on an opt-in larger fixture.
 - **A6 built on fixtures (10 October 2026):** "start build A6". Section 7.5's build record has what was built, two notes on the design, the measurements and what is not verified. No real Entity can publish an ordered Summary until A0.
 - **Decision 34 amended (10 October 2026):** "approved go aheand and update blueprint for review". The heading depends on whether every ranked group is shown, and the No value row is labelled "Not ranked" (section 7.5, "Headings and counts"). This came from audit round 16; the contract is unchanged. A6 is still not built.
@@ -458,7 +459,7 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
 3. A Top-N response stays within 7.2's bound: (50 + 4) × (12 + 1) × 5 = 3,510 ≤ `LIST_AGGREGATE_MAX_CELLS` (3,600). `groupLimit` never exceeds 50, so the constant needs no change.
 
 **Scope (decision 33).**
-- **Level 1 only.** Expanded levels keep their order; nested Top N needs a later decision.
+- **Level 1 only (as built in A6).** Expanded levels keep their order. **Amended by decisions 37–41:** expanded levels can be ranked too; see "Nested Top / Bottom N" below.
 - **With a column dimension,** rows are ranked by their row total across all columns, and columns keep their order and their 12-column cap.
 
 **State, URL and view (decision 34).**
@@ -500,6 +501,82 @@ The heading therefore says which case it is:
   - N below the ranked count: "Top 10 of …" over 11 rows (10 ranked, then No value);
   - N above the ranked count: "All 36 … highest first", with the No value row reading "Not ranked" and the held-back note present.
 - **Other tests:** contract tests for the parameters, the state and the URL round trip; jsdom tests; and browser tests for a top 10 in the grid and the chart, a bottom 5, the tie notice, the held-back notice and a phone.
+
+**Nested Top / Bottom N (decisions 37–41; approved 10 October 2026, not built)**
+
+*What it adds.* Expanded levels can be ranked too, for example "Top 10 cost centres by spend, and the top 5 GL accounts within each".
+
+*Why decision 33's deferral is reopened.* Decision 33 kept A6 to level 1 partly because nesting "multiplies the cost". That reason does not hold:
+- Each expansion is already one request (decision 2). Ranking adds a sort to that request, not a request, and A6 measured the sort at about the cost of the unordered statement.
+- What nesting multiplies is the number of expansions a person opens. That is the existing model, unchanged: "top 5 within each of 10" is 10 requests, and opening every second-level row multiplies it again. The request-cost attribute shows it, and it is why ranking within groups is an explicit choice.
+- The real constraints are wording and state, which the points below settle.
+
+The refutation is recorded here beside the amended decision, as the pivot's rejected source restriction and the `GROUPING(__group_key) = 0` retraction are, so the amendment reads as a re-examined reason rather than as scope creep.
+
+*No new server capability.*
+- The server already accepts `groupOrder` on any Summary request and does not know which level a request is for. An expansion is the same request, with its parent rows' values as `eq` filters.
+- The client passes the order to expansion requests as well as to level 1. Today only level 1 does.
+
+**1. One measure and direction; a separate limit for expanded levels** (decision 38).
+
+| Property of `aggregate.order` | Meaning |
+| --- | --- |
+| `measure`, `direction` | Shared by every ranked level, as today |
+| `limit` | Level 1's N: 5, 10, 20 or 50 |
+| `within` (new, optional) | N for each expanded level: 5, 10, 20 or 50. Absent: expanded levels keep their own order, which is A6's behaviour |
+
+- `within` is state and URL only (`aggregate.topWithin`). On the wire it is that expansion request's existing `groupLimit`, so no new parameter is added.
+- Each expansion stays within (50 + 4) × (12 + 1) × 5 = 3,510 ≤ 3,600, because `within` takes the same four values.
+- **Rejected: a separate measure per level.** One ordering measure is what lets the view read as a single ranking; ranking cost centres by spend and accounts by count would read as one ranking and not be one. It would also need one picker per level, and would multiply the saved-state and URL combinations.
+
+**2. A level the measure cannot rank keeps its own order and says why** (decision 39). The view is never refused as a whole. The client decides this before requesting, with A6's `orderRefusal` rule; the server refuses the same cases if asked.
+- **Not summable.** The ancestors' `eq` filters can pin a semi-additive measure's time field. So a balance that cannot rank accounts can rank the periods under one account, with no new rule.
+- **A date bucket is not its own time field.** The rule asks for each time field to be pinned or to be the level's own field (`query.groupBucket ? undefined : query.group`, mirrored by `level.unit ? undefined : level.field.key`), and a month or quarter bucket holds many values of the field.
+  - Example: a balance kept per posting date can rank the groups under one posting date. The same balance grouped by posting month cannot, because a month holds many posting dates.
+  - This is the additivity contract, not an accident of the rule: a balance added up across the days of a month means nothing.
+  - (A fiscal period held as a choice field cannot be bucketed at all; only date fields take month or quarter.)
+- **Currency.** The mixed and unknown currency refusals apply per expansion, on that expansion's own parent total, and are never a partial ranking within it. That total is the parent row's own totals, which the grid already holds, so the client decides before sending a request the server would refuse.
+
+**3. Notices inside an expansion** (decision 40).
+
+*A ranked expansion* has one notice row at its top, the nested form of A6's headings. It replaces that expansion's "Showing 50 of more" notice:
+
+| Case | Notice |
+| --- | --- |
+| More ranked groups than N | "Top 5 of 12 {dimension} in {group} by {measure}" |
+| Every ranked group shown | "All 3 {dimension} in {group} by {measure}, highest first" (or "lowest first") |
+| No count given | "Top 5 {dimension} in {group} by {measure}" |
+
+Within a ranked expansion, No value reads "Not ranked", and the held-back and tie notes apply as at level 1.
+
+*A fallback expansion,* one the measure cannot rank, keeps the "Showing 50 of more" notice when it is truncated, and adds the reason it cannot be ranked in A6's wording. One condition is not enough: replacing the notice unconditionally would hide that groups are missing from an expansion that is not ranked.
+
+*Known tension, not changed now.* The nested notice names the dimension, the group, the count and the measure, and it grows at a third level, although the group is already named in the row above. A later decision may move the group's name out of the visible notice into its accessible name. One notice per expansion is the right amount of chrome for now.
+
+**4. What does not change.**
+- **Request count:** one request per expansion.
+- **Changed-data notice:** section 7.4's comparison of an expansion's parent totals.
+- **The chart:** it draws level 1 only.
+- **A column dimension:** expanded rows rank by their row total across every column, in A6's `"__rows"` step, keeping the opening's columns.
+- **Decision 14:** it is not applied to ranked rows at any level.
+
+**5. Control** (decision 41).
+- "Show" remains level 1's N.
+- Once an order is chosen and the Summary has more than one row level, a second picker appears: "Within each group: own order / 5 / 10 / 20 / 50".
+- **Rejected: one N for every level.** "Top 50" at level 1 is reasonable; 50 under each of 50 is a wall.
+
+**6. Acceptance.**
+- **Real PostgreSQL:**
+  - an expansion ranked under an ancestor `eq` filter, including the balance ranking the periods under one account that the filter makes possible;
+  - a posting-month bucket refused for the same balance;
+  - No value, the floor and `groupCount` within an expansion.
+- **Contract:** `within` in state and in the URL, normalized; on the wire it is `groupLimit`.
+- **jsdom:**
+  - the three nested notices;
+  - the two-condition rule: a fallback expansion shows its reason **and** its truncation notice, while a ranked expansion replaces the truncation notice with its ranking notice;
+  - a currency fallback decided from the parent row's totals with no request sent;
+  - one request per expansion.
+- **Browser** (the opt-in larger fixture): a ranked expansion's notice and "Not ranked" row, and a fallback expansion with its reason.
 
 **Build record (A6, 10 October 2026)**
 
@@ -805,7 +882,17 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 30. **The server orders groups across every group the viewer can read,** with `groupOrder` and `groupLimit` (5, 10, 20 or 50). Ties are broken by key. The cell bound is unchanged.
 31. **Orderable measures, and refusals for the whole level** (mixed currency, unknown currency, not summable), decided from the parent total in the same statement. The refusal is deliberately conservative.
 32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
-33. **Level 1 only.** Nested Top N needs a later decision.
+33. **Level 1 only.** Nested Top N needs a later decision. **Amended by decisions 37–41 (10 October 2026):** the deferral's "multiplies the cost" reason is corrected, not removed. Ranking adds a sort to a request that already exists, and the cost that grows is the number of expansions opened. The remaining constraints, wording and state, are settled in 7.5's "Nested Top / Bottom N".
+
+**Nested Top N (approved 10 October 2026, not built; 7.5):**
+
+37. **Nested Top N extends A6's ranking to expanded levels** through the existing list operation, with no new server capability. This amends decision 33.
+38. **One measure and direction for every ranked level,** with a separate `within` limit for expanded levels, sent as that expansion's `groupLimit`. Absent, expanded levels keep their own order.
+39. **A level the measure cannot rank keeps its own order and says why;** the view is never refused as a whole.
+    - A date bucket is not its own time field.
+    - The currency rule applies per expansion, decided from the parent row's own totals.
+40. **The nested notices.** A ranked expansion replaces its truncation notice with its ranking notice. A fallback expansion keeps its truncation notice and adds its reason.
+41. **The "Within each group" control,** shown only once an order is chosen and there is more than one row level, with the URL key `aggregate.topWithin`.
 34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only. **Amended (10 October 2026):** the heading reads "Top N of M" only when M > N, "All M … highest first" (or "lowest first") when every ranked group is shown, and "Top N" with no total when M is not given. The No value row is labelled "Not ranked" (section 7.5, "Headings and counts").
 36. **In a ranked view the Total row is labelled "Not ranked"** (approved and built, 10 October 2026; 7.5). It keeps its first place. **Why:** the Total row is not a group. It aggregates every record, including No value and held-back groups, while the ranking compares groups. It is therefore outside the ranking for the same reason No value is, which is why both carry one label. Rejected alternatives:
     - moving it last, which breaks A1's convention and the tree grid's first-row total;
@@ -952,4 +1039,11 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 19 | The Total row is outside the ranking because its cells read "Not summed across Fiscal period" | Corrected: that text belongs to the semi-additive Closing net column on most rows, and the ranked measure's total is a value. The reason recorded in decision 36 is that the Total row is not a group |
 | Audit round 19 | The spec held five ranking-heading assertions at `1bb8ddd7a` | Corrected count: four. Three are on the heading element and one finds the ranked chart by the same caption. The round 18 row's "three" counted the heading element only |
 | Owner (10 October 2026) | "go ahead" | Decision 36's rationale recorded |
+| Author, nested Top N draft | Decision 33's "multiplies the cost" reason | Corrected: ranking adds a sort, not a request; the cost that grows is the number of expansions opened (7.5) |
+| Audit round 20 | `within` should travel as the existing `groupLimit` | Adopted |
+| Audit round 20 | A date bucket is not its own time field | Adopted, with a corrected example: a fiscal period held as a choice field cannot be bucketed, so the case is a balance's posting date against the posting month (7.5, point 2) |
+| Audit round 20 | A fallback expansion keeps its truncation notice | Adopted: the two-condition rule, tested both ways |
+| Audit round 20 | Record the user-driven cost, the per-level measure rejection and the wording tension | Adopted |
+| Author, round 20 | The currency fallback can be decided before the request | Adopted: from the parent row's own totals |
+| Owner (10 October 2026) | "Approved 37–41 with these additions and write this into section 7.5 of the Aggregate blueprint" | Recorded in 7.5; decision 33 amended; not built |
 
