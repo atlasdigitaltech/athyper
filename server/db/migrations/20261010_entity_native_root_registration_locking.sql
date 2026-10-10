@@ -1,3 +1,10 @@
+BEGIN;
+SET LOCAL lock_timeout='5s';
+-- Requires the separately provisioned product-command transport and root tickets.
+-- Missing prerequisites abort deployment rather than leave a healthy unusable API.
+DO $root_upgrade$ BEGIN
+ IF to_regclass('entity_command_private.root_registration_admission') IS NULL THEN
+ EXECUTE $root_install$
 -- A separate fresh-root admission. The root declaration is carried in the
 -- issuer ticket after trusted composition reads an immutable native proposal;
 -- it is never accepted as an HTTP attribute and does not broaden application
@@ -50,6 +57,10 @@ RESET ROLE;
 -- not receive INSERT on metadata.entity.
 GRANT SELECT ON control.module TO athyper_product_command_owner;
 GRANT SELECT,INSERT ON metadata.entity TO athyper_product_command_owner;
+
+$root_install$;
+ END IF;
+END $root_upgrade$;
 -- Ticket checks never query metadata.entity, avoiding recursive RLS evaluation.
 SET ROLE athyper_product_command_owner;
 CREATE OR REPLACE FUNCTION entity_command_private.admitted_root(p_entity uuid) RETURNS boolean
@@ -77,6 +88,10 @@ CREATE OR REPLACE FUNCTION entity_command_private.admitted_root_attributes(
 $$;
 REVOKE ALL ON FUNCTION entity_command_private.admitted_root_attributes(uuid,uuid,text,text,text) FROM PUBLIC;
 RESET ROLE;
+DROP POLICY IF EXISTS native_root_registration_owner_read ON metadata.entity;
+DROP POLICY IF EXISTS native_root_registration_owner_read_fence ON metadata.entity;
+DROP POLICY IF EXISTS native_root_registration_owner_insert ON metadata.entity;
+DROP POLICY IF EXISTS native_root_registration_owner_insert_fence ON metadata.entity;
 CREATE POLICY native_root_registration_owner_read ON metadata.entity FOR SELECT TO athyper_product_command_owner
  USING(tenant_id IS NULL AND ownership_model='system' AND entity_command_private.admitted_root(id));
 CREATE POLICY native_root_registration_owner_read_fence ON metadata.entity AS RESTRICTIVE FOR SELECT TO athyper_product_command_owner
@@ -91,7 +106,7 @@ CREATE POLICY native_root_registration_owner_insert_fence ON metadata.entity AS 
    AND entity_command_private.admitted_root_attributes(id,module_id,entity_code,entity_class::text,ownership_model::text));
 
 SET ROLE athyper_product_command_owner;
-CREATE FUNCTION entity_command_private.enter_root_registration(p_token text,p_request_hash text) RETURNS boolean
+CREATE OR REPLACE FUNCTION entity_command_private.enter_root_registration(p_token text,p_request_hash text) RETURNS boolean
  LANGUAGE plpgsql SECURITY DEFINER
  SET search_path=pg_catalog,entity_command_private,metadata,control AS $$
 DECLARE a entity_command_private.root_registration_admission;
@@ -136,3 +151,5 @@ END $$;
 REVOKE ALL ON FUNCTION entity_command_private.enter_root_registration(text,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION entity_command_private.enter_root_registration(text,text) TO athyper_product_command_app;
 RESET ROLE;
+
+COMMIT;

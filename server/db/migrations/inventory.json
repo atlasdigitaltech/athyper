@@ -8,9 +8,13 @@
       "sha256": "078750c53402aad51f358b5acef01dd98a85e135a77eb2c26577aae7a1b64f0c",
       "planes": [],
       "disposition": "operational-upgrade",
-      "callers": ["tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"],
+      "callers": [
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
       "reason": "Authenticated generic fresh system-root registration from immutable native proposal attributes, before existing change-set creation admission.",
-      "canonicalPaths": ["ddl/planes/studio/metadata/67_native_root_registration.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_native_root_registration.sql"
+      ]
     },
     {
       "originalPath": "migrations/20261010_native_clean_foundation_bootstrap_compatibility.sql",
@@ -19,11 +23,11 @@
       "planes": [],
       "disposition": "operational-upgrade",
       "callers": [
-            "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
       ],
       "reason": "Bridge the current empty canonical Studio foundation to the exact native root-revision provenance helper. It rejects nonempty Entity history or any unrecognized root guard/pending constraint; historic upgrades retain their pinned transitions.",
       "canonicalPaths": [
-            "ddl/planes/studio/metadata/31_entity_root_revision_provenance.sql"
+        "ddl/planes/studio/metadata/31_entity_root_revision_provenance.sql"
       ]
     },
     {
@@ -33,13 +37,13 @@
       "planes": [],
       "disposition": "operational-upgrade",
       "callers": [
-            "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
       ],
       "reason": "Bridge the empty current Studio foundation from the exact original authoring-resource review functions to the maintained live-read resource contract and immutable payload verifier. It rejects Entity history and unknown predecessor or resulting contracts.",
       "canonicalPaths": [
-            "ddl/common/runtime_meta/13_authoring_resource_projection.sql",
-            "ddl/common/runtime_meta/14_live_read_resource_projection.sql",
-            "ddl/planes/studio/publication/33_live_read_resource_review.sql"
+        "ddl/common/runtime_meta/13_authoring_resource_projection.sql",
+        "ddl/common/runtime_meta/14_live_read_resource_projection.sql",
+        "ddl/planes/studio/publication/33_live_read_resource_review.sql"
       ]
     },
     {
@@ -2893,6 +2897,37 @@
       "reason": "Restore the canonical UI-component reviewed-resource kind after the empty-foundation live-read compatibility bridge; exact predecessor function hashes reject drift and the migration creates no resources, grants or catalogue rows.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/34_component_resource_review.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_entity_native_root_registration_locking.sql",
+      "path": "migrations/20261010_entity_native_root_registration_locking.sql",
+      "sha256": "807c3cd13a664f39083ca05f8a44620afd5eca6e57ca95ad7ba78d3addda461b",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install or correct native first-root registration after restricted command transport provisioning; ticket-bound forced RLS and advisory transaction locking without UPDATE grants. Existing operational migration bytes remain immutable.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_native_root_registration.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_bootstrap_dependencies.sql",
+      "path": "migrations/20261010_native_bootstrap_dependencies.sql",
+      "sha256": "d69f9e1c2ea2b2f153e31dd157d050b34f0bec081ddfdad10ace41d64905895c",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install exact admitted reference-target lookup and bounded descriptor readiness before native bootstrap startup.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/59_native_reference_target_read.sql",
+        "ddl/planes/studio/metadata/68_native_bootstrap_readiness.sql"
       ]
     }
   ]

@@ -1,3 +1,4 @@
+import { requireNativeBootstrapDependencies } from "./native-bootstrap-readiness.js";
 import { resolveNativeBootstrapAi } from "./native-bootstrap-ai.js";
 import { resolveNativeBootstrapAuthorization } from "./native-bootstrap-authorization.js";
 import { resolveNativeBootstrapListProviders } from "./native-bootstrap-provider.js";
@@ -301,6 +302,12 @@ export async function createControlProductCommandRuntime(options: {
     );
     if (reads.rows.length !== 1 || reads.rows[0]?.allowed !== true)
       throw Error("PRODUCT_REFERENCE_RESOURCE_READ_PRIVILEGE_REQUIRED");
+    if (nativeBootstrap)
+      await requireNativeBootstrapDependencies(
+        options.commandDatabase,
+        options.authority.tenantId,
+        resourceConfig.descriptorPin,
+      );
     runtime.referenceEnrollment = {
       database: runtime.database,
       authority: runtime.authority,

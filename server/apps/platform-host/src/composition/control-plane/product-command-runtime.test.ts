@@ -44,17 +44,21 @@ function database(
       pool: {
         connect: async () => ({
           query: async (query: string) => ({
-            rows: query.includes("SELECT id,entity_id")
-              ? identities
-              : query.includes("WITH RECURSIVE types")
-                ? storage
-                : [
-                    query.includes("has_schema_privilege")
-                      ? { allowed: auditAllowed }
-                      : query.includes("has_function_privilege")
-                        ? { allowed: resourceAllowed }
-                        : row,
-                  ],
+            rows:
+              query.includes("native_descriptor_ready") &&
+              !query.includes("has_function_privilege")
+                ? [{ ready: resourceAllowed }]
+                : query.includes("SELECT id,entity_id")
+                  ? identities
+                  : query.includes("WITH RECURSIVE types")
+                    ? storage
+                    : [
+                        query.includes("has_schema_privilege")
+                          ? { allowed: auditAllowed }
+                          : query.includes("has_function_privilege")
+                            ? { allowed: resourceAllowed }
+                            : row,
+                      ],
             rowCount: 1,
           }),
           release() {},

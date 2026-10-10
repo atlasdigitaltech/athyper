@@ -13,6 +13,7 @@
     "src/native-core-layout-persistence.test.ts",
     "src/native-supplemental-storage.test.ts",
     "src/native-core-layout.postgres.test.ts",
+    "src/native-root-registration.postgres.test.ts",
     "src/native-graph-conversion.test.ts",
     "src/native-list-view.test.ts",
     "src/native-field-choices.test.ts",
