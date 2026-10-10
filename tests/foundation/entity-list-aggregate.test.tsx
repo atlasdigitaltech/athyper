@@ -513,6 +513,8 @@ test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No va
     assert.deepEqual(rows.map((row) => row.querySelector("[data-tree-open]")?.textContent), ["2000 Payables", "1000 Cash", "No value"]);
     assert.equal(rows[2]!.querySelector(".a-entity-aggregate__unranked")?.textContent, "Not ranked");
     assert.equal(rows[0]!.querySelector(".a-entity-aggregate__unranked"), null);
+    // Decision 36: the Total row stands outside the ranking and says so.
+    assert.equal(container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked")?.textContent, "Not ranked");
     // The key order's "Showing 50 of more" notice is not shown under an order.
     assert.doesNotMatch(container.textContent!, /Showing 50/);
   });
@@ -520,6 +522,10 @@ test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No va
   await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
     assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "All 2 GL account by Records, highest first");
     assert.doesNotMatch(container.textContent!, /too small to rank|same value/);
+  });
+  // Without an order the Total row carries no label.
+  await withSummary({}, async ({ container }) => {
+    assert.equal(container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked"), null);
   });
   await withSummary({ state: orderedState({ measure: "period_net:sum", direction: "asc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
     assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "All 2 GL account by Period net total, lowest first");

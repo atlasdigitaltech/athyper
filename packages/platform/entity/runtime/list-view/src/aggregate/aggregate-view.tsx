@@ -713,16 +713,19 @@ function TotalRow({ totals, context }: { readonly totals: ListGroupTotalsV1; rea
       {label}
     </button>
   );
+  // In a ranked view the total stands outside the ranking, and says so as No
+  // value does (decision 36).
+  const unranked = context.ranked ? <span className="a-entity-aggregate__unranked">{context.intl.message("list.aggregate.notRanked")}</span> : null;
   if (context.narrow)
     return (
       <div className="a-entity-aggregate__item" data-total="">
-        <div className="a-entity-aggregate__heading">{drill}</div>
+        <div className="a-entity-aggregate__heading">{drill}{unranked}</div>
         <Cells totals={totals} context={context} label={label} filters={[]} />
       </div>
     );
   return (
     <tr className="a-entity-aggregate__total">
-      <th scope="row">{drill}</th>
+      <th scope="row">{drill}{unranked}</th>
       <Cells totals={totals} context={context} label={label} filters={[]} />
     </tr>
   );

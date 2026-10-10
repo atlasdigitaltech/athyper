@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 14 (10 October 2026).
+**Status:** approved, revision 15 (10 October 2026).
+- **Decision 36 approved and built (10 October 2026):** "approved both". In a ranked view the Total row is labelled "Not ranked", as No value is (7.5, "Headings and counts"). The ranked browser cases now run on an opt-in larger fixture.
 - **A6 built on fixtures (10 October 2026):** "start build A6". Section 7.5's build record has what was built, two notes on the design, the measurements and what is not verified. No real Entity can publish an ordered Summary until A0.
 - **Decision 34 amended (10 October 2026):** "approved go aheand and update blueprint for review". The heading depends on whether every ranked group is shown, and the No value row is labelled "Not ranked" (section 7.5, "Headings and counts"). This came from audit round 16; the contract is unchanged. A6 is still not built.
 - **A6 approved as revised (10 October 2026), not built.** The owner, after audit round 15: "approved A6 as revised, including the amended decision 12 separating "lowest on n items" back to Matrix, with the three implementation details above written into the design". The design is section 7.5; decisions 29–34 are in section 14, and decision 12 is amended there. "Lowest on n items" returns to the [Matrix blueprint](../entity-list-matrix/blueprint.md).
@@ -482,6 +483,7 @@ The heading therefore says which case it is:
 
 - **The No value row** carries "Not ranked" as visible and accessible text. Someone counting rows then sees why it is outside the number, and "Top 10 of 36" beside 11 rows reads as designed, not as an off-by-one.
 - **Held-back groups** keep their own note and are never rows, so the visible rows are always at most N, plus No value.
+- **The Total row** stays first, as A1 established, and in a ranked view carries the same "Not ranked" label (decision 36). Ordered "lowest first", a total that is the largest figure, drawn above the ranking, then reads as outside it rather than as its first entry. Every row outside the ranking says so in the same words.
 
 **Acceptance**
 - **Real-PostgreSQL tests:**
@@ -571,7 +573,13 @@ The order adds no measurable cost here. A3's volume remains the real test.
 - A3's volume;
 - an Arabic page.
 
-The browser fixture has three accounts, so "Top N of M" with M > N is covered by jsdom and by PostgreSQL, not in the browser.
+**Added after audit round 18:** an opt-in larger fixture (`window.summaryFixture`, the pattern the Gantt spec uses), set only by the ranked browser test, so the shared three accounts stay as every other test asserts them. It adds 40 one-record accounts and one No value record. In a real browser it shows:
+- "Top 10 of 43 GL account by Period net total" over 11 rows, with No value last;
+- "Not ranked" on No value and on the Total row (decision 36);
+- account 3000 ranked third while its Salary average cell reads "Too few records", because the floor applies only to the measure being ordered;
+- once ordered by Salary average (floor 3), "41 groups are too small to rank." and "All 2 … highest first".
+
+The screenshot is `entity-list-aggregate-ranked-top.png`; the spec now has 16 tests.
 
 ## 8. Totals, additivity and currency
 
@@ -799,6 +807,9 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
 33. **Level 1 only.** Nested Top N needs a later decision.
 34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only. **Amended (10 October 2026):** the heading reads "Top N of M" only when M > N, "All M … highest first" (or "lowest first") when every ranked group is shown, and "Top N" with no total when M is not given. The No value row is labelled "Not ranked" (section 7.5, "Headings and counts").
+36. **In a ranked view the Total row is labelled "Not ranked"** (approved and built, 10 October 2026; 7.5). It keeps its first place. Rejected alternatives:
+    - moving it last, which breaks A1's convention and the tree grid's first-row total;
+    - a separate wording such as "Outside the ranking", which gives two labels for one idea.
 35. **No "Others" for a measure that declares `minimumGroupSize`** (approved and built, 10 October 2026; 13.9, build note 3). It closes a live exposure in A5.3 and also governs A6.
 14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
 
@@ -934,4 +945,8 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 17 | Read A6's prerequisite as A5.3, because A5.1 and A5.2 are not built | Not adopted: both are built (`59f5ccd85`, `002eb5bb9`), so A5 is complete as written |
 | Audit round 17 | Hold the build to the three load-bearing tests and the pivot's PostgreSQL path, and measure | Done: 6 PostgreSQL tests on both statement shapes, with measurements |
 | Author, A6 build | Not-summable is decided per group, not from the parent total | Build note 1 (7.5); the currency refusals stay on the parent total |
+| Audit round 18 | The browser spec has no heading assertion | Corrected: it asserted three "All M" headings; what was missing was "Top N of M" and "Not ranked" |
+| Audit round 18 | Enlarge the browser fixture | Adopted as an opt-in larger fixture, so the 15 tests on the shared fixture are unchanged |
+| Audit round 18 | Mark the Total row as outside the ranking | Decision 36, approved and built |
+| Owner (10 October 2026) | "approved both" | Decision 36 built; larger fixture added |
 
