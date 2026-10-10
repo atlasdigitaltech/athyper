@@ -12,10 +12,11 @@ import {
   sha256,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 
-const [manifestPath, outputPath, ...extra] = process.argv.slice(2);
+const [manifestPath, outputPath, releaseNumbersPath, ...extra] =
+  process.argv.slice(2);
 if (!manifestPath || !outputPath || extra.length)
   throw Error(
-    "Usage: tsx scripts/operations/prepare-component-resource-candidates.ts <component-manifest.json> <new-output-directory>",
+    "Usage: tsx scripts/operations/prepare-component-resource-candidates.ts <component-manifest.json> <new-output-directory> [release-numbers.json]",
   );
 
 const manifest = JSON.parse(await readFile(resolve(manifestPath), "utf8"));
@@ -73,6 +74,24 @@ if (
 )
   throw Error("COMPONENT_DEPLOYMENT_PLANE_UNQUALIFIED");
 
+const releaseNumbers: Record<string, number> | undefined = releaseNumbersPath
+  ? JSON.parse(await readFile(resolve(releaseNumbersPath), "utf8"))
+  : undefined;
+if (
+  releaseNumbersPath &&
+  (!releaseNumbers ||
+    typeof releaseNumbers !== "object" ||
+    Array.isArray(releaseNumbers) ||
+    components.some(
+      (c) =>
+        !Number.isSafeInteger(
+          releaseNumbers[c.declaration.publicationResourceKey],
+        ) || releaseNumbers[c.declaration.publicationResourceKey]! < 1,
+    ) ||
+    Object.keys(releaseNumbers).length !== components.length)
+)
+  throw Error("COMPONENT_RELEASE_NUMBERS_INVALID");
+
 const root = resolve(outputPath);
 await mkdir(root, { mode: 0o700 });
 const generatedAt = new Date().toISOString();
@@ -84,7 +103,8 @@ const candidates = components
       payload,
       publicationKey: payload.declaration.publicationResourceKey,
       releaseId: randomUUID(),
-      releaseNo: 1,
+      releaseNo:
+        releaseNumbers?.[payload.declaration.publicationResourceKey] ?? 1,
     };
     return {
       releaseId: source.releaseId,
