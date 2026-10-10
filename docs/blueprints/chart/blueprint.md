@@ -462,6 +462,20 @@ Sequence order is greedy: each next colour is the one farthest from those alread
 - a theme test locks each set's values and its validator report (decision 26), and checks that `styles.css` declares the same values;
 - `atlas-mono.ts`'s comment is amended (13.4a.5).
 
+**Quieter Mono (owner request, 10 October 2026).** Asked whether Mono should be colour or black and white, the author recommended keeping decision 16, with evidence:
+- Light Mono fits at most four greys that reach 3:1 and are 15 apart; dark fits three.
+- Keeping them apart from the neutral tone and "Others" leaves one.
+
+Single-series Mono charts are already drawn in ink. The owner asked for quieter colours instead. Two further levels were searched, and every level passes with no findings and nothing relieved:
+
+| Mono level | Light sequence | Dark sequence | Highest / average chroma (light; dark) | Above the floors (light / dark) |
+| --- | --- | --- | --- | --- |
+| First candidates | as in the table above | as in the table above | 55 / 40; 55 / 38 | 10% / 10% |
+| **Quieter (recommended)** | `#4d4481` `#9a934a` `#4499d8` `#13524a` `#7f728b` `#b66d6d` `#8f4b68` `#5870b3` | `#95a3eb` `#857a33` `#e6c4e5` `#5da190` `#835a84` `#5079bc` `#586f4f` `#a48bb0` | 40 / 32; 40 / 30 | 10% / 10% |
+| Quietest | `#50619a` `#a58c51` `#906175` `#384f3d` `#7c90cc` `#594067` `#72886e` `#098a98` | `#7fa5e2` `#82773a` `#ab8683` `#dec5eb` `#837bb7` `#845a83` `#a3c9bd` `#586e51` | 35 / 27; 35 / 26 | 9% / 5% |
+
+For comparison, Modern averages chroma 56. Going lower still passes, but light mode's margin shrinks: about 8% at a cap of 30, and about 3% at 25, where the colours read as tinted greys. Dark has more room because its colours can range further in lightness. The recommendation is the quieter level, the calmest that keeps the full 10% margin in both modes.
+
 `--a-chart-neutral` is the name 13.4a.2 gives the "Others" token. 13.4 and 13.5 still say `--a-chart-rest` and are read as `--a-chart-neutral`.
 
 **Proposed (not approved):**
@@ -554,3 +568,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 14 | "Okabe-Ito has five colours below 3:1" | Corrected: three (13.4a.9) |
 | Owner (10 October 2026) | "Approved" (decisions 24–27) | 24 and 25 built (13.4a.10); 26 and 27 govern A5.1b |
 | Owner (10 October 2026) | "go ahead" (A5.1b) | High-contrast length built; five candidate sets proposed with measurements (13.4a.11); decision 28 proposed |
+| Owner (10 October 2026) | Mono: colour or black and white? Then "try the quieter Mono palette" | Colour kept (decision 16), with measured grey limits; two quieter Mono levels found, the chroma-40 level recommended (13.4a.11) |
