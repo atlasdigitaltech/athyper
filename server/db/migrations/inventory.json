@@ -3080,6 +3080,16 @@
       "callers": ["server/db/migrations/manifests/studio.txt"],
       "reason": "Retire empty optional Entity graph storage while preserving the independent onboarding flow and numbering contracts.",
       "canonicalPaths": ["ddl/planes/studio/metadata/70_native_optional_graph_retirement.sql"]
+    },
+    {
+      "originalPath": "migrations/20261011_local_successor_predecessor_read.sql",
+      "path": "migrations/20261011_local_successor_predecessor_read.sql",
+      "sha256": "3b0007307f32c1627eebc82e21c664a5aeb32c25854ab16ec74f80efd14a4c74",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Expose the exact current native product source to the authenticated local-successor command without granting the control API direct release-link reads.",
+      "canonicalPaths": ["ddl/planes/studio/publication/67_local_successor_predecessor_read.sql"]
     }
   ]
 }

@@ -277,6 +277,7 @@ common/authz/21_entity_default_access.sql
 planes/studio/metadata/22_product_human_review.sql
 planes/studio/publication/19_human_reviewed_publication.sql
 planes/studio/publication/20_product_publication_owner.sql
+planes/studio/publication/67_local_successor_predecessor_read.sql
 
 planes/studio/control/14_publication_policy_replacement.sql
 

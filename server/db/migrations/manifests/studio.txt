@@ -121,3 +121,4 @@
 20261011_business_partner_studio_retirement.sql
 20261011_business_partner_delivery_bridge_retirement.sql
 20261011_native_optional_graph_retirement.sql
+20261011_local_successor_predecessor_read.sql

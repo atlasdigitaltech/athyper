@@ -67,7 +67,6 @@ function command(value: unknown): { requestId: string } {
 async function predecessor(
   tx: Database,
   entityId: string,
-  tenantId: string,
 ): Promise<Predecessor> {
   const rows = await sql<{
     authoring_release_id: string;
@@ -79,17 +78,7 @@ async function predecessor(
     contract_hash: string;
     revision_id: string;
     publication_key: string;
-  }>`SELECT er.id AS authoring_release_id,er.release_no AS authoring_release_no,
-      er.release_hash AS authoring_release_hash,pr.id AS publication_release_id,
-      pr.release_no AS publication_release_no,pr.release_hash AS publication_release_hash,
-      er.contract_hash,er.revision_id,pr.release_key AS publication_key
-    FROM metadata.entity_release er
-    JOIN metadata.entity e ON e.id=er.entity_id AND e.tenant_id IS NULL AND e.ownership_model='system'
-    JOIN metadata.entity_change_set c ON c.id=er.change_set_id AND c.status='published'
-    JOIN publication.entity_release_link l ON l.entity_release_id=er.id
-    JOIN publication.release pr ON pr.id=l.publication_release_id AND pr.tenant_id=${tenantId}::uuid
-    WHERE er.entity_id=${entityId}::uuid AND er.tenant_id IS NULL AND pr.status IN ('approved','published')
-    ORDER BY er.release_no DESC,pr.release_no DESC LIMIT 1`.execute(tx);
+  }>`SELECT * FROM publication.read_local_successor_predecessor(${entityId}::uuid)`.execute(tx);
   if (rows.rows.length !== 1) {
     throw new HttpError(
       409,
@@ -168,7 +157,7 @@ export function createLocalSuccessorPreparation(options: Options) {
             "LOCAL_SUCCESSOR_ADMISSION_DENIED",
             "Current local authoring authority is required",
           );
-        const source = await predecessor(tx, entityId, context.tenantId);
+        const source = await predecessor(tx, entityId);
         const draftAuthority: EntitySuccessorDraftAuthority = {
           async assertAuthorized(request) {
             if (
