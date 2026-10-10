@@ -1,7 +1,8 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 5 (10 October 2026).
+**Status:** approved through A2; A5 contract proposed, revision 6 (10 October 2026).
 - **Delivery (10 October 2026): A2 built, on synthetic fixtures, before A3.** Section 5.9 records the build, including the measured response size and statement time A2's acceptance asks for. A3 remains the gate before any real Entity publishes a pivot. Still not verified: a real Entity, and the server's real responses in a browser.
+- **Revision 6 (10 October 2026): A5 contract proposed.** Section 13 now holds the A5 contract for review: a reusable chart in three layers, and Summary's use of it. Decisions 9–15 in section 14 ask for approval. Nothing in section 13 is approved or built. The 5.9 build record now names the test that refutes the rejected source restriction.
 - **A2 before A3 approved (10 October 2026).** The owner approved building A2 on fixtures ahead of A3, whose prerequisites (the metadata cleanup and the business partner, item and commodity Entities) are no design dependency of A2. The approved order existed to prove the pivot at volume before it ships, which is about what may ship, not what may be built. Four conditions, recorded in section 17 (the fourth added by audit round 8):
   - A3 stays the gate before any real Entity publishes a pivot;
   - A2 carries a real-PostgreSQL test of its own SQL path;
@@ -332,6 +333,7 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
    - **First measurement: 114.6 ms** over 1,205 records. The plan (`EXPLAIN ANALYZE`) showed the cause. The `GROUPING SETS` aggregation over the whole fact took about 1–2 ms. About 105 ms went to a correlated `EXISTS` against the column list: it re-ran that list's sort and limit once per grouped row (`loops=1040`).
    - **Fix (revision 5):** the source, rows and columns CTEs are `MATERIALIZED`, and the column test is a hashed `IN` with an uncorrelated check for the No value column. **Re-measured: 5.3 ms** in three runs, with the same 3,315 values. The test now fails above 50 ms.
    - **Not adopted: restricting the source to the shown rows and columns.** The audit proposed it, but row totals must include records in columns not shown, column totals records in rows not shown, and the total every record. Restricting the source would make all three wrong. The aggregation over the whole fact was not the cost.
+   - **The test that refutes it:** the caps test asserts `expect(result.parentGroup?.count).toBe(1200)`, that the total covers every record while only 50 rows and 12 columns are shown. A source restricted to the shown rows and columns fails that assertion, so the rejected change cannot land unnoticed.
 8. **Not built:** column paging (more than 12 values are filtered, never paged, as section 7.2 says), the location key `aggregate.open`, and Studio authoring.
 
 ## 6. Validation, availability and finding codes
@@ -507,19 +509,172 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 - Every cell state is text. Colour only supports it.
 - Expand controls say what they load ("Show fiscal periods under Office supplies").
 
-## 13. Chart (A5, contract sketch)
+## 13. Chart (A5): a reusable chart, and Summary's use of it (proposed, revision 6)
 
-Recorded so that A1–A2 do not paint the chart into a corner. Its contract is proposed in a later revision and approved separately.
+**Status of this section:** proposed. It is the A5 contract, written for review. Nothing in it is approved or built. Decisions 9–15 in section 14 ask for approval.
 
-- **Same data.** A chart is a view of the Summary's own response, with no new request and no new aggregate. The toggle "Table | Chart" sits inside the Summary, and the table remains each chart's accessible equivalent.
-- **Chart types:**
-  - column and bar for one dimension;
-  - line for an ordered dimension (a date bucket, or a choice or number dimension with a declared order);
-  - grouped and stacked column for a row dimension with the column dimension;
-  - pie or donut only for at most 5 slices of an additive, non-negative `sum` or `count` with no truncation.
-- **Not offered:** area, "Combination" and 3-D.
-- **Honest charts.** A truncated level or column dimension shows the truncation notice under the chart. A `notSummable`, `mixedCurrency` or `suppressed` cell is not plotted, and is listed under the chart.
-- **Out of scope:** "Add to Dashboard". A dashboard is a different surface and needs its own owner instruction.
+**Shape.** A chart is not a Summary feature but a platform component that Summary is the first to use. There are three layers, and only the third knows about Entities:
+
+1. **A chart-data contract** (`@athyper/contract-platform-chart`): pure data, no fetching, no Entity types.
+2. **A `Chart` component** in the design system (`@athyper/platform-ui`), drawn as hand-written SVG with theme tokens.
+3. **One adapter per consumer.** Summary's adapter (`summaryChartData`, in `list-view`) turns the Summary response it already has into chart data. It sends no request.
+
+The dependency direction is fixed:
+- `platform-ui` imports only the chart contract;
+- the adapter imports the chart contract and the Entity list contracts;
+- nothing in the chart layer imports Entity code.
+
+So a non-Entity consumer can use the chart without the Entity list contracts.
+
+### 13.1 Current-state facts
+
+Verified on 10 October 2026.
+
+| Fact | Evidence | Consequence |
+| --- | --- | --- |
+| The theme defines no chart or series colour tokens | `packages/platform/foundation/theme/src/styles.css` has no `--a-chart-*` or series token | A5's first step is a design-system change: a validated categorical palette (13.4) |
+| No chart library is a dependency anywhere in the workspace | no `recharts`, `echarts`, `d3`, `chart.js`, `visx`, `nivo` or `vega` in any package manifest | Hand-written SVG adds no dependency (decision 10) |
+| Experience surfaces (Home, workspace) already declare a `chart` block, `visualization: "bar" \| "line" \| "donut" \| "metric"`, whose data is `chart?: readonly number[]`. It is rendered as the numbers in text | `contract-platform-dashboard` (`ExperienceBlock`), `platform/shell/dashboard` (`ExperienceDataResult`, block renderer) | An existing would-be consumer with no labels, units or exactness. A5 does not change it; adopting the chart there is a separate decision (13.8) |
+| The Summary response carries exact decimals as text or JSON numbers, with withheld states | section 5.5, `parseGroupTotals` | The chart contract keeps exact text for anything shown (13.2) |
+| Summary rows follow the server's order, by raw key; grouped Table orders a choice dimension by published choice order | `summaryRows`, `groupHeadings` | A status dimension would read alphabetically by code in Summary and its chart. Decision 14 aligns Summary with the published order |
+
+### 13.2 The chart-data contract
+
+```ts
+// @athyper/contract-platform-chart
+export interface ChartDataV1 {
+  readonly schemaVersion: 1;
+  /** The categories in the order the producer gives them; the chart never sorts. */
+  readonly categories: readonly { readonly key: string; readonly label: string }[];  // 1–52
+  readonly categoryAxis: {
+    readonly label: string;
+    /** The categories form a sequence (dates, periods), so a line is meaningful.
+     * Set by the producer from its own ordering, never inferred by the chart. */
+    readonly ordered: boolean;
+  };
+  /** One series per measure-and-column the producer charts; all share one unit. */
+  readonly series: readonly ChartSeriesV1[];  // 1–8
+  /** [series][category], aligned with `series` and `categories`. */
+  readonly points: readonly (readonly ChartPointV1[])[];
+  /** More categories, or more series, exist than are given. */
+  readonly truncated?: { readonly categories?: true; readonly series?: true };
+}
+
+export interface ChartSeriesV1 {
+  readonly key: string;
+  readonly label: string;
+  readonly valueKind: "count" | "integer" | "decimal" | "money";
+  /** A currency or unit code shown with every value; one per chart. */
+  readonly unit?: string;
+  /** The series' values are parts of one whole: a count, or an additive sum in
+   * one unit, all non-negative. Only then are shares, stacking, pies and an
+   * "Others" slice meaningful. Set by the producer. */
+  readonly partOfWhole: boolean;
+  /** The server's total for the series, over every category including any not
+   * given; the denominator of a share. Required for a part-of-whole series. */
+  readonly total?: ChartPointV1;
+  /** "Others": the categories not given, as one point. Only for a part-of-whole
+   * series, and only when the producer can state it exactly (13.5). */
+  readonly rest?: ChartPointV1;
+}
+
+export type ChartPointV1 =
+  | { readonly kind: "value"; readonly value: string }  // an exact decimal, as text
+  | { readonly kind: "notSummable" | "suppressed" | "mixedCurrency" | "unknownCurrency" | "empty" };
+```
+
+**Rules of the contract:**
+- **The chart never computes a total.** It draws the points it is given, and computes a share only as point ÷ `total`, both from the producer.
+- **Exact text for everything shown.** Data labels, tooltips and the data table use the point's decimal text, formatted by the consumer's formatter. The component converts to a number **only for geometry** (bar lengths, slice angles, line positions), where rounding to a pixel is invisible.
+- **One unit per chart.** Series with different units or currencies are never drawn on one axis. There is no dual axis.
+- **A parser validates every payload,** in the same style as the list contracts: alignment of `points` with `series` and `categories`, the bounds, decimal text, and the part-of-whole rules (a `rest` only on a part-of-whole series, a `total` required there).
+- **Labels only.** Categories and series carry readable labels. A producer must not put identifiers in a label; Summary's adapter uses the same server labels as the grid.
+
+### 13.3 The `Chart` component
+
+```ts
+<Chart
+  data={ChartDataV1}
+  type="column" | "bar" | "line" | "stackedColumn" | "groupedColumn" | "pie" | "donut"
+  dataLabel="value" | "percentage" | "none"
+  caption={string}                                    // the chart's accessible name
+  format={(point: string, series: ChartSeriesV1) => string}  // the consumer's locale formatting
+  stateLabel={(kind, series) => string}                // the consumer's words for withheld points
+  onSelect?={(category: string, series: string) => void}     // a drill-down, when the consumer offers one
+/>
+```
+
+- **Type availability** comes from one exported function, `chartTypes(data)`, which returns each type as available or unavailable with a reason code. The consumer's type picker shows unavailable types disabled with their reason, the same pattern as the list's unavailable modes.
+
+  | Type | Available when | Otherwise |
+  | --- | --- | --- |
+  | `column`, `bar` | one series, at least one value | `CHART_NO_VALUES` |
+  | `line` | `categoryAxis.ordered`, one series | `CHART_UNORDERED` |
+  | `groupedColumn` | 2–8 series | `CHART_SERIES_COUNT` |
+  | `stackedColumn` | 2–8 series, all part-of-whole, one unit | `CHART_NOT_PART_OF_WHOLE` |
+  | `pie`, `donut` | one part-of-whole series; all values ≥ 0; no withheld point; at most 6 slices including "Others"; not truncated, or truncated with an exact `rest` | `CHART_NOT_PART_OF_WHOLE`, `CHART_NEGATIVE`, `CHART_WITHHELD`, `CHART_TOO_MANY_SLICES`, `CHART_TRUNCATED` |
+
+- **Data labels.** `value` shows the formatted exact text. `percentage` is offered only for a part-of-whole series, computed as point ÷ `total`. `none` shows no labels.
+- **Axes.**
+  - A value axis for column, bar and line starts at zero, so a bar's length is its value.
+  - Ticks are "nice" round values computed from the given points.
+  - The category axis follows the document direction: in right-to-left locales, columns run from the right (decision 15).
+- **Withheld points.** A point that is not a value is not drawn, and is not a zero. The chart lists each one under it in the consumer's words, for example "Cash: Closing net total, not summed across Fiscal period".
+- **Truncation.** When `truncated` is set, a notice under the chart says the chart shows the first categories or series, and nothing implies completeness. A pie is unavailable unless an exact `rest` is given.
+- **Legend.** It is shown for multiple series and for pies. Long labels end in an ellipsis; the full label is in the tooltip and the data table. There is no "legend length" setting.
+- **Interaction and accessibility.**
+  - The chart is one tab stop; the arrow keys move between points (roving focus, the tree grid's pattern).
+  - Each point has an accessible name: category, series, formatted value, and share when shown.
+  - Enter calls `onSelect`.
+  - The SVG has `role="img"` with the caption and a one-line summary.
+  - The data itself is always available as a table: for Summary, its own grid (13.6); for other consumers, a "Show data table" disclosure rendered by the component from the same `ChartDataV1`.
+- **Motion.** None beyond a short fade on data change, removed under `prefers-reduced-motion`.
+
+### 13.4 Chart colour tokens (A5's first step)
+
+- **What the theme gains:** a categorical palette, `--a-chart-1` … `--a-chart-8`, plus `--a-chart-rest` (a neutral for "Others") and `--a-chart-grid`/`--a-chart-axis`, defined for light and dark themes and every brand theme the theme package carries.
+- **Validated, not chosen by eye.** Each colour against the surface for non-text contrast (at least 3:1); adjacent series for separation under the common colour-vision deficiencies; and the text colours used for data labels on each fill. The dataviz skill's validator runs as part of the theme's tests, so a palette edit that breaks contrast fails.
+- **Colour supports, never carries, meaning.** Series also differ by legend order and label, and in a stacked column by position; a withheld point is text.
+- **The gates** (`policy:design-system`, `policy:style-tokens:strict`) stay clean: the component uses only tokens.
+
+### 13.5 "Others"
+
+- `rest` is exact only for a count, or a sum of an additive field in one unit: the server's total minus the given points, by exact decimal subtraction.
+- It is never given for an average, minimum, maximum, distinct count or semi-additive balance, where "total minus shown" means nothing, or when any given point is withheld.
+- The adapter computes it; the chart only draws it. Its label is the consumer's "Others" text, and its colour is `--a-chart-rest`.
+- Without a `rest`, a truncated pie is unavailable (`CHART_TRUNCATED`), and the column chart shows the truncation notice.
+
+### 13.6 Summary's use of the chart
+
+- **One toggle, same data.** The Summary toolbar gains "Table | Chart". The chart reads the opening response (level 1) that the grid already holds; it sends no request. Expansions stay in the grid.
+- **What is charted:**
+  - categories are the level-1 rows, with the grid's labels and in the grid's order, and No value labelled as in the grid;
+  - one chosen measure is charted (`chart.measure`, default the first shown). Without a column dimension it is one series; with one, the series are the columns.
+  - `categoryAxis.ordered` is true for a date bucket. Otherwise it is false, since a reference or choice order is a listing order, not a sequence.
+  - `partOfWhole` is true for the record count, and for a sum of an additive field whose cells share one currency.
+  - `total` is the server's parent total, or the column's total for each column series.
+  - `rest` follows 13.5 when the level is truncated.
+- **Saved state and URL.** `aggregate.chart` holds `{ type, measure, label }`. The URL keys are `aggregate.view=chart`, `aggregate.chartType`, `aggregate.chartMeasure` and `aggregate.chartLabel`.
+- **Drill-down.** Selecting a point opens Table with the row's filters (and the column's, for a column series), exactly as the grid's cell does.
+- **Withheld values** use the Summary's own messages (`list.aggregate.notSummable`, `.suppressed`, `list.group.mixedCurrencies`), passed through `stateLabel`.
+- **Narrow screens** draw the chart at full width, with bar instead of column when categories exceed what fits, and the legend below.
+
+### 13.7 Other consumers (not in A5)
+
+The component is built for reuse, but A5 adopts it only in Summary. Each later use is its own decision, with its own adapter and tests:
+- inside the Entity Framework: Board's lane distribution, Matrix's column comparison, and a declared metric section on a record page (which would need published metadata);
+- outside it: the experience surfaces' `chart` block, whose data contract (`number[]`) would move to `ChartDataV1`, under the design-system authorization of 1 October 2026;
+- "Add to Dashboard" stays out of scope.
+
+### 13.8 Phases inside A5
+
+| Step | Delivers | Acceptance |
+| --- | --- | --- |
+| **A5.1** | Chart colour tokens (13.4) in the theme, validated | The validator in the theme's tests; light, dark and brand themes; gates clean |
+| **A5.2** | `@athyper/contract-platform-chart` (types, parser, `chartTypes`) and the `Chart` component | Contract tests over every rule in 13.2 and the availability table in 13.3; jsdom tests for labels, states, truncation, keyboard and the data table; a package-ownership row (foundation section 9, point 4) |
+| **A5.3** | Summary adoption (13.6) and the published choice order for Summary rows (decision 14) | Adapter tests including "Others" exactness and its refusals; the Summary spec gains chart tests at desktop and phone widths, including RTL |
+
+The status block of this document records each step as it is built.
 
 ## 14. Decisions required (project owner)
 
@@ -540,6 +695,19 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 **Raised at the A1 build:**
 
 8. **Approved and built: apply additivity to grouped Table's sums.** It is the same field property, the same rule and the same withheld-value rendering ("Not summed across …"). Before it, the same list could show a closing-balance total in grouped Table that Summary withholds as meaningless, and the surface showing the wrong number was the one that appeared to work. The owner approved it, as its own change before A2: "decision 8 approved". Section 5.8 records the build.
+
+**Raised for A5 (revision 6, proposed):**
+
+9. **A reusable chart in three layers:** a platform chart-data contract, `@athyper/contract-platform-chart` (not in the Entity list contracts), a design-system `Chart` component, and one adapter per consumer (section 13).
+10. **Hand-written SVG with theme tokens,** no chart library (13.1, 13.3).
+11. **The chart types and their guardrails** in the 13.3 availability table:
+    - pies and donuts only for one part-of-whole series of at most 6 slices;
+    - "Others" only where exact (13.5);
+    - no area, "Combination" or 3-D chart, and no dual axis.
+12. **Top / Bottom N as its own phase, A6, after A5.** It is a server capability that orders groups by a measure across every group the viewer can read. Matrix's deferred "Lowest on n items" needs the same capability, so it is designed once for both (section 17). Until then, a chart shows the first groups by key, says so, and offers no "top N".
+13. **Chart colour tokens as A5's first step,** validated in the theme's tests (13.4).
+14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
+15. **Right-to-left charts follow the document direction,** for categorical and time axes alike. The alternative is keeping time axes left to right in every locale.
 
 ## 15. Studio authoring and registration inventory
 
@@ -576,7 +744,8 @@ Foundation section 9's policy gates run before each commit.
 | **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, through the service path the Entity takes (authorized-aggregate or SQL-covered), with index findings, and the fact-size precondition (status block) checked for this fact. The budget is a go/no-go number, set by the owner, that decides A4 | A1. The business partner, item and commodity category Entities for readable dimensions |
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated`. Built before A3 by the owner's approval (status block), with three conditions: a real-PostgreSQL test of its own SQL path; acceptance that measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS` and the statement's cost; and A3 kept as the gate before any real Entity publishes a pivot | A1. A3 gates publication on a real Entity, not the build |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
-| **A5** | Chart (section 13), after its contract is approved | A2 |
+| **A5** | The reusable chart and Summary's use of it, in three steps: chart colour tokens, the chart contract and component, Summary adoption with the published choice order (section 13.8) | A2; section 14 decisions 9–15 approved |
+| **A6** | Top / Bottom N: a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. Matrix's deferred "Lowest on n items" uses the same capability | A5; its own approval, acceptance criteria and real-PostgreSQL test |
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
 
@@ -605,6 +774,13 @@ The status block distinguishes what is built, published and verified at runtime.
 | Currency conversion in the browser or in phase 1 | A governed rate rule; separate design |
 | Reading history from `event.outbox` | It holds no history from before the projector; backfill reads the source tables |
 | Approval assignment as a phase of this work | Needs workflow DDL outside this workstream's authority |
+| A chart library (ECharts, Recharts, visx, Chart.js) | Brings its own colours, tooltips, legends and right-to-left assumptions, which would have to be suppressed for a narrow set of types; and a bundle cost. Hand-written SVG keeps tokens, dark mode, RTL and accessibility in our hands (decision 10) |
+| A chart contract inside the Entity list contracts | Every non-Entity consumer would import the Entity list contracts; the chart is a platform contract (decision 9) |
+| Area, "Combination", 3-D and dual-axis charts | 3-D distorts values; two axes invite false correlation and mix units; area adds little over line for the dimensions here |
+| Totals or shares computed from drawn points | Wrong for every non-additive measure and whenever categories are cut off; the chart uses the producer's totals |
+| "Others" for averages, minimums, maximums, distinct counts or balances | "Total minus shown" has no meaning for them (13.5) |
+| Top / Bottom N over the first 50 groups by key | Looks right and is wrong; it needs ordering by the measure across every group (A6) |
+| One tab stop per chart point | Up to 52 × 8 tab stops; the chart is one tab stop with arrow keys |
 
 ## 19. Review disposition
 
@@ -654,3 +830,7 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 8 | The pivot's cost is GROUPING SETS over the whole fact plus HAVING; restrict the source CTE to the shown rows and columns | **Corrected by measurement.** The aggregation took about 1–2 ms. The cost was a correlated `EXISTS` re-running the column query per grouped row. Fixed by materializing and hashing: 114.6 → 5.3 ms. Restricting the source would make row, column and overall totals wrong, so it was not adopted (5.9 point 7) |
 | Audit round 8 | A3 must measure the service path the Entity takes, with a go/no-go budget that decides A4 | Adopted as the fourth condition; the number awaits the owner |
 | Audit round 8 | No value is protected by the row cap but not the column cap | Recorded (5.9 point 3) |
+| Audit round 9 | Name the test that refutes the rejected source restriction | Recorded (5.9 point 7) |
+| Audit round 9 | A5: three layers, SVG, the type set with pie and "Others" guardrails, Top / Bottom N later, the contract as a platform contract | Section 13; decisions 9–12 |
+| Author, on audit round 9 | No chart colour tokens exist; exact text for display but numbers for geometry; Top / Bottom N shares a capability with Matrix's "Lowest on n items"; Summary rows should follow the published choice order; a new package needs its ownership row | Decisions 13 and 14; 13.1–13.3; A6; 13.8 (A5.2) |
+| Author | The experience surfaces' `chart` block (`number[]`, rendered as text) is an existing would-be consumer | Recorded (13.1, 13.7); not changed in A5 |
