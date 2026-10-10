@@ -38,3 +38,4 @@
 .a-entity-aggregate__view{justify-self:start;min-inline-size:12rem}
 .a-entity-aggregate__ranking{margin:0;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium)}
 .a-entity-aggregate__unranked{margin-inline-start:var(--a-space-2);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-normal);color:var(--a-muted-foreground)}
+.a-entity-aggregate__table .a-entity-aggregate__message td{text-align:start}

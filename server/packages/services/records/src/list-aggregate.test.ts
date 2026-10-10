@@ -326,3 +326,22 @@ describe("Top / Bottom N (Aggregate A6, section 7.5)", () => {
     expect(() => parseRecordListParameters({ group: "account", groupsOnly: "true", countMode: "exact", groupOrder: "count:desc", groupLimit: "10" })).toThrow(/groupOrder/);
   });
 });
+
+describe("nested Top N (decisions 37-41)", () => {
+  const ordered = { groupOrder: { key: "closing_net:sum", direction: "desc" as const, limit: 5 as const } };
+  // A balance kept per posting date: its time field is a date.
+  const dated = descriptor();
+  (dated as unknown as { fields: { key: string; list?: unknown }[] }).fields.find((field) => field.key === "closing_net")!.list = { currencyField: "currency", additivity: { kind: "semiAdditive", timeFields: ["posted"] }, aggregations: ["count", "sum"] };
+
+  it("an ancestor's eq filter pins the time field, so an expansion can rank a balance its parent level cannot", async () => {
+    const request = { ...summary, group: "account", groupAggregates: [{ field: "closing_net", aggregate: "sum" as const }], ...ordered };
+    await expect(lists(dated).list(request)).rejects.toMatchObject({ code: "LIST_AGGREGATE_ORDER_NOT_SUMMABLE" });
+    // Under one posting date (an expansion's eq filter), the accounts rank.
+    const page = parseEntityListResult(await lists(dated).list({ ...request, filters: [{ field: "posted", operator: "eq", value: "2026-02-28" }] }));
+    expect(page.groups?.map((group) => [group.value, group.aggregates?.["closing_net:sum"]])).toEqual([["1000", 150], ["2000", 40]]);
+  });
+
+  it("a date bucket is not its own time field: a balance grouped by posting month cannot rank", async () => {
+    await expect(lists(dated).list({ ...summary, group: "posted", groupBucket: { unit: "month" }, groupAggregates: [{ field: "closing_net", aggregate: "sum" }], ...ordered })).rejects.toMatchObject({ code: "LIST_AGGREGATE_ORDER_NOT_SUMMABLE" });
+  });
+});

@@ -130,8 +130,8 @@ test("cells turn the server's totals into values or text states, and rows carry 
 });
 
 type Call = Record<string, unknown>;
-const result = (groups: unknown[], parentGroup: unknown): EntityListResultV1 =>
-  ({ schemaVersion: 1, descriptorHash: "a".repeat(64), scopeFingerprint: "f".repeat(64), queryHash: "d".repeat(64), rows: [], groups, parentGroup, pagination: { pageSize: 0, hasNext: false, hasPrevious: false, countMode: "exact", total: 5 } }) as unknown as EntityListResultV1;
+const result = (groups: unknown[], parentGroup: unknown, truncated = false): EntityListResultV1 =>
+  ({ ...(truncated ? { groupsTruncated: true } : {}), schemaVersion: 1, descriptorHash: "a".repeat(64), scopeFingerprint: "f".repeat(64), queryHash: "d".repeat(64), rows: [], groups, parentGroup, pagination: { pageSize: 0, hasNext: false, hasPrevious: false, countMode: "exact", total: 5 } }) as unknown as EntityListResultV1;
 const accounts = [
   { value: id(1), label: "1000 Cash", count: 2, aggregates: { "period_net:sum": 150, "fee:sum": null }, aggregateCurrencies: { "period_net:sum": "MYR" }, mixedCurrencies: ["fee:sum"], states: { "closing_net:sum": "notSummable", "salary:average": "suppressed" } },
   { value: id(2), label: "2000 Payables", count: 3, aggregates: { "period_net:sum": 46, "salary:average": 40, "fee:sum": 3 }, aggregateCurrencies: { "period_net:sum": "MYR", "fee:sum": "MYR" }, states: { "closing_net:sum": "notSummable" } },
@@ -139,7 +139,7 @@ const accounts = [
 const total = { count: 5, aggregates: { "period_net:sum": 196, "salary:average": 30, "fee:sum": null }, aggregateCurrencies: { "period_net:sum": "MYR" }, mixedCurrencies: ["fee:sum"], states: { "closing_net:sum": "notSummable" } };
 
 async function withSummary(
-  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean; pivoted?: boolean; ranking?: { groupCount: number; groupsUnranked: number; tie?: boolean } },
+  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean; pivoted?: boolean; ranking?: { groupCount: number; groupsUnranked: number; tie?: boolean }; nestedRanking?: { groupCount: number; groupsUnranked: number }; childTruncated?: boolean },
   run: (h: { container: HTMLElement; calls: Call[]; settle: () => Promise<void>; drills: (readonly ListFilterV1[])[]; changes: unknown[] }) => Promise<void>,
 ) {
   const dom = new JSDOM("<div id='root'></div>", { url: "https://example.test/app/trial-balance" });
@@ -154,6 +154,24 @@ async function withSummary(
       calls.push(input.query);
       if (input.query.pivot) return pivotResult(input.query);
       // Top / Bottom N (A6): the server's ranking, with No value kept last.
+      // Nested Top N: an expansion ranked under its parent, No value kept last.
+      if (input.query.groupOrder && input.query.group !== "account") {
+        const spec = String(input.query.groupOrder), at = spec.lastIndexOf(":");
+        return {
+          ...result(
+            [
+              { value: "P02", label: "P02", count: 1, aggregates: { "period_net:sum": 50 }, aggregateCurrencies: { "period_net:sum": "MYR" } },
+              { value: "P01", label: "P01", count: 1, aggregates: { "period_net:sum": 100 }, aggregateCurrencies: { "period_net:sum": "MYR" } },
+              { value: null, label: "—", count: 1 },
+            ],
+            accounts[0],
+          ),
+          groupOrder: { key: spec.slice(0, at), direction: spec.slice(at + 1), limit: Number(input.query.groupLimit) },
+          groupCount: options.nestedRanking?.groupCount ?? 2,
+          groupsUnranked: options.nestedRanking?.groupsUnranked ?? 0,
+          ...((options.nestedRanking?.groupCount ?? 2) > Number(input.query.groupLimit) ? { groupsTruncated: true } : {}),
+        } as unknown as EntityListResultV1;
+      }
       if (input.query.groupOrder) {
         const spec = String(input.query.groupOrder), at = spec.lastIndexOf(":");
         return {
@@ -161,6 +179,7 @@ async function withSummary(
           groupOrder: { key: spec.slice(0, at), direction: spec.slice(at + 1), limit: Number(input.query.groupLimit) },
           groupCount: options.ranking?.groupCount ?? 2,
           groupsUnranked: options.ranking?.groupsUnranked ?? 0,
+          ...((options.ranking?.groupCount ?? 2) > Number(input.query.groupLimit) ? { groupsTruncated: true } : {}),
           ...(options.ranking?.tie ? { groupOrderTieAtCut: true } : {}),
         } as unknown as EntityListResultV1;
       }
@@ -172,6 +191,7 @@ async function withSummary(
           { value: "P02", label: "P02", count: 1, aggregates: { "period_net:sum": 50, "closing_net:sum": 150, "fee:sum": 2 }, aggregateCurrencies: { "period_net:sum": "MYR", "closing_net:sum": "MYR", "fee:sum": "EUR" }, states: { "salary:average": "suppressed" } },
         ],
         options.changedParent ? { ...accounts[0], count: 3 } : accounts[0],
+        ...(options.childTruncated ? [true] : []),
       );
     },
   } as unknown as HttpClient;
@@ -515,8 +535,9 @@ test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No va
     assert.equal(rows[0]!.querySelector(".a-entity-aggregate__unranked"), null);
     // Decision 36: the Total row stands outside the ranking and says so.
     assert.equal(container.querySelector(".a-entity-aggregate__total .a-entity-aggregate__unranked")?.textContent, "Not ranked");
-    // The key order's "Showing 50 of more" notice is not shown under an order.
-    assert.doesNotMatch(container.textContent!, /Showing 50/);
+    // The key order's "Showing the first 50" notice is not shown under an order,
+    // although the server reports the level truncated (36 > 5).
+    assert.doesNotMatch(container.textContent!, /Showing the first 50/);
   });
   // Every ranked group shown: "All 2 … highest first", never "Top 10 of 2".
   await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
@@ -552,4 +573,52 @@ test("A6: a ranked chart follows the ranking and takes the heading as its captio
     const names = [...container.querySelectorAll("[data-chart-point]")].map((point) => point.getAttribute("aria-label")!.split(",")[0]);
     assert.deepEqual(names, ["2000 Payables", "1000 Cash", "No value"]);
   });
+});
+
+// ---- Nested Top / Bottom N (decisions 37–41).
+test("nested Top N: an expansion is ranked by the same measure, sent as its groupLimit, with its own notice and Not ranked row", async () => {
+  await withSummary({ state: orderedState({ measure: "period_net:sum", direction: "desc", limit: 5, within: 5 }), ranking: { groupCount: 2, groupsUnranked: 0 }, nestedRanking: { groupCount: 12, groupsUnranked: 1 } }, async ({ container, calls, settle }) => {
+    await act(async () => container.querySelector<HTMLButtonElement>("tbody tr[aria-level='1'] [data-tree-toggle]")!.click());
+    await settle();
+    // One request per expansion; `within` travels as the expansion's groupLimit.
+    assert.equal(calls.length, 2);
+    assert.deepEqual([calls[1]!.group, calls[1]!.groupOrder, calls[1]!.groupLimit], ["period", "period_net:sum:desc", "5"]);
+    const text = container.textContent!;
+    assert.match(text, /Top 5 of 12 Fiscal period in 2000 Payables by Period net total/);
+    assert.match(text, /1 group is too small to rank/);
+    // A ranked expansion's notice states its cut: no "Showing 50" notice.
+    assert.doesNotMatch(text, /Showing the first 50/);
+    const children = [...container.querySelectorAll("tbody tr[aria-level='2']")];
+    assert.deepEqual(children.map((row) => row.querySelector("[data-tree-open]")?.textContent), ["Period 2", "Period 1", "No value"]);
+    assert.equal(children[2]!.querySelector(".a-entity-aggregate__unranked")?.textContent, "Not ranked");
+  });
+  // Without `within`, expansions keep their own order and send no order.
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 5 }) }, async ({ container, calls, settle }) => {
+    await act(async () => container.querySelector<HTMLButtonElement>("tbody tr[aria-level='1'] [data-tree-toggle]")!.click());
+    await settle();
+    assert.equal(calls[1]!.groupOrder, undefined);
+  });
+});
+
+test("nested Top N fallback: the expansion keeps its own order, says why, and keeps its truncation notice (two conditions)", async () => {
+  // Fee's totals for 1000 Cash span currencies. Given a ranked level 1 this
+  // cannot arise, so the case is built directly: the guard is decided from
+  // the row's own totals, before any request.
+  await withSummary({ state: orderedState({ measure: "fee:sum", direction: "desc", limit: 5, within: 5 }, { measures: ["count", "fee:sum"] }), ranking: { groupCount: 2, groupsUnranked: 0 }, childTruncated: true }, async ({ container, calls, settle }) => {
+    const cash = [...container.querySelectorAll("tbody tr[aria-level='1']")].find((row) => row.textContent!.includes("1000 Cash"))!;
+    await act(async () => cash.querySelector<HTMLButtonElement>("[data-tree-toggle]")!.click());
+    await settle();
+    // The expansion is requested in its own order: no refused ordered request.
+    assert.equal(calls[1]!.groupOrder, undefined);
+    const text = container.textContent!;
+    assert.match(text, /Fiscal period in 1000 Cash keep their own order: Fee total cannot rank them, because its amounts are in more than one currency\./);
+    assert.match(text, /Showing the first 50/);
+  });
+});
+
+test("the Within each group control appears only once an order is chosen and there is more than one row level", async () => {
+  const within = (container: HTMLElement) => [...container.querySelectorAll("[role=combobox]")].some((item) => item.getAttribute("aria-label") === "Within each group" || item.textContent === "Own order within groups");
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 5 }) }, async ({ container }) => assert.equal(within(container), true));
+  await withSummary({}, async ({ container }) => assert.equal(within(container), false));
+  await withSummary({ state: { aggregate: { rows: ["account"], measures: ["count"], order: { measure: "count", direction: "desc", limit: 5 } } } }, async ({ container }) => assert.equal(within(container), false));
 });

@@ -198,3 +198,16 @@ test("Top / Bottom N (A6): the order travels in the URL and saved state, normali
   assert.throws(() => parseEntityListResult(page({ groupCount: 36 })), /need groupOrder/);
   assert.throws(() => parseEntityListResult(page({ groupOrder: { key: "count", direction: "desc", limit: 7 }, groupCount: 1, groupsUnranked: 0 })), /limit/);
 });
+
+test("nested Top N: `within` travels in the URL and saved state, normalized", () => {
+  const offered = descriptor(true);
+  const state = decodeListLocationState("view=aggregate&aggregate.orderBy=count&aggregate.direction=desc&aggregate.top=10&aggregate.topWithin=5", offered);
+  assert.deepEqual(state.aggregate?.order, { measure: "count", direction: "desc", limit: 10, within: 5 });
+  assert.equal(encodeListLocationState(state, offered).get("aggregate.topWithin"), "5");
+  assert.deepEqual(toSaveableListState(state).aggregate?.order?.within, 5);
+  // A value outside the set drops `within`, never the order.
+  const parsedAggregate = parseListAggregate(aggregate, listed);
+  assert.deepEqual(parseListAggregateState({ measures: ["count"], order: { measure: "count", direction: "desc", limit: 10, within: 7 } }, parsedAggregate).order, { measure: "count", direction: "desc", limit: 10 });
+  // Without `within`, nothing is written for it.
+  assert.equal(encodeListLocationState(decodeListLocationState("view=aggregate&aggregate.orderBy=count&aggregate.direction=desc&aggregate.top=10", offered), offered).get("aggregate.topWithin"), null);
+});

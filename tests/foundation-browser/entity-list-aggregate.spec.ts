@@ -402,3 +402,19 @@ test("on a larger fixture: Top 10 of 43, No value and the Total marked Not ranke
   await expect(level1(page)).toHaveText(["2000 Payables", "1000 Cash", "No value"]);
 });
 
+
+test("nested Top N: Within each group ranks an expansion by the same measure, with its own notice", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.orderBy=period_net%3Asum&aggregate.direction=desc&aggregate.top=10", undefined, { extended: true });
+  await expect(level1(page).first()).toHaveText("2000 Payables");
+  await chooseOption(region(page).getByRole("combobox", { name: "Within each group" }), "5");
+  await expect(page).toHaveURL(/aggregate\.topWithin=5/);
+  const before = (await summaries(page)).length;
+  await region(page).locator("tbody tr[aria-level='1']").first().locator("[data-tree-toggle]").click();
+  await expect(region(page)).toContainText("All 3 Fiscal period in 2000 Payables by Period net total, highest first");
+  await expect(region(page).locator("tbody tr[aria-level='2'] [data-tree-open]")).toHaveText(["Period 3", "Period 2", "Period 1"]);
+  // One request for the expansion; `within` travels as its groupLimit.
+  const sent = (await summaries(page)).slice(before) as (Request & { groupOrder?: string; groupLimit?: string })[];
+  expect(sent).toHaveLength(1);
+  expect([sent[0]!.group, sent[0]!.groupOrder, sent[0]!.groupLimit]).toEqual(["period", "period_net:sum:desc", "5"]);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-nested.png" });
+});

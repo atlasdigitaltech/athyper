@@ -193,7 +193,7 @@ export function decodeListLocationState(
       },
     });
   }
-  if (state.aggregate && ["aggregate.rows", "aggregate.measures", "aggregate.column", "aggregate.view", "aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel", "aggregate.orderBy", "aggregate.direction", "aggregate.top"].some((key) => parameters.has(key))) {
+  if (state.aggregate && ["aggregate.rows", "aggregate.measures", "aggregate.column", "aggregate.view", "aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel", "aggregate.orderBy", "aggregate.direction", "aggregate.top", "aggregate.topWithin"].some((key) => parameters.has(key))) {
     const listed = (key: string, fallback: readonly string[]) => {
       const raw = parameters.get(key);
       return raw === null ? fallback : raw.split(",").filter(Boolean);
@@ -216,9 +216,11 @@ export function decodeListLocationState(
         // Top / Bottom N (A6): an empty orderBy returns to the dimension's order.
         ...(parameters.has("aggregate.orderBy")
           ? parameters.get("aggregate.orderBy")
-            ? { order: { measure: parameters.get("aggregate.orderBy"), direction: parameters.get("aggregate.direction") ?? "desc", limit: Number(parameters.get("aggregate.top") ?? 10) } as unknown as ListAggregateOrderStateV1 } // normalized by parseListAggregateState
+            ? { order: { measure: parameters.get("aggregate.orderBy"), direction: parameters.get("aggregate.direction") ?? "desc", limit: Number(parameters.get("aggregate.top") ?? 10), ...(parameters.get("aggregate.topWithin") ? { within: Number(parameters.get("aggregate.topWithin")) } : {}) } as unknown as ListAggregateOrderStateV1 } // normalized by parseListAggregateState
             : {}
-          : state.aggregate.order ? { order: state.aggregate.order } : {}),
+          : state.aggregate.order
+            ? { order: parameters.has("aggregate.topWithin") ? ({ ...state.aggregate.order, within: Number(parameters.get("aggregate.topWithin")) || undefined } as unknown as ListAggregateOrderStateV1) : state.aggregate.order }
+            : {}),
       },
     });
   }
@@ -327,10 +329,11 @@ export function encodeListLocationState(
       parameters.set("aggregate.view", normalized.aggregate.view ?? "table");
     const chart = normalized.aggregate.chart, baseChart = base.aggregate.chart;
     const order = normalized.aggregate.order, baseOrder = base.aggregate.order;
-    if (order && (order.measure !== baseOrder?.measure || order.direction !== baseOrder?.direction || order.limit !== baseOrder?.limit)) {
+    if (order && (order.measure !== baseOrder?.measure || order.direction !== baseOrder?.direction || order.limit !== baseOrder?.limit || order.within !== baseOrder?.within)) {
       parameters.set("aggregate.orderBy", order.measure);
       parameters.set("aggregate.direction", order.direction);
       parameters.set("aggregate.top", String(order.limit));
+      if (order.within) parameters.set("aggregate.topWithin", String(order.within));
     } else if (!order && baseOrder) parameters.set("aggregate.orderBy", "");
     if (chart && (chart.type !== baseChart?.type || chart.measure !== baseChart?.measure || chart.label !== baseChart?.label)) {
       parameters.set("aggregate.chartType", chart.type);

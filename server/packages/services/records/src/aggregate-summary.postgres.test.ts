@@ -316,6 +316,21 @@ describe.skipIf(!enabled)("Top / Bottom N on PostgreSQL (Aggregate A6)", () => {
       expect([floored.groupCount, floored.groupsUnranked]).toEqual([2, 5]);
     }));
 
+  it("ranks an expansion under its ancestor's eq filter: No value kept, the floor applied, groupCount of its ranked groups", () =>
+    inSession(async (client, repository) => {
+      // Under account 1000, five periods and an empty period; P05 has one record, below a floor of 2.
+      await insert(client, [
+        ["1000", "P01", 10], ["1000", "P01", 10], ["1000", "P02", 40], ["1000", "P02", 40], ["1000", "P03", 5], ["1000", "P03", 5],
+        ["1000", "P04", 30], ["1000", "P04", 30], ["1000", "P05", 999], ["1000", null as never, 1],
+        ["2000", "P01", 500], ["2000", "P01", 500],
+      ]);
+      const result = await repository.list(input({ group: "period", filters: [{ field: "account", operator: "eq", value: "1000" }], groupAggregates: [money], ...order("period_net:sum", "desc", 5, 2) }));
+      expect(result.groups?.map((group) => [group.value, group.aggregates?.["period_net:sum"]])).toEqual([["P02", 80], ["P04", 60], ["P01", 20], ["P03", 10], [null, 1]]);
+      expect([result.groupCount, result.groupsUnranked, result.groupsTruncated]).toEqual([4, 1, undefined]);
+      // The expansion's total is its parent row: account 1000 only.
+      expect(result.parentGroup?.count).toBe(10);
+    }));
+
   it("ranks only an authorized identity set, as executeAuthorizedAggregate passes it", () =>
     inSession(async (client, repository) => {
       await seed(client);

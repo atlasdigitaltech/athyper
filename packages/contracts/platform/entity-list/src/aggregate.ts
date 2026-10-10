@@ -104,6 +104,9 @@ export interface ListAggregateOrderStateV1 {
   readonly measure: string;
   readonly direction: "asc" | "desc";
   readonly limit: ListAggregateOrderLimit;
+  /** Nested Top N (decisions 37–41): N for each expanded level, sent as that
+   * expansion's `groupLimit`; absent, expanded levels keep their own order. */
+  readonly within?: ListAggregateOrderLimit;
 }
 
 /** Saved Summary state (section 5.6): row dimensions, level 1 first, the
@@ -239,7 +242,12 @@ export function parseListAggregateState(
     (orderRaw.measure === "count" || shownMeasures.includes(orderRaw.measure)) &&
     (orderRaw.direction === "asc" || orderRaw.direction === "desc") &&
     LIST_AGGREGATE_ORDER_LIMITS.includes(orderRaw.limit as ListAggregateOrderLimit)
-      ? Object.freeze({ measure: orderRaw.measure, direction: orderRaw.direction as "asc" | "desc", limit: orderRaw.limit as ListAggregateOrderLimit })
+      ? Object.freeze({
+          measure: orderRaw.measure,
+          direction: orderRaw.direction as "asc" | "desc",
+          limit: orderRaw.limit as ListAggregateOrderLimit,
+          ...(LIST_AGGREGATE_ORDER_LIMITS.includes(orderRaw.within as ListAggregateOrderLimit) ? { within: orderRaw.within as ListAggregateOrderLimit } : {}),
+        })
       : undefined;
   return Object.freeze({
     rows: Object.freeze(shownRows),

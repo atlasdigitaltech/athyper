@@ -200,6 +200,26 @@ function cellText(totals: ListGroupTotalsV1, measure: ListAggregateMeasureV1, in
   return cell.kind === "empty" ? "—" : stateText(cell.kind, measure, intl);
 }
 
+/** A ranked level's heading (7.5, "Headings and counts"): "Top N of M" only
+ * when M > N, "All M … highest first" when every ranked group is shown, and
+ * "Top N" without a total when the server gives no count. Inside an
+ * expansion it names the group (nested Top N, decision 40). */
+function rankingHeading(
+  intl: EntityIntl,
+  direction: "asc" | "desc",
+  limit: number,
+  measure: ListAggregateMeasureV1,
+  level: SummaryLevel,
+  ranking: { readonly groupCount: number } | undefined,
+  group?: string,
+): string {
+  const values = { dimension: levelName(level, intl), measure: measureLabel(measure, intl), limit, total: ranking?.groupCount ?? 0, ...(group !== undefined ? { group } : {}) };
+  const within = group !== undefined ? "In" : "";
+  if (!ranking) return intl.message(`list.aggregate.${direction === "desc" ? "rankTop" : "rankBottom"}${within}`, values);
+  if (ranking.groupCount > limit) return intl.message(`list.aggregate.${direction === "desc" ? "rankTopOf" : "rankBottomOf"}${within}`, values);
+  return intl.message(`list.aggregate.${direction === "desc" ? "rankAllHighest" : "rankAllLowest"}${within}`, values);
+}
+
 /** The chart types Summary prefers, in order, when the viewer has not chosen one. */
 const CHART_PREFERENCE: readonly ChartType[] = ["column", "groupedColumn", "line", "bar", "stackedColumn", "pie", "donut"];
 /** Below this many categories a column chart fits a narrow screen; above it, bars. */
@@ -258,12 +278,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
   };
   const ranking = top.status === "ready" ? top.ranking : undefined;
   const heading = order && orderMeasure && levels[0] && top.status === "ready"
-    ? (() => {
-        const values = { dimension: levelName(levels[0]!, intl), measure: measureLabel(orderMeasure, intl), limit: order.limit, total: ranking?.groupCount ?? 0 };
-        if (!ranking) return intl.message(order.direction === "desc" ? "list.aggregate.rankTop" : "list.aggregate.rankBottom", values);
-        if (ranking.groupCount > order.limit) return intl.message(order.direction === "desc" ? "list.aggregate.rankTopOf" : "list.aggregate.rankBottomOf", values);
-        return intl.message(order.direction === "desc" ? "list.aggregate.rankAllHighest" : "list.aggregate.rankAllLowest", values);
-      })()
+    ? rankingHeading(intl, order.direction, order.limit, orderMeasure, levels[0], ranking)
     : undefined;
   // The chart (A5.3, section 13.6): the opening response, charted; no request.
   const view = summary.view === "chart" ? "chart" : "table";
@@ -362,8 +377,24 @@ export function EntityAggregate(props: EntityAggregateProps) {
             <ChoiceSelect
               label={intl.message("list.aggregate.show")}
               value={String(order.limit)}
-              options={LIST_AGGREGATE_ORDER_LIMITS.map((limit) => ({ value: String(limit), label: intl.number(limit) }))}
+              options={LIST_AGGREGATE_ORDER_LIMITS.map((limit) => ({ value: String(limit), label: intl.message("list.aggregate.showLimit", { count: limit }) }))}
               onChange={(limit) => changeOrder({ ...order, limit: Number(limit) as ListAggregateOrderStateV1["limit"] })}
+            />
+          </span>
+        ) : null}
+        {order && levels.length > 1 ? (
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.within")}
+              value={order.within ? String(order.within) : ""}
+              options={[
+                { value: "", label: intl.message("list.aggregate.withinOwnOrder") },
+                ...LIST_AGGREGATE_ORDER_LIMITS.map((limit) => ({ value: String(limit), label: intl.message("list.aggregate.withinLimit", { count: limit }) })),
+              ]}
+              onChange={(within) => {
+                const { within: _within, ...rest } = order;
+                changeOrder(within ? { ...rest, within: Number(within) as ListAggregateOrderStateV1["limit"] } : rest);
+              }}
             />
           </span>
         ) : null}
@@ -538,6 +569,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
       onDrillDown: props.onDrillDown,
       onChanged: () => setChanged(true),
       ranked: Boolean(ranking),
+      ...(order?.within && orderMeasure ? { nested: { direction: order.direction, within: order.within, measure: orderMeasure } } : {}),
       shared: { ...shared, ...(column && columns ? { columnValues: columns.map((item) => item.value) } : {}) },
       ...(column && columns ? { columns, columnLevel: column } : {}),
     };
@@ -546,7 +578,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
       <>
         {total ? <TotalRow totals={total} context={context} /> : null}
         {top.rows.map((row, index) => (
-          <SummaryNode key={row.key} row={row} depth={0} ancestors={[]} parentPath="" context={context} position={index + 1} size={top.rows.length} first={index === 0} />
+          <SummaryNode key={row.key} row={row} depth={0} ancestors={[]} parentPath="" context={context} position={index + 1} size={top.rows.length} first={index === 0} ranked={context.ranked} />
         ))}
         {/* Under an order the heading states the cut (A6); this notice is the key order's. */}
         {top.truncated && !ranking ? <Notice depth={0} context={context} text={intl.message("list.aggregate.truncated", { count: LIST_GROUP_LIMIT, dimension: levels[0]!.dimension.label })} /> : null}
@@ -621,6 +653,9 @@ interface RowContext {
   readonly onChanged: () => void;
   /** Level 1 is ranked by a measure (A6): its No value row is "Not ranked". */
   readonly ranked: boolean;
+  /** Nested Top N (decisions 37–41): expanded levels ranked by the same
+   * measure and direction, `within` groups each. */
+  readonly nested?: { readonly direction: "asc" | "desc"; readonly within: ListAggregateOrderStateV1["limit"]; readonly measure: ListAggregateMeasureV1 };
   readonly shared: Omit<Parameters<typeof useLevel>[0], "level" | "filters">;
   /** With a column dimension (A2): the opening's columns and their level. */
   readonly columns?: readonly SummaryColumnValue[];
@@ -740,6 +775,7 @@ function SummaryNode({
   position,
   size,
   first,
+  ranked,
 }: {
   readonly row: SummaryRow;
   readonly depth: number;
@@ -751,6 +787,8 @@ function SummaryNode({
   readonly position: number;
   readonly size: number;
   readonly first?: boolean;
+  /** This row's level is ranked: a No value row reads "Not ranked". */
+  readonly ranked?: boolean;
 }) {
   const { levels, intl } = context;
   const level = levels[depth]!;
@@ -760,7 +798,16 @@ function SummaryNode({
   const expandable = Boolean(next);
   const expanded = expandable && context.open.has(path);
   const label = rowLabel(row, level, intl);
-  const children = useLevel({ ...context.shared, level: expanded ? next : undefined, filters });
+  // Nested Top N: the expansion is ranked by the same measure when it can be.
+  // A level the measure cannot rank keeps its own order and says why
+  // (decision 39), decided from this row's own totals and the filters that
+  // pin it, before any request. Given a ranked level 1 this cannot arise (an
+  // ancestor's eq filter pins its field, and a subset of single-currency
+  // records is single-currency), so it is a guard, kept because it is cheap.
+  const nested = context.nested && next ? context.nested : undefined;
+  const refusal = nested ? orderRefusal(nested.measure, next!, [...context.shared.state.filters, ...filters], row.totals) : undefined;
+  const childOrder = nested && !refusal ? { measure: nested.measure.key, direction: nested.direction, limit: nested.within } : undefined;
+  const children = useLevel({ ...context.shared, level: expanded ? next : undefined, filters, ...(childOrder ? { order: childOrder } : {}) });
   // The expansion recomputes this row; a different figure means the data
   // changed since the summary opened (section 7.4).
   const reported = useRef("");
@@ -802,7 +849,7 @@ function SummaryNode({
       <TreeIndent level={depth + 1} />
       {toggle}
       {drill}
-      {depth === 0 && context.ranked && row.kind === "none" ? <span className="a-entity-aggregate__unranked">{intl.message("list.aggregate.notRanked")}</span> : null}
+      {ranked && row.kind === "none" ? <span className="a-entity-aggregate__unranked">{intl.message("list.aggregate.notRanked")}</span> : null}
     </>
   );
   const own = context.narrow ? (
@@ -828,10 +875,32 @@ function SummaryNode({
         <Notice depth={depth + 1} context={context} text={intl.message("list.aggregate.levelFailed")} />
       ) : (
         <>
+          {/* A ranked expansion leads with its ranking notice and its notes; a
+              fallback expansion leads with the reason it is not ranked. */}
+          {nested && children.ranking ? (
+            <>
+              <Notice depth={depth + 1} context={context} text={rankingHeading(intl, nested.direction, nested.within, nested.measure, next!, children.ranking, label)} />
+              {children.ranking.groupsUnranked ? <Notice depth={depth + 1} context={context} text={intl.message("list.aggregate.unranked", { count: children.ranking.groupsUnranked })} /> : null}
+              {children.ranking.tieAtCut ? <Notice depth={depth + 1} context={context} text={intl.message("list.aggregate.tieAtCut")} /> : null}
+            </>
+          ) : nested && refusal ? (
+            <Notice
+              depth={depth + 1}
+              context={context}
+              text={intl.message("list.aggregate.nestedRefused", {
+                measure: measureLabel(nested.measure, intl),
+                dimension: levelName(next!, intl),
+                group: label,
+                reason: intl.message(`list.aggregate.orderRefused.${refusal}`, { fields: (nested.measure.timeFields ?? []).map((time) => time.label).join(", ") }),
+              })}
+            />
+          ) : null}
           {children.rows.map((child, index) => (
-            <SummaryNode key={child.key} row={child} depth={depth + 1} ancestors={filters} parentPath={path} context={context} position={index + 1} size={children.rows.length} />
+            <SummaryNode key={child.key} row={child} depth={depth + 1} ancestors={filters} parentPath={path} context={context} position={index + 1} size={children.rows.length} ranked={Boolean(children.ranking)} />
           ))}
-          {children.truncated ? (
+          {/* Two conditions (decision 40): a ranked expansion's notice states
+              its cut; any other expansion keeps "Showing 50 of more". */}
+          {children.truncated && !children.ranking ? (
             <Notice depth={depth + 1} context={context} text={intl.message("list.aggregate.truncated", { count: LIST_GROUP_LIMIT, dimension: next!.dimension.label })} />
           ) : null}
         </>

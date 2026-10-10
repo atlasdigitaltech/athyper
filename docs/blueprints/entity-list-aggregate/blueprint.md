@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 16 (10 October 2026).
+**Status:** approved, revision 17 (10 October 2026).
+- **Nested Top N built on fixtures (10 October 2026):** "Nested Top N approved for build go ahead". The build record follows the design in 7.5. One finding: given a ranked level 1, the per-level fallback (decision 39) cannot occur, so it is built as a guard.
 - **Nested Top N approved (10 October 2026), not built:** "Approved 37–41 with these additions and write this into section 7.5 of the Aggregate blueprint". Expanded levels can be ranked too ("Nested Top / Bottom N" in 7.5). Decision 33 is amended, with its cost reason corrected. Building it needs its own instruction.
 - **Decision 36 approved and built (10 October 2026):** "approved both". In a ranked view the Total row is labelled "Not ranked", as No value is (7.5, "Headings and counts"). The ranked browser cases now run on an opt-in larger fixture.
 - **A6 built on fixtures (10 October 2026):** "start build A6". Section 7.5's build record has what was built, two notes on the design, the measurements and what is not verified. No real Entity can publish an ordered Summary until A0.
@@ -578,6 +579,47 @@ Within a ranked expansion, No value reads "Not ranked", and the held-back and ti
   - one request per expansion.
 - **Browser** (the opt-in larger fixture): a ranked expansion's notice and "Not ranked" row, and a fallback expansion with its reason.
 
+**Build record (nested Top N, 10 October 2026)**
+
+*What was built*
+- **State and URL:** `aggregate.order.within` (5, 10, 20 or 50, normalized; an unknown value drops `within`, never the order), with the URL key `aggregate.topWithin`.
+- **Client.** As the audit noted, the change sits at the expansion's one call to `useLevel`: it now passes `{ measure, direction, limit: within }`, sent as that request's `groupLimit`. A6's `orderRefusal` is reused with the expansion's level, the list and ancestor filters, and the parent row's own totals; no new rule was needed.
+- **View.**
+  - A ranked expansion leads with its ranking notice (A6's heading builder with the group named), and the held-back and tie notes.
+  - Its No value row reads "Not ranked", and no "Showing the first 50" notice appears.
+  - A fallback expansion leads with its reason and keeps that notice when truncated.
+  - The "Within each group" picker appears once an order is chosen and there is more than one row level.
+- **Server:** unchanged, as decision 37 says.
+
+*Build notes*
+1. **Given a ranked level 1, the fallback (decision 39) cannot occur.** Level 1 is ranked only when the measure passes `orderRefusal` for it, and an expansion only adds filters:
+   - Not summable: a time field that level 1 pinned stays pinned. A time field that was level 1's own field is pinned by the expansion's `eq` (or `is_null`) filter on that field.
+   - Currency: the records under one row are a subset of level 1's, so a single-currency total implies single-currency subsets, and a level with no unknown currency has none in any subset.
+
+   The "Within each group" picker exists only once a level 1 order is chosen. So the fallback is a guard, kept because it is cheap and because a state that reaches the server unvalidated (an old saved view, a hand-edited link) is still handled. The jsdom test builds the case directly from a row's totals. The browser case in the acceptance list cannot be produced from consistent data and is not claimed.
+2. **"No request sent" in the acceptance list means no refused *ordered* request.** A fallback expansion is still requested, in its own order. The ranking request the server would refuse is never sent.
+3. **Option labels say what they set:** "Show 10", "5 within each group" and "Own order within groups". Two bare numbers side by side ("10", "5") were ambiguous in the browser.
+4. **Notice rows are left-aligned.** In the table, every notice row (loading, truncation and now ranking) had inherited the measure cells' right alignment.
+5. **A vacuous assertion was fixed.** The jsdom checks for an absent truncation notice used the pattern "Showing 50", which the real text ("Showing the first 50 values of …") never matches, so they could not fail. They now use the real text. The mock reports the level truncated when the ranked count exceeds N, so the checks fail if the notice returns.
+
+*Verified*
+- **Real PostgreSQL** (15 tests, 1 new): an expansion ranked under its ancestor's `eq` filter, with No value kept last, the floor applied (`groupsUnranked` 1) and `groupCount` of its ranked groups, its total being the parent row's.
+- **Service** (2 new):
+  - a balance kept per posting date cannot rank accounts, but ranks them under one posting date (an `eq` filter);
+  - grouped by posting month, it is refused (`LIST_AGGREGATE_ORDER_NOT_SUMMABLE`).
+
+  The records suite passes (669 tests).
+- **Contract** (1 new): `within` in the URL and saved state, normalized.
+- **jsdom** (27 tests, 3 new):
+  - a ranked expansion's request (`groupLimit` = `within`, one request), its "Top 5 of 12 … in 2000 Payables" notice, held-back note, "Not ranked" row and no truncation notice;
+  - no order sent without `within`;
+  - the fallback guard, with its reason and its truncation notice, and no ordered request;
+  - the picker's visibility.
+- **Browser** (17 tests, 1 new, on the larger fixture): choosing "5 within each group", the URL, one request for the expansion, "All 3 Fiscal period in 2000 Payables by Period net total, highest first", and the ranked periods. The screenshot is `entity-list-aggregate-nested.png`.
+- **Gates:** the design-system, UI-system and strict style-token gates pass.
+
+*Not verified:* a real Entity (A0) and an Arabic page.
+
 **Build record (A6, 10 October 2026)**
 
 *Prerequisite.* Audit round 17 suggested reading A6's prerequisite "A5" as A5.3, on the understanding that A5.1 and A5.2 were not built. They are built: A5.1 is the validator and tokens (`59f5ccd85`), and A5.2 is the contract and component (`002eb5bb9`). A5 is therefore complete as written, and there is no deviation from the phases table to record.
@@ -1046,4 +1088,7 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 20 | Record the user-driven cost, the per-level measure rejection and the wording tension | Adopted |
 | Author, round 20 | The currency fallback can be decided before the request | Adopted: from the parent row's own totals |
 | Owner (10 October 2026) | "Approved 37–41 with these additions and write this into section 7.5 of the Aggregate blueprint" | Recorded in 7.5; decision 33 amended; not built |
+| Owner (10 October 2026) | "Nested Top N approved for build go ahead" | Built on fixtures (7.5, nested build record) |
+| Audit round 21 | The client change is one call site, and `orderRefusal` needs only the expansion's parent totals | Confirmed in the build (nested build record) |
+| Author, nested build | Given a ranked level 1, the fallback (decision 39) cannot occur | Built as a guard; tested directly; browser case not claimed (build note 1) |
 
