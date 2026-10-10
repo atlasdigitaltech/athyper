@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/contract-platform-chart": "workspace:*",
     "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-entity-comparison": "workspace:*",

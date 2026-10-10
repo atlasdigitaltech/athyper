@@ -969,6 +969,7 @@
       "packageName": "@athyper/contract-platform-chart",
       "physicalPath": "packages/contracts/platform/chart/package.json",
       "currentConsumers": [
+        "packages/platform/entity/runtime/list-view/package.json",
         "packages/platform/foundation/ui/package.json"
       ],
       "intendedOwner": "Contract Platform",

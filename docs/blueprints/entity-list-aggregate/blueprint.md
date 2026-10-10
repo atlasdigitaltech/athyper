@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 9 (10 October 2026).
+**Status:** approved, revision 10 (10 October 2026).
+- **A5.3 built (10 October 2026), on synthetic fixtures:** "go ahead with Next: A5.3". Summary has its Table | Chart toggle, its chart adapter and decision 14's published choice order. Section 13.9 records the build. No real Entity uses Summary yet, because A0 and A3 wait for the metadata cleanup.
 - **The shared chart moved to its own blueprint (10 October 2026).** On the owner's instruction ("go ahead"), the reusable chart moved verbatim to the [Chart blueprint](../chart/blueprint.md) in a move-only commit (`6d9510f29`). That covers its data contract, component, colour tokens, "Others" rule and other consumers, with decisions 9, 10, 11, 13 and 15. This document keeps how Summary uses it: 13.6, A5.3, decisions 12 and 14, and A6. **Coupled:** a change to the chart contract that Summary relies on updates both documents together.
 - **Decision 15 amended, A5 approved as amended (10 October 2026).** After audit round 10, the owner approved the contract with decision 15 in its separated form, in these words: "Approved". The category axis of a categorical dimension mirrors with the document direction. A time axis stays earliest on the left in every locale. Labels are localized and bidi-correct either way (13.3). Revision 8 also links each unavailable-type reason to its message (13.3) and states A6's inherited authorization constraint (section 17).
 - **A5 contract approved (10 October 2026).** The owner approved section 14 decisions 9–15 in these words: "Decisions (section 14, 9–15): Approved". Section 13 is the approved A5 contract. No build instruction for A5 is recorded yet; when one is given, A5.1 (chart colour tokens) comes first (13.8). **Update (10 October 2026):** A5.1 and A5.2 are built and recorded in the [Chart blueprint](../chart/blueprint.md) (13.4a.6–13.4a.13). A5.3, Summary's adapter and its use of the chart, is not started and needs its own instruction.
@@ -539,6 +540,57 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 | **A5.3** | Summary adoption (13.6) and the published choice order for Summary rows (decision 14) | Adapter tests including "Others" exactness and its refusals; the Summary spec gains chart tests at desktop and phone widths, including RTL |
 
 The status block of this document records each step as it is built.
+
+### 13.9 Build record (A5.3, 10 October 2026)
+
+**What was built**
+
+- **State and URL.**
+  - `ListAggregateStateV1` gains `view` (`"chart"`, absent for Table) and `chart` (`{ type, measure, label }`), normalized by `parseListAggregateState`. The charted measure is always one of the shown measures, and an unknown type or label falls back.
+  - The URL keys are `aggregate.view`, `aggregate.chartType`, `aggregate.chartMeasure` and `aggregate.chartLabel`. The default (Table, no chart chosen) writes nothing; returning to Table from a shared chart link writes `aggregate.view=table`.
+- **Decision 14.** `summaryRows` orders a choice or boolean dimension by its published order (true, then false, for a boolean). Values outside that order follow in the server's order, and No value stays last. A reference or date bucket keeps the server's order.
+- **The adapter, `summaryChartData`** (`list-view/src/aggregate/aggregate-chart.ts`). It reads the opening response the grid holds and sends nothing. Every payload passes `parseChartData`.
+  - Categories are the level-1 rows, with the grid's labels and order. Their keys are positions (`row:n`), as the grid's rows are, so no record identity enters the chart data.
+  - The series are the chosen measure, or one series per column (at most 8 of the up to 12 columns, with `truncated.series` set).
+  - `partOfWhole` is true for the record count, and for a sum without time fields (not a semi-additive balance) in one currency with the server's total.
+  - **"Others"** is the server's total minus the given points, by exact decimal subtraction. It is given only when the level is truncated, the series is part of a whole, the total is a value, and every given point is a value or empty.
+  - Colour by meaning uses the dimension's `statusTones`, own key only, through `resolveEntityStatusTone`. A choice's palette position is its published-order index.
+  - A point's drill-down applies its row's filters, plus its column's filters for a column series, exactly as the grid's cell does.
+- **The view.**
+  - The toolbar gains "Table | Chart". In Chart, a fieldset offers the chart type (unavailable types disabled, with their reasons listed beneath, as the list's unavailable modes are), the charted measure, and the data labels ("Percentages" only when every series is part of a whole).
+  - With no type chosen, the first available of column, grouped column, line, bar, stacked column, pie and donut is used.
+  - The chart's own data table is off, because the grid is the table. With more than one row level, a note says the chart shows the first level.
+  - Withheld points use the Summary's own messages; an empty point reads "No value".
+  - On a narrow screen, a column chart of more than 6 categories is drawn as bars.
+
+**Build notes**
+
+1. **One unit per chart.** When the charted values span more than one currency, every value point is shown as "In more than one currency" and nothing is charted. Plotting MYR and EUR on one axis would be wrong, and the grid still shows each row's own figure.
+2. **The chart is laid out at its measured width,** with a `ResizeObserver` in the shared component (recorded in the Chart blueprint, 13.4a.13). Before this, the SVG scaled with the page, and at desktop width its text doubled in size.
+
+**Verified**
+
+- **Contract:** a URL, saved-state and normalization test for the chart state (9 tests in the aggregate contract file).
+- **jsdom** (`tests/foundation/entity-list-aggregate.test.tsx`, 20 tests, 8 new):
+  - decision 14's order;
+  - the adapter's order, labels, total and drill-down;
+  - "Others" exactness past a double's precision, and its refusals: a complete level, a semi-additive balance, an average, a withheld point;
+  - mixed currencies;
+  - own-key tones and published-order positions, and an ordered month axis;
+  - Chart with no further request and a point's drill-down;
+  - the Table toggle's saved state and withheld wording;
+  - the column series and their drill-down.
+- **Browser** (`tests/foundation-browser/entity-list-aggregate.spec.ts`, 12 tests, 4 new, on the real list runtime and Neon CSS):
+  - one request, and a point drilling down to Table;
+  - the keyboard;
+  - a phone with no horizontal scroll;
+  - right to left: a categorical column chart's first category is on the right, and a month line's earliest month is on the left.
+
+  Screenshots are in `tooling/config/test-results/entity-list-aggregate-chart*.png`.
+- **Other suites and gates:** the 24 entity-list foundation files and the contract suites pass, except `detail-navigation`'s import-boundary test, which fails on the form-detail package and predates this change. The design-system, UI-system, strict style-token, deployment-profile and workspace gates pass.
+- **Not verified:**
+  - a real Entity, which waits for A0 and A3;
+  - an Arabic-language page. The right-to-left test sets the document direction with English text.
 
 ## 14. Decisions required (project owner)
 

@@ -43,7 +43,7 @@ Each consumer has its own adapter, its own approved decision and its own tests. 
 
 | Consumer | Status | Where it is decided |
 | --- | --- | --- |
-| Entity list Summary | Approved (A5.3), not built | [Aggregate blueprint](../entity-list-aggregate/blueprint.md) sections 13.6 and 13.8, decisions 12 and 14 |
+| Entity list Summary | Approved (A5.3); built on fixtures (Aggregate 13.9) | [Aggregate blueprint](../entity-list-aggregate/blueprint.md) sections 13.6 and 13.8, decisions 12 and 14 |
 | Experience surfaces' `chart` block (Home, workspace) | Candidate; not approved. Conditions of adoption: its registry data source returns `ChartDataV1`, so the shape moves with the component rather than beside it, and the `number[]` result is retired. The block's declared `visualization` (`bar`, `line`, `donut`, `metric`) is a request, not an instruction: `chartTypes(data)` decides, and an unavailable type renders its reason code's message, never an empty or misleading chart. `metric` is a single number, not a chart, and is decided with the block | A future owner decision, under the design-system authorization of 1 October 2026, recorded here |
 | Board lane distribution, Matrix column comparison, a declared record-page metric section | Candidates; not approved | Each layout's own blueprint, then recorded here |
 | "Add to Dashboard" | Out of scope | Needs its own owner instruction |
@@ -571,7 +571,7 @@ For comparison, Modern averages chroma 56. Going lower still passes, but light m
   - `policy:deployment-profiles`, `policy:canonical-packages`, `policy:workspace-resolution`, `policy:tsconfig` and `policy:peers` pass.
   - `policy:frontend-spine` reports no finding for the design system after the budget change. Its other findings, and `policy:i18n`'s shell-locale finding, predate this change.
 
-**Not verified:** the chart has not been seen in a browser. No page uses it until A5.3.
+**Not verified at A5.2:** the chart had not been seen in a browser. **A5.3 (10 October 2026)** drew it in Summary in a real browser (Aggregate 13.9), which showed one fault that is now fixed. The SVG scaled with its container, so at desktop width its text doubled. It is now laid out at its measured width: a `ResizeObserver` on the figure, 640 px before measuring or without the observer, and at least 280 px. The theme observer also tolerates a missing `MutationObserver`. `useChartSeriesLimit()` is exported, so a consumer's type picker applies the theme's series limit.
 
 ### 13.5 "Others"
 

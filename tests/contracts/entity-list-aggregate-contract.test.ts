@@ -156,3 +156,22 @@ test("the column dimension (A2): saved and URL state, and cells aligned with the
   assert.throws(() => parseEntityListResult({ ...base, pivotColumns: [{ value: "P01", label: "P01" }], parentGroup: { count: 1, cells: [{ count: 1, cells: [] }] } }), /not allowed on a cell/);
   assert.throws(() => parseEntityListResult({ ...base, pivotColumns: Array.from({ length: 13 }, (_, index) => ({ value: String(index), label: String(index) })) }), /at most 12/);
 });
+
+test("the chart (A5.3): view and chart state travel in the URL and saved state, normalized", () => {
+  const offered = descriptor(true);
+  const state = decodeListLocationState("view=aggregate&aggregate.view=chart&aggregate.chartType=pie&aggregate.chartMeasure=count&aggregate.chartLabel=percentage&aggregate.measures=count,period_net:sum", offered);
+  assert.deepEqual(state.aggregate, { rows: ["account", "period"], measures: ["count", "period_net:sum"], column: "", view: "chart", chart: { type: "pie", measure: "count", label: "percentage" } });
+  const encoded = encodeListLocationState(state, offered);
+  assert.deepEqual(["aggregate.view", "aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel"].map((key) => encoded.get(key)), ["chart", "pie", "count", "percentage"]);
+  assert.deepEqual(toSaveableListState(state).aggregate?.chart, { type: "pie", measure: "count", label: "percentage" });
+  // The charted measure is one of the shown measures; unknown values fall back.
+  const fallback = parseListAggregateState({ measures: ["count"], view: "chart", chart: { type: "area", measure: "salary:average", label: "loud" } }, parseListAggregate(aggregate, listed));
+  assert.deepEqual([fallback.view, fallback.chart], ["chart", { type: "column", measure: "count", label: "value" }]);
+  // Table is the default: no view and no chart until chosen, and nothing in the URL.
+  const table = decodeListLocationState("view=aggregate", offered);
+  assert.deepEqual([table.aggregate?.view, table.aggregate?.chart], [undefined, undefined]);
+  assert.equal(encodeListLocationState(table, offered).get("aggregate.view"), null);
+  // Returning to the table from a shared chart link is written explicitly.
+  const back = decodeListLocationState("view=aggregate&aggregate.view=table", offered);
+  assert.equal(back.aggregate?.view, undefined);
+});

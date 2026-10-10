@@ -787,7 +787,7 @@ details[open]>summary .a-disclosure-caret--menu,[aria-expanded=true]>.a-disclosu
 
 /* Shared chart (docs/blueprints/chart): SVG in theme tokens only. Colours come from the chart sequence, the single-series token, "Others" and the status tones. */
 .a-chart{margin:0;display:grid;gap:var(--a-space-2);min-width:0}
-.a-chart__svg{display:block;width:100%;height:auto;overflow:visible;animation:a-chart-fade var(--a-motion-normal) var(--a-easing)}
+.a-chart__svg{display:block;max-width:100%;height:auto;overflow:visible;animation:a-chart-fade var(--a-motion-normal) var(--a-easing)}
 @keyframes a-chart-fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){.a-chart__svg{animation:none}}
 .a-chart__grid{stroke:var(--a-chart-grid);stroke-width:1}

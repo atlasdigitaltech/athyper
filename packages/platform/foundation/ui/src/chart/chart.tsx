@@ -47,7 +47,9 @@ interface Mark {
   readonly order: readonly [number, number];
 }
 
-const WIDTH = 640;
+/** The drawing width before the chart is measured, and where it cannot be. */
+const DEFAULT_WIDTH = 640;
+const MIN_WIDTH = 280;
 const BAND_LABEL_MIN = 28;
 const value = (point: ChartPointV1 | undefined): point is ChartPointV1 & { kind: "value" } => point?.kind === "value";
 const short = (text: string, room: number) => (text.length * 6.5 <= room ? text : `${text.slice(0, Math.max(1, Math.floor(room / 6.5) - 1))}…`);
@@ -58,11 +60,35 @@ function useChartTheme(): ChartTheme {
     const root = document.documentElement;
     const update = () => setTheme((current) => { const next = documentChartTheme(root); return next.family === current.family && next.mode === current.mode ? current : next; });
     update();
+    if (typeof MutationObserver === "undefined") return;
     const observer = new MutationObserver(update);
     observer.observe(root, { attributes: true, attributeFilter: ["data-theme", "data-theme-family"] });
     return () => observer.disconnect();
   }, []);
   return theme;
+}
+
+/** How many series the theme can colour apart (8, or 5 under high contrast),
+ * for a consumer's type picker; the Chart applies the same limit itself. */
+export function useChartSeriesLimit(): number {
+  return chartSeriesLimit(useChartTheme());
+}
+
+/** The figure's width in CSS pixels, so the drawing is laid out at its real
+ * size and text stays at its token size instead of scaling with the SVG. */
+function useWidth(ref: { readonly current: Element | null }): number {
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const next = Math.max(MIN_WIDTH, Math.round(entry?.contentRect.width ?? DEFAULT_WIDTH));
+      setWidth((current) => (current === next ? current : next));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return width;
 }
 
 function useDirection(ref: { readonly current: Element | null }): "ltr" | "rtl" {
@@ -80,6 +106,7 @@ export function Chart({ data, type, dataLabel = "value", caption, format, stateL
   const figure = useRef<HTMLElement>(null);
   const direction = useDirection(figure);
   const rtl = direction === "rtl";
+  const width = useWidth(figure);
   const summaryId = useId();
   const limit = chartSeriesLimit(theme);
   const availability = chartTypes(data, { seriesLimit: limit }).find((item) => item.type === type)!;
@@ -94,7 +121,7 @@ export function Chart({ data, type, dataLabel = "value", caption, format, stateL
   const shown = (point: ChartPointV1 & { kind: "value" }, series: ChartSeriesV1) =>
     dataLabel === "percentage" ? share(point, series) ?? format(point.value, series) : format(point.value, series);
 
-  const drawing = useMemo(() => (availability.available ? draw(data, type, { rtl, limit, theme, toneOf, paletteIndexOf, restLabel, format }) : undefined), [availability.available, data, type, rtl, limit, theme, toneOf, paletteIndexOf, restLabel, format]);
+  const drawing = useMemo(() => (availability.available ? draw(data, type, { rtl, width, limit, theme, toneOf, paletteIndexOf, restLabel, format }) : undefined), [availability.available, data, type, rtl, width, limit, theme, toneOf, paletteIndexOf, restLabel, format]);
   const marks = drawing?.marks ?? [];
   const labelled = useMemo(() => closeTones(marks.flatMap((mark) => (mark.slot.kind === "tone" ? [mark.slot.tone] : [])), theme), [marks, theme]);
 
@@ -132,7 +159,7 @@ export function Chart({ data, type, dataLabel = "value", caption, format, stateL
         <p role="status" className="a-chart__unavailable">{messages.chartUnavailable(availability.reason, availability.seriesLimit)}</p>
       ) : (
         <>
-          <svg key={chartSignature(data)} className="a-chart__svg" viewBox={`0 0 ${WIDTH} ${drawing!.height}`} role="group" aria-roledescription={messages.chartTypeName(type)} aria-label={caption} aria-describedby={summaryId} onKeyDown={move}>
+          <svg key={chartSignature(data)} className="a-chart__svg" viewBox={`0 0 ${width} ${drawing!.height}`} width={width} height={drawing!.height} role="group" aria-roledescription={messages.chartTypeName(type)} aria-label={caption} aria-describedby={summaryId} onKeyDown={move}>
             {drawing!.chrome}
             {navigable.map((mark, index) => {
               const name = messages.chartPoint(mark.categoryLabel, mark.series.label, format(mark.point.value, mark.series), share(mark.point, mark.series));
@@ -195,6 +222,7 @@ function ChartTable({ data, format, stateLabel, restLabel, totalLabel }: { reado
 
 interface DrawOptions {
   readonly rtl: boolean;
+  readonly width: number;
   readonly limit: number;
   readonly theme: ChartTheme;
   readonly toneOf?: (key: string) => ChartTone | undefined;
@@ -220,6 +248,7 @@ function draw(data: ChartDataV1, type: ChartType, options: DrawOptions): Drawing
 
   // Column, grouped, stacked and line: categories along x, values up.
   const height = 300, top = 20, bottom = 36, start = 56, end = 12;
+  const WIDTH = options.width;
   const plotLeft = rtl ? end : start, plotRight = WIDTH - (rtl ? start : end), plotBottom = height - bottom, plotHeight = plotBottom - top;
   const n = data.categories.length, band = (plotRight - plotLeft) / n;
   // A categorical axis mirrors with the document; a time axis stays earliest on the left (decision 15).
@@ -295,6 +324,7 @@ function drawBar(data: ChartDataV1, options: DrawOptions, seriesSlots: readonly 
   const { rtl, toneOf } = options;
   const row = 28, top = 8, bottom = 28, start = 132, end = 56;
   const height = top + data.categories.length * row + bottom;
+  const WIDTH = options.width;
   const plotLeft = rtl ? end : start, plotRight = WIDTH - (rtl ? start : end), plotWidth = plotRight - plotLeft, plotBottom = height - bottom;
   const series = data.series[0]!, points = data.points[0]!;
   const numbers = points.map(chartNumber).filter((item): item is number => item !== undefined);
@@ -331,7 +361,7 @@ function drawBar(data: ChartDataV1, options: DrawOptions, seriesSlots: readonly 
 function drawPie(data: ChartDataV1, type: "pie" | "donut", options: DrawOptions): Drawing {
   const { limit, toneOf, paletteIndexOf, restLabel } = options;
   const series = data.series[0]!;
-  const height = 240, cx = WIDTH / 2, cy = height / 2, radius = 108, hole = type === "donut" ? radius * 0.58 : 0;
+  const height = 240, cx = options.width / 2, cy = height / 2, radius = 108, hole = type === "donut" ? radius * 0.58 : 0;
   const slices = data.categories.flatMap((category, c) => {
     const point = data.points[0]![c];
     return value(point) && Number(point.value) > 0 ? [{ key: category.key, label: category.label, point, slot: keyedSlot(category.key, c, limit, toneOf, paletteIndexOf) }] : [];

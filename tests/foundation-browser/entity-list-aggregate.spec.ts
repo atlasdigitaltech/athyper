@@ -120,12 +120,12 @@ const script = buildSync({
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 type Request = { filter?: string[] | string; limit?: number | string; group?: string; groupsOnly?: string; totals?: string; aggregate?: string[] | string };
 
-async function mount(page: Page, width: number, path = "") {
+async function mount(page: Page, width: number, path = "", dir?: "rtl") {
   await page.setViewportSize({ width, height: 1000 });
   await page.route("https://list.test/**", (route) =>
     route.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>`,
+      body: `<!doctype html><html${dir ? ` dir="${dir}"` : ""}><body><div id="root" style="padding:clamp(var(--a-space-6),3vw,var(--a-space-10))"></div></body></html>`,
     }),
   );
   await page.goto(`https://list.test/lines${path}`);
@@ -258,3 +258,53 @@ test("a pivoted Summary on a phone lists each column inside its group, with no h
   expect(overflow).toBeLessThanOrEqual(0);
   expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
 });
+
+// ---- A5.3: Summary's chart (blueprint 13.6), on the same fixture.
+const point = (page: Page, name: RegExp) => page.getByRole("img", { name });
+
+test("Chart draws the opening response with no further request, and a point drills down to Table", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.view=chart");
+  const chart = page.getByRole("group", { name: "Records by GL account" });
+  await expect(chart).toBeVisible();
+  expect(await summaries(page)).toHaveLength(1);
+  await expect(point(page, /^1000 Cash, Records: 3/)).toBeVisible();
+  await expect(point(page, /^3000 Revenue, Records: 1/)).toBeVisible();
+  // The table's toolbar keeps its pickers; the chart adds its own, with reasons for unavailable types.
+  await expect(page.locator(".a-entity-aggregate__reasons")).toContainText("Line chart: A line needs a sequence");
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-chart.png" });
+  await point(page, /^2000 Payables,/).click();
+  await expect(page).toHaveURL(/view=table/);
+  const last = (await requests(page)).at(-1)!;
+  expect(parsedFilters(last)).toEqual([{ field: "account", operator: "eq", value: expect.stringMatching(UUID) }]);
+});
+
+test("the chart keyboard: one tab stop, arrows move, Enter drills down", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.view=chart");
+  await point(page, /^1000 Cash,/).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(point(page, /^2000 Payables,/)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/view=table/);
+});
+
+test("a phone draws the chart at full width with no horizontal scroll", async ({ page }) => {
+  await mount(page, 390, "?aggregate.view=chart");
+  await expect(page.getByRole("group", { name: "Records by GL account" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-chart-phone.png" });
+});
+
+test("right to left: a categorical column chart starts on the right; a month line runs earliest on the left (decision 15)", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.view=chart", "rtl");
+  const first = await point(page, /^1000 Cash,/).boundingBox();
+  const last = await point(page, /^3000 Revenue,/).boundingBox();
+  expect(first!.x).toBeGreaterThan(last!.x);
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-chart-rtl.png" });
+  await mount(page, 1440, "?aggregate.view=chart&aggregate.rows=posted:month&aggregate.chartType=line", "rtl");
+  const january = await point(page, /^January 2026,/).boundingBox();
+  const march = await point(page, /^March 2026,/).boundingBox();
+  expect(january!.x).toBeLessThan(march!.x);
+});
+

@@ -267,4 +267,4 @@ export { SegmentedControl, type SegmentedOption } from "./segmented-control";
 export { SettingsMenu, SettingsSwitch, SettingsChoice } from "./settings-menu";
 export { PanelRowMenu } from "./panel-row-menu";
 export { ChoiceSelect, type ChoiceOption, type ChoiceSelectProps } from "./choice-select";
-export { Chart, type ChartProps } from "./chart/chart";
+export { Chart, useChartSeriesLimit, type ChartProps } from "./chart/chart";

@@ -80,8 +80,23 @@ export interface ListAggregateV1 {
   readonly fieldsRestricted?: true;
 }
 
+/** The chart types a Summary chart may save (the shared chart's types; Chart
+ * blueprint 13.3). */
+export type ListAggregateChartType = "column" | "bar" | "line" | "groupedColumn" | "stackedColumn" | "pie" | "donut";
+export const LIST_AGGREGATE_CHART_TYPES: readonly ListAggregateChartType[] = Object.freeze(["column", "bar", "line", "groupedColumn", "stackedColumn", "pie", "donut"]);
+export type ListAggregateChartLabel = "value" | "percentage" | "none";
+export const LIST_AGGREGATE_CHART_LABELS: readonly ListAggregateChartLabel[] = Object.freeze(["value", "percentage", "none"]);
+
+/** The Summary's chart (section 13.6): its type, the one measure charted (one
+ * of the shown measures) and its data labels. */
+export interface ListAggregateChartStateV1 {
+  readonly type: ListAggregateChartType;
+  readonly measure: string;
+  readonly label: ListAggregateChartLabel;
+}
+
 /** Saved Summary state (section 5.6): row dimensions, level 1 first, the
- * measures shown, and the column dimension (A2). */
+ * measures shown, the column dimension (A2), and the chart (A5.3). */
 export interface ListAggregateStateV1 {
   readonly rows: readonly string[];
   readonly measures: readonly string[];
@@ -89,6 +104,10 @@ export interface ListAggregateStateV1 {
    * or "" for none. Present only when the Summary declares a column
    * dimension, so a chosen "none" survives a round trip. */
   readonly column?: string;
+  /** Present when the chart is shown instead of the table. */
+  readonly view?: "chart";
+  /** The chosen chart; absent until the viewer chooses one. */
+  readonly chart?: ListAggregateChartStateV1;
 }
 
 /** A column entry this Summary declares: a dimension marked `column`,
@@ -188,10 +207,22 @@ export function parseListAggregateState(
         ? value.column
         : defaultColumn
       : defaultColumn;
+  const shownMeasures = measures.length ? measures : fallbackMeasures;
+  // The chart (A5.3): its measure is one of the shown measures.
+  const chartRaw = value.chart && typeof value.chart === "object" && !Array.isArray(value.chart) ? (value.chart as Record<string, unknown>) : undefined;
+  const chart = chartRaw
+    ? Object.freeze({
+        type: LIST_AGGREGATE_CHART_TYPES.includes(chartRaw.type as ListAggregateChartType) ? (chartRaw.type as ListAggregateChartType) : "column",
+        measure: typeof chartRaw.measure === "string" && shownMeasures.includes(chartRaw.measure) ? chartRaw.measure : shownMeasures[0]!,
+        label: LIST_AGGREGATE_CHART_LABELS.includes(chartRaw.label as ListAggregateChartLabel) ? (chartRaw.label as ListAggregateChartLabel) : "value",
+      })
+    : undefined;
   return Object.freeze({
     rows: Object.freeze(shownRows),
-    measures: Object.freeze(measures.length ? measures : fallbackMeasures),
+    measures: Object.freeze(shownMeasures),
     ...(columnOffered ? { column } : {}),
+    ...(value.view === "chart" ? { view: "chart" as const } : {}),
+    ...(chart && shownMeasures.length ? { chart } : {}),
   });
 }
 

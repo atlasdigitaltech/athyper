@@ -8,6 +8,7 @@ import {
   type EntityListResultV1,
   type EntityListScopeCoordinateV1,
   type JsonValue,
+  type ListAggregateChartLabel,
   type ListAggregateMeasureV1,
   type ListAggregateStateV1,
   type ListAggregateV1,
@@ -17,7 +18,8 @@ import {
   type ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { Button, Checkbox, ChoiceSelect, Label } from "@athyper/platform-ui";
+import { CHART_TYPES, chartTypes, type ChartPointState, type ChartType } from "@athyper/contract-platform-chart";
+import { Button, Chart, Checkbox, ChoiceSelect, Label, SegmentedControl, useChartSeriesLimit } from "@athyper/platform-ui";
 import { formatFieldValue } from "../field-format";
 import type { ListWidthTier } from "../presentation-tier";
 import { handleTreeKeyDown } from "../tree/tree-keyboard";
@@ -39,6 +41,7 @@ import {
   type SummaryLevel,
   type SummaryRow,
 } from "./aggregate-model";
+import { summaryChartData } from "./aggregate-chart";
 
 // The Aggregate Layout, shown as Summary (Entity list Aggregate blueprint
 // sections 7, 11 and 12): grouped rows at up to three levels, the declared
@@ -159,16 +162,17 @@ export function measureLabel(measure: ListAggregateMeasureV1, intl: EntityIntl):
   return intl.message(`list.group.aggregate.${measure.aggregate}`, { field: measure.label ?? "" });
 }
 
-function cellText(totals: ListGroupTotalsV1, measure: ListAggregateMeasureV1, intl: EntityIntl): string {
-  const cell = summaryCell(totals, measure);
-  switch (cell.kind) {
-    case "value": {
-      if (measure.aggregate === "count" || measure.aggregate === "countDistinct") return intl.number(Number(cell.value));
-      const field = { key: measure.field ?? measure.key, label: measure.label ?? "", valueKind: measure.valueKind ?? "decimal" } as ListFieldDescriptorV1;
-      return [formatFieldValue(cell.value, field, intl), cell.currency].filter(Boolean).join(" ");
-    }
-    case "empty":
-      return "—";
+/** A measure's value as the grid shows it; the chart uses the same text. */
+function valueText(value: number | string, measure: ListAggregateMeasureV1, intl: EntityIntl, currency?: string): string {
+  if (measure.aggregate === "count" || measure.aggregate === "countDistinct") return intl.number(Number(value));
+  const field = { key: measure.field ?? measure.key, label: measure.label ?? "", valueKind: measure.valueKind ?? "decimal" } as ListFieldDescriptorV1;
+  return [formatFieldValue(value, field, intl), currency].filter(Boolean).join(" ");
+}
+
+/** Why a cell has no value, in the Summary's own words; the chart's withheld
+ * points use the same messages. */
+function stateText(kind: Exclude<ChartPointState, "empty">, measure: ListAggregateMeasureV1, intl: EntityIntl): string {
+  switch (kind) {
     case "notSummable":
       return intl.message("list.aggregate.notSummable", { fields: (measure.timeFields ?? []).map((item) => item.label).join(", ") });
     case "suppressed":
@@ -179,6 +183,17 @@ function cellText(totals: ListGroupTotalsV1, measure: ListAggregateMeasureV1, in
       return intl.message("list.group.unknownCurrency");
   }
 }
+
+function cellText(totals: ListGroupTotalsV1, measure: ListAggregateMeasureV1, intl: EntityIntl): string {
+  const cell = summaryCell(totals, measure);
+  if (cell.kind === "value") return valueText(cell.value, measure, intl, cell.currency);
+  return cell.kind === "empty" ? "—" : stateText(cell.kind, measure, intl);
+}
+
+/** The chart types Summary prefers, in order, when the viewer has not chosen one. */
+const CHART_PREFERENCE: readonly ChartType[] = ["column", "groupedColumn", "line", "bar", "stackedColumn", "pie", "donut"];
+/** Below this many categories a column chart fits a narrow screen; above it, bars. */
+const NARROW_COLUMNS = 6;
 
 export function EntityAggregate(props: EntityAggregateProps) {
   const intl = useEntityI18n();
@@ -217,9 +232,50 @@ export function EntityAggregate(props: EntityAggregateProps) {
     setChanged(false);
     setAttempt((value) => value + 1);
   };
+  // The chart (A5.3, section 13.6): the opening response, charted; no request.
+  const view = summary.view === "chart" ? "chart" : "table";
+  const setView = (next: "table" | "chart") => {
+    setChanged(false);
+    const { view: _view, ...rest } = summary;
+    props.onAggregateChange({ aggregate: next === "chart" ? { ...rest, view: "chart" } : rest });
+  };
+  const seriesLimit = useChartSeriesLimit();
+  const chartMeasure = measures.find((measure) => measure.key === summary.chart?.measure) ?? measures[0];
+  const chart = useMemo(() => {
+    if (view !== "chart" || top.status !== "ready" || !top.rows.length || !levels[0] || !chartMeasure) return undefined;
+    return summaryChartData({
+      level: levels[0],
+      levelLabel: levelName(levels[0], intl),
+      rows: top.rows,
+      rowLabel: (row) => rowLabel(row, levels[0]!, intl),
+      ...(top.parent ? { parent: top.parent } : {}),
+      truncated: top.truncated,
+      measure: chartMeasure,
+      measureLabel: measureLabel(chartMeasure, intl),
+      ...(column && top.columns ? { columns: top.columns, columnLevel: column, columnLabel: (item: SummaryColumnValue) => rowLabel(item, column, intl) } : {}),
+      ...(top.columnsTruncated ? { columnsTruncated: true } : {}),
+    });
+  }, [view, top, levels, chartMeasure, column, intl]);
+  const availability = chart ? chartTypes(chart.data, { seriesLimit }) : [];
+  const offered = (type: ChartType) => availability.find((item) => item.type === type)?.available === true;
+  const chartType: ChartType = summary.chart?.type ?? CHART_PREFERENCE.find(offered) ?? "column";
+  const partOfWhole = Boolean(chart?.data.series.every((series) => series.partOfWhole));
+  const chartLabel: ListAggregateChartLabel = summary.chart?.label === "percentage" && !partOfWhole ? "value" : summary.chart?.label ?? "value";
+  const changeChart = (next: Partial<NonNullable<ListAggregateStateV1["chart"]>>) =>
+    change({ chart: { type: chartType, measure: chartMeasure?.key ?? "count", label: chartLabel, ...next } });
 
   const pickers = (
     <div className="a-entity-aggregate__toolbar">
+      <SegmentedControl
+        className="a-entity-aggregate__view"
+        label={intl.message("list.aggregate.view")}
+        value={view}
+        options={[
+          { value: "table", label: intl.message("list.aggregate.viewTable") },
+          { value: "chart", label: intl.message("list.aggregate.viewChart") },
+        ]}
+        onValueChange={setView}
+      />
       <fieldset className="a-entity-aggregate__rows">
         <legend>{intl.message("list.aggregate.rows")}</legend>
         {[0, 1, 2].slice(0, Math.min(3, summary.rows.length + 1)).map((index) => {
@@ -295,6 +351,48 @@ export function EntityAggregate(props: EntityAggregateProps) {
           <span className="a-entity-aggregate__hint">{intl.message("list.aggregate.measureLimit", { count: LIST_AGGREGATE_REQUEST_MEASURES })}</span>
         ) : null}
       </fieldset>
+      {view === "chart" && chart ? (
+        <fieldset className="a-entity-aggregate__rows">
+          <legend>{intl.message("list.aggregate.viewChart")}</legend>
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.chartType")}
+              value={chartType}
+              options={CHART_TYPES.map((type) => ({ value: type, label: intl.message(`chart.type.${type}`), disabled: !offered(type) }))}
+              onChange={(type) => changeChart({ type })}
+            />
+          </span>
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.chartMeasure")}
+              value={chartMeasure?.key ?? ""}
+              options={measures.map((measure) => ({ value: measure.key, label: measureLabel(measure, intl) }))}
+              onChange={(measure) => changeChart({ measure })}
+            />
+          </span>
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.chartLabel")}
+              value={chartLabel}
+              options={[
+                { value: "value" as const, label: intl.message("list.aggregate.chartLabelValue") },
+                { value: "percentage" as const, label: intl.message("list.aggregate.chartLabelPercentage"), disabled: !partOfWhole },
+                { value: "none" as const, label: intl.message("list.aggregate.chartLabelNone") },
+              ]}
+              onChange={(label) => changeChart({ label })}
+            />
+          </span>
+          {availability.some((item) => !item.available) ? (
+            <ul className="a-entity-aggregate__reasons">
+              {availability.flatMap((item) =>
+                item.available
+                  ? []
+                  : [<li key={item.type}>{intl.message("list.aggregate.chartTypeUnavailable", { type: intl.message(`chart.type.${item.type}`), reason: intl.message(`chart.unavailable.${item.reason}`, { max: item.seriesLimit }) })}</li>],
+              )}
+            </ul>
+          ) : null}
+        </fieldset>
+      ) : null}
     </div>
   );
 
@@ -327,7 +425,30 @@ export function EntityAggregate(props: EntityAggregateProps) {
     );
   else if (!top.rows.length)
     body = <div className="a-entity-aggregate__state" role="status"><p>{intl.message("list.aggregate.noRecords")}</p></div>;
-  else {
+  else if (view === "chart" && chart && chartMeasure) {
+    const shown: ChartType = narrow && chartType === "column" && chart.data.categories.length > NARROW_COLUMNS ? "bar" : chartType;
+    body = (
+      <div className="a-entity-aggregate__chart">
+        <Chart
+          data={chart.data}
+          type={shown}
+          dataLabel={chartLabel}
+          caption={intl.message("list.aggregate.chartCaption", { measure: measureLabel(chartMeasure, intl), dimension: levelName(levels[0]!, intl) })}
+          format={(value) => valueText(value, chartMeasure, intl)}
+          stateLabel={(kind) => (kind === "empty" ? intl.message("list.board.noValue") : stateText(kind, chartMeasure, intl))}
+          onSelect={(category, series) => {
+            const filters = chart.filtersOf(category, series);
+            if (filters) props.onDrillDown(filters);
+          }}
+          toneOf={chart.toneOf}
+          paletteIndexOf={chart.paletteIndexOf}
+          restLabel={intl.message("list.aggregate.others")}
+          dataTable={false}
+        />
+        {levels.length > 1 ? <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.chartFirstLevel")}</p> : null}
+      </div>
+    );
+  } else {
     const context: RowContext = {
       levels,
       measures,

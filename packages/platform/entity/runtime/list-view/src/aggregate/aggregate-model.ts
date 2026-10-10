@@ -182,16 +182,35 @@ export interface SummaryRow {
   readonly filters: readonly ListFilterV1[];
 }
 
-/** A level's rows, in the server's order with No value last. Every bucket is a
- * row with its server label; unlike grouped Table, no value is folded into
- * Unmapped values, because a reference dimension has no published choice list. */
+/** A choice or boolean field's published order (true then false for a
+ * boolean), or undefined for a reference or date, which keep the server's
+ * order (decision 14). */
+export function publishedOrder(field: ListFieldDescriptorV1): readonly JsonValue[] | undefined {
+  if (field.valueKind === "boolean") return [true, false];
+  return field.filterOptions?.length ? field.filterOptions.map((option) => option.value) : undefined;
+}
+
+/** A level's rows, No value last. A choice or boolean dimension follows its
+ * published choice order, as grouped Table does, so the grid, its chart and
+ * grouped Table agree (decision 14); values outside it follow in the server's
+ * order. A reference or date bucket keeps the server's order. Every bucket is
+ * a row with its server label; unlike grouped Table, no value is folded into
+ * Unmapped values. */
 export function summaryRows(
   groups: readonly (ListGroupTotalsV1 & { readonly value: JsonValue; readonly label: string })[],
   level: SummaryLevel,
   timeZone?: string,
 ): readonly SummaryRow[] {
   const none = (value: JsonValue) => value === null || value === "";
-  return [...groups.filter((group) => !none(group.value)), ...groups.filter((group) => none(group.value))].flatMap((group) => {
+  const order = level.unit ? undefined : publishedOrder(level.field);
+  const rank = (value: JsonValue) => {
+    const index = order?.findIndex((item) => JSON.stringify(item) === JSON.stringify(value)) ?? -1;
+    return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+  };
+  // A stable sort: values outside the published order keep the server's order.
+  const valued = groups.filter((group) => !none(group.value)).map((group, index) => ({ group, index }));
+  if (order) valued.sort((a, b) => rank(a.group.value) - rank(b.group.value) || a.index - b.index);
+  return [...valued.map((item) => item.group), ...groups.filter((group) => none(group.value))].flatMap((group) => {
     const kind = none(group.value) ? ("none" as const) : ("value" as const);
     const filters = headingFilters(level.field, kind === "none" ? { key: "", kind: "none" } : { key: "", kind: "choice", value: group.value }, level.unit, timeZone);
     if (!filters) return [];

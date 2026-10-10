@@ -1156,6 +1156,9 @@ importers:
 
   packages/platform/entity/runtime/list-view:
     dependencies:
+      '@athyper/contract-platform-chart':
+        specifier: workspace:*
+        version: link:../../../../contracts/platform/chart
       '@athyper/contract-platform-collection':
         specifier: workspace:*
         version: link:../../../../contracts/platform/collection
