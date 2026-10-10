@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 12 (10 October 2026).
+**Status:** approved, revision 13 (10 October 2026).
+- **Decision 34 amended (10 October 2026):** "approved go aheand and update blueprint for review". The heading depends on whether every ranked group is shown, and the No value row is labelled "Not ranked" (section 7.5, "Headings and counts"). This came from audit round 16; the contract is unchanged. A6 is still not built.
 - **A6 approved as revised (10 October 2026), not built.** The owner, after audit round 15: "approved A6 as revised, including the amended decision 12 separating "lowest on n items" back to Matrix, with the three implementation details above written into the design". The design is section 7.5; decisions 29–34 are in section 14, and decision 12 is amended there. "Lowest on n items" returns to the [Matrix blueprint](../entity-list-matrix/blueprint.md).
 - **Decision 35 approved and built (10 October 2026):** "The decision on 35 and the A5.3 fix also approved". A measure that declares `minimumGroupSize` never gets "Others" in the chart. Its own commit, independent of A6 (13.9, build note 3).
 - **A5.3 built (10 October 2026), on synthetic fixtures:** "go ahead with Next: A5.3". Summary has its Table | Chart toggle, its chart adapter and decision 14's published choice order. Section 13.9 records the build. No real Entity uses Summary yet, because A0 and A3 wait for the metadata cleanup.
@@ -447,7 +448,7 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
    - **Pivot statement:** the row cap is not in the grouping sets. It is the `"__rows"` CTE (today `GROUP BY 1 ORDER BY 1 ASC LIMIT 51` over `"__src"`, with nulls excluded), which the `HAVING` then matches.
      - The ranking therefore moves into `"__rows"`: it groups `"__src"` by the row key, which gives each row's total across all columns. It applies the floor there, orders by the measure, and takes `count(*) OVER ()` for `groupCount`.
      - `GROUPING(__group_key) = 0` alone would not isolate the row totals, because cell rows `(group, pivot)` match it too. The CTE has only row-level groups by construction.
-   - **Wording:** "Top 10 of 37 {dimension} by {measure}" appears only when `groupCount` is present; otherwise it reads "Top 10 {dimension} by {measure}". This is the same exactness rule as every count in the list's chrome.
+   - **Wording:** the heading uses `groupCount` only when the server gives it, the same exactness rule as every count in the list's chrome. The cases are in "Headings and counts" below.
 
 **Invariants**, each with a test:
 1. No value is never dropped by a cap, under any ordering.
@@ -463,7 +464,23 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
 - **One "Rows" control** offers "By {dimension}" (the default), and "Highest {measure}" and "Lowest {measure}" for each orderable measure. A refused measure is disabled, with its reason.
 - **"Show 5 / 10 / 20 / 50"** appears only once an order is chosen; a limit without an order is just today's cap.
 - **Messages:** when groups are held back below the floor, a note says "n groups are too small to rank". A tie at the cut-off says "Another group has the same value as the last one shown".
-- **Chart:** its categories follow the ranking, and its caption reads "Top 10 {dimension} by {measure}".
+- **Chart:** its categories follow the ranking, and its caption uses the same heading as the grid.
+
+**Headings and counts** (decision 34, amended 10 October 2026). `groupCount` is the number of **ranked** groups, not the number of rows on screen. A Top-N grid shows:
+- the top N ranked groups, or every ranked group when there are fewer;
+- the No value row, drawn last and never ranked;
+- no row for a group held back below the floor. Such groups appear only in the note "n groups are too small to rank".
+
+The heading therefore says which case it is:
+
+| Case | Heading (English; three locales) |
+| --- | --- |
+| More ranked groups than N (`groupCount` > N) | "Top 10 of 36 {dimension} by {measure}" ("Bottom 5 of 36 …" in ascending order) |
+| Every ranked group shown (`groupCount` ≤ N) | "All 36 {dimension} by {measure}, highest first" ("lowest first" in ascending order). No "Top N": a "Top 50 of 36" would claim a cut that did not happen |
+| `groupCount` not given | "Top 10 {dimension} by {measure}", with no total |
+
+- **The No value row** carries "Not ranked" as visible and accessible text. Someone counting rows then sees why it is outside the number, and "Top 10 of 36" beside 11 rows reads as designed, not as an off-by-one.
+- **Held-back groups** keep their own note and are never rows, so the visible rows are always at most N, plus No value.
 
 **Acceptance**
 - **Real-PostgreSQL tests:**
@@ -476,6 +493,9 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
   - a column dimension ranked by row total, with `groupCount` taken from `"__rows"`;
   - the authorized-aggregate path with its capacity refusal.
 - **Cost:** the statement measured against A2's numbers (5.9), and on A3's volume once A3 runs.
+- **Headings and counts:** one fact with No value rows and one group held back below the floor, run twice. Each run asserts `groupCount` (the ranked groups only), the visible row count and the exact heading:
+  - N below the ranked count: "Top 10 of …" over 11 rows (10 ranked, then No value);
+  - N above the ranked count: "All 36 … highest first", with the No value row reading "Not ranked" and the held-back note present.
 - **Other tests:** contract tests for the parameters, the state and the URL round trip; jsdom tests; and browser tests for a top 10 in the grid and the chart, a bottom 5, the tie notice, the held-back notice and a phone.
 
 ## 8. Totals, additivity and currency
@@ -703,7 +723,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 31. **Orderable measures, and refusals for the whole level** (mixed currency, unknown currency, not summable), decided from the parent total in the same statement. The refusal is deliberately conservative.
 32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
 33. **Level 1 only.** Nested Top N needs a later decision.
-34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only.
+34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only. **Amended (10 October 2026):** the heading reads "Top N of M" only when M > N, "All M … highest first" (or "lowest first") when every ranked group is shown, and "Top N" with no total when M is not given. The No value row is labelled "Not ranked" (section 7.5, "Headings and counts").
 35. **No "Others" for a measure that declares `minimumGroupSize`** (approved and built, 10 October 2026; 13.9, build note 3). It closes a live exposure in A5.3 and also governs A6.
 14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
 
@@ -831,4 +851,8 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 15 | The mixed-currency refusal should cover the whole level | Adopted, plus unknown currency, recorded as deliberately conservative |
 | Audit round 15, second note | `groupCount` would include the grand-total row; the pivot's ranked rows are ambiguous | Adopted, corrected: in the pivot the row cap is the `"__rows"` CTE, not a grouping set, so the ranking and count move there (`GROUPING(__group_key) = 0` also matches cell rows) |
 | Author, round 15 | "Others" does the differencing for the viewer when exactly one group is held back | Decision 35, built as its own commit |
+| Audit round 16 | `groupCount` (ranked groups) differs from the visible rows when No value exists | Adopted, sharpened: under 7.5 a Top 10 shows at most 11 rows, so the mismatch appears only when N is at least the ranked count, where "Top 50 of 36" was itself wrong. Decision 34 amended: the "All M … highest first" heading, the "Not ranked" label, and a two-case test |
+| Audit round 16 | Retraction of `GROUPING(__group_key) = 0` for the pivot | Recorded; the refutation stays in constraint 3 |
+| Audit round 16 | Prototypes stay uncommitted unless they are marked illustrative | Agreed; they remain uncommitted, unchanged |
+| Owner (10 October 2026) | "approved go aheand and update blueprint for review" | Decision 34 amended (7.5) |
 
