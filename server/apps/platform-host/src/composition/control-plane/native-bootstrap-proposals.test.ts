@@ -39,6 +39,12 @@ async function setup(
     title: "Reference",
     branchCode: "native",
     baseReleaseId: null,
+    registration: {
+      moduleCode: "rel",
+      entityCode: graph.entity.entityCode,
+      entityClass: "reference",
+      ownershipModel: "system",
+    },
     graph,
   };
   const entry: Record<string, unknown> = {
@@ -79,6 +85,7 @@ it("reads the exact author/coordinate-bound native proposal without granting res
     "baseReleaseId",
     "branchCode",
     "graph",
+    "registration",
     "title",
   ]);
   result.title = "mutated";
@@ -182,6 +189,9 @@ it("resolves resources only for the admitted author and rechecks files during qu
     resolver.resolve(tx, { ...context, principalId: "other" }, f.input),
   ).rejects.toThrow();
   expect(resolveResources).not.toHaveBeenCalled();
+  await expect(
+    resolver.resolveRootRegistration(context, f.input),
+  ).resolves.toEqual(f.document.registration);
   const { policy } = await resolver.resolve(tx, context, f.input);
   await policy.qualify(tx, f.input);
   expect(qualify).toHaveBeenCalledOnce();

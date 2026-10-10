@@ -20,6 +20,8 @@ export const nativeIdentityAdoptionMigrationName =
   "20261008_entity_native_identity_adoption.sql";
 export const productCreationEntityReadMigrationName =
   "20261008_entity_product_creation_entity_read.sql";
+export const nativeRootRegistrationMigrationName =
+  "20261010_entity_native_root_registration.sql";
 export const liveReadResourceProjectionMigrationName =
   "20261008_entity_live_read_resource_projection.sql";
 export const liveReadResourceReviewMigrationName =
@@ -110,6 +112,7 @@ export function preparationSql(
       nativeFieldContractTriggerMigrationName,
       nativeIdentityAdoptionMigrationName,
       productCreationEntityReadMigrationName,
+      nativeRootRegistrationMigrationName,
       nativeBootstrapPrivilegesMigrationName,
       operationReservationMigrationName,
       productDraftCreationMigrationName,
@@ -193,6 +196,7 @@ export function runPreparation(args) {
     "--native-field-contract-trigger",
     "--native-identity-adoption",
     "--product-creation-entity-read",
+    "--native-root-registration",
     "--native-bootstrap-privileges",
     "--operation-reservation",
     "--product-draft-creation",
@@ -288,6 +292,8 @@ export function runPreparation(args) {
                   ? nativeIdentityAdoptionMigrationName
                   : !allowed.has("--product-creation-entity-read")
                     ? productCreationEntityReadMigrationName
+                    : !allowed.has("--native-root-registration")
+                    ? nativeRootRegistrationMigrationName
                     : !allowed.has("--native-bootstrap-privileges")
                       ? nativeBootstrapPrivilegesMigrationName
                       : !allowed.has("--operation-reservation")

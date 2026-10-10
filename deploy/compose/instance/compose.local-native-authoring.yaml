@@ -26,8 +26,8 @@ services:
       - ${ATHYPER_PRODUCT_COMMAND_ROOT}/label-policy.json:/run/product-command/label-policy.json:ro
       - ${ATHYPER_REFERENCE_RESOURCE_ROOT:?set approved reference resource pins}:/run/reference-resources:ro
       - ${ATHYPER_NATIVE_BOOTSTRAP_ROOT:?set native bootstrap configuration}:/run/native-bootstrap:ro
-      - ${ATHYPER_CONTROL_TARGET_ROOT:?set target database credentials}/neon-database-url:/run/control-targets/neon-database-url:ro
-      - ${ATHYPER_CONTROL_TARGET_ROOT}/mesh-database-url:/run/control-targets/mesh-database-url:ro
+      - ${ATHYPER_CONTROL_TARGET_ROOT:?set target database credentials}/native-neon-database-url:/run/control-targets/neon-database-url:ro
+      - ${ATHYPER_CONTROL_TARGET_ROOT}/native-mesh-database-url:/run/control-targets/mesh-database-url:ro
       - ${ATHYPER_RESOURCE_SOURCE_ROOT:?set generated resource candidates}:/run/resource-review:ro
       - ${ATHYPER_COMPONENT_DEPLOYMENT_ROOT:?set component deployment bundle}:/run/component-deployment:ro
       - ${ATHYPER_LOCAL_PUBLICATION_WORKLOAD_ROOT:?set local publication workload}/workload.json:/run/local-publication/workload.json:ro

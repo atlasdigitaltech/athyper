@@ -3,12 +3,22 @@ import { sql, type Kysely } from "kysely";
 import { sha256 } from "./deterministic.js";
 
 type Database = Kysely<Record<string, never>>;
+export interface ProductCommandRootRegistration {
+  readonly entityId: string;
+  readonly moduleCode: string;
+  readonly entityCode: string;
+  readonly entityClass: string;
+  readonly ownershipModel: "system";
+}
 export interface ProductCommandScope {
   readonly authorityTenantId: string;
   readonly actorId: string;
   readonly changeSetId: string;
   /** Explicit creation intent, pinned by governance and the database ticket. */
   readonly creationEntityId?: string;
+  /** A fresh root is derived by trusted composition from an immutable proposal.
+   * It is deliberately distinct from change-set creation admission. */
+  readonly rootRegistration?: ProductCommandRootRegistration;
 }
 /** Trusted host port. It must re-resolve the installed governance binding and
  * current authenticated human authority, including revocation, on every call.
@@ -46,7 +56,21 @@ export function createProductCommandAuthority<Context>(options: {
       await options.governance.authorize(context, captured, requestHash);
       const token = randomBytes(32).toString("hex");
       const digest = createHash("sha256").update(token).digest();
-      if (captured.creationEntityId !== undefined) {
+      if (
+        captured.creationEntityId !== undefined &&
+        captured.rootRegistration !== undefined
+      )
+        throw Error("PRODUCT_COMMAND_SCOPE_AMBIGUOUS");
+      if (captured.rootRegistration !== undefined) {
+        const root = captured.rootRegistration;
+        await sql`INSERT INTO entity_command_private.root_registration_admission
+          (token_hash,login_role,authority_tenant_id,actor_id,change_set_id,request_hash,expires_at,entity_id,module_code,entity_code,entity_class,ownership_model)
+          VALUES(${digest},${options.applicationLogin},${captured.authorityTenantId}::uuid,
+          ${captured.actorId}::uuid,${captured.changeSetId}::uuid,${requestHash},clock_timestamp()+interval '60 seconds',
+          ${root.entityId}::uuid,${root.moduleCode},${root.entityCode},${root.entityClass},${root.ownershipModel})`.execute(
+          options.issuer,
+        );
+      } else if (captured.creationEntityId !== undefined) {
         await sql`INSERT INTO entity_command_private.admission
           (token_hash,login_role,authority_tenant_id,actor_id,change_set_id,request_hash,expires_at,creation_entity_id)
           VALUES(${digest},${options.applicationLogin},${captured.authorityTenantId}::uuid,
@@ -57,7 +81,7 @@ export function createProductCommandAuthority<Context>(options: {
         await sql`INSERT INTO entity_command_private.admission
         (token_hash,login_role,authority_tenant_id,actor_id,change_set_id,request_hash,expires_at)
         VALUES(${digest},${options.applicationLogin},${captured.authorityTenantId}::uuid,
-          ${captured.actorId}::uuid,${captured.changeSetId}::uuid,${requestHash},clock_timestamp()+interval '60 seconds')`.execute(
+        ${captured.actorId}::uuid,${captured.changeSetId}::uuid,${requestHash},clock_timestamp()+interval '60 seconds')`.execute(
           options.issuer,
         );
       return { token, requestHash, scope: captured };
@@ -85,9 +109,14 @@ export async function enterProductCommand(
     set_config('app.current_principal_id',${admission.scope.actorId},true)`.execute(
     tx,
   );
-  await sql`SELECT entity_command_private.enter(${admission.token},${admission.requestHash})`.execute(
-    tx,
-  );
+  if (admission.scope.rootRegistration !== undefined)
+    await sql`SELECT entity_command_private.enter_root_registration(${admission.token},${admission.requestHash})`.execute(
+      tx,
+    );
+  else
+    await sql`SELECT entity_command_private.enter(${admission.token},${admission.requestHash})`.execute(
+      tx,
+    );
 }
 
 /** Cleanup failure is distinct from transaction failure. An unconfirmed outcome

@@ -291,3 +291,55 @@ it("native bootstrap rejects missing installation and caller authority injection
     ).rejects.toMatchObject({ code: "PRODUCT_REFERENCE_INPUT_INVALID" });
   expect(transport).not.toHaveBeenCalled();
 });
+it("registers a fresh system root only from the installed immutable proposal declaration", async () => {
+  const resolveRootRegistration = vi.fn(async () => ({
+    moduleCode: "rel",
+    entityCode: "generic_reference",
+    entityClass: "reference" as const,
+    ownershipModel: "system" as const,
+  }));
+  const service = createProductReferenceEnrollment({
+    database,
+    authority: {},
+    resolvePolicies: vi.fn(),
+    nativeBootstrap: { resolve: vi.fn(), resolveRootRegistration },
+  } as unknown as ProductReferenceEnrollmentOptions);
+  const input = {
+    changeSetId: "draft",
+    entityId: "entity",
+    proposalHash: "a".repeat(64),
+    idempotencyKey: "bootstrap-command-001",
+  };
+  query.mockResolvedValue({
+    rows: [
+      {
+        id: "entity",
+        entity_code: "generic_reference",
+        entity_class: "reference",
+        ownership_model: "system",
+        module_code: "rel",
+      },
+    ],
+  });
+  await expect(service.registerNativeRoot(context, input)).resolves.toEqual({
+    entityId: "entity",
+    replay: true,
+  });
+  expect(resolveRootRegistration).toHaveBeenCalledWith(context, {
+    ...input,
+    actorId: "actor",
+    tenantId: null,
+  });
+  expect(transport.mock.calls.at(-1)?.[0].scope).toEqual({
+    authorityTenantId: "platform",
+    actorId: "actor",
+    changeSetId: "draft",
+    rootRegistration: {
+      entityId: "entity",
+      moduleCode: "rel",
+      entityCode: "generic_reference",
+      entityClass: "reference",
+      ownershipModel: "system",
+    },
+  });
+});

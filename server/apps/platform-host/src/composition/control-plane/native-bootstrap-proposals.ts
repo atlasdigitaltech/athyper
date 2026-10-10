@@ -9,6 +9,7 @@ import {
   canonicalJson,
   sha256,
   type NativeBootstrapInput,
+  type NativeRootRegistration,
   type NativeBootstrapPolicy,
   type ProductReferenceEnrollmentOptions,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
@@ -21,7 +22,7 @@ type Prepared = Awaited<ReturnType<NativeBootstrapPolicy["prepare"]>>;
 export type NativeBootstrapProposal = Pick<
   Prepared,
   "graph" | "title" | "branchCode" | "baseReleaseId"
->;
+> & { readonly registration?: NativeRootRegistration };
 const hash = /^[a-f0-9]{64}$/;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const fail = (): never => {
@@ -137,13 +138,22 @@ export function createNativeBootstrapProposalReader(options: {
     );
     if (matches.length !== 1) fail();
     const entry = matches[0]!;
-    const document = object(await read(entry.file as string), [
+    const rawDocument = await read(entry.file as string);
+    const documentKeys = [
       "schema",
       "title",
       "branchCode",
       "baseReleaseId",
       "graph",
-    ]);
+    ];
+    if (
+      rawDocument &&
+      typeof rawDocument === "object" &&
+      !Array.isArray(rawDocument) &&
+      Object.prototype.hasOwnProperty.call(rawDocument, "registration")
+    )
+      documentKeys.push("registration");
+    const document = object(rawDocument, documentKeys);
     if (
       sha256(document) !== entry.documentHash ||
       document.schema !== "entity.native-bootstrap-proposal/1" ||
@@ -168,6 +178,31 @@ export function createNativeBootstrapProposalReader(options: {
       graph.ownedLabels?.changeSetId !== input.changeSetId
     )
       fail();
+    const registration = document.registration;
+    if (registration !== undefined) {
+      const value = object(registration, [
+        "moduleCode",
+        "entityCode",
+        "entityClass",
+        "ownershipModel",
+      ]);
+      if (
+        typeof value.moduleCode !== "string" ||
+        !/^[a-z][a-z0-9_.-]{1,62}$/.test(value.moduleCode) ||
+        value.entityCode !== graph.entity.entityCode ||
+        typeof value.entityClass !== "string" ||
+        ![
+          "business",
+          "configuration",
+          "reference",
+          "process",
+          "projection",
+          "technical",
+        ].includes(value.entityClass) ||
+        value.ownershipModel !== "system"
+      )
+        fail();
+    } else if (document.baseReleaseId === null) fail();
     // Complete typed semantics, resource closure and exact SQL readback remain
     // the canonical bootstrap compiler/repository's responsibility.
     return structuredClone({
@@ -175,6 +210,9 @@ export function createNativeBootstrapProposalReader(options: {
       title: document.title as string,
       branchCode: document.branchCode as string,
       baseReleaseId: document.baseReleaseId as string | null,
+      ...(registration
+        ? { registration: registration as NativeRootRegistration }
+        : {}),
     });
   };
 }
@@ -207,6 +245,13 @@ export function createNativeBootstrapProposalResolver(options: {
   )
     fail();
   return {
+    async resolveRootRegistration(context, input) {
+      if (context.principalId !== input.actorId || input.tenantId !== null)
+        fail();
+      const proposal = await options.readProposal(structuredClone(input));
+      if (!proposal.registration || proposal.baseReleaseId !== null) fail();
+      return structuredClone(proposal.registration) as NativeRootRegistration;
+    },
     async resolve(tx, context, input) {
       if (
         !tx.isTransaction ||

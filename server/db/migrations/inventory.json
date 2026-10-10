@@ -3,6 +3,16 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261010_entity_native_root_registration.sql",
+      "path": "scripts/operations/upgrades/entity-product-command/20261010_entity_native_root_registration.sql",
+      "sha256": "078750c53402aad51f358b5acef01dd98a85e135a77eb2c26577aae7a1b64f0c",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": ["tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"],
+      "reason": "Authenticated generic fresh system-root registration from immutable native proposal attributes, before existing change-set creation admission.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/67_native_root_registration.sql"]
+    },
+    {
       "originalPath": "migrations/20261010_native_clean_foundation_bootstrap_compatibility.sql",
       "path": "migrations/20261010_native_clean_foundation_bootstrap_compatibility.sql",
       "sha256": "e8c2428a22db208dd464cd0a1a5e659bbd69543fe2f0fe9ba23d2ca68301669e",

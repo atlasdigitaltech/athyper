@@ -27,6 +27,7 @@ import {
 import type {
   NativeBootstrapInput,
   NativeBootstrapPolicy,
+  NativeRootRegistration,
 } from "./native-bootstrap-application.js";
 export type ProductNativeBootstrapCommand = Omit<
   NativeBootstrapInput,
@@ -53,6 +54,12 @@ export interface ProductReferenceEnrollmentOptions {
       policy: NativeBootstrapPolicy;
       schema: InstalledNativeSchemaEvidence;
     }>;
+    /** Reads the root declaration from the same pinned proposal. This performs
+     * no database write and accepts no root attributes from the request. */
+    resolveRootRegistration(
+      context: VerifiedRequestContext,
+      command: NativeBootstrapInput,
+    ): Promise<NativeRootRegistration>;
   };
   /** Optional installed composition, never request-supplied. Schema qualification
    * is mandatory here, including replay; authoring admission alone is insufficient. */
@@ -296,7 +303,64 @@ export function createProductReferenceEnrollment(
       },
     });
   }
+  async function registerNativeRoot(
+    context: VerifiedRequestContext,
+    input: ProductNativeBootstrapCommand,
+  ) {
+    if (!options.nativeBootstrap?.resolveRootRegistration)
+      throw new AuthoringPolicyError(
+        "NATIVE_ROOT_REGISTRATION_HOST_NOT_CONFIGURED",
+        "Installed immutable root registration resources are required.",
+      );
+    if (
+      !input ||
+      Object.keys(input).sort().join() !==
+        "changeSetId,entityId,idempotencyKey,proposalHash"
+    )
+      throw new AuthoringPolicyError(
+        "PRODUCT_REFERENCE_INPUT_INVALID",
+        "Only canonical root-registration coordinates are accepted.",
+      );
+    const capturedContext = structuredClone(context);
+    const command: NativeBootstrapInput = {
+      ...structuredClone(input),
+      actorId: capturedContext.principalId,
+      tenantId: null,
+    };
+    const registration = await options.nativeBootstrap.resolveRootRegistration(
+      capturedContext,
+      structuredClone(command),
+    );
+    if (
+      !registration ||
+      registration.entityCode.length === 0 ||
+      registration.ownershipModel !== "system"
+    )
+      throw new AuthoringPolicyError(
+        "NATIVE_ROOT_REGISTRATION_INVALID",
+        "The installed proposal does not declare an eligible fresh system root.",
+      );
+    return withProductCommandAuthority({
+      authority: options.authority,
+      database: options.database,
+      context: capturedContext,
+      scope: {
+        authorityTenantId: capturedContext.tenantId,
+        actorId: capturedContext.principalId,
+        changeSetId: command.changeSetId,
+        rootRegistration: { entityId: command.entityId, ...registration },
+      },
+      command: { kind: "native-root-registration", input: command },
+      async execute(_database, admitted) {
+        // The security-definer admission routine inserts or verifies the exact
+        // root attributes stored in its issuer ticket. The app role receives no
+        // root-table privilege and therefore cannot broaden this phase.
+        return { entityId: admitted.input.entityId, replay: true };
+      },
+    });
+  }
   return {
+    registerNativeRoot,
     bootstrapNative,
     convertNative: (
       context: VerifiedRequestContext,

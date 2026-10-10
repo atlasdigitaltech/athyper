@@ -139,13 +139,20 @@ export function registerProductReferenceEnrollmentRoutes(
         next(error);
       }
     };
-  if (options.nativeBootstrap)
+  if (options.nativeBootstrap) {
+    app.post(
+      "/api/platform-control/meta-entity-authoring/change-sets/:id/register-native-root",
+      options.authenticate,
+      express.json({ limit: 4096 }),
+      handler(service.registerNativeRoot, parseProductNativeBootstrapRequest),
+    );
     app.post(
       "/api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
       options.authenticate,
       express.json({ limit: 4096 }),
       handler(service.bootstrapNative, parseProductNativeBootstrapRequest),
     );
+  }
   if (options.nativeConversion)
     app.post(
       "/api/platform-control/meta-entity-authoring/change-sets/:id/convert-native",

@@ -33,6 +33,12 @@ function fixture() {
         title: "Reference",
         branchCode: "native",
         baseReleaseId: null,
+        registration: {
+          moduleCode: "rel",
+          entityCode: graph.entity.entityCode,
+          entityClass: "reference",
+          ownershipModel: "system",
+        },
         graph,
       },
     })),

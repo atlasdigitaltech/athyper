@@ -60,8 +60,10 @@ export function buildNativeBootstrapProposalBundle(input: {
       const proposal = entry.proposal;
       if (
         !proposal ||
-        Object.keys(proposal).sort().join() !==
-          "baseReleaseId,branchCode,graph,title" ||
+        ![
+          "baseReleaseId,branchCode,graph,title",
+          "baseReleaseId,branchCode,graph,registration,title",
+        ].includes(Object.keys(proposal).sort().join()) ||
         typeof proposal.title !== "string" ||
         !proposal.title.trim() ||
         proposal.title.length > 200 ||
@@ -71,7 +73,21 @@ export function buildNativeBootstrapProposalBundle(input: {
       )
         fail();
       const graph = proposal.graph;
+      const registration = proposal.registration;
       if (
+        (proposal.baseReleaseId === null && !registration) ||
+        (registration &&
+          (!/^[a-z][a-z0-9_.-]{1,62}$/.test(registration.moduleCode) ||
+            registration.entityCode !== graph?.entity?.entityCode ||
+            ![
+              "business",
+              "configuration",
+              "reference",
+              "process",
+              "projection",
+              "technical",
+            ].includes(registration.entityClass) ||
+            registration.ownershipModel !== "system")) ||
         !graph ||
         graph.contractSchema !== "athyper.meta-entity-contract/2.5" ||
         graph.authoringSource?.sourceKind !== "product" ||

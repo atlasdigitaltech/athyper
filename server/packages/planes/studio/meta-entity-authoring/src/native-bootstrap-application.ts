@@ -45,6 +45,20 @@ export interface NativeBootstrapInput extends NormalizedSaveCoordinate {
 /** Installed composition, never a request-supplied graph, initializer or grant.
  * Qualification runs even on replay; prepare resolves the exact author proposal.
  * This command does not publish or attest independent release review. */
+export interface NativeRootRegistration {
+  /** Resolved from the immutable native proposal; never supplied by HTTP. */
+  readonly moduleCode: string;
+  readonly entityCode: string;
+  readonly entityClass:
+    | "business"
+    | "configuration"
+    | "reference"
+    | "process"
+    | "projection"
+    | "technical";
+  /** Fresh product roots are system-owned only. */
+  readonly ownershipModel: "system";
+}
 export interface NativeBootstrapPolicy {
   readonly host: NativeAuthoringPolicy;
   readonly maximumBytes: number;

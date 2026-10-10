@@ -112,6 +112,7 @@ export type {
   NativeBootstrapInput,
   NativeBootstrapPolicy,
   NativeBootstrapResult,
+  NativeRootRegistration,
 } from "./native-bootstrap-application.js";
 
 export * from "./native-reference-relations.js";

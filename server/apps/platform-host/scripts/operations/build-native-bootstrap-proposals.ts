@@ -194,6 +194,12 @@ async function main() {
                 title: entry.title,
                 branchCode: entry.branchCode,
                 baseReleaseId: null,
+                registration: {
+                  moduleCode: product.moduleCode,
+                  entityCode: graph.entity.entityCode,
+                  entityClass: "reference",
+                  ownershipModel: "system",
+                },
               },
             });
           }
