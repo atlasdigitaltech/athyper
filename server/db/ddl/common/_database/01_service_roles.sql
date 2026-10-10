@@ -4,6 +4,25 @@
 
 DO $$
 BEGIN
+    -- Existing native publication routines grant this inert capability role.
+    -- Fresh foundations need the same prerequisite as the retained upgrade.
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_runtime') THEN
+        CREATE ROLE athyper_runtime
+            NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_runtime'
+        AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN
+        RAISE EXCEPTION 'Publication runtime role requires privilege review';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_worker') THEN
+        CREATE ROLE athyper_worker
+            NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_worker'
+        AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN
+        RAISE EXCEPTION 'Publication worker role requires privilege review';
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         CREATE ROLE athyperadmin
             NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;

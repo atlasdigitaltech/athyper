@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 262,
+    "configuration:new": 263,
     "database-commands:deferred": 76,
     "database-commands:migrated": 19,
     "database-commands:new": 102,
@@ -26,7 +26,7 @@
     "jobs:new": 67,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 418,
+    "operational-scripts:new": 421,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -7596,6 +7596,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "configuration:restoration_test_container",
+      "category": "configuration",
+      "key": "restoration_test_container",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/runtime-restoration-retirement.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:rls_app_role",
@@ -15353,6 +15365,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:dev-imported-baseline-retirement",
+      "category": "operational-scripts",
+      "key": "dev-imported-baseline-retirement",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-imported-baseline-retirement.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:dev-mesh-worker-identity",
       "category": "operational-scripts",
       "key": "dev-mesh-worker-identity",
@@ -15409,6 +15433,18 @@
       "currentLocations": [
         "server/apps/platform-host/scripts/qualification/check-dev-reference-relationships.ts",
         "server/db/scripts/operations/publication/check-dev-reference-relationships.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:dev-runtime-restoration-retirement",
+      "category": "operational-scripts",
+      "key": "dev-runtime-restoration-retirement",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/apply-dev-runtime-restoration-retirement.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -19556,6 +19592,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/bp-integration-20260921/runtime-publication-audit.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:runtime-restoration-retirement.test",
+      "category": "operational-scripts",
+      "key": "runtime-restoration-retirement.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/runtime-restoration-retirement.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

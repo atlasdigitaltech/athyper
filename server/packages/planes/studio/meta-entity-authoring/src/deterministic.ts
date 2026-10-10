@@ -27,7 +27,6 @@ import {
   isCanonicalEntityCode,
 } from "@athyper/contract-platform-entity-runtime";
 import { compileEntityAi } from "./entity-ai.js";
-import { compileRuntimeRestoration } from "./runtime-restoration.js";
 import {
   compileEntityAuthorization,
   compileEntityAuthorizationRuntime,
@@ -578,7 +577,11 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   );
   validateOwners(graph, issues);
   for (const surface of graph.surfaces ?? []) {
-    for (const marker of ["baselineImport", "authorizationSuccessor"]) {
+    for (const marker of [
+      "baselineImport",
+      "authorizationSuccessor",
+      "runtimeRestoration",
+    ]) {
       if (
         Object.prototype.hasOwnProperty.call(surface.layoutConfig ?? {}, marker)
       )
@@ -634,21 +637,6 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
       path: "surfaces.layoutConfig.ai",
       message:
         cause instanceof Error ? cause.message : "Invalid entity AI contract",
-    });
-  }
-  try {
-    compileRuntimeRestoration({
-      ...graph,
-      authorization: compileEntityAuthorization(graph),
-      authorizationRuntime: compileEntityAuthorizationRuntime(graph),
-      ai: compileEntityAi(graph),
-    });
-  } catch (cause) {
-    issues.push({
-      code: "RUNTIME_RESTORATION_INVALID",
-      path: "surfaces.layoutConfig.runtimeRestoration",
-      message:
-        cause instanceof Error ? cause.message : "Invalid restoration payload",
     });
   }
   return { deterministic: true, contractHash, issues: sorted(issues) };

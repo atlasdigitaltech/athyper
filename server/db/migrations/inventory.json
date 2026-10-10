@@ -1316,9 +1316,7 @@
       "reason": "Historical explicit reset installer found during final dynamic-path audit; recovered original checksummed SQL, while fresh installs use canonical DDL.",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_neon.sql",
       "legacyPlanes": ["neon"],
-      "callers": [
-        "tooling/scripts/verification/install-reset-runtime-migrations.mjs"
-      ]
+      "callers": []
     },
     {
       "originalPath": "migrations/20260911_runtime_restoration_studio.sql",
@@ -1326,14 +1324,12 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "canonicalPaths": [
-        "ddl/planes/studio/metadata/14_runtime_restoration.sql"
+        "ddl/planes/studio/metadata/68_runtime_restoration_retirement.sql"
       ],
       "reason": "Historical explicit reset installer found during final dynamic-path audit; recovered original checksummed SQL, while fresh installs use canonical DDL.",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_studio.sql",
       "legacyPlanes": ["studio"],
-      "callers": [
-        "tooling/scripts/verification/install-reset-runtime-migrations.mjs"
-      ]
+      "callers": []
     },
     {
       "originalPath": "migrations/20260911_successor_active_baseline_sequence.sql",
@@ -3010,6 +3006,32 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_runtime_restoration_retirement.sql",
+      "path": "migrations/20261010_runtime_restoration_retirement.sql",
+      "sha256": "0774eefa56741183956b07342edbbd1918133b95a3c9255cf4c5f8d5cba3857f",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire tenant QA restoration while preserving native publication and rejecting retired artifact activation.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/68_runtime_restoration_retirement.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_retired_baseline_activation.sql",
+      "path": "migrations/20261010_retired_baseline_activation.sql",
+      "sha256": "42771ed52433648311e5e47169515ede30aecab7d00a6f1a86001ad8cf1285bd",
+      "planes": ["studio", "neon", "mesh"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "server/db/migrations/manifests/neon.txt",
+        "server/db/migrations/manifests/mesh.txt"
+      ],
+      "reason": "Retire tenant QA restoration while preserving native publication and rejecting retired artifact activation.",
+      "canonicalPaths": ["ddl/common/runtime_meta/12_baseline_precondition.sql"]
     }
   ]
 }

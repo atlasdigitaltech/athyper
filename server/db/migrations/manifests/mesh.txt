@@ -14,3 +14,4 @@
 20261001_publication_rollback_retry.sql
 20261003_mesh_publication_worker_identity.sql
 20261009_successor_initial_target.sql
+20261010_retired_baseline_activation.sql

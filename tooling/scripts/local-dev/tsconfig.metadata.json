@@ -12,8 +12,6 @@
   },
   "include": [
     "metadata-capture.mts",
-    "metadata-import.mts",
-    "qa-metadata-import.mts",
     "qa-metadata-catalog.mts",
     "workspace-inventory.mts"
   ],

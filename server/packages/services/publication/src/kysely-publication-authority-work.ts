@@ -320,19 +320,6 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     }
     if (!result.rows.length) {
       const available = (
-        await sql<Row>`SELECT to_regprocedure('publication.fn_runtime_restoration_compilation_source(uuid)') IS NOT NULL AS available`.execute(
-          this.options.database,
-        )
-      ).rows[0]?.["available"];
-      if (available)
-        result =
-          await sql<Row>`SELECT * FROM publication.fn_runtime_restoration_compilation_source(${releaseId}::uuid)`.execute(
-            this.options.database,
-          );
-      if (result.rows.length) artifactKind = "entity_runtime";
-    }
-    if (!result.rows.length) {
-      const available = (
         await sql<Row>`SELECT to_regprocedure('publication.fn_collection_configuration_compilation_source(uuid)') IS NOT NULL AS available`.execute(
           this.options.database,
         )
@@ -379,6 +366,14 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     }
     if (!result.rows.length)
       throw permanent("PUBLICATION_COMPILATION_SOURCE_NOT_FOUND");
+    if (
+      result.rows.some(
+        (row) =>
+          row["imported_baseline"] !== undefined &&
+          row["imported_baseline"] !== null,
+      )
+    )
+      throw permanent("RUNTIME_RESTORATION_RETIRED");
 
     const compilationIds: string[] = [];
     const selected = result.rows.filter((row) =>
@@ -395,9 +390,8 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
         : caseContract ||
             result.rows.some(
               (row) =>
-                row["imported_baseline"] !== undefined ||
                 object(row, "compiled_json")["schema"] ===
-                  "athyper.entity-notifications/1",
+                "athyper.entity-notifications/1",
             )
           ? 1
           : this.options.targetPlanes.length)
@@ -411,11 +405,10 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       // Vocabulary derivatives explicitly bridge these two existing contracts.
       if (
         artifactKind === "entity_runtime" &&
-        (row["imported_baseline"] !== undefined ||
-          [
-            "athyper.entity-notifications/1",
-            "athyper.published-collection/1",
-          ].includes(String(object(row, "compiled_json")["schema"])) ||
+        ([
+          "athyper.entity-notifications/1",
+          "athyper.published-collection/1",
+        ].includes(String(object(row, "compiled_json")["schema"])) ||
           (
             object(row, "compiled_json")["ai"] as
               { vocabulary?: unknown } | undefined
@@ -1058,10 +1051,12 @@ function buildUnsigned(
     compatibilityLevel: string(row, "compatibility_level"),
     payload,
   };
+  if (
+    row["imported_baseline"] !== undefined &&
+    row["imported_baseline"] !== null
+  )
+    throw permanent("RUNTIME_RESTORATION_RETIRED");
   const evidence = {
-    ...(row["imported_baseline"]
-      ? { importedBaseline: object(row, "imported_baseline") }
-      : {}),
     ...(row["native_descriptor_hash"]
       ? {
           nativeDescriptorHash: string(row, "native_descriptor_hash"),

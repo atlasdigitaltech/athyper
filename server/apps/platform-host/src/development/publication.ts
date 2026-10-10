@@ -7,16 +7,11 @@ import type {
   MetaEntityChangeSet,
   MetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
-import {
-  compileEntityIntakeSurfaces,
-  compileEntityIntakeFlows,
-} from "@athyper/contract-platform-entity-runtime";
 import { runWithRequestContext } from "@athyper/server-foundation/context";
 import {
   DevelopmentPublicationWorkflow,
   KyselyMetaEntityAuthoringRepository,
   sha256,
-  runtimePayloadHash,
   type MetaEntityAuthoringService,
   type DevelopmentPublicationRequest,
 } from "@athyper/server-plane-studio";
@@ -78,61 +73,16 @@ export function admitDevIntakePrerequisite(
     Array.isArray(graph.surfaces) && graph.surfaces.length > 0,
     "DEV_PUBLICATION_INTAKE_SURFACES_NOT_PUBLISHED",
   );
-  let proposed = structuredClone(graph);
-  // A reviewed restoration carrier is a one-time coordinate. The fresh workload
-  // draft must review a new coordinate and the full native intake projection;
-  // prepareRuntimeRestorationRelease still enforces an empty target at publish.
-  for (const [index, surface] of (proposed.surfaces ?? []).entries()) {
-    const marker = surface.layoutConfig?.runtimeRestoration as
-      Record<string, any> | undefined;
-    if (!marker) continue;
-    marker.publicationKey = `${marker.publicationKey}.dev-intake-${pin.contractHash.slice(0, 12)}`;
-    marker.descriptor = JSON.parse(
-      JSON.stringify({
-        ...marker.descriptor,
-        intakeSurfaces: compileEntityIntakeSurfaces(
-          proposed as unknown as Record<string, unknown>,
-        ),
-        intakeFlows: compileEntityIntakeFlows(
-          proposed as unknown as Record<string, unknown>,
-        ),
-      }),
-    );
-    marker.descriptorHash = runtimePayloadHash(marker.descriptor);
-    const path = `surfaces.${index}.layoutConfig.runtimeRestoration.descriptor`;
-    proposed = {
-      ...proposed,
-      tests: proposed.tests?.map((test) =>
-        test.path === path
-          ? { ...test, expected: structuredClone(marker.descriptor) }
-          : test,
+  requireDev(
+    !graph.surfaces?.some((surface) =>
+      Object.prototype.hasOwnProperty.call(
+        surface.layoutConfig ?? {},
+        "runtimeRestoration",
       ),
-    };
-  }
-  return proposed;
-}
-
-/** A persisted fork has new authoring IDs. Recognize the exact restoration
- * projection on retry instead of generating another one-time release. */
-export function reusePublishedIntakePrerequisite(
-  current: MetaEntityGraph,
-  proposed: MetaEntityGraph,
-): MetaEntityGraph {
-  const markers = (graph: MetaEntityGraph) =>
-    (graph.surfaces ?? []).flatMap((surface) => {
-      const marker = surface.layoutConfig?.runtimeRestoration as
-        Record<string, any> | undefined;
-      return marker ? [marker] : [];
-    });
-  const expected = markers(proposed),
-    published = markers(current);
-  return expected.length === 1 &&
-    published.length === 1 &&
-    expected[0]!.publicationKey === published[0]!.publicationKey &&
-    expected[0]!.descriptorHash === published[0]!.descriptorHash &&
-    runtimePayloadHash(published[0]!.descriptor) === expected[0]!.descriptorHash
-    ? current
-    : proposed;
+    ),
+    "RUNTIME_RESTORATION_RETIRED",
+  );
+  return structuredClone(graph);
 }
 
 export function loadDevPublicationConfiguration(
@@ -383,8 +333,7 @@ export function registerDevPublicationRoutes(
           current,
           overlays: prerequisite
             ? {
-                "intake-prerequisite": (graph) =>
-                  reusePublishedIntakePrerequisite(graph, prerequisite.graph),
+                "intake-prerequisite": () => prerequisite.graph,
               }
             : {},
           withCurrent: (request, sourceReleaseId, work) =>

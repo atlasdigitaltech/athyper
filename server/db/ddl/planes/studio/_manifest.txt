@@ -247,8 +247,9 @@ common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
 common/master/19_entity_saved_views.sql
 planes/studio/metadata/12_activation_acknowledgement.sql
-planes/studio/metadata/14_runtime_restoration.sql
+planes/studio/metadata/14_publication_payload_hash.sql
 planes/studio/metadata/67_imported_baseline_retirement.sql
+planes/studio/metadata/68_runtime_restoration_retirement.sql
 planes/studio/metadata/18_publication_recovery.sql
 planes/studio/metadata/19_publication_recovery_successor.sql
 planes/studio/metadata/20_publication_recovery_audit.sql
@@ -285,5 +286,6 @@ planes/studio/publication/22_coordinated_deployment_recovery.sql
 planes/studio/metadata/42_product_authoring_audit.sql
 
 common/runtime_meta/15_locked_live_read_resources.sql
+common/runtime_meta/12_baseline_precondition.sql
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

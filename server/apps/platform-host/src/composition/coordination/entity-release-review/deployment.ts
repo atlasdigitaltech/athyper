@@ -75,68 +75,9 @@ export function createDeploymentEntityReleaseReview(input: {
         return result.rows[0]?.current === true;
       });
     },
-    async sourceCurrent(coordinate, raw) {
-      const base = raw as any;
-      if (
-        !base ||
-        base.tenantId !== coordinate.tenantId ||
-        base.planeKey !== coordinate.plane ||
-        !coordinate.tenantId
-      )
-        return false;
-      if (base.kind === "reviewed_empty_target") {
-        const keys = [
-          "kind",
-          "schemaVersion",
-          "tenantId",
-          "entityCode",
-          "planeKey",
-          "publicationKey",
-          "descriptorHash",
-        ];
-        if (
-          Object.keys(base).length !== keys.length ||
-          Object.keys(base).some((k) => !keys.includes(k)) ||
-          base.schemaVersion !== 1 ||
-          base.entityCode !== coordinate.entityCode ||
-          base.planeKey !== "neon" ||
-          coordinate.releaseNo !== 1 ||
-          typeof base.publicationKey !== "string" ||
-          !/^[a-f0-9]{64}$/.test(base.descriptorHash)
-        )
-          return false;
-        const empty = await scoped(
-          input.neon,
-          coordinate.tenantId,
-          async (tx) => {
-            const result = await sql<{
-              current: boolean;
-            }>`SELECT NOT EXISTS(SELECT 1 FROM runtime_meta.release_activation_head WHERE publication_key=${base.publicationKey}) AND NOT EXISTS(SELECT 1 FROM runtime_meta.entity_contract WHERE tenant_id=${coordinate.tenantId}::uuid AND entity_code=${coordinate.entityCode}) AND runtime_meta.fn_runtime_restoration_precondition_version()=1 AS current`.execute(
-              tx,
-            );
-            return result.rows[0]?.current === true;
-          },
-        );
-        if (!empty) return false;
-        return scoped(input.studio, coordinate.tenantId, async (tx) => {
-          const expected = {
-            schemaVersion: 1,
-            kind: base.kind,
-            tenantId: base.tenantId,
-            entityCode: base.entityCode,
-            publicationKey: base.publicationKey,
-            descriptorHash: base.descriptorHash,
-          };
-          const result = await sql<{
-            current: boolean;
-          }>`SELECT EXISTS(SELECT 1 FROM publication.release r JOIN publication.entity_runtime_restoration_link l ON l.publication_release_id=r.id AND l.tenant_id=r.tenant_id JOIN publication.fn_runtime_restoration_compilation_source(${coordinate.releaseId}::uuid) source ON source.publication_release_id=r.id WHERE r.id=${coordinate.releaseId}::uuid AND r.tenant_id=${coordinate.tenantId}::uuid AND r.release_no=1 AND r.status IN ('approved','published') AND l.descriptor_hash=${base.descriptorHash} AND l.runtime_precondition=${JSON.stringify(expected)}::jsonb AND source.entity_code=${coordinate.entityCode} AND source.plane_key=${coordinate.plane} AND encode(sha256(convert_to(publication.fn_successor_canonical_json(source.contract_json),'UTF8')),'hex')=${coordinate.contractHash}) AS current`.execute(
-            tx,
-          );
-          return result.rows[0]?.current === true;
-        });
-      }
-      // Imported-baseline successors are retired; native successors have
-      // their own source and target qualification contracts.
+    async sourceCurrent() {
+      // Historical imported-baseline publication is retired. Native source
+      // qualification is resolved by its separate installed contract.
       return false;
     },
     async evidenceCurrent(evidence) {

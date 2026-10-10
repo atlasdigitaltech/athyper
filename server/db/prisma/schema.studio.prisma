@@ -7328,7 +7328,6 @@ model tenant {
   job_execution_attempt                                          job_execution_attempt[]
   job_execution_command                                          job_execution_command[]
   record_edit_lock                                               record_edit_lock[]
-  entity_runtime_restoration_link                                entity_runtime_restoration_link[]
   release                                                        release[]
   applied_release_payload                                        applied_release_payload[]
   authorization_epoch                                            authorization_epoch?
@@ -8513,7 +8512,6 @@ model entity_release {
   entity_release_entity_release_supersedes_release_idToentity_release               entity_release?                      @relation("entity_release_supersedes_release_idToentity_release", fields: [supersedes_release_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_release_supersedes_fk")
   other_entity_release_entity_release_supersedes_release_idToentity_release         entity_release?                      @relation("entity_release_supersedes_release_idToentity_release")
   entity_release_link                                                               entity_release_link?
-  entity_runtime_restoration_link                                                   entity_runtime_restoration_link?
   entity_contract_revision_entity_contract_revision_base_release_idToentity_release entity_contract_revision[]           @relation("entity_contract_revision_base_release_idToentity_release")
   entity_release_artifact                                                           entity_release_artifact[]
 
@@ -10005,18 +10003,6 @@ model entity_release_link {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_runtime_restoration_link {
-  publication_release_id String         @id @db.Uuid
-  tenant_id              String         @db.Uuid
-  descriptor_hash        String
-  runtime_precondition   Json
-  entity_release         entity_release @relation(fields: [tenant_id, publication_release_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_runtime_restoration_li_tenant_id_publication_releas_fkey")
-  release                release        @relation(fields: [publication_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenant                 tenant         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -10045,7 +10031,6 @@ model release {
   business_partner_case_contract_release_link                                                             business_partner_case_contract_release_link?
   business_partner_definition_release_link                                                                business_partner_definition_release_link?
   entity_release_link                                                                                     entity_release_link?
-  entity_runtime_restoration_link                                                                         entity_runtime_restoration_link?
   tenant                                                                                                  tenant                                       @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "publication_release_tenant_fk")
 
   @@unique([release_key, release_no], map: "publication_release_coordinate_uq")

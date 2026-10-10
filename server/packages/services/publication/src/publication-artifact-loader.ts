@@ -361,6 +361,13 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         throw failure("ARTIFACT_PAYLOAD_INVALID");
       }
     }
+    if (
+      Object.prototype.hasOwnProperty.call(
+        manifest.evidence ?? {},
+        "importedBaseline",
+      )
+    )
+      throw failure("ARTIFACT_PAYLOAD_INVALID"); // Retired baseline activation format.
     const hasLearning =
       envelope.artifactKind === "entity_runtime" &&
       Boolean(
@@ -371,8 +378,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       );
     if (
       envelope.artifactKind === "entity_runtime" &&
-      (manifest.evidence?.["importedBaseline"] !== undefined ||
-        hasLearning ||
+      (hasLearning ||
         envelope.payload.entityDescriptor.descriptorKind ===
           "collection_configuration" ||
         envelope.payload.entityDescriptor.descriptorKind ===
@@ -408,31 +414,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       )
         throw failure("ARTIFACT_SIGNATURE_INVALID");
     }
-    if (
-      envelope.artifactKind === "entity_runtime" &&
-      manifest.evidence?.["importedBaseline"] !== undefined
-    ) {
-      const c = envelope.payload.entityContract,
-        d = envelope.payload.entityDescriptor;
-      try {
-        parseEntityRuntimeDescriptor({
-          entity_code: c.entityCode,
-          release_id: c.releaseId,
-          release_no: c.releaseNo,
-          entity_contract_hash: c.contractHash,
-          plane_code: d.plane,
-          compiled_hash: d.compiledHash,
-          compiled_json: d.descriptor,
-        });
-      } catch {
-        throw failure("ARTIFACT_PAYLOAD_INVALID");
-      }
-    }
-    if (
-      envelope.artifactKind === "entity_runtime" &&
-      hasLearning &&
-      manifest.evidence?.["importedBaseline"] === undefined
-    ) {
+    if (envelope.artifactKind === "entity_runtime" && hasLearning) {
       const c = envelope.payload.entityContract,
         d = envelope.payload.entityDescriptor;
       try {

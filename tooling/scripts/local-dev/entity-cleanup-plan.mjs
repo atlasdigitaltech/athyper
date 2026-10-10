@@ -7,7 +7,6 @@ const permittedEvidence = new Set([
   "snapshot.entity_release_artifact",
   "snapshot.entity_draft_save",
   "publication.entity_release_link",
-  "publication.entity_runtime_restoration_link",
   "entity_command_private.operation_bootstrap_source",
 ]);
 // These rows are part of the current native lineage. A product-entity reset

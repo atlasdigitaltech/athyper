@@ -19,3 +19,4 @@
 20261003_partner_child_read_models.sql
 20261003_partner_identity_read_models.sql
 20261009_successor_initial_target.sql
+20261010_retired_baseline_activation.sql

@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { validateGraph } from "./deterministic.js";
 import { authoringGraph } from "./testing/authoring-graph.js";
 
-it.each(["baselineImport", "authorizationSuccessor"])(
+it.each(["baselineImport", "authorizationSuccessor", "runtimeRestoration"])(
   "rejects the retired %s carrier, including an explicit null marker",
   (marker) => {
     for (const value of [{}, null]) {

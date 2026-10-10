@@ -171,7 +171,6 @@ import {
   createPublishedLearningFixtureProvider,
   registerAtlasLearningInboxRoutes,
   prepareAtlasLearningRelease,
-  prepareRuntimeRestorationRelease,
 } from "@athyper/server-plane-studio";
 import {
   createEntityScopeRegistry,
@@ -5624,37 +5623,6 @@ function registerStudioAuthoring(
         if (await prepareSystemReferenceRelease(tx, input)) return;
         if (await prepareCollectionConfigurationRelease(tx, input)) return;
         if (await prepareNotificationConfigurationRelease(tx, input)) return;
-        const restored = await prepareRuntimeRestorationRelease(
-          tx,
-          input,
-          async (expected) =>
-            transactions.run(
-              "neon",
-              { tenantId: expected.tenantId, principalId: expected.actorId },
-              async (source) => {
-                const capability = (
-                  await sql<{
-                    available: boolean;
-                  }>`SELECT to_regprocedure('runtime_meta.fn_runtime_restoration_precondition_version()') IS NOT NULL AS available`.execute(
-                    source,
-                  )
-                ).rows[0]?.available;
-                if (!capability) return false;
-                const result = (
-                  await sql<{
-                    ready: boolean;
-                  }>`SELECT runtime_meta.fn_runtime_restoration_precondition_version()=1
-            AND NOT EXISTS(SELECT 1 FROM runtime_meta.release_activation_head WHERE publication_key=${expected.publicationKey})
-            AND NOT EXISTS(SELECT 1 FROM runtime_meta.entity_contract WHERE tenant_id=${expected.tenantId}::uuid AND entity_code=${expected.entityCode})
-            AND EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='runtime_meta.release_activation_head'::regclass AND tgname='baseline_activation_precondition' AND tgenabled IN ('O','A')) AS ready`.execute(
-                    source,
-                  )
-                ).rows[0];
-                return result?.ready === true;
-              },
-            ),
-        );
-        if (restored) return;
         if (!(await prepareDocumentCollectionRelease(tx, input)))
           await prepareAtlasLearningRelease(tx, input);
       }),

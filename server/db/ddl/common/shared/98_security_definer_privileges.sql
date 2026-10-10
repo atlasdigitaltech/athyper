@@ -4427,13 +4427,6 @@ BEGIN
         ]
       },
       {
-        "relation": "publication.entity_runtime_restoration_link",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
         "relation": "publication.release",
         "privileges": [
           "INSERT",
@@ -4536,12 +4529,6 @@ BEGIN
         "command": "SELECT",
         "reason": "Preserves the existing entity_release_tenant_read policy only when the original session is a member of athyperapp.",
         "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
-      },
-      {
-        "relation": "publication.entity_runtime_restoration_link",
-        "command": "INSERT",
-        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-        "check": "(tenant_id = shared.current_tenant_id_soft())"
       },
       {
         "relation": "publication.release",

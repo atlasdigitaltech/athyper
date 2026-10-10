@@ -116,20 +116,9 @@ function assertLocalDaemon() {
 export async function main(args = process.argv.slice(2)) {
   const [action, ...rest] = args;
   if (action === "qa-prepare" && rest.length === 1) {
-    const candidate = verifyCandidate(resolve(rest[0]));
-    if (!candidate.metadata)
-      throw Error("Complete candidate v2 metadata required");
-    const { prepareQaMetadataCandidate } =
-      await import("./qa-metadata-import.mts");
-    console.log(
-      JSON.stringify(
-        await prepareQaMetadataCandidate(
-          candidate,
-          resolve(import.meta.dirname, "../../.."),
-        ),
-      ),
+    throw Error(
+      "TENANT_QA_IMPORT_RETIRED: use the supported native product publication workflow; tenant-native import is deferred.",
     );
-    return;
   }
   if (action === "metadata-capture" && rest.length >= 1) {
     const { captureMetadataFile } = await import("./metadata-capture.mts");
@@ -582,20 +571,10 @@ export async function main(args = process.argv.slice(2)) {
     const { manifest, authoring, metadata } = verifyCandidate(
       resolve(directory),
     );
-    if (metadata) {
-      const { importQaMetadataCandidate } =
-        await import("./qa-metadata-import.mts");
-      const candidate = verifyCandidate(resolve(directory));
-      console.log(
-        JSON.stringify(
-          await importQaMetadataCandidate(
-            candidate,
-            resolve(import.meta.dirname, "../../.."),
-          ),
-        ),
+    if (metadata)
+      throw Error(
+        "TENANT_QA_IMPORT_RETIRED: tenant graph import is no longer supported.",
       );
-      return;
-    }
     const tokenPath = process.env.ATHYPER_QA_AUTHOR_TOKEN_FILE;
     if (!tokenPath)
       throw new Error(
