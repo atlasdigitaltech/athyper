@@ -19,7 +19,6 @@ import {
   validateEntityCapabilities,
 } from "./entity-capabilities.js";
 import type {
-  BusinessPartnerDefinitionProjection,
   CompiledEntityRuntimeProjectionV2,
   EntityRuntimeProjection,
   PublicationCompatibilityLevel,
@@ -35,7 +34,6 @@ export const PUBLICATION_ARTIFACT_MEDIA_TYPE_V1 =
 export type PublicationArtifactKind =
   | "entity_runtime"
   | "compiled_entity_runtime"
-  | "business_partner_definition_bundle"
   | "entity_authoring_descriptor"
   | "entity_identity_review"
   | "entity_ui_component"
@@ -149,10 +147,6 @@ export type PublicationArtifactEnvelopeV1 =
   | (PublicationArtifactEnvelopeBaseV1 & {
       readonly artifactKind: "compiled_entity_runtime";
       readonly payload: CompiledEntityRuntimeProjectionV2;
-    })
-  | (PublicationArtifactEnvelopeBaseV1 & {
-      readonly artifactKind: "business_partner_definition_bundle";
-      readonly payload: BusinessPartnerDefinitionProjection;
     })
   | (PublicationArtifactEnvelopeBaseV1 & {
       readonly artifactKind: "entity_authoring_descriptor";
@@ -1067,17 +1061,6 @@ export function parsePublicationArtifactEnvelope(
       throw new PublicationContractError(
         "ARTIFACT_PAYLOAD_INVALID",
         "Entity runtime payload is required",
-      );
-  } else if (value.artifactKind === "business_partner_definition_bundle") {
-    if (
-      !isRecord(value.payload.bundle) ||
-      typeof value.payload.bundleHash !== "string" ||
-      typeof value.payload.bundleSchemaVersion !== "string" ||
-      value.payload.plane !== value.targetPlane
-    )
-      throw new PublicationContractError(
-        "ARTIFACT_PAYLOAD_INVALID",
-        "Business Partner definition bundle payload is required",
       );
   } else if (value.artifactKind === "compiled_entity_runtime") {
     try {

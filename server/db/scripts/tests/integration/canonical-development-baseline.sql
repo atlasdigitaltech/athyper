@@ -32,8 +32,6 @@ BEGIN
    IF to_regclass(item) IS NULL THEN RAISE EXCEPTION 'Saga foundation missing: %',item; END IF;
   END LOOP;
   IF NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='publication' AND p.proname='fn_prepare_document_collection_release') THEN RAISE EXCEPTION 'Document collection publication function missing'; END IF;
-  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='snapshot' AND table_name='business_partner_case_contract_revision' AND column_name IN ('previous_contract_id','previous_contract_hash') AND is_nullable='NO') THEN RAISE EXCEPTION 'Initial contract publication incorrectly requires predecessor'; END IF;
-  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='snapshot.business_partner_case_contract_revision'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%previous_release_no = 0%') THEN RAISE EXCEPTION 'Initial contract predecessor check missing'; END IF;
  END IF;
 
  -- Final baseline: previously automatic September 6-10 upgrades.

@@ -27,7 +27,6 @@ export interface CreatePublicationReleaseInput {
   readonly tenantId: string;
   readonly entityReleaseId?: string;
   readonly authoringResourceSource?: import("./entity-authoring-resource.js").EntityAuthoringResourceSource;
-  readonly businessPartnerDefinitionRevisionId?: string;
   readonly publicationKey: string;
   readonly releaseNo: number;
   readonly releaseKind: "publish" | "rollback";

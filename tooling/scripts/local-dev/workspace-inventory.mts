@@ -58,11 +58,6 @@ export function inventoryWorkspaces() {
         "studio",
         `SELECT cs.id,cs.tenant_id,cs.entity_id,e.entity_code,cs.status,cs.lock_version revision,jsonb_build_object(${branches}) branches FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.status<>'published' ORDER BY cs.id`,
       );
-      const definitions = localMetadataQuery(
-        name,
-        "studio",
-        "SELECT id,tenant_id,bundle_code,bundle_hash,bundle_json,target_planes FROM snapshot.business_partner_definition_revision ORDER BY id",
-      );
       const releases = localMetadataQuery(
         name,
         "studio",
@@ -75,7 +70,6 @@ export function inventoryWorkspaces() {
           ...row,
           contentHash: metadataHash(row.branches),
         })),
-        definitions,
         releases,
       });
     } catch (error) {
@@ -102,25 +96,11 @@ export function inventoryWorkspaces() {
         entityCode: draft.entity_code,
         contentHash: draft.contentHash,
       }));
-    workspace.uniqueDefinitions = (workspace.definitions ?? [])
-      .filter(
-        (draft: any) =>
-          !(main?.definitions ?? []).some(
-            (current: any) =>
-              current.bundle_code === draft.bundle_code &&
-              current.bundle_hash === draft.bundle_hash,
-          ),
-      )
-      .map((draft: any) => ({
-        id: draft.id,
-        bundleCode: draft.bundle_code,
-        bundleHash: draft.bundle_hash,
-      }));
     workspace.reconciliationRequired =
       workspace.container !== "athyper-dev-db-1" &&
       (!workspace.inventoryComplete ||
         workspace.uniqueDrafts.length > 0 ||
-        workspace.uniqueDefinitions.length > 0);
+        false);
   }
   return {
     schema: "athyper.authoring-workspace-inventory/1",

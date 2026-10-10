@@ -260,40 +260,11 @@ export async function captureMetadata(options: {
               key: related.source,
               plane: reference.plane,
             });
-      } else if (reference.kind === "definition") {
-        const found = choose(
-          "studio",
-          `SELECT bundle_json payload FROM snapshot.business_partner_definition_revision WHERE tenant_id=${literal(tenant)}::uuid AND bundle_code=${literal(reference.key)} AND ${literal(reference.plane!)}=ANY(target_planes) ORDER BY created_at DESC LIMIT 1`,
-        );
-        if (!found) return undefined;
-        source = found.source;
-        payload = found.row.payload;
-        requires = [
-          runtimeReference,
-          ...["read", "author", "publish"].map((action) => ({
-            kind: "permission",
-            key: `studio.business_partner_definition.${action}`,
-            plane: "studio",
-          })),
-        ];
-      } else if (reference.kind === "case_contract") {
-        if (
-          reference.key !== "master.business_partner" ||
-          reference.plane !== "neon"
-        )
-          throw Error("Native case contract capture adapter unavailable");
-        const found = choose(
-          "studio",
-          `SELECT s.entity_id,s.publication_key,s.contract_json FROM snapshot.business_partner_case_contract_revision s JOIN publication.business_partner_case_contract_release_link l ON l.revision_id=s.id AND l.tenant_id=s.tenant_id JOIN publication.release r ON r.id=l.publication_release_id WHERE s.tenant_id=${literal(tenant)}::uuid AND r.status IN ('approved','published') ORDER BY r.release_no DESC LIMIT 1`,
-        );
-        if (!found) return undefined;
-        source = found.source;
-        payload = {
-          entityId: found.row.entity_id,
-          publicationKey: found.row.publication_key,
-          contract: found.row.contract_json,
-        };
-        requires = [runtimeReference];
+      } else if (
+        reference.kind === "definition" ||
+        reference.kind === "case_contract"
+      ) {
+        throw Error("BUSINESS_PARTNER_STUDIO_PUBLICATION_RETIRED");
       } else if (reference.kind === "permission") {
         const found = choose(
           reference.plane!,

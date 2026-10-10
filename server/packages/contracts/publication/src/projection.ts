@@ -62,47 +62,6 @@ export interface CompiledEntityRuntimeProjectionV2 {
   readonly generatedAt: string;
 }
 
-export const BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 =
-  "athyper.business-partner-definition-bundle.v1" as const;
-
-export interface BusinessPartnerDefinitionBundleV1 {
-  readonly schema: typeof BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1;
-  readonly bundleCode: string;
-  readonly semanticVersion: string;
-  readonly requestSchemas: Readonly<Record<string, unknown>>;
-  readonly fieldPolicies: Readonly<Record<string, unknown>>;
-  readonly validationDeclarations: readonly Readonly<Record<string, unknown>>[];
-  readonly duplicateRules: Readonly<Record<string, unknown>>;
-  readonly formDescriptors: Readonly<Record<string, unknown>>;
-  readonly viewDescriptors: Readonly<Record<string, unknown>>;
-  readonly mappingContracts: Readonly<Record<string, unknown>>;
-  readonly workflowDefinitions: Readonly<Record<string, unknown>>;
-  readonly evidencePolicies: Readonly<Record<string, unknown>>;
-  readonly readinessGates: Readonly<Record<string, unknown>>;
-  readonly reasonCodeCatalog: Readonly<Record<string, string>>;
-  readonly meshSafeSchemas: Readonly<Record<string, unknown>>;
-  readonly compatibilityRules: Readonly<Record<string, unknown>>;
-  readonly sourceContractHashes: Readonly<Record<string, string>>;
-}
-
-export interface BusinessPartnerDefinitionProjection {
-  readonly id: string;
-  readonly tenantId: string;
-  readonly revisionId: string;
-  readonly releaseId: string;
-  readonly releaseNo: number;
-  readonly publicationKey: string;
-  readonly plane: PublicationPlane;
-  readonly bundleCode: string;
-  readonly semanticVersion: string;
-  readonly bundleSchemaVersion: string;
-  readonly bundleHash: string;
-  readonly sourceBundleHash?: string;
-  readonly bundle: BusinessPartnerDefinitionBundleV1;
-  readonly compileReport?: Readonly<Record<string, unknown>>;
-  readonly generatedAt: string;
-}
-
 export type AppliedReleaseStatus = "staged" | "verified" | "active" | "rejected" | "superseded";
 
 export interface AppliedReleaseProjection {
@@ -148,7 +107,6 @@ export interface LocalProjectionRepository {
   findByDeployment(deploymentId: string): Promise<AppliedReleaseProjection | null>;
   findActive(publicationKey: string): Promise<ActiveReleaseProjection | null>;
   findActiveEntity(publicationKey: string): Promise<ActiveEntityProjection | null>;
-  findActiveBusinessPartnerDefinition?(publicationKey: string): Promise<BusinessPartnerDefinitionProjection | null>;
   rollback(input: RollbackReleaseInput): Promise<ActiveReleaseProjection>;
 }
 

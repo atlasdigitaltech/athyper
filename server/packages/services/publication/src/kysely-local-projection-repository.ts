@@ -1,16 +1,7 @@
 import {
-  businessPartnerCasePublicationIdentity,
-  assertCompanyCaseOperationBindings,
-} from "./entity-operation-binding-compiler.js";
-import {
-  overlayLocalDefinitionPreview,
-  localDefinitionPreviewBaseline,
-} from "./local-definition-preview.js";
-import {
   PublicationContractError,
   compiledPublicationTenant,
   type ActiveEntityProjection,
-  type BusinessPartnerDefinitionProjection,
   type ActiveReleaseProjection,
   type AppliedReleaseProjection,
   type LocalProjectionRepository,
@@ -27,7 +18,7 @@ type Row = Record<string, unknown>;
 export class KyselyLocalProjectionRepository implements LocalProjectionRepository {
   constructor(
     private readonly database: Kysely<Database>,
-    private readonly preview = false,
+    _preview = false,
     private readonly componentInstaller?: {
       install(
         database: Kysely<Database>,
@@ -42,77 +33,6 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
   }): Promise<AppliedReleaseProjection> {
     assertArtifactCoordinates(input.deployment, input.artifact);
     const envelope = input.artifact.envelope;
-    if (
-      envelope.artifactKind === "entity_runtime" &&
-      envelope.payload.entityDescriptor.descriptorKind === "entity_case_runtime"
-    ) {
-      const contract = envelope.payload.entityContract,
-        base = envelope.payload.entityDescriptor.descriptor[
-          "caseContractBase"
-        ] as Record<string, unknown> | undefined;
-      if (!base || !contract.tenantId || envelope.targetPlane !== "neon")
-        throw new Error("CASE_CONTRACT_COORDINATES_INVALID");
-      const identity = businessPartnerCasePublicationIdentity(
-        contract.tenantId,
-        envelope.publicationKey,
-      );
-      if (
-        contract.entityCode !== identity.entityCode ||
-        envelope.payload.entityDescriptor.descriptor["entityCode"] !==
-          identity.entityCode ||
-        (!identity.operationScopeBindings.length &&
-          JSON.stringify(
-            envelope.payload.entityDescriptor.descriptor[
-              "operation_scope_bindings"
-            ],
-          ) !== "[]")
-      )
-        throw new Error("CASE_CONTRACT_REGISTERED_IDENTITY_MISMATCH");
-      if (identity.operationScopeBindings.length)
-        assertCompanyCaseOperationBindings(
-          envelope.payload.entityDescriptor.descriptor,
-          contract.entityId,
-        );
-      // Serialize against activation; an exact replay is allowed after this deployment activated.
-      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${envelope.publicationKey},0))`.execute(
-        this.database,
-      );
-      const prior = (
-        await sql<Row>`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND entity_id=${contract.entityId}::uuid AND publication_key=${envelope.publicationKey} AND status='published'`.execute(
-          this.database,
-        )
-      ).rows[0];
-      const replay =
-        (await this.findByDeployment(input.deployment.deploymentId))?.status ===
-          "active" && prior?.["release_id"] === envelope.releaseId;
-      if (!replay && base["id"] === null) {
-        if (
-          base["hash"] !== null ||
-          base["releaseNo"] !== 0 ||
-          (!identity.operationScopeBindings.length &&
-            contract.releaseNo !== 1) ||
-          contract.releaseNo < 1 ||
-          contract.entityCode !== identity.entityCode
-        )
-          throw new Error("CASE_CONTRACT_INITIAL_COORDINATES_INVALID");
-        // Any history blocks initialization, including retired/revoked contracts.
-        const history = (
-          await sql<Row>`SELECT id FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND (entity_code=${identity.entityCode} OR publication_key=${envelope.publicationKey}) LIMIT 1`.execute(
-            this.database,
-          )
-        ).rows;
-        if (history.length) throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
-      } else if (
-        !replay &&
-        (!prior ||
-          prior["id"] !== base["id"] ||
-          prior["entity_contract_hash"] !== base["hash"] ||
-          Number(prior["release_no"]) !== Number(base["releaseNo"]) ||
-          contract.releaseNo !== Number(base["releaseNo"]) + 1)
-      )
-        throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
-    }
-
     const result =
       await sql<Row>`SELECT * FROM runtime_meta.fn_stage_release_projection(
       ${envelope.publicationKey},${envelope.releaseId}::uuid,${envelope.releaseNo},${input.deployment.deploymentId}::uuid,
@@ -295,59 +215,6 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
     };
   }
 
-  async findActiveBusinessPartnerDefinition(
-    publicationKey: string,
-  ): Promise<BusinessPartnerDefinitionProjection | null> {
-    // The active projection function is the consumer-safe boundary. Do not join its
-    // result back to the tenant-owned payload table: a release authored by Studio's
-    // tenant must remain readable after it is verified and activated in this plane.
-    const result =
-      await sql<Row>`SELECT * FROM runtime_meta.fn_active_business_partner_definition(${publicationKey})`.execute(
-        this.database,
-      );
-    const row = result.rows[0];
-    if (!row) {
-      if (process.env.ATHYPER_LOCAL_PREVIEW_ROOT) {
-        const plane = (
-          await sql<{
-            name: string;
-          }>`SELECT current_database() AS name`.execute(this.database)
-        ).rows[0]?.name;
-        if (plane === "athyper_neon") {
-          const baseline = await localDefinitionPreviewBaseline(publicationKey);
-          return baseline && this.preview
-            ? overlayLocalDefinitionPreview(baseline)
-            : baseline;
-        }
-      }
-      return null;
-    }
-    const projection: BusinessPartnerDefinitionProjection = {
-      id: string(row, "id"),
-      tenantId: string(row, "tenant_id"),
-      revisionId: string(row, "revision_id"),
-      releaseId: string(row, "release_id"),
-      releaseNo: number(row, "release_no"),
-      publicationKey: string(row, "publication_key"),
-      plane: string(
-        row,
-        "plane_code",
-      ) as BusinessPartnerDefinitionProjection["plane"],
-      bundleCode: string(row, "bundle_code"),
-      semanticVersion: string(row, "semantic_version"),
-      bundleSchemaVersion: string(row, "bundle_schema_version"),
-      bundleHash: string(row, "bundle_hash"),
-      bundle: object(
-        row,
-        "bundle_json",
-      ) as unknown as BusinessPartnerDefinitionProjection["bundle"],
-      generatedAt: date(row, "generated_at"),
-    };
-    return this.preview
-      ? overlayLocalDefinitionPreview(projection)
-      : projection;
-  }
-
   async rollback(input: {
     readonly publicationKey: string;
     readonly targetAppliedReleaseId: string;
@@ -399,14 +266,7 @@ function assertArtifactCoordinates(
   const payloadPlane =
     envelope.artifactKind === "entity_runtime"
       ? envelope.payload.entityDescriptor.plane
-      : envelope.artifactKind === "compiled_entity_runtime" ||
-          envelope.artifactKind === "entity_authoring_descriptor" ||
-          envelope.artifactKind === "entity_identity_review" ||
-          envelope.artifactKind === "entity_ui_component" ||
-          envelope.artifactKind === "entity_security_manifest" ||
-          envelope.artifactKind === "entity_storage_authority"
-        ? envelope.targetPlane
-        : envelope.payload.plane;
+      : envelope.targetPlane;
   if (
     envelope.targetPlane !== deployment.targetPlane ||
     envelope.targetPlane !== payloadPlane
@@ -498,31 +358,6 @@ export function projectionJson(artifact: PublicationArtifactDocumentV1) {
           compiled_release_hash: payload.release.releaseHash,
         },
         generated_at: payload.generatedAt,
-      },
-    };
-  }
-  if (envelope.artifactKind === "business_partner_definition_bundle") {
-    const b = envelope.payload;
-    return {
-      applied_release_payload: {
-        id: b.id,
-        tenant_id: b.tenantId,
-        artifact_kind: envelope.artifactKind,
-        payload_schema_version: b.bundleSchemaVersion,
-        payload_hash: b.bundleHash,
-        payload_json: b.bundle,
-        coordinates: {
-          revision_id: b.revisionId,
-          release_id: b.releaseId,
-          release_no: b.releaseNo,
-          publication_key: b.publicationKey,
-          plane_code: b.plane,
-          bundle_code: b.bundleCode,
-          semantic_version: b.semanticVersion,
-          source_bundle_hash: b.sourceBundleHash,
-          compile_report: b.compileReport,
-        },
-        generated_at: b.generatedAt,
       },
     };
   }

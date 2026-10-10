@@ -98,14 +98,9 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
         WHERE r.id=$1::uuid AND r.release_key=$2 AND r.status='published' AND a.status='signed'
         AND a.artifact_kind='compiled_entity_runtime' AND a.plane_code='neon' AND c.unsigned_hash=$3`,
         [options.sourceDefinitionReleaseId,`metadata.compiled_entity.${options.entityCode}`,options.expectedActiveArtifactHash])
-      : await one<{ tenant_id: string; bundle_json: Json; release_no: number; release_key: string }>(studio, `
-      SELECT revision.tenant_id::text, revision.bundle_json, release.release_no::int, release.release_key
-      FROM publication.release release
-      JOIN publication.business_partner_definition_release_link link ON link.publication_release_id=release.id
-      JOIN snapshot.business_partner_definition_revision revision ON revision.id=link.definition_revision_id
-      JOIN publication.artifact artifact ON artifact.publication_release_id=release.id
-        AND artifact.plane_code='neon' AND artifact.artifact_kind='business_partner_definition_bundle'
-      WHERE release.id=$1::uuid AND release.status='published' AND artifact.status='signed'`, [options.sourceDefinitionReleaseId]);
+      : (() => {
+          throw new Error("BUSINESS_PARTNER_STUDIO_PUBLICATION_RETIRED");
+        })();
 
     const authority = options.authority;
     if (!options.dryRun) {

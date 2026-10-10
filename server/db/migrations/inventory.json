@@ -3042,6 +3042,16 @@
       "callers": ["server/db/migrations/manifests/studio.txt"],
       "reason": "Retire empty operator archive recovery while retaining native publication and delivery recovery.",
       "canonicalPaths": ["ddl/planes/studio/metadata/69_publication_archive_retirement.sql"]
+    },
+    {
+      "originalPath": "migrations/20261011_business_partner_studio_retirement.sql",
+      "path": "migrations/20261011_business_partner_studio_retirement.sql",
+      "sha256": "18d0814a4bef7c1368bfffc78ed20cf85c1c7b3b14ee6216fd6fc032a576cf57",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire empty Business Partner Studio publication/history tables while preserving native Entity publication.",
+      "canonicalPaths": ["ddl/planes/studio/publication/16_business_partner_studio_retirement.sql"]
     }
   ]
 }

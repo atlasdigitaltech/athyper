@@ -4,10 +4,6 @@ import {
   type EntityAuthoringResourcePublication,
 } from "./compilation/entity-authoring-resource.js";
 import {
-  businessPartnerCasePublicationIdentity,
-  compileCompanyCaseOperationBindings,
-} from "./entity-operation-binding-compiler.js";
-import {
   compileEntityAuthorizationPublication,
   type EntityAuthorizationPublicationInput,
 } from "./entity-authorization-compiler.js";
@@ -46,10 +42,6 @@ import {
   publicationArtifactKey,
   publicationArtifactUri,
 } from "./publication-artifact-store.js";
-import {
-  BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION,
-  compileBusinessPartnerDefinition,
-} from "./entity-definition-compiler.js";
 
 type Row = Record<string, unknown>;
 type Database = Record<string, never>;
@@ -213,111 +205,9 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
         throw permanent("COMPILED_PUBLICATION_APPROVED_SOURCE_REQUIRED");
       return this.compileSplitSources(releaseId, split.rows);
     }
-    let result =
-      await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
-        pr.compatibility_level,pr.minimum_runtime_version,r.id revision_id,r.bundle_code,r.semantic_version,
-        r.bundle_schema_version,r.bundle_json,r.bundle_hash,r.created_at,r.created_by,
-        unnest(r.target_planes) plane_key
-        FROM publication.release pr
-        JOIN publication.business_partner_definition_release_link l ON l.publication_release_id=pr.id
-        JOIN snapshot.business_partner_definition_revision r ON r.id=l.definition_revision_id
-        WHERE pr.id=${releaseId}::uuid AND pr.status IN ('approved','published') ORDER BY plane_key`.execute(
-        this.options.database,
-      );
+    let result = { rows: [] as Row[] };
     let artifactKind: import("@athyper/server-contract-publication").PublicationArtifactKind =
-      "business_partner_definition_bundle";
-    let caseContract = false;
-    if (!result.rows.length) {
-      const cases =
-        await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
-        pr.compatibility_level,pr.minimum_runtime_version,pr.created_by published_by,r.id revision_id,r.entity_id,
-        r.contract_json,r.contract_hash,r.previous_contract_id,r.previous_contract_hash,r.previous_release_no,r.created_at
-        FROM publication.release pr JOIN publication.business_partner_case_contract_release_link l ON l.publication_release_id=pr.id AND l.tenant_id=pr.tenant_id
-        JOIN snapshot.business_partner_case_contract_revision r ON r.id=l.revision_id AND r.tenant_id=l.tenant_id
-        WHERE pr.id=${releaseId}::uuid AND pr.status IN('approved','published')`.execute(
-          this.options.database,
-        );
-      if (cases.rows.length) {
-        caseContract = true;
-        artifactKind = "entity_runtime";
-        const row = cases.rows[0]!;
-        const contractBytes = this.options.canonicalizer.canonicalBytes(
-          row["contract_json"],
-        );
-        if (
-          this.options.canonicalizer.sha256(contractBytes) !==
-          row["contract_hash"]
-        )
-          throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
-        const signature = await this.options.signer.sign({
-          keyId: this.options.signingKeyId,
-          algorithm: "Ed25519",
-          bytes: contractBytes,
-        });
-        const identity = businessPartnerCasePublicationIdentity(
-          String(row["tenant_id"]),
-          String(row["release_key"]),
-        );
-        let operationProjection: Record<string, unknown> = {
-          operation_scope_bindings: identity.operationScopeBindings,
-        };
-        if (identity.operationScopeBindings.length) {
-          const source = (
-            await sql<Row>`SELECT er.release_hash,r.contract_json FROM metadata.entity_release er
-            JOIN snapshot.entity_contract_revision r ON r.id=er.revision_id AND r.tenant_id=er.tenant_id
-            WHERE er.tenant_id=${String(row["tenant_id"])}::uuid AND er.entity_id=${String(row["entity_id"])}::uuid
-              AND er.release_kind='publish' AND er.contract_signature IS NOT NULL AND er.published_at<=${row["created_at"] as Date}
-            ORDER BY er.release_no DESC LIMIT 1`.execute(this.options.database)
-          ).rows[0];
-          if (!source || !this.options.caseOperationCatalog)
-            throw permanent("COMPANY_CASE_REVIEWED_OPERATION_SOURCE_REQUIRED");
-          operationProjection = compileCompanyCaseOperationBindings(
-            {
-              entityId: String(row["entity_id"]),
-              releaseHash: String(source["release_hash"]),
-              graph: source["contract_json"] as Record<string, unknown>,
-            },
-            await this.options.caseOperationCatalog(),
-          );
-        }
-        const descriptor = {
-          schema: "athyper.entity-case-runtime-descriptor/1.0",
-          entityCode: identity.entityCode,
-          planeKey: "neon",
-          lifecycleStore: "document.entity_case",
-          ...operationProjection,
-          caseContractBase: {
-            id: row["previous_contract_id"],
-            hash: row["previous_contract_hash"],
-            releaseNo: Number(row["previous_release_no"]),
-          },
-        };
-        result = {
-          ...cases,
-          rows: [
-            {
-              ...row,
-              entity_code: identity.entityCode,
-              contract_schema_code: "athyper.entity-contract",
-              contract_schema_version: "1.0.0",
-              published_at: row["created_at"],
-              plane_key: "neon",
-              descriptor_kind: "entity_case_runtime",
-              descriptor_id: stableUuid(
-                `case-contract-descriptor:${releaseId}:neon`,
-              ),
-              compiled_json: descriptor,
-              compiled_hash: this.options.canonicalizer.sha256(
-                this.options.canonicalizer.canonicalBytes(descriptor),
-              ),
-              contract_signature: signature.signature,
-              signature_algorithm: "Ed25519",
-              contract_signing_key_id: this.options.signingKeyId,
-            },
-          ],
-        };
-      }
-    }
+      "entity_runtime";
     if (!result.rows.length) {
       const available = (
         await sql<Row>`SELECT to_regprocedure('publication.fn_collection_configuration_compilation_source(uuid)') IS NOT NULL AS available`.execute(
@@ -387,8 +277,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
           "athyper.published-collection/1",
       )
         ? result.rows.length
-        : caseContract ||
-            result.rows.some(
+        : result.rows.some(
               (row) =>
                 object(row, "compiled_json")["schema"] ===
                 "athyper.entity-notifications/1",
@@ -485,20 +374,12 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
           contract_signing_key_id: this.options.signingKeyId,
         };
       }
-      let unsigned =
-        artifactKind === "entity_runtime"
-          ? buildUnsigned(
-              consumerRow,
-              plane,
-              this.options.signingKeyId,
-              this.options.canonicalizer,
-            )
-          : buildBusinessPartnerDefinitionUnsigned(
-              row,
-              plane,
-              this.options.signingKeyId,
-              this.options.canonicalizer,
-            );
+      let unsigned = buildUnsigned(
+        consumerRow,
+        plane,
+        this.options.signingKeyId,
+        this.options.canonicalizer,
+      );
       if (
         artifactKind === "entity_runtime" &&
         object(row, "compiled_json")["authorizationRuntime"] !== undefined
@@ -1088,85 +969,6 @@ function buildUnsigned(
   return { envelope, manifest };
 }
 
-function buildBusinessPartnerDefinitionUnsigned(
-  row: Row,
-  plane: PublicationPlane,
-  signingKeyId: string,
-  canonicalizer: PublicationCanonicalizer,
-) {
-  const compiled = compileBusinessPartnerDefinition({
-    bundle: object(row, "bundle_json"),
-    plane,
-    canonicalizer,
-  });
-  if (compiled.sourceBundleHash !== string(row, "bundle_hash"))
-    throw permanent("BUSINESS_PARTNER_DEFINITION_SOURCE_HASH_MISMATCH");
-  const payload = {
-    id: stableUuid(
-      `business-partner-definition-projection:${string(row, "publication_release_id")}:${plane}`,
-    ),
-    tenantId: string(row, "tenant_id"),
-    revisionId: string(row, "revision_id"),
-    releaseId: string(row, "publication_release_id"),
-    releaseNo: number(row, "release_no"),
-    publicationKey: string(row, "release_key"),
-    plane,
-    bundleCode: string(row, "bundle_code"),
-    semanticVersion: string(row, "semantic_version"),
-    bundleSchemaVersion: string(row, "bundle_schema_version"),
-    bundleHash: compiled.compiledBundleHash,
-    sourceBundleHash: compiled.sourceBundleHash,
-    bundle: compiled.bundle,
-    compileReport: compiled.report,
-    generatedAt: date(row, "created_at"),
-  };
-  const envelope = {
-    schema: PUBLICATION_ARTIFACT_SCHEMA_V1,
-    publicationKey: string(row, "release_key"),
-    releaseId: string(row, "publication_release_id"),
-    releaseNo: number(row, "release_no"),
-    releaseKind: string(row, "release_kind"),
-    targetPlane: plane,
-    artifactKind: "business_partner_definition_bundle" as const,
-    generatedAt: date(row, "created_at"),
-    ...(row["minimum_runtime_version"]
-      ? { minimumRuntimeVersion: string(row, "minimum_runtime_version") }
-      : {}),
-    compatibilityLevel: string(row, "compatibility_level"),
-    payload,
-  };
-  const manifest = {
-    artifactSchema: PUBLICATION_ARTIFACT_SCHEMA_V1,
-    mediaType: PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,
-    publicationKey: string(row, "release_key"),
-    releaseId: string(row, "publication_release_id"),
-    releaseNo: number(row, "release_no"),
-    targetPlane: plane,
-    artifactKind: "business_partner_definition_bundle" as const,
-    payloadSha256: canonicalizer.sha256(canonicalizer.canonicalBytes(payload)),
-    compiler: {
-      name: "athyper.business-partner-definition-artifact",
-      version: BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION,
-    },
-    contractSchemaVersion: string(row, "bundle_schema_version"),
-    descriptorSchemaVersion: string(row, "bundle_schema_version"),
-    ...(row["minimum_runtime_version"]
-      ? { minimumRuntimeVersion: string(row, "minimum_runtime_version") }
-      : {}),
-    signatureAlgorithm: "Ed25519",
-    signingKeyId,
-    createdAt: date(row, "created_at"),
-    evidence: {
-      sourceBundleHash: compiled.sourceBundleHash,
-      compiledBundleHash: compiled.compiledBundleHash,
-      compileReportHash: canonicalizer.sha256(
-        canonicalizer.canonicalBytes(compiled.report),
-      ),
-    },
-  };
-  return { envelope, manifest };
-}
-
 function stableUuid(value: string) {
   const hex = createHash("sha256")
     .update(value)
@@ -1221,7 +1023,6 @@ function artifactKindValue(
   if (
     value !== "entity_runtime" &&
     value !== "compiled_entity_runtime" &&
-    value !== "business_partner_definition_bundle" &&
     value !== "entity_authoring_descriptor" &&
     value !== "entity_identity_review" &&
     value !== "entity_ui_component" &&

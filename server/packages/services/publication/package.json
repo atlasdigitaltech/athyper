@@ -13,11 +13,8 @@
     "./kysely-local-projection-repository": "./src/kysely-local-projection-repository.ts",
     "./publication-artifact-loader": "./src/publication-artifact-loader.ts",
     "./publication-orchestrator": "./src/publication-orchestrator.ts",
-    "./entity-foundation-definition": "./src/entity-foundation-definition.ts",
-    "./entity-definition-compiler": "./src/entity-definition-compiler.ts",
     "./compiled-entity-artifact-compiler": "./src/compiled-entity-artifact-compiler.ts",
     "./compiled-entity-collection-compiler": "./src/compiled-entity-collection-compiler.ts",
-    "./entity-case-contract-service": "./src/entity-case-contract-service.ts",
     "./compilation/compiled-runtime": "./src/compilation/compiled-runtime.ts"
   },
   "scripts": {

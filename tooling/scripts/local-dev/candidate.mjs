@@ -252,55 +252,7 @@ export async function main(args = process.argv.slice(2)) {
     return;
   }
   if (action === "export" && rest.length === 2) {
-    const [revisionId, output] = rest;
-    if (!/^[a-f0-9-]{36}$/.test(revisionId))
-      throw new Error("A saved Studio revision UUID is required");
-    const inspected = JSON.parse(
-      execute("docker", ["inspect", "athyper-dev-db-1"]),
-    )[0];
-    if (
-      inspected.Config.Labels["com.docker.compose.project"] !== "athyper-dev" ||
-      !inspected.State.Running
-    )
-      throw new Error("Running local DEV database required");
-    const sql = `SELECT json_build_object('id',id,'tenantId',tenant_id,'bundleCode',bundle_code,'semanticVersion',semantic_version,'bundle',bundle_json,'targetPlanes',target_planes) FROM snapshot.business_partner_definition_revision WHERE id='${revisionId}'::uuid`;
-    const row = execute("docker", [
-      "exec",
-      inspected.Id,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "athyper_studio",
-      "-Atc",
-      sql,
-    ]).trim();
-    if (!row) throw new Error("Studio revision not found");
-    const revision = JSON.parse(row),
-      document = {
-        schema: "athyper.authoring-export/1",
-        revision,
-        bundleSha256: sha(revision.bundle),
-      };
-    verifyPackage(document);
-    const destination = resolve(output);
-    if (existsSync(destination)) {
-      if (!lstatSync(destination).isFile())
-        throw new Error("Authoring output must be a regular file");
-      const prior = verifyPackage(json(destination));
-      if (
-        prior.revision.tenantId !== revision.tenantId ||
-        prior.revision.bundleCode !== revision.bundleCode
-      )
-        throw new Error("Refusing to replace another authoring definition");
-      const temporary = `${destination}.tmp-${process.pid}`;
-      writeNew(temporary, document);
-      renameSync(temporary, destination);
-    } else writeNew(destination, document);
-    console.log(
-      "Exported Studio authoring definition; no users, grants, credentials or approvals were exported.",
-    );
-    return;
+    throw new Error("BUSINESS_PARTNER_STUDIO_PUBLICATION_RETIRED");
   }
   if (action === "freeze" && [3, 4].includes(rest.length)) {
     const [authoringPath, imagesPath, output, metadataPath] = rest,

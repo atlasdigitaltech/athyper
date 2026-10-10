@@ -36,7 +36,6 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
       if (
         !this.canonicalizer ||
         input.entityReleaseId ||
-        input.businessPartnerDefinitionRevisionId ||
         resource.releaseId !== input.id ||
         resource.releaseNo !== input.releaseNo ||
         resource.publicationKey !== input.publicationKey ||
@@ -97,11 +96,6 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
         if (input.entityReleaseId) {
           await sql`INSERT INTO publication.entity_release_link(publication_release_id,entity_release_id)
             VALUES(${input.id}::uuid,${input.entityReleaseId}::uuid)`.execute(
-            transaction,
-          );
-        } else if (input.businessPartnerDefinitionRevisionId) {
-          await sql`INSERT INTO publication.business_partner_definition_release_link(publication_release_id,definition_revision_id,publish_idempotency_key,created_by)
-            VALUES(${input.id}::uuid,${input.businessPartnerDefinitionRevisionId}::uuid,${String(input.metadata?.["publishIdempotencyKey"] ?? input.id)},${input.actorId}::uuid)`.execute(
             transaction,
           );
         } else if (!resource) {

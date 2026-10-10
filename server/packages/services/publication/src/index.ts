@@ -37,13 +37,7 @@ export { readPublishedNotificationConfiguration } from "./notification-configura
 export * from "./publication-operations.js";
 export * from "./release-promotion.js";
 export * from "./kysely-publication-operations-repository.js";
-export * from "./entity-definition-service.js";
 export * from "./entity-definition-source.js";
-export * from "./entity-foundation-definition.js";
-export * from "./entity-definition-compiler.js";
-export * from "./entity-definition-consumer.js";
-
-export * from "./entity-case-contract-service.js";
 export * from "./entity-authorization-compiler.js";
 
 export * from "./entity-authorization-publication-review.js";
@@ -52,7 +46,6 @@ export * from "./authenticated-entity-release-review.js";
 
 export * from "./file-entity-release-review-store.js";
 
-export { businessPartnerInitialCaseSchema } from "./entity-initial-case-schema.js";
 export { localPreviewRoot } from "./shared/preview/environment.js";
 export type {
   ActiveCaseContract,
@@ -72,7 +65,6 @@ export type {
   CompiledRuntimePublication,
   CompiledRuntimeSource,
 } from "./compilation/compiled-runtime.js";
-export * from "./entity-operation-binding-compiler.js";
 export { readPublishedCollectionConfiguration } from "./collection-configuration-source.js";
 export { lowerNativeRuntimePublication } from "./compilation/native-runtime.js";
 
