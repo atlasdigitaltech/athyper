@@ -581,7 +581,6 @@ BEGIN
   "master.command_materialize_business_partner_registration_case(uuid, uuid, bigint, text, uuid, uuid)",
   "master.command_materialize_business_partner_role_case(uuid, uuid, bigint, text, uuid, uuid)",
   "master.command_materialize_internal_business_partner_case(uuid, uuid, bigint, text, uuid, uuid)",
-  "master.command_materialize_mesh_profile_change_case(uuid, uuid, bigint, text, uuid, uuid)",
   "master.fn_materialize_business_partner_case_relationships()",
   "master.fn_pin_business_partner_child_activation(uuid, uuid, jsonb, boolean)",
   "master.fn_refresh_mv_cpa()",

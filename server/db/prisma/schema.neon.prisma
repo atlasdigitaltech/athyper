@@ -156,6 +156,7 @@ model ai_agent_run {
   principal                principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "ai_agent_run_aar_principal_fk")
   tenant                   tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "ai_agent_run_aar_tenant_fk")
   atlas_run                atlas_run[]
+
   @@unique([tenant_id, id], map: "ai_agent_run_aar_tenant_id_uq")
   @@index([tenant_id, client_request_id, created_at(sort: Desc)], map: "ai_agent_run_aar_client_request_idx")
   @@index([tenant_id, error_category, created_at(sort: Desc)], map: "ai_agent_run_aar_failure_pidx", where: raw("(outcome = 'failed'::text)"))
@@ -3226,7 +3227,7 @@ model external_workforce_rate {
   id                                                                String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                         String                           @db.Uuid
   rate_card_id                                                      String                           @db.Uuid
-  supplier_id                                                       String?                          @db.Uuid
+  business_partner_id                                               String?                          @db.Uuid
   job_id                                                            String?                          @db.Uuid
   site_id                                                           String?                          @db.Uuid
   worker_classification                                             String?
@@ -3249,8 +3250,8 @@ model external_workforce_rate {
   external_workforce_rate_card                                      external_workforce_rate_card     @relation(fields: [tenant_id, rate_card_id], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_card_fk")
   principal_external_workforce_rate_tenant_id_created_byToprincipal principal                        @relation("external_workforce_rate_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_created_by_fk")
   job                                                               job?                             @relation(fields: [tenant_id, job_id], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_job_fk")
+  business_partner                                                  business_partner?                @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_partner_fk")
   site                                                              site?                            @relation(fields: [tenant_id, site_id], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_site_fk")
-  supplier                                                          supplier?                        @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_supplier_fk")
   tenant                                                            tenant                           @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "external_workforce_rate_tenant_fk")
   principal_external_workforce_rate_tenant_id_updated_byToprincipal principal?                       @relation("external_workforce_rate_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_workforce_rate_updated_by_fk")
   contingent_work_order_revision                                    contingent_work_order_revision[]
@@ -3258,7 +3259,7 @@ model external_workforce_rate {
 
   @@unique([tenant_id, rate_card_id, rate_code, effective_from], map: "external_workforce_rate_code_uq")
   @@unique([tenant_id, id], map: "external_workforce_rate_tenant_id_uq")
-  @@index([tenant_id, rate_card_id, supplier_id, job_id, site_id, worker_classification, effective_from], map: "external_workforce_rate_match_idx", where: raw("(status = 'active'::text)"))
+  @@index([tenant_id, rate_card_id, business_partner_id, job_id, site_id, worker_classification, effective_from], map: "external_workforce_rate_match_idx", where: raw("(status = 'active'::text)"))
   @@schema("control")
 }
 
@@ -3782,184 +3783,11 @@ model mesh_bank_account_disclosure_inbox {
   received_by                           String                                 @db.Uuid
   principal                             principal                              @relation(fields: [tenant_id, received_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_disclosure_inbox_actor_fk")
   tenant                                tenant                                 @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bank_disclosure_inbox_tenant_fk")
-  mesh_bank_account_projection          mesh_bank_account_projection[]
   mesh_bank_account_disclosure_received mesh_bank_account_disclosure_received?
 
   @@unique([tenant_id, event_id], map: "mesh_bank_disclosure_inbox_event_uq")
   @@unique([tenant_id, id], map: "mesh_bank_disclosure_inbox_tenant_id_uq")
   @@index([tenant_id, network_relationship_id, received_at(sort: Desc)], map: "mesh_bank_disclosure_inbox_relationship_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_bank_account_projection {
-  id                                    String                                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                             String                                @db.Uuid
-  account_link_id                       String                                @db.Uuid
-  source_tenant_id                      String                                @db.Uuid
-  source_network_account_id             String                                @db.Uuid
-  recipient_network_account_id          String                                @db.Uuid
-  network_relationship_id               String                                @db.Uuid
-  current_disclosure_id                 String                                @db.Uuid
-  current_disclosure_version            Int
-  current_lifecycle_version             Int
-  current_snapshot_id                   String                                @db.Uuid
-  last_inbox_event_id                   String                                @db.Uuid
-  account_fingerprint                   String
-  projection_status                     String                                @default("available")
-  updated_at                            DateTime                              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  updated_by                            String                                @db.Uuid
-  principal                             principal                             @relation(fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_projection_actor_fk")
-  mesh_bank_account_disclosure_inbox    mesh_bank_account_disclosure_inbox    @relation(fields: [tenant_id, last_inbox_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_projection_inbox_fk")
-  mesh_business_partner_account_link    mesh_business_partner_account_link    @relation(fields: [tenant_id, account_link_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_projection_link_fk")
-  mesh_bank_account_disclosure_received mesh_bank_account_disclosure_received @relation(fields: [tenant_id, current_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_projection_snapshot_fk")
-  tenant                                tenant                                @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bank_account_projection_tenant_fk")
-
-  @@unique([tenant_id, network_relationship_id], map: "mesh_bank_account_projection_relationship_uq")
-  @@unique([tenant_id, id], map: "mesh_bank_account_projection_tenant_id_uq")
-  @@index([tenant_id, account_link_id, projection_status], map: "mesh_bank_account_projection_partner_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_account_link {
-  id                                                                              String                                   @id(map: "mesh_bp_account_link_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                       String                                   @db.Uuid
-  profile_projection_id                                                           String                                   @db.Uuid
-  source_tenant_id                                                                String                                   @db.Uuid
-  source_network_account_id                                                       String                                   @db.Uuid
-  recipient_network_account_id                                                    String                                   @db.Uuid
-  network_relationship_id                                                         String                                   @db.Uuid
-  business_partner_id                                                             String                                   @db.Uuid
-  proposed_role                                                                   String
-  external_reference_id                                                           String?                                  @db.Uuid
-  onboarding_request_id                                                           String?                                  @db.Uuid
-  idempotency_key                                                                 String
-  decision_fingerprint                                                            String?
-  status                                                                          String                                   @default("pending_approval")
-  reviewed_at                                                                     DateTime?                                @db.Timestamptz(6)
-  reviewed_by                                                                     String?                                  @db.Uuid
-  approved_at                                                                     DateTime?                                @db.Timestamptz(6)
-  approved_by                                                                     String?                                  @db.Uuid
-  terminated_at                                                                   DateTime?                                @db.Timestamptz(6)
-  terminated_by                                                                   String?                                  @db.Uuid
-  termination_reason                                                              String?
-  row_version                                                                     BigInt                                   @default(1)
-  created_at                                                                      DateTime                                 @default(now()) @db.Timestamptz(6)
-  created_by                                                                      String                                   @db.Uuid
-  updated_at                                                                      DateTime?                                @db.Timestamptz(6)
-  updated_by                                                                      String?                                  @db.Uuid
-  mesh_bank_account_projection                                                    mesh_bank_account_projection[]
-  principal_mesh_business_partner_account_link_tenant_id_approved_byToprincipal   principal?                               @relation("mesh_business_partner_account_link_tenant_id_approved_byToprincipal", fields: [tenant_id, approved_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_approved_by_fk")
-  principal_mesh_business_partner_account_link_tenant_id_created_byToprincipal    principal                                @relation("mesh_business_partner_account_link_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_created_by_fk")
-  external_reference                                                              external_reference?                      @relation(fields: [tenant_id, external_reference_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_external_fk")
-  business_partner                                                                business_partner                         @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_partner_fk")
-  mesh_business_partner_profile_projection                                        mesh_business_partner_profile_projection @relation(fields: [tenant_id, profile_projection_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_projection_fk")
-  principal_mesh_business_partner_account_link_tenant_id_reviewed_byToprincipal   principal?                               @relation("mesh_business_partner_account_link_tenant_id_reviewed_byToprincipal", fields: [tenant_id, reviewed_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_reviewed_by_fk")
-  tenant                                                                          tenant                                   @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bp_account_link_tenant_fk")
-  principal_mesh_business_partner_account_link_tenant_id_terminated_byToprincipal principal?                               @relation("mesh_business_partner_account_link_tenant_id_terminated_byToprincipal", fields: [tenant_id, terminated_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_account_link_terminated_by_fk")
-
-  @@unique([tenant_id, business_partner_id, source_network_account_id, proposed_role], map: "mesh_bp_account_link_active_partner_role_uq", where: raw("(status = 'active'::text)"))
-  @@unique([tenant_id, source_tenant_id, source_network_account_id], map: "mesh_bp_account_link_coordinate_uq")
-  @@unique([tenant_id, idempotency_key], map: "mesh_bp_account_link_idempotency_uq")
-  @@unique([tenant_id, id], map: "mesh_bp_account_link_tenant_id_uq")
-  @@index([tenant_id, business_partner_id, status], map: "mesh_bp_account_link_partner_idx")
-  @@index([tenant_id, network_relationship_id, status], map: "mesh_bp_account_link_relationship_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_profile_inbox {
-  id                                               String                                             @id(map: "mesh_bp_profile_inbox_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                        String                                             @db.Uuid
-  event_id                                         String                                             @db.Uuid
-  event_type                                       String
-  source_tenant_id                                 String                                             @db.Uuid
-  source_network_account_id                        String                                             @db.Uuid
-  recipient_network_account_id                     String                                             @db.Uuid
-  network_relationship_id                          String                                             @db.Uuid
-  publication_id                                   String                                             @db.Uuid
-  publication_version                              Int
-  lifecycle_version                                Int
-  schema_code                                      String
-  schema_version                                   Int
-  field_set_code                                   String
-  payload_hash                                     String
-  envelope_json                                    Json
-  envelope_hash                                    String
-  occurred_at                                      DateTime                                           @db.Timestamptz(6)
-  received_at                                      DateTime                                           @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  received_by                                      String                                             @db.Uuid
-  principal                                        principal                                          @relation(fields: [tenant_id, received_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_inbox_received_by_fk")
-  tenant                                           tenant                                             @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bp_profile_inbox_tenant_fk")
-  mesh_business_partner_profile_processing_attempt mesh_business_partner_profile_processing_attempt[]
-  mesh_business_partner_profile_projection         mesh_business_partner_profile_projection[]
-  mesh_business_partner_profile_received           mesh_business_partner_profile_received?
-
-  @@unique([tenant_id, event_id], map: "mesh_bp_profile_inbox_event_uq")
-  @@unique([tenant_id, id], map: "mesh_bp_profile_inbox_tenant_id_uq")
-  @@index([tenant_id, network_relationship_id, publication_version(sort: Desc), lifecycle_version(sort: Desc)], map: "mesh_bp_profile_inbox_coordinate_idx")
-  @@index([tenant_id, publication_id, lifecycle_version(sort: Desc)], map: "mesh_bp_profile_inbox_publication_idx")
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_profile_processing_attempt {
-  id                                  String                              @id(map: "mesh_bp_profile_attempt_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                           String                              @db.Uuid
-  inbox_event_id                      String                              @db.Uuid
-  attempt_no                          Int
-  trigger_kind                        String
-  disposition                         String
-  reason_code                         String?
-  details                             Json                                @default("{}")
-  processed_at                        DateTime                            @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  processed_by                        String                              @db.Uuid
-  mesh_business_partner_profile_inbox mesh_business_partner_profile_inbox @relation(fields: [tenant_id, inbox_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_attempt_inbox_fk")
-  principal                           principal                           @relation(fields: [tenant_id, processed_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_attempt_processed_by_fk")
-
-  @@unique([tenant_id, inbox_event_id, attempt_no], map: "mesh_bp_profile_attempt_number_uq")
-  @@unique([tenant_id, id], map: "mesh_bp_profile_attempt_tenant_id_uq")
-  @@index([tenant_id, processed_at(sort: Desc), inbox_event_id], map: "mesh_bp_profile_attempt_quarantine_idx", where: raw("(disposition = 'quarantined'::text)"))
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_profile_projection {
-  id                                     String                                 @id(map: "mesh_bp_profile_projection_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                              String                                 @db.Uuid
-  source_tenant_id                       String                                 @db.Uuid
-  source_network_account_id              String                                 @db.Uuid
-  recipient_network_account_id           String                                 @db.Uuid
-  network_relationship_id                String                                 @db.Uuid
-  current_publication_id                 String                                 @db.Uuid
-  current_publication_version            Int
-  current_lifecycle_version              Int
-  current_snapshot_id                    String                                 @db.Uuid
-  last_inbox_event_id                    String                                 @db.Uuid
-  projection_status                      String
-  updated_at                             DateTime                               @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  updated_by                             String                                 @db.Uuid
-  mesh_business_partner_account_link     mesh_business_partner_account_link[]
-  mesh_business_partner_profile_inbox    mesh_business_partner_profile_inbox    @relation(fields: [tenant_id, last_inbox_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_projection_event_fk")
-  mesh_business_partner_profile_received mesh_business_partner_profile_received @relation(fields: [tenant_id, current_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_projection_snapshot_fk")
-  principal                              principal                              @relation(fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_projection_updated_by_fk")
-  mesh_business_partner_match            mesh_business_partner_match[]
-  mesh_profile_change_resolution         mesh_profile_change_resolution[]
-
-  @@unique([tenant_id, network_relationship_id], map: "mesh_bp_profile_projection_relationship_uq")
-  @@unique([tenant_id, id], map: "mesh_bp_profile_projection_tenant_id_uq")
-  @@index([tenant_id, source_tenant_id, source_network_account_id, projection_status], map: "mesh_bp_profile_projection_source_idx")
   @@schema("control")
 }
 
@@ -7682,49 +7510,47 @@ model engagement_onboarding_case {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_case {
-  id                                                                                             String                                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                      String                                  @db.Uuid
+  id                                                                                             String                                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                      String                                 @db.Uuid
   case_code                                                                                      String
   entity_code                                                                                    String
   operation_code                                                                                 String
-  owner_company_code_id                                                                          String?                                 @db.Uuid
-  target_entity_id                                                                               String?                                 @db.Uuid
+  owner_company_code_id                                                                          String?                                @db.Uuid
+  target_entity_id                                                                               String?                                @db.Uuid
   pre_materialization_ref                                                                        String?
-  entity_contract_id                                                                             String                                  @db.Uuid
-  entity_contract_hash                                                                           String                                  @db.Char(64)
-  form_template_release_id                                                                       String?                                 @db.Uuid
+  entity_contract_id                                                                             String                                 @db.Uuid
+  entity_contract_hash                                                                           String                                 @db.Char(64)
+  form_template_release_id                                                                       String?                                @db.Uuid
   form_template_release_no                                                                       BigInt?
-  form_template_hash                                                                             String?                                 @db.Char(64)
-  current_snapshot_id                                                                            String                                  @db.Uuid
-  submitted_snapshot_id                                                                          String?                                 @db.Uuid
-  decision_snapshot_id                                                                           String?                                 @db.Uuid
-  result_snapshot_id                                                                             String?                                 @db.Uuid
-  status                                                                                         String                                  @default("draft")
-  row_version                                                                                    BigInt                                  @default(1)
+  form_template_hash                                                                             String?                                @db.Char(64)
+  current_snapshot_id                                                                            String                                 @db.Uuid
+  submitted_snapshot_id                                                                          String?                                @db.Uuid
+  decision_snapshot_id                                                                           String?                                @db.Uuid
+  result_snapshot_id                                                                             String?                                @db.Uuid
+  status                                                                                         String                                 @default("draft")
+  row_version                                                                                    BigInt                                 @default(1)
   idempotency_key                                                                                String
-  status_changed_at                                                                              DateTime?                               @db.Timestamptz(6)
-  status_changed_by                                                                              String?                                 @db.Uuid
-  created_at                                                                                     DateTime                                @default(now()) @db.Timestamptz(6)
-  created_by                                                                                     String                                  @db.Uuid
-  updated_at                                                                                     DateTime?                               @db.Timestamptz(6)
-  updated_by                                                                                     String?                                 @db.Uuid
+  status_changed_at                                                                              DateTime?                              @db.Timestamptz(6)
+  status_changed_by                                                                              String?                                @db.Uuid
+  created_at                                                                                     DateTime                               @default(now()) @db.Timestamptz(6)
+  created_by                                                                                     String                                 @db.Uuid
+  updated_at                                                                                     DateTime?                              @db.Timestamptz(6)
+  updated_by                                                                                     String?                                @db.Uuid
   business_partner_invitation                                                                    business_partner_invitation?
   business_partner_invitation_recovery                                                           business_partner_invitation_recovery[]
-  company_code                                                                                   company_code?                           @relation(fields: [tenant_id, owner_company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_company_owner_fk")
-  entity_contract                                                                                entity_contract                         @relation(fields: [tenant_id, entity_contract_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_contract_fk")
-  principal_entity_case_tenant_id_created_byToprincipal                                          principal                               @relation("entity_case_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_created_by_fk")
-  entity_snapshot_identity_entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity   entity_snapshot_identity                @relation("entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity", fields: [tenant_id, current_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_current_snapshot_fk")
-  entity_snapshot_identity_entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity  entity_snapshot_identity?               @relation("entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity", fields: [tenant_id, decision_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_decision_snapshot_fk")
-  entity_snapshot_identity_entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity    entity_snapshot_identity?               @relation("entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity", fields: [tenant_id, result_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_result_snapshot_fk")
-  principal_entity_case_tenant_id_status_changed_byToprincipal                                   principal?                              @relation("entity_case_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_status_by_fk")
-  entity_snapshot_identity_entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity entity_snapshot_identity?               @relation("entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity", fields: [tenant_id, submitted_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_submitted_snapshot_fk")
-  tenant                                                                                         tenant                                  @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_tenant_fk")
-  principal_entity_case_tenant_id_updated_byToprincipal                                          principal?                              @relation("entity_case_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_updated_by_fk")
+  company_code                                                                                   company_code?                          @relation(fields: [tenant_id, owner_company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_company_owner_fk")
+  entity_contract                                                                                entity_contract                        @relation(fields: [tenant_id, entity_contract_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_contract_fk")
+  principal_entity_case_tenant_id_created_byToprincipal                                          principal                              @relation("entity_case_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_created_by_fk")
+  entity_snapshot_identity_entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity   entity_snapshot_identity               @relation("entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity", fields: [tenant_id, current_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_current_snapshot_fk")
+  entity_snapshot_identity_entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity  entity_snapshot_identity?              @relation("entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity", fields: [tenant_id, decision_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_decision_snapshot_fk")
+  entity_snapshot_identity_entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity    entity_snapshot_identity?              @relation("entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity", fields: [tenant_id, result_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_result_snapshot_fk")
+  principal_entity_case_tenant_id_status_changed_byToprincipal                                   principal?                             @relation("entity_case_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_status_by_fk")
+  entity_snapshot_identity_entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity entity_snapshot_identity?              @relation("entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity", fields: [tenant_id, submitted_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_submitted_snapshot_fk")
+  tenant                                                                                         tenant                                 @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_tenant_fk")
+  principal_entity_case_tenant_id_updated_byToprincipal                                          principal?                             @relation("entity_case_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_updated_by_fk")
   entity_case_command_evidence                                                                   entity_case_command_evidence[]
   entity_case_materialization                                                                    entity_case_materialization[]
   entity_case_validation                                                                         entity_case_validation[]
-  mesh_business_partner_acceptance_event                                                         mesh_business_partner_acceptance_event?
-  mesh_profile_change_case                                                                       mesh_profile_change_case?
   process_case_contributor                                                                       process_case_contributor[]
   process_task_assignment_history                                                                process_task_assignment_history[]
   process_task_information                                                                       process_task_information[]
@@ -8919,137 +8745,6 @@ model match_exception {
   @@index([tenant_id, invoice_match_case_id], map: "match_exception_case_idx")
   @@index([tenant_id, invoice_line_id], map: "match_exception_open_line_idx", where: raw("((status)::text = 'open'::text)"))
   @@index([tenant_id, workflow_request_id], map: "match_exception_workflow_idx", where: raw("(workflow_request_id IS NOT NULL)"))
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_acceptance {
-  id                                     String                                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                              String                                   @db.Uuid
-  match_id                               String                                   @db.Uuid
-  snapshot_id                            String                                   @db.Uuid
-  accepted_field_paths                   String[]
-  proposed_payload                       Json
-  acceptance_hash                        String
-  request_idempotency_key                String
-  created_at                             DateTime                                 @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  created_by                             String                                   @db.Uuid
-  principal                              principal                                @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_acceptance_created_by_fk")
-  mesh_business_partner_match            mesh_business_partner_match              @relation(fields: [tenant_id, match_id, snapshot_id], references: [tenant_id, id, snapshot_id], onUpdate: NoAction, map: "mesh_business_partner_acceptance_match_fk")
-  mesh_business_partner_acceptance_event mesh_business_partner_acceptance_event[]
-
-  @@unique([tenant_id, request_idempotency_key], map: "mesh_business_partner_acceptance_key_uq")
-  @@unique([tenant_id, id], map: "mesh_business_partner_acceptance_tenant_id_uq")
-  @@index([tenant_id, match_id, created_at(sort: Desc)], map: "mesh_business_partner_acceptance_match_idx")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_acceptance_event {
-  id                               String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                        String                           @db.Uuid
-  acceptance_id                    String                           @db.Uuid
-  lifecycle_version                Int
-  event_kind                       String
-  event_fingerprint                String
-  recorded_at                      DateTime                         @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  recorded_by                      String                           @db.Uuid
-  entity_case_id                   String?                          @db.Uuid
-  mesh_business_partner_acceptance mesh_business_partner_acceptance @relation(fields: [tenant_id, acceptance_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_acceptance_event_acceptance_fk")
-  entity_case                      entity_case?                     @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_acceptance_event_case_fk")
-  principal                        principal                        @relation(fields: [tenant_id, recorded_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_acceptance_event_recorded_by_fk")
-
-  @@unique([tenant_id, entity_case_id], map: "mesh_business_partner_acceptance_event_case_global_uq", where: raw("(entity_case_id IS NOT NULL)"))
-  @@unique([tenant_id, id], map: "mesh_business_partner_acceptance_event_tenant_id_uq")
-  @@unique([tenant_id, acceptance_id, lifecycle_version], map: "mesh_business_partner_acceptance_event_version_uq")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_match {
-  id                                       String                                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                String                                   @db.Uuid
-  projection_id                            String                                   @db.Uuid
-  snapshot_id                              String                                   @db.Uuid
-  source_payload_hash                      String
-  source_publication_version               Int
-  operating_organization_id                String                                   @db.Uuid
-  company_code_id                          String?                                  @db.Uuid
-  candidate_business_partner_id            String?                                  @db.Uuid
-  candidate_fingerprint                    String?
-  algorithm_code                           String
-  algorithm_version                        Int
-  algorithm_hash                           String
-  ranked_candidates                        Json
-  field_diff                               Json
-  diff_hash                                String
-  idempotency_key                          String
-  created_at                               DateTime                                 @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  created_by                               String                                   @db.Uuid
-  mesh_business_partner_acceptance         mesh_business_partner_acceptance[]
-  business_partner                         business_partner?                        @relation(fields: [tenant_id, candidate_business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_candidate_fk")
-  company_code                             company_code?                            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_company_fk")
-  principal                                principal                                @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_created_by_fk")
-  operating_organization                   operating_organization                   @relation(fields: [tenant_id, operating_organization_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_org_fk")
-  mesh_business_partner_profile_projection mesh_business_partner_profile_projection @relation(fields: [tenant_id, projection_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_projection_fk")
-  mesh_business_partner_profile_received   mesh_business_partner_profile_received   @relation(fields: [tenant_id, snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_business_partner_match_snapshot_fk")
-
-  @@unique([tenant_id, idempotency_key], map: "mesh_business_partner_match_key_uq")
-  @@unique([tenant_id, id, snapshot_id], map: "mesh_business_partner_match_snapshot_uq")
-  @@unique([tenant_id, id], map: "mesh_business_partner_match_tenant_id_uq")
-  @@index([tenant_id, candidate_business_partner_id, created_at(sort: Desc)], map: "mesh_business_partner_match_candidate_idx", where: raw("(candidate_business_partner_id IS NOT NULL)"))
-  @@index([tenant_id, operating_organization_id, created_at(sort: Desc)], map: "mesh_business_partner_match_org_idx")
-  @@index([tenant_id, snapshot_id, created_at(sort: Desc)], map: "mesh_business_partner_match_snapshot_idx")
-  @@schema("document")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_profile_change_case {
-  tenant_id                      String                         @db.Uuid
-  resolution_id                  String                         @db.Uuid
-  entity_case_id                 String                         @db.Uuid
-  created_at                     DateTime                       @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  entity_case                    entity_case                    @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_case_entity_case_fk")
-  mesh_profile_change_resolution mesh_profile_change_resolution @relation(fields: [tenant_id, resolution_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_case_resolution_fk")
-
-  @@id([tenant_id, resolution_id])
-  @@unique([tenant_id, entity_case_id])
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_profile_change_resolution {
-  id                                                                                                                                           String                                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                                                                    String                                   @db.Uuid
-  projection_id                                                                                                                                String                                   @db.Uuid
-  baseline_snapshot_id                                                                                                                         String                                   @db.Uuid
-  incoming_snapshot_id                                                                                                                         String                                   @db.Uuid
-  business_partner_id                                                                                                                          String                                   @db.Uuid
-  operating_organization_id                                                                                                                    String                                   @db.Uuid
-  expected_target_version                                                                                                                      BigInt
-  preview_fingerprint                                                                                                                          String
-  preview                                                                                                                                      Json
-  decisions                                                                                                                                    Json
-  proposed_values                                                                                                                              Json
-  idempotency_key                                                                                                                              String
-  created_by                                                                                                                                   String                                   @db.Uuid
-  created_at                                                                                                                                   DateTime                                 @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  mesh_profile_change_case                                                                                                                     mesh_profile_change_case?
-  mesh_business_partner_profile_received_mesh_profile_change_resolution_tenant_id_baseline_snapshot_idTomesh_business_partner_profile_received mesh_business_partner_profile_received   @relation("mesh_profile_change_resolution_tenant_id_baseline_snapshot_idTomesh_business_partner_profile_received", fields: [tenant_id, baseline_snapshot_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_resolution_baseline_snapshot_fk")
-  business_partner                                                                                                                             business_partner                         @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_resolution_business_partner_fk")
-  principal                                                                                                                                    principal                                @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_resolution_created_by_fk")
-  mesh_business_partner_profile_received_mesh_profile_change_resolution_tenant_id_incoming_snapshot_idTomesh_business_partner_profile_received mesh_business_partner_profile_received   @relation("mesh_profile_change_resolution_tenant_id_incoming_snapshot_idTomesh_business_partner_profile_received", fields: [tenant_id, incoming_snapshot_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_resolution_incoming_snapshot_fk")
-  mesh_business_partner_profile_projection                                                                                                     mesh_business_partner_profile_projection @relation(fields: [tenant_id, projection_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "mesh_profile_change_resolution_projection_fk")
-
-  @@unique([tenant_id, id])
-  @@unique([tenant_id, idempotency_key])
   @@schema("document")
 }
 
@@ -11061,7 +10756,7 @@ model render_output {
 model sales_opportunity {
   id                                                                 String                     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                          String                     @db.Uuid
-  customer_id                                                        String                     @db.Uuid
+  business_partner_id                                                String                     @db.Uuid
   operating_organization_id                                          String                     @db.Uuid
   code                                                               String
   name                                                               String
@@ -11083,8 +10778,8 @@ model sales_opportunity {
   updated_by                                                         String?                    @db.Uuid
   principal_sales_opportunity_tenant_id_created_byToprincipal        principal                  @relation("sales_opportunity_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_created_by_fk")
   currency                                                           currency?                  @relation(fields: [currency_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "sales_opportunity_currency_fk")
-  customer                                                           customer                   @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_customer_fk")
   operating_organization                                             operating_organization     @relation(fields: [tenant_id, operating_organization_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_org_fk")
+  business_partner                                                   business_partner           @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_partner_fk")
   company_code                                                       company_code?              @relation(fields: [tenant_id, principal_seller_company_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_principal_company_fk")
   principal_sales_opportunity_tenant_id_requested_byToprincipal      principal?                 @relation("sales_opportunity_tenant_id_requested_byToprincipal", fields: [tenant_id, requested_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_requested_by_fk")
   principal_sales_opportunity_tenant_id_status_changed_byToprincipal principal?                 @relation("sales_opportunity_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_opportunity_status_by_fk")
@@ -11095,8 +10790,8 @@ model sales_opportunity {
 
   @@unique([tenant_id, code], map: "sales_opportunity_code_uq")
   @@unique([tenant_id, id], map: "sales_opportunity_tenant_id_uq")
-  @@index([tenant_id, customer_id, status], map: "sales_opportunity_customer_idx")
   @@index([tenant_id, operating_organization_id, status, expected_close_date], map: "sales_opportunity_org_status_idx")
+  @@index([tenant_id, business_partner_id, status], map: "sales_opportunity_partner_idx")
   @@index([tenant_id, principal_seller_company_id], map: "sales_opportunity_principal_company_idx", where: raw("(principal_seller_company_id IS NOT NULL)"))
   @@index([tenant_id, requested_by], map: "sales_opportunity_requested_by_idx", where: raw("(requested_by IS NOT NULL)"))
   @@schema("document")
@@ -11137,7 +10832,7 @@ model sales_order {
   id                                   String                                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                            String                                 @db.Uuid
   company_code_id                      String                                 @db.Uuid
-  customer_id                          String                                 @db.Uuid
+  business_partner_id                  String                                 @db.Uuid
   code                                 String
   order_date                           DateTime                               @db.Date
   requested_date                       DateTime?                              @db.Date
@@ -11155,7 +10850,7 @@ model sales_order {
   company_code                         company_code                           @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_order_company_fk")
   principal                            principal                              @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_order_created_by_fk")
   currency                             currency                               @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "sales_order_currency_fk")
-  customer                             customer                               @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_order_customer_fk")
+  business_partner                     business_partner                       @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_order_partner_fk")
   sales_quotation                      sales_quotation?                       @relation(fields: [tenant_id, quotation_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_order_quotation_fk")
   sales_order_intercompany_fulfillment sales_order_intercompany_fulfillment[]
   sales_order_line                     sales_order_line[]
@@ -11165,8 +10860,8 @@ model sales_order {
   @@unique([tenant_id, quotation_id, company_code_id], map: "sales_order_quotation_company_uq", where: raw("(quotation_id IS NOT NULL)"))
   @@unique([tenant_id, id], map: "sales_order_tenant_id_uq")
   @@index([tenant_id, created_by], map: "sales_order_created_by_idx")
-  @@index([tenant_id, customer_id], map: "sales_order_customer_fk_idx")
-  @@index([tenant_id, company_code_id, customer_id, status, order_date], map: "sales_order_customer_status_idx")
+  @@index([tenant_id, business_partner_id], map: "sales_order_partner_fk_idx")
+  @@index([tenant_id, company_code_id, business_partner_id, status, order_date], map: "sales_order_partner_status_idx")
   @@schema("document")
 }
 
@@ -11252,7 +10947,7 @@ model sales_quotation {
   id                                                               String                       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                        String                       @db.Uuid
   opportunity_id                                                   String?                      @db.Uuid
-  customer_id                                                      String                       @db.Uuid
+  business_partner_id                                              String                       @db.Uuid
   operating_organization_id                                        String                       @db.Uuid
   code                                                             String
   name                                                             String
@@ -11274,9 +10969,9 @@ model sales_quotation {
   sales_order                                                      sales_order[]
   principal_sales_quotation_tenant_id_created_byToprincipal        principal                    @relation("sales_quotation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_created_by_fk")
   currency                                                         currency                     @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "sales_quotation_currency_fk")
-  customer                                                         customer                     @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_customer_fk")
   sales_opportunity                                                sales_opportunity?           @relation(fields: [tenant_id, opportunity_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_opportunity_fk")
   operating_organization                                           operating_organization       @relation(fields: [tenant_id, operating_organization_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_org_fk")
+  business_partner                                                 business_partner             @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_partner_fk")
   company_code                                                     company_code?                @relation(fields: [tenant_id, principal_seller_company_id], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_principal_company_fk")
   principal_sales_quotation_tenant_id_requested_byToprincipal      principal?                   @relation("sales_quotation_tenant_id_requested_byToprincipal", fields: [tenant_id, requested_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_requested_by_fk")
   principal_sales_quotation_tenant_id_status_changed_byToprincipal principal?                   @relation("sales_quotation_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "sales_quotation_status_by_fk")
@@ -11287,9 +10982,9 @@ model sales_quotation {
 
   @@unique([tenant_id, code], map: "sales_quotation_code_uq")
   @@unique([tenant_id, id], map: "sales_quotation_tenant_id_uq")
-  @@index([tenant_id, customer_id, status], map: "sales_quotation_customer_idx")
   @@index([tenant_id, opportunity_id], map: "sales_quotation_opportunity_idx", where: raw("(opportunity_id IS NOT NULL)"))
   @@index([tenant_id, operating_organization_id, status, valid_until], map: "sales_quotation_org_status_idx")
+  @@index([tenant_id, business_partner_id, status], map: "sales_quotation_partner_idx")
   @@index([tenant_id, principal_seller_company_id], map: "sales_quotation_principal_company_idx", where: raw("(principal_seller_company_id IS NOT NULL)"))
   @@index([tenant_id, requested_by], map: "sales_quotation_requested_by_idx", where: raw("(requested_by IS NOT NULL)"))
   @@schema("document")
@@ -15089,7 +14784,7 @@ model address_link {
   updated_at               DateTime?             @db.Timestamptz(6)
   updated_by               String?               @db.Uuid
   address                  address               @relation(fields: [tenant_id, address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_address_fk")
-  owner_type_rel               owner_type            @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
+  owner_type               owner_type            @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
   tenant                   tenant                @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
   principal                principal?            @relation(fields: [tenant_id, usage_denied_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_usage_denied_by_fk")
   contact_person_role      contact_person_role[]
@@ -15570,6 +15265,7 @@ model master_bom {
   uom               uom                    @relation(fields: [uom_code], references: [code], onUpdate: NoAction, map: "bom_uom_fk")
   bom_component     master_bom_component[]
   snapshot_bom               snapshot_bom[]
+
   @@unique([tenant_id, company_code_id, code], map: "bom_code_uq")
   @@unique([tenant_id, company_code_id, id], map: "bom_company_id_uq")
   @@unique([tenant_id, company_code_id, output_item_id, bom_type], map: "bom_released_output_uq", where: raw("((status)::text = 'released'::text)"))
@@ -15612,6 +15308,7 @@ model master_bom_component {
   item                 item                     @relation(fields: [tenant_id, company_code_id, component_item_id], references: [tenant_id, company_code_id, id], onUpdate: NoAction, map: "bom_component_item_fk")
   uom                  uom                      @relation(fields: [uom_code], references: [code], onUpdate: NoAction, map: "bom_component_uom_fk")
   snapshot_bom_component        snapshot_bom_component[]
+
   @@unique([tenant_id, bom_id, component_item_id, alternate_group_code], map: "bom_component_item_uq")
   @@unique([tenant_id, bom_id, line_no], map: "bom_component_line_uq")
   @@unique([tenant_id, id], map: "bom_component_tenant_id_uq")
@@ -15711,6 +15408,8 @@ model business_partner {
   partner_category                                                                                                                      String                                               @default("organization")
   person_id                                                                                                                             String?                                              @db.Uuid
   ownership_class                                                                                                                       String                                               @default("external")
+  supplier_enabled                                                                                                                      Boolean                                              @default(false)
+  customer_enabled                                                                                                                      Boolean                                              @default(false)
   legal_classification                                                                                                                  String?
   category_locked_at                                                                                                                    DateTime                                             @default(now()) @db.Timestamptz(6)
   category_locked_by                                                                                                                    String                                               @db.Uuid
@@ -15726,15 +15425,13 @@ model business_partner {
   created_by                                                                                                                            String                                               @db.Uuid
   updated_at                                                                                                                            DateTime?                                            @db.Timestamptz(6)
   updated_by                                                                                                                            String?                                              @db.Uuid
-  supplier_enabled                                                                                                                      Boolean                                              @default(false)
-  customer_enabled                                                                                                                      Boolean                                              @default(false)
   business_partner_block                                                                                                                business_partner_block[]
   business_partner_mutation_evidence                                                                                                    business_partner_mutation_evidence[]
   business_partner_qualification                                                                                                        business_partner_qualification[]
   customer_account_designation                                                                                                          customer_account_designation[]
   customer_credit_review                                                                                                                customer_credit_review[]
   customer_lifecycle_event                                                                                                              customer_lifecycle_event[]
-  mesh_business_partner_account_link                                                                                                    mesh_business_partner_account_link[]
+  external_workforce_rate                                                                                                               external_workforce_rate[]
   supplier_preference_designation                                                                                                       supplier_preference_designation[]
   business_partner_duplicate_resolution_business_partner_duplicate_resolution_tenant_id_duplicate_business_partner_idTobusiness_partner business_partner_duplicate_resolution?               @relation("business_partner_duplicate_resolution_tenant_id_duplicate_business_partner_idTobusiness_partner")
   business_partner_duplicate_resolution_business_partner_duplicate_resolution_tenant_id_surviving_business_partner_idTobusiness_partner business_partner_duplicate_resolution[]              @relation("business_partner_duplicate_resolution_tenant_id_surviving_business_partner_idTobusiness_partner")
@@ -15745,8 +15442,6 @@ model business_partner {
   external_candidate_submission                                                                                                         external_candidate_submission[]
   external_service_entry                                                                                                                external_service_entry[]
   journal_line                                                                                                                          journal_line[]
-  mesh_business_partner_match                                                                                                           mesh_business_partner_match[]
-  mesh_profile_change_resolution                                                                                                        mesh_profile_change_resolution[]
   payment_entry                                                                                                                         payment_entry[]
   payment_remittance_output                                                                                                             payment_remittance_output[]
   punchout_cart                                                                                                                         punchout_cart[]
@@ -15755,6 +15450,9 @@ model business_partner {
   purchase_requisition_line                                                                                                             purchase_requisition_line[]
   receipt                                                                                                                               receipt[]
   receipt_line                                                                                                                          receipt_line[]
+  sales_opportunity                                                                                                                     sales_opportunity[]
+  sales_order                                                                                                                           sales_order[]
+  sales_quotation                                                                                                                       sales_quotation[]
   service_sheet                                                                                                                         service_sheet[]
   service_sheet_line                                                                                                                    service_sheet_line[]
   sourcing_event_award                                                                                                                  sourcing_event_award[]
@@ -16585,7 +16283,6 @@ model company_code {
   intercompany_transaction_intercompany_transaction_tenant_id_source_company_code_idTocompany_code                                  intercompany_transaction[]                  @relation("intercompany_transaction_tenant_id_source_company_code_idTocompany_code")
   invoice_match_case                                                                                                                invoice_match_case[]
   journal_entry                                                                                                                     journal_entry[]
-  mesh_business_partner_match                                                                                                       mesh_business_partner_match[]
   netting_batch_netting_batch_tenant_id_company_code_a_idTocompany_code                                                             netting_batch[]                             @relation("netting_batch_tenant_id_company_code_a_idTocompany_code")
   netting_batch_netting_batch_tenant_id_company_code_b_idTocompany_code                                                             netting_batch[]                             @relation("netting_batch_tenant_id_company_code_b_idTocompany_code")
   netting_batch_netting_batch_tenant_id_company_code_idTocompany_code                                                               netting_batch[]                             @relation("netting_batch_tenant_id_company_code_idTocompany_code")
@@ -16684,6 +16381,7 @@ model company_code {
   site                                                                                                                              site[]
   work_assignment                                                                                                                   work_assignment[]
   snapshot_bom                                                                                                                               snapshot_bom[]
+
   @@unique([tenant_id, code], map: "company_code_tenant_code_uq")
   @@unique([tenant_id, id, legal_entity_id], map: "company_code_tenant_id_legal_entity_uq")
   @@unique([tenant_id, id], map: "company_code_tenant_id_uq")
@@ -16768,7 +16466,7 @@ model company_code_chart_assignment {
 model company_code_customer_profile {
   id                                                                             String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                      String                           @db.Uuid
-  customer_id                                                                    String?                          @db.Uuid
+  business_partner_id                                                            String                           @db.Uuid
   company_code_id                                                                String                           @db.Uuid
   currency_code                                                                  String?                          @db.Char(3)
   payment_term_id                                                                String?                          @db.Uuid
@@ -16784,13 +16482,11 @@ model company_code_customer_profile {
   created_by                                                                     String                           @db.Uuid
   updated_at                                                                     DateTime?                        @db.Timestamptz(6)
   updated_by                                                                     String?                          @db.Uuid
-  business_partner_id                                                            String                           @db.Uuid
   commodity_category_sell_policy                                                 commodity_category_sell_policy[]
   accounting_profile                                                             accounting_profile?              @relation(fields: [tenant_id, default_accounting_profile_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_accounting_fk")
   company_code                                                                   company_code                     @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_company_fk")
   principal_company_code_customer_profile_tenant_id_created_byToprincipal        principal                        @relation("company_code_customer_profile_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_created_by_fk")
   currency                                                                       currency?                        @relation(fields: [currency_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "company_code_customer_profile_currency_fk")
-  customer                                                                       customer?                        @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_customer_fk")
   dimension_set                                                                  dimension_set?                   @relation(fields: [tenant_id, default_dimension_set_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_dimension_fk")
   business_partner                                                               business_partner                 @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_partner_fk")
   payment_term                                                                   payment_term?                    @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_payment_term_fk")
@@ -16799,10 +16495,9 @@ model company_code_customer_profile {
   intercompany_trading_pair                                                      intercompany_trading_pair[]
 
   @@unique([tenant_id, company_code_id, id], map: "company_code_customer_profile_company_id_uq")
-  @@unique([tenant_id, customer_id, company_code_id], map: "company_code_customer_profile_coordinate_uq")
-  @@unique([tenant_id, business_partner_id, company_code_id], map: "company_code_customer_profile_partner_coordinate_uq")
+  @@unique([tenant_id, business_partner_id, company_code_id], map: "company_code_customer_profile_coordinate_uq")
   @@unique([tenant_id, id], map: "company_code_customer_profile_tenant_id_uq")
-  @@index([tenant_id, company_code_id, status, customer_id], map: "company_code_customer_profile_company_idx")
+  @@index([tenant_id, company_code_id, status, business_partner_id], map: "company_code_customer_profile_company_idx")
   @@schema("master")
 }
 
@@ -16891,7 +16586,7 @@ model company_code_gl_account {
 model company_code_supplier_profile {
   id                                                                             String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                      String                          @db.Uuid
-  supplier_id                                                                    String?                         @db.Uuid
+  business_partner_id                                                            String                          @db.Uuid
   company_code_id                                                                String                          @db.Uuid
   currency_code                                                                  String?                         @db.Char(3)
   payment_term_id                                                                String?                         @db.Uuid
@@ -16907,7 +16602,6 @@ model company_code_supplier_profile {
   created_by                                                                     String                          @db.Uuid
   updated_at                                                                     DateTime?                       @db.Timestamptz(6)
   updated_by                                                                     String?                         @db.Uuid
-  business_partner_id                                                            String                          @db.Uuid
   commodity_category_buy_policy                                                  commodity_category_buy_policy[]
   accounting_profile                                                             accounting_profile?             @relation(fields: [tenant_id, default_accounting_profile_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_accounting_fk")
   payment_instrument_link                                                        payment_instrument_link?        @relation(fields: [tenant_id, preferred_remittance_bank_link_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_bank_link_fk")
@@ -16918,16 +16612,14 @@ model company_code_supplier_profile {
   business_partner                                                               business_partner                @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_partner_fk")
   payment_term                                                                   payment_term?                   @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_payment_term_fk")
   principal_company_code_supplier_profile_tenant_id_status_changed_byToprincipal principal?                      @relation("company_code_supplier_profile_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_status_changed_by_fk")
-  supplier                                                                       supplier?                       @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_supplier_fk")
   principal_company_code_supplier_profile_tenant_id_updated_byToprincipal        principal?                      @relation("company_code_supplier_profile_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_supplier_profile_updated_by_fk")
   intercompany_trading_pair                                                      intercompany_trading_pair[]
 
   @@unique([tenant_id, company_code_id, id], map: "company_code_supplier_profile_company_id_uq")
-  @@unique([tenant_id, supplier_id, company_code_id], map: "company_code_supplier_profile_coordinate_uq")
-  @@unique([tenant_id, business_partner_id, company_code_id], map: "company_code_supplier_profile_partner_coordinate_uq")
+  @@unique([tenant_id, business_partner_id, company_code_id], map: "company_code_supplier_profile_coordinate_uq")
   @@unique([tenant_id, id], map: "company_code_supplier_profile_tenant_id_uq")
   @@index([tenant_id, preferred_remittance_bank_link_id], map: "company_code_supplier_profile_bank_idx", where: raw("(preferred_remittance_bank_link_id IS NOT NULL)"))
-  @@index([tenant_id, company_code_id, status, supplier_id], map: "company_code_supplier_profile_company_idx")
+  @@index([tenant_id, company_code_id, status, business_partner_id], map: "company_code_supplier_profile_company_idx")
   @@schema("master")
 }
 
@@ -17089,9 +16781,10 @@ model contact_link {
   updated_at             DateTime?      @db.Timestamptz(6)
   updated_by             String?        @db.Uuid
   contact_email          contact_email[]
-  owner_type_rel             owner_type     @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "contact_link_owner_type_fk")
+  owner_type             owner_type     @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "contact_link_owner_type_fk")
   tenant                 tenant         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "contact_link_tenant_fk")
   contact_phone          contact_phone[]
+
   @@unique([tenant_id, owner_type_id, owner_id, channel_type, purpose, role_qualifier], map: "contact_link_one_primary_uq", where: raw("(is_primary AND (status = 'active'::text) AND (effective_until IS NULL))"))
   @@unique([tenant_id, id], map: "contact_link_tenant_id_uq")
   @@unique([tenant_id, owner_type_id, owner_id, channel_type, value, purpose, role_qualifier], map: "contact_link_value_uq", where: raw("((status = 'active'::text) AND (effective_until IS NULL))"))
@@ -17277,33 +16970,29 @@ model cost_center {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model customer {
-  id                                                        String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                 String                          @db.Uuid
-  business_partner_id                                       String                          @db.Uuid
+  id                                                        String                         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                 String                         @db.Uuid
+  business_partner_id                                       String                         @db.Uuid
   customer_code                                             String
-  customer_type                                             String                          @default("corporate")
-  record_version                                            BigInt                          @default(1)
-  metadata                                                  Json                            @default("{}")
-  status                                                    String                          @default("prospect")
-  is_active                                                 Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                         DateTime?                       @db.Timestamptz(6)
-  status_changed_by                                         String?                         @db.Uuid
-  created_at                                                DateTime                        @default(now()) @db.Timestamptz(6)
-  created_by                                                String                          @db.Uuid
-  updated_at                                                DateTime?                       @db.Timestamptz(6)
-  updated_by                                                String?                         @db.Uuid
+  customer_type                                             String                         @default("corporate")
+  record_version                                            BigInt                         @default(1)
+  metadata                                                  Json                           @default("{}")
+  status                                                    String                         @default("prospect")
+  is_active                                                 Boolean?                       @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                         DateTime?                      @db.Timestamptz(6)
+  status_changed_by                                         String?                        @db.Uuid
+  created_at                                                DateTime                       @default(now()) @db.Timestamptz(6)
+  created_by                                                String                         @db.Uuid
+  updated_at                                                DateTime?                      @db.Timestamptz(6)
+  updated_by                                                String?                        @db.Uuid
   customer_account_designation                              customer_account_designation[]
   customer_credit_review                                    customer_credit_review[]
   customer_lifecycle_event                                  customer_lifecycle_event[]
-  sales_opportunity                                         sales_opportunity[]
-  sales_order                                               sales_order[]
-  sales_quotation                                           sales_quotation[]
-  company_code_customer_profile                             company_code_customer_profile[]
-  business_partner                                          business_partner                @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "customer_business_partner_fk")
-  principal_customer_tenant_id_created_byToprincipal        principal                       @relation("customer_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_created_by_fk")
-  principal_customer_tenant_id_status_changed_byToprincipal principal?                      @relation("customer_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_status_changed_by_fk")
-  tenant                                                    tenant                          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "customer_tenant_fk")
-  principal_customer_tenant_id_updated_byToprincipal        principal?                      @relation("customer_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_updated_by_fk")
+  business_partner                                          business_partner               @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "customer_business_partner_fk")
+  principal_customer_tenant_id_created_byToprincipal        principal                      @relation("customer_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_created_by_fk")
+  principal_customer_tenant_id_status_changed_byToprincipal principal?                     @relation("customer_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_status_changed_by_fk")
+  tenant                                                    tenant                         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "customer_tenant_fk")
+  principal_customer_tenant_id_updated_byToprincipal        principal?                     @relation("customer_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "customer_updated_by_fk")
 
   @@unique([tenant_id, business_partner_id], map: "customer_business_partner_uq")
   @@unique([tenant_id, id], map: "customer_tenant_id_uq")
@@ -17665,29 +17354,28 @@ model employment {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model external_reference {
-  id                                                                  String                               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                           String                               @db.Uuid
-  owner_type_id                                                       String                               @db.Uuid
-  owner_id                                                            String                               @db.Uuid
+  id                                                                  String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                           String     @db.Uuid
+  owner_type_id                                                       String     @db.Uuid
+  owner_id                                                            String     @db.Uuid
   source_system_code                                                  String
   external_entity_code                                                String
   external_id                                                         String
   external_code                                                       String?
-  metadata                                                            Json                                 @default("{}")
-  status                                                              String                               @default("active")
-  is_active                                                           Boolean?                             @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                   DateTime?                            @db.Timestamptz(6)
-  status_changed_by                                                   String?                              @db.Uuid
-  created_at                                                          DateTime                             @default(now()) @db.Timestamptz(6)
-  created_by                                                          String                               @db.Uuid
-  updated_at                                                          DateTime?                            @db.Timestamptz(6)
-  updated_by                                                          String?                              @db.Uuid
-  mesh_business_partner_account_link                                  mesh_business_partner_account_link[]
-  principal_external_reference_tenant_id_created_byToprincipal        principal                            @relation("external_reference_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_created_by_fk")
-  owner_type_rel                                                          owner_type                           @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "external_reference_owner_type_fk")
-  principal_external_reference_tenant_id_status_changed_byToprincipal principal?                           @relation("external_reference_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_status_changed_by_fk")
-  tenant                                                              tenant                               @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "external_reference_tenant_fk")
-  principal_external_reference_tenant_id_updated_byToprincipal        principal?                           @relation("external_reference_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_updated_by_fk")
+  metadata                                                            Json       @default("{}")
+  status                                                              String     @default("active")
+  is_active                                                           Boolean?   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                   DateTime?  @db.Timestamptz(6)
+  status_changed_by                                                   String?    @db.Uuid
+  created_at                                                          DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                                          String     @db.Uuid
+  updated_at                                                          DateTime?  @db.Timestamptz(6)
+  updated_by                                                          String?    @db.Uuid
+  principal_external_reference_tenant_id_created_byToprincipal        principal  @relation("external_reference_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_created_by_fk")
+  owner_type                                                          owner_type @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "external_reference_owner_type_fk")
+  principal_external_reference_tenant_id_status_changed_byToprincipal principal? @relation("external_reference_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_status_changed_by_fk")
+  tenant                                                              tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "external_reference_tenant_fk")
+  principal_external_reference_tenant_id_updated_byToprincipal        principal? @relation("external_reference_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_updated_by_fk")
 
   @@unique([tenant_id, source_system_code, external_entity_code, external_id], map: "external_reference_source_identity_uq")
   @@unique([tenant_id, id], map: "external_reference_tenant_id_uq")
@@ -18183,6 +17871,7 @@ model item {
   project_item               project_item[]
   snapshot_bom                        snapshot_bom[]
   snapshot_bom_component              snapshot_bom_component[]
+
   @@unique([tenant_id, company_code_id, code], map: "item_company_code_uq")
   @@unique([tenant_id, company_code_id, id], map: "item_company_id_uq")
   @@unique([tenant_id, company_code_id, product_id], map: "item_company_product_uq")
@@ -18622,7 +18311,6 @@ model operating_organization {
   customer_lifecycle_event                           customer_lifecycle_event[]
   supplier_preference_designation                    supplier_preference_designation[]
   business_partner_invitation                        business_partner_invitation[]
-  mesh_business_partner_match                        mesh_business_partner_match[]
   sales_opportunity                                  sales_opportunity[]
   sales_quotation                                    sales_quotation[]
   sourcing_event                                     sourcing_event[]
@@ -19513,6 +19201,7 @@ model person {
   person_identity_document                                                     person_identity_document[]
   person_prior_employment                                                      person_prior_employment[]
   person_sensitive_profile                                                     person_sensitive_profile?
+  principal_person_link                                                        principal_person_link?
 
   @@unique([tenant_id, code], map: "person_code_uq")
   @@unique([tenant_id, person_number], map: "person_number_uq")
@@ -19962,14 +19651,6 @@ model principal {
   item_inventory_policy_item_inventory_policy_tenant_id_status_changed_byToprincipal                                                           item_inventory_policy[]                              @relation("item_inventory_policy_tenant_id_status_changed_byToprincipal")
   item_inventory_policy_item_inventory_policy_tenant_id_updated_byToprincipal                                                                  item_inventory_policy[]                              @relation("item_inventory_policy_tenant_id_updated_byToprincipal")
   mesh_bank_account_disclosure_inbox                                                                                                           mesh_bank_account_disclosure_inbox[]
-  mesh_bank_account_projection                                                                                                                 mesh_bank_account_projection[]
-  mesh_business_partner_account_link_mesh_business_partner_account_link_tenant_id_approved_byToprincipal                                       mesh_business_partner_account_link[]                 @relation("mesh_business_partner_account_link_tenant_id_approved_byToprincipal")
-  mesh_business_partner_account_link_mesh_business_partner_account_link_tenant_id_created_byToprincipal                                        mesh_business_partner_account_link[]                 @relation("mesh_business_partner_account_link_tenant_id_created_byToprincipal")
-  mesh_business_partner_account_link_mesh_business_partner_account_link_tenant_id_reviewed_byToprincipal                                       mesh_business_partner_account_link[]                 @relation("mesh_business_partner_account_link_tenant_id_reviewed_byToprincipal")
-  mesh_business_partner_account_link_mesh_business_partner_account_link_tenant_id_terminated_byToprincipal                                     mesh_business_partner_account_link[]                 @relation("mesh_business_partner_account_link_tenant_id_terminated_byToprincipal")
-  mesh_business_partner_profile_inbox                                                                                                          mesh_business_partner_profile_inbox[]
-  mesh_business_partner_profile_processing_attempt                                                                                             mesh_business_partner_profile_processing_attempt[]
-  mesh_business_partner_profile_projection                                                                                                     mesh_business_partner_profile_projection[]
   mesh_workforce_claim_inbox                                                                                                                   mesh_workforce_claim_inbox[]
   mesh_workforce_claim_processing_attempt                                                                                                      mesh_workforce_claim_processing_attempt[]
   module_module_created_byToprincipal                                                                                                          control_module[]                                     @relation("module_created_byToprincipal")
@@ -20234,10 +19915,6 @@ model principal {
   match_exception_match_exception_tenant_id_created_byToprincipal                                                                              match_exception[]                                    @relation("match_exception_tenant_id_created_byToprincipal")
   match_exception_match_exception_tenant_id_resolved_byToprincipal                                                                             match_exception[]                                    @relation("match_exception_tenant_id_resolved_byToprincipal")
   match_exception_match_exception_tenant_id_updated_byToprincipal                                                                              match_exception[]                                    @relation("match_exception_tenant_id_updated_byToprincipal")
-  mesh_business_partner_acceptance                                                                                                             mesh_business_partner_acceptance[]
-  mesh_business_partner_acceptance_event                                                                                                       mesh_business_partner_acceptance_event[]
-  mesh_business_partner_match                                                                                                                  mesh_business_partner_match[]
-  mesh_profile_change_resolution                                                                                                               mesh_profile_change_resolution[]
   multipart_upload_multipart_upload_tenant_id_created_byToprincipal                                                                            multipart_upload[]                                   @relation("multipart_upload_tenant_id_created_byToprincipal")
   multipart_upload_multipart_upload_tenant_id_initiated_byToprincipal                                                                          multipart_upload[]                                   @relation("multipart_upload_tenant_id_initiated_byToprincipal")
   multipart_upload_multipart_upload_tenant_id_updated_byToprincipal                                                                            multipart_upload[]                                   @relation("multipart_upload_tenant_id_updated_byToprincipal")
@@ -20737,6 +20414,7 @@ model principal {
   tenant                                                                                                                                       tenant                                               @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_tenant_fk")
   principal_identity_binding                                                                                                                   principal_identity_binding?
   principal_notification_preference                                                                                                            principal_notification_preference[]
+  principal_person_link                                                                                                                        principal_person_link?
   principal_profile                                                                                                                            principal_profile?
   principal_ui_preference                                                                                                                      principal_ui_preference[]
   principal_ui_profile                                                                                                                         principal_ui_profile?
@@ -20802,7 +20480,6 @@ model principal {
   entity_case_snapshot_lineage                                                                                                                 entity_case_snapshot_lineage[]
   entity_snapshot_identity                                                                                                                     entity_snapshot_identity[]
   mesh_bank_account_disclosure_received                                                                                                        mesh_bank_account_disclosure_received[]
-  mesh_business_partner_profile_received                                                                                                       mesh_business_partner_profile_received[]
   template_version                                                                                                                             template_version[]
 
   @@unique([tenant_id, external_ref], map: "principal_external_ref_uq", where: raw("(external_ref IS NOT NULL)"))
@@ -20859,6 +20536,7 @@ model principal_identity_binding {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_notification_preference {
+  record_version    BigInt    @default(1)
   id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id         String    @db.Uuid
   principal_id      String    @db.Uuid
@@ -20875,7 +20553,6 @@ model principal_notification_preference {
   created_by        String    @db.Uuid
   updated_at        DateTime? @db.Timestamptz(6)
   updated_by        String?   @db.Uuid
-  record_version    BigInt    @default(1)
   principal         principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_notification_preference_principal_fk")
   tenant            tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_notification_preference_tenant_fk")
 
@@ -20886,9 +20563,31 @@ model principal_notification_preference {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_person_link {
+  id             String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  principal_id   String    @db.Uuid
+  person_id      String    @db.Uuid
+  record_version BigInt    @default(1)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  created_by     String    @db.Uuid
+  updated_at     DateTime? @db.Timestamptz(6)
+  updated_by     String?   @db.Uuid
+  person         person    @relation(fields: [tenant_id, person_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+  principal      principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, person_id])
+  @@unique([tenant_id, principal_id])
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_profile {
+  record_version BigInt    @default(1)
   id             String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id      String    @db.Uuid
   principal_id   String    @db.Uuid
@@ -20903,7 +20602,6 @@ model principal_profile {
   created_by     String    @db.Uuid
   updated_at     DateTime? @db.Timestamptz(6)
   updated_by     String?   @db.Uuid
-  record_version BigInt    @default(1)
   principal      principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_principal_fk")
   tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_profile_tenant_fk")
 
@@ -20958,6 +20656,7 @@ model principal_ui_preference {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_ui_profile {
+  record_version  BigInt    @default(1)
   id              String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id       String    @db.Uuid
   principal_id    String    @db.Uuid
@@ -21650,10 +21349,8 @@ model supplier {
   created_by                                                String                            @db.Uuid
   updated_at                                                DateTime?                         @db.Timestamptz(6)
   updated_by                                                String?                           @db.Uuid
-  external_workforce_rate                                   external_workforce_rate[]
   supplier_preference_designation                           supplier_preference_designation[]
   supplier_activation_evidence                              supplier_activation_evidence[]
-  company_code_supplier_profile                             company_code_supplier_profile[]
   business_partner                                          business_partner                  @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "supplier_business_partner_fk")
   principal_supplier_tenant_id_created_byToprincipal        principal                         @relation("supplier_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "supplier_created_by_fk")
   principal_supplier_tenant_id_status_changed_byToprincipal principal?                        @relation("supplier_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "supplier_status_changed_by_fk")
@@ -22016,9 +21713,6 @@ model tenant {
   integration_endpoint                                           integration_endpoint[]
   lookup_value                                                   lookup_value[]
   mesh_bank_account_disclosure_inbox                             mesh_bank_account_disclosure_inbox[]
-  mesh_bank_account_projection                                   mesh_bank_account_projection[]
-  mesh_business_partner_account_link                             mesh_business_partner_account_link[]
-  mesh_business_partner_profile_inbox                            mesh_business_partner_profile_inbox[]
   mesh_workforce_claim_inbox                                     mesh_workforce_claim_inbox[]
   notification_routing_rule                                      notification_routing_rule[]
   notification_template                                          notification_template[]
@@ -22319,7 +22013,6 @@ model tenant {
   content_item_version                                           content_item_version[]
   entity_snapshot_identity                                       entity_snapshot_identity[]
   mesh_bank_account_disclosure_received                          mesh_bank_account_disclosure_received[]
-  mesh_business_partner_profile_received                         mesh_business_partner_profile_received[]
   template_version                                               template_version[]
 
   @@unique([realm_key, code], map: "tenant_realm_code_uq")
@@ -23100,15 +22793,6 @@ model record_transfer_retention_policy {
   updated_by             String   @db.Uuid
 
   @@schema("ops")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model athyper_foundation_receipt_v1 {
-  plane        String   @id
-  ddl_sha256   String
-  completed_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@schema("public")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -24134,6 +23818,7 @@ model uom {
   site                            site[]
   snapshot_bom                             snapshot_bom[]
   snapshot_bom_component                   snapshot_bom_component[]
+
   @@index([code], map: "uom_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("shared")
 }
@@ -24169,6 +23854,7 @@ model snapshot_bom {
   bom                                            master_bom               @relation(fields: [tenant_id, source_bom_id], references: [tenant_id, id], onUpdate: NoAction, map: "bom_snapshot_source_fk")
   uom                                            uom                      @relation(fields: [uom_code], references: [code], onUpdate: NoAction, map: "bom_snapshot_uom_fk")
   snapshot_bom_component                                  snapshot_bom_component[]
+
   @@unique([tenant_id, source_bom_id, content_hash], map: "bom_snapshot_source_hash_uq")
   @@unique([tenant_id, source_bom_id, revision_no], map: "bom_snapshot_source_revision_uq")
   @@unique([tenant_id, id], map: "bom_snapshot_tenant_id_uq")
@@ -24368,7 +24054,6 @@ model mesh_bank_account_disclosure_received {
   payload_hash                       String
   received_at                        DateTime                           @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
   received_by                        String                             @db.Uuid
-  mesh_bank_account_projection       mesh_bank_account_projection[]
   principal                          principal                          @relation(fields: [tenant_id, received_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_disclosure_received_actor_fk")
   mesh_bank_account_disclosure_inbox mesh_bank_account_disclosure_inbox @relation(fields: [tenant_id, inbox_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_disclosure_received_inbox_fk")
   tenant                             tenant                             @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bank_disclosure_received_tenant_fk")
@@ -24376,41 +24061,6 @@ model mesh_bank_account_disclosure_received {
   @@unique([tenant_id, inbox_event_id], map: "mesh_bank_disclosure_received_inbox_uq")
   @@unique([tenant_id, id], map: "mesh_bank_disclosure_received_tenant_id_uq")
   @@index([tenant_id, network_relationship_id, received_at(sort: Desc)], map: "mesh_bank_disclosure_received_relationship_idx")
-  @@schema("snapshot")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model mesh_business_partner_profile_received {
-  id                                                                                                                                   String                                     @id(map: "mesh_bp_profile_received_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                                                            String                                     @db.Uuid
-  inbox_event_id                                                                                                                       String                                     @db.Uuid
-  source_tenant_id                                                                                                                     String                                     @db.Uuid
-  source_network_account_id                                                                                                            String                                     @db.Uuid
-  recipient_network_account_id                                                                                                         String                                     @db.Uuid
-  network_relationship_id                                                                                                              String                                     @db.Uuid
-  publication_id                                                                                                                       String                                     @db.Uuid
-  publication_version                                                                                                                  Int
-  schema_code                                                                                                                          String
-  schema_version                                                                                                                       Int
-  field_set_code                                                                                                                       String
-  payload_json                                                                                                                         Json
-  payload_hash                                                                                                                         String
-  received_at                                                                                                                          DateTime                                   @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  received_by                                                                                                                          String                                     @db.Uuid
-  mesh_business_partner_profile_projection                                                                                             mesh_business_partner_profile_projection[]
-  mesh_business_partner_match                                                                                                          mesh_business_partner_match[]
-  mesh_profile_change_resolution_mesh_profile_change_resolution_tenant_id_baseline_snapshot_idTomesh_business_partner_profile_received mesh_profile_change_resolution[]           @relation("mesh_profile_change_resolution_tenant_id_baseline_snapshot_idTomesh_business_partner_profile_received")
-  mesh_profile_change_resolution_mesh_profile_change_resolution_tenant_id_incoming_snapshot_idTomesh_business_partner_profile_received mesh_profile_change_resolution[]           @relation("mesh_profile_change_resolution_tenant_id_incoming_snapshot_idTomesh_business_partner_profile_received")
-  principal                                                                                                                            principal                                  @relation(fields: [tenant_id, received_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_received_by_fk")
-  mesh_business_partner_profile_inbox                                                                                                  mesh_business_partner_profile_inbox        @relation(fields: [tenant_id, inbox_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bp_profile_received_inbox_fk")
-  tenant                                                                                                                               tenant                                     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "mesh_bp_profile_received_tenant_fk")
-
-  @@unique([tenant_id, inbox_event_id], map: "mesh_bp_profile_received_inbox_uq")
-  @@unique([tenant_id, publication_id], map: "mesh_bp_profile_received_publication_uq")
-  @@unique([tenant_id, id], map: "mesh_bp_profile_received_tenant_id_uq")
-  @@index([tenant_id, network_relationship_id, publication_version(sort: Desc)], map: "mesh_bp_profile_received_relationship_idx")
   @@schema("snapshot")
 }
 

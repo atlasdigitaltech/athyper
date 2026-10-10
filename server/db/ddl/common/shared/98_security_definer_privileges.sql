@@ -2786,12 +2786,6 @@ BEGIN
         ]
       },
       {
-        "relation": "control.mesh_business_partner_profile_projection",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
         "relation": "control.owner_type",
         "privileges": [
           "SELECT"
@@ -2845,18 +2839,6 @@ BEGIN
         "relation": "document.entity_case_materialization",
         "privileges": [
           "INSERT",
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "document.mesh_profile_change_case",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "document.mesh_profile_change_resolution",
-        "privileges": [
           "SELECT"
         ]
       },
@@ -3264,12 +3246,6 @@ BEGIN
       },
       {
         "relation": "snapshot.entity_snapshot",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "snapshot.mesh_business_partner_profile_received",
         "privileges": [
           "SELECT"
         ]

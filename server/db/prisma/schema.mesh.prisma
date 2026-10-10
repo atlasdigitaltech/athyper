@@ -156,6 +156,7 @@ model ai_agent_run {
   principal                principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "ai_agent_run_aar_principal_fk")
   tenant                   tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "ai_agent_run_aar_tenant_fk")
   atlas_run                atlas_run[]
+
   @@unique([tenant_id, id], map: "ai_agent_run_aar_tenant_id_uq")
   @@index([tenant_id, client_request_id, created_at(sort: Desc)], map: "ai_agent_run_aar_client_request_idx")
   @@index([tenant_id, error_category, created_at(sort: Desc)], map: "ai_agent_run_aar_failure_pidx", where: raw("(outcome = 'failed'::text)"))
@@ -5897,7 +5898,7 @@ model address_link {
   updated_at               DateTime?             @db.Timestamptz(6)
   updated_by               String?               @db.Uuid
   address                  address               @relation(fields: [tenant_id, address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_address_fk")
-  owner_type_rel               owner_type            @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
+  owner_type               owner_type            @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
   tenant                   tenant                @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
   principal                principal?            @relation(fields: [tenant_id, usage_denied_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_usage_denied_by_fk")
   contact_person_role      contact_person_role[]
@@ -6053,9 +6054,10 @@ model contact_link {
   updated_at             DateTime?      @db.Timestamptz(6)
   updated_by             String?        @db.Uuid
   contact_email          contact_email[]
-  owner_type_rel             owner_type     @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "contact_link_owner_type_fk")
+  owner_type             owner_type     @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "contact_link_owner_type_fk")
   tenant                 tenant         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "contact_link_tenant_fk")
   contact_phone          contact_phone[]
+
   @@unique([tenant_id, owner_type_id, owner_id, channel_type, purpose, role_qualifier], map: "contact_link_one_primary_uq", where: raw("(is_primary AND (status = 'active'::text) AND (effective_until IS NULL))"))
   @@unique([tenant_id, id], map: "contact_link_tenant_id_uq")
   @@unique([tenant_id, owner_type_id, owner_id, channel_type, value, purpose, role_qualifier], map: "contact_link_value_uq", where: raw("((status = 'active'::text) AND (effective_until IS NULL))"))
@@ -6171,7 +6173,7 @@ model external_reference {
   updated_at                                                          DateTime?  @db.Timestamptz(6)
   updated_by                                                          String?    @db.Uuid
   principal_external_reference_tenant_id_created_byToprincipal        principal  @relation("external_reference_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_created_by_fk")
-  owner_type_rel                                                          owner_type @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "external_reference_owner_type_fk")
+  owner_type                                                          owner_type @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "external_reference_owner_type_fk")
   principal_external_reference_tenant_id_status_changed_byToprincipal principal? @relation("external_reference_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_status_changed_by_fk")
   tenant                                                              tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "external_reference_tenant_fk")
   principal_external_reference_tenant_id_updated_byToprincipal        principal? @relation("external_reference_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "external_reference_updated_by_fk")
@@ -6652,6 +6654,7 @@ model principal_identity_binding {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_notification_preference {
+  record_version    BigInt    @default(1)
   id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id         String    @db.Uuid
   principal_id      String    @db.Uuid
@@ -6668,7 +6671,6 @@ model principal_notification_preference {
   created_by        String    @db.Uuid
   updated_at        DateTime? @db.Timestamptz(6)
   updated_by        String?   @db.Uuid
-  record_version    BigInt    @default(1)
   principal         principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_notification_preference_principal_fk")
   tenant            tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_notification_preference_tenant_fk")
 
@@ -6682,6 +6684,7 @@ model principal_notification_preference {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_profile {
+  record_version BigInt    @default(1)
   id             String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id      String    @db.Uuid
   principal_id   String    @db.Uuid
@@ -6696,11 +6699,29 @@ model principal_profile {
   created_by     String    @db.Uuid
   updated_at     DateTime? @db.Timestamptz(6)
   updated_by     String?   @db.Uuid
-  record_version BigInt    @default(1)
   principal      principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_principal_fk")
   tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_profile_tenant_fk")
 
   @@unique([tenant_id, principal_id], map: "principal_profile_tenant_principal_uq")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_surface_arrangement {
+  tenant_id     String    @db.Uuid
+  principal_id  String    @db.Uuid
+  plane_code    String
+  surface_key   String
+  base_revision Int
+  arrangement   Json
+  created_at    DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by    String    @db.Uuid
+  updated_at    DateTime? @db.Timestamptz(6)
+  updated_by    String?   @db.Uuid
+
+  @@id([tenant_id, principal_id, plane_code, surface_key])
   @@schema("master")
 }
 
@@ -6732,6 +6753,7 @@ model principal_ui_preference {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_ui_profile {
+  record_version  BigInt    @default(1)
   id              String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id       String    @db.Uuid
   principal_id    String    @db.Uuid
@@ -7561,26 +7583,6 @@ model bank_provisional_reference {
   tenant                  tenant            @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([tenant_id, id])
-  @@schema("mesh")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model business_partner_delivery_acknowledgement {
-  id                        String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  source_tenant_id          String   @db.Uuid
-  recipient_tenant_id       String   @db.Uuid
-  source_network_account_id String   @db.Uuid
-  outbox_id                 String   @db.Uuid
-  event_id                  String   @db.Uuid
-  delivery_lease_id         String
-  attempt_no                Int
-  disposition               String
-  reason_code               String?
-  acknowledged_at           DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-
-  @@unique([outbox_id, delivery_lease_id], map: "business_partner_delivery_ackno_outbox_id_delivery_lease_id_key")
-  @@index([source_tenant_id, source_network_account_id, acknowledged_at(sort: Desc), id], map: "business_partner_delivery_acknowledgement_source_idx")
   @@schema("mesh")
 }
 
@@ -9290,15 +9292,6 @@ model reference_sync_checkpoint {
   @@index([status, last_succeeded_at], map: "reference_sync_checkpoint_status_idx")
   @@index([target_schema_name, target_table_name], map: "reference_sync_checkpoint_target_idx")
   @@schema("ops")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model athyper_foundation_receipt_v1 {
-  plane        String   @id
-  ddl_sha256   String
-  completed_at DateTime @default(now()) @db.Timestamptz(6)
-
-  @@schema("public")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

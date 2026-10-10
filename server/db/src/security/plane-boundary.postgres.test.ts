@@ -189,15 +189,6 @@ test(
         // historical migration or accepting unknown signatures.
         sql(container, database, hardening);
         sql(container, database, hardening);
-        if (plane === "mesh")
-          sql(
-            container,
-            database,
-            readFileSync(
-              new URL("./mesh-boundary.sql", import.meta.url),
-              "utf8",
-            ),
-          );
         if (plane === "studio")
           sql(
             container,

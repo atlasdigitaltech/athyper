@@ -15,3 +15,4 @@
 20261003_mesh_publication_worker_identity.sql
 20261009_successor_initial_target.sql
 20261010_retired_baseline_activation.sql
+20261011_business_partner_delivery_bridge_retirement.sql

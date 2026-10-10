@@ -237,5 +237,7 @@ common/authz/21_entity_default_access.sql
 
 common/runtime_meta/15_locked_live_read_resources.sql
 common/runtime_meta/12_baseline_precondition.sql
+common/runtime_meta/16_business_partner_definition_retirement.sql
+planes/mesh/mesh/16_business_partner_delivery_bridge_retirement.sql
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

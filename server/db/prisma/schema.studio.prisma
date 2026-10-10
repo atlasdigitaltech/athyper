@@ -155,7 +155,7 @@ model ai_agent_run {
   ai_agent_call            ai_agent_call[]
   principal                principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "ai_agent_run_aar_principal_fk")
   tenant                   tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "ai_agent_run_aar_tenant_fk")
-  atlas_run                atlas_run?
+  atlas_run                atlas_run[]
 
   @@unique([tenant_id, id], map: "ai_agent_run_aar_tenant_id_uq")
   @@index([tenant_id, client_request_id, created_at(sort: Desc)], map: "ai_agent_run_aar_client_request_idx")
@@ -964,7 +964,7 @@ model atlas_thread {
   updated_by                                                     String?              @db.Uuid
   ai_tool_invocation                                             ai_tool_invocation[]
   atlas_message                                                  atlas_message[]
-  atlas_run                                                      atlas_run?
+  atlas_run                                                      atlas_run[]
   conversation                                                   conversation         @relation(fields: [tenant_id, conversation_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "atlas_thread_conversation_fk")
   principal_atlas_thread_tenant_id_created_byToprincipal         principal            @relation("atlas_thread_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_thread_created_by_fk")
   principal_atlas_thread_tenant_id_owner_principal_idToprincipal principal            @relation("atlas_thread_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_thread_owner_fk")
@@ -2572,7 +2572,7 @@ model integration_endpoint {
   principal_integration_endpoint_tenant_id_status_changed_byToprincipal principal?                     @relation("integration_endpoint_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "integration_endpoint_status_changed_by_fk")
   tenant                                                                tenant                         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "integration_endpoint_tenant_fk")
   principal_integration_endpoint_tenant_id_updated_byToprincipal        principal?                     @relation("integration_endpoint_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "integration_endpoint_updated_by_fk")
-  webhook_subscription                                                  control_webhook_subscription[]
+  control_webhook_subscription                                                  control_webhook_subscription[]
   integration_delivery                                                  integration_delivery[]
 
   @@unique([tenant_id, connector_instance_id, code], map: "integration_endpoint_code_uq")
@@ -6231,10 +6231,10 @@ model contact_link {
   created_by             String         @db.Uuid
   updated_at             DateTime?      @db.Timestamptz(6)
   updated_by             String?        @db.Uuid
-  contact_email          contact_email?
+  contact_email          contact_email[]
   owner_type             owner_type     @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "contact_link_owner_type_fk")
   tenant                 tenant         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "contact_link_tenant_fk")
-  contact_phone          contact_phone?
+  contact_phone          contact_phone[]
 
   @@unique([tenant_id, owner_type_id, owner_id, channel_type, purpose, role_qualifier], map: "contact_link_one_primary_uq", where: raw("(is_primary AND (status = 'active'::text) AND (effective_until IS NULL))"))
   @@unique([tenant_id, id], map: "contact_link_tenant_id_uq")
@@ -6624,7 +6624,7 @@ model principal {
   audit_reason_code_audit_reason_code_tenant_id_created_byToprincipal                                    audit_reason_code[]                       @relation("audit_reason_code_tenant_id_created_byToprincipal")
   audit_reason_code_audit_reason_code_tenant_id_status_changed_byToprincipal                             audit_reason_code[]                       @relation("audit_reason_code_tenant_id_status_changed_byToprincipal")
   audit_reason_code_audit_reason_code_tenant_id_updated_byToprincipal                                    audit_reason_code[]                       @relation("audit_reason_code_tenant_id_updated_byToprincipal")
-  brand_profile                                                                                          brand_profile?
+  brand_profile                                                                                          brand_profile[]
   canonical_party_canonical_party_created_byToprincipal                                                  canonical_party[]                         @relation("canonical_party_created_byToprincipal")
   canonical_party_canonical_party_status_changed_byToprincipal                                           canonical_party[]                         @relation("canonical_party_status_changed_byToprincipal")
   canonical_party_canonical_party_updated_byToprincipal                                                  canonical_party[]                         @relation("canonical_party_updated_byToprincipal")
@@ -6634,14 +6634,14 @@ model principal {
   external_reference_external_reference_tenant_id_created_byToprincipal                                  external_reference[]                      @relation("external_reference_tenant_id_created_byToprincipal")
   external_reference_external_reference_tenant_id_status_changed_byToprincipal                           external_reference[]                      @relation("external_reference_tenant_id_status_changed_byToprincipal")
   external_reference_external_reference_tenant_id_updated_byToprincipal                                  external_reference[]                      @relation("external_reference_tenant_id_updated_byToprincipal")
-  letterhead                                                                                             letterhead?
+  letterhead                                                                                             letterhead[]
   tenant                                                                                                 tenant                                    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_tenant_fk")
   principal_identity_binding                                                                             principal_identity_binding?
   principal_notification_preference                                                                      principal_notification_preference[]
   principal_profile                                                                                      principal_profile?
   principal_ui_preference                                                                                principal_ui_preference[]
   principal_ui_profile                                                                                   principal_ui_profile?
-  print_profile                                                                                          print_profile?
+  print_profile                                                                                          print_profile[]
   record_bookmark                                                                                        record_bookmark[]
   saved_view                                                                                             saved_view[]
   team_team_tenant_id_created_byToprincipal                                                              team[]                                    @relation("team_tenant_id_created_byToprincipal")
@@ -7310,7 +7310,7 @@ model tenant {
   tenant_module_entitlement_override                             tenant_module_entitlement_override[]
   tenant_parameter_value                                         tenant_parameter_value[]
   tenant_usage_limit_override                                    tenant_usage_limit_override[]
-  webhook_subscription                                           control_webhook_subscription[]
+  control_webhook_subscription                                           control_webhook_subscription[]
   workflow_sla_policy                                            workflow_sla_policy[]
   attachment                                                     attachment[]
   attachment_derivative                                          attachment_derivative[]
@@ -7367,20 +7367,20 @@ model tenant {
   address_event                                                  address_event[]
   address_link                                                   address_link[]
   audit_reason_code                                              audit_reason_code[]
-  brand_profile                                                  brand_profile?
+  brand_profile                                                  brand_profile[]
   canonical_party_canonical_party_authority_tenant_idTotenant    canonical_party[]                         @relation("canonical_party_authority_tenant_idTotenant")
   contact_email                                                  contact_email[]
   contact_link                                                   contact_link[]
   contact_phone                                                  contact_phone[]
   external_reference                                             external_reference[]
-  letterhead                                                     letterhead?
+  letterhead                                                     letterhead[]
   principal                                                      principal[]
   principal_identity_binding                                     principal_identity_binding[]
   principal_notification_preference                              principal_notification_preference[]
   principal_profile                                              principal_profile[]
   principal_ui_preference                                        principal_ui_preference[]
   principal_ui_profile                                           principal_ui_profile[]
-  print_profile                                                  print_profile?
+  print_profile                                                  print_profile[]
   record_bookmark                                                record_bookmark[]
   saved_view                                                     saved_view[]
   team                                                           team[]

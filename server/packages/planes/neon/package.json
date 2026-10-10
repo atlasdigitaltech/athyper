@@ -5,7 +5,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./mesh-external-reference-code": "./src/mesh-external-reference-code.ts",
     "./business-partner-account-bank-linkage": "./src/business-partner-account-bank-linkage.ts",
     "./business-partner-profile-match": "./src/business-partner-profile-match.ts"
   },

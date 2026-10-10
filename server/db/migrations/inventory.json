@@ -3052,6 +3052,24 @@
       "callers": ["server/db/migrations/manifests/studio.txt"],
       "reason": "Retire empty Business Partner Studio publication/history tables while preserving native Entity publication.",
       "canonicalPaths": ["ddl/planes/studio/publication/16_business_partner_studio_retirement.sql"]
+    },
+    {
+      "originalPath": "migrations/20261011_business_partner_delivery_bridge_retirement.sql",
+      "path": "migrations/20261011_business_partner_delivery_bridge_retirement.sql",
+      "sha256": "01840020c19516f86118e467bba7d252a1dea988a8b691ac8ec241a604308842",
+      "planes": ["studio", "neon", "mesh"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "server/db/migrations/manifests/neon.txt",
+        "server/db/migrations/manifests/mesh.txt"
+      ],
+      "reason": "Retire empty Business Partner profile-delivery bridge tables and routines while preserving core Business Partner, native Entity and masked bank-disclosure capabilities.",
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/16_business_partner_definition_retirement.sql",
+        "ddl/planes/neon/control/19_business_partner_delivery_bridge_retirement.sql",
+        "ddl/planes/mesh/mesh/16_business_partner_delivery_bridge_retirement.sql"
+      ]
     }
   ]
 }
