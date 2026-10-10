@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 8 (10 October 2026).
+**Status:** approved, revision 9 (10 October 2026).
+- **The shared chart moved to its own blueprint (10 October 2026).** On the owner's instruction ("go ahead"), the reusable chart moved verbatim to the [Chart blueprint](../chart/blueprint.md) in a move-only commit (`6d9510f29`). That covers its data contract, component, colour tokens, "Others" rule and other consumers, with decisions 9, 10, 11, 13 and 15. This document keeps how Summary uses it: 13.6, A5.3, decisions 12 and 14, and A6. **Coupled:** a change to the chart contract that Summary relies on updates both documents together.
 - **Decision 15 amended, A5 approved as amended (10 October 2026).** After audit round 10, the owner approved the contract with decision 15 in its separated form, in these words: "Approved". The category axis of a categorical dimension mirrors with the document direction. A time axis stays earliest on the left in every locale. Labels are localized and bidi-correct either way (13.3). Revision 8 also links each unavailable-type reason to its message (13.3) and states A6's inherited authorization constraint (section 17).
 - **A5 contract approved (10 October 2026).** The owner approved section 14 decisions 9–15 in these words: "Decisions (section 14, 9–15): Approved". Section 13 is the approved A5 contract. No build instruction for A5 is recorded yet; when one is given, A5.1 (chart colour tokens) comes first (13.8).
 - **Delivery (10 October 2026): A2 built, on synthetic fixtures, before A3.** Section 5.9 records the build, including the measured response size and statement time A2's acceptance asks for. A3 remains the gate before any real Entity publishes a pivot. Still not verified: a real Entity, and the server's real responses in a browser.
@@ -85,7 +86,7 @@
 10. Fact backing: views and the `insight` projection
 11. Views and interaction
 12. Accessibility
-13. Chart (A5, contract sketch)
+13. Chart: Summary's use of the shared chart (A5.3)
 14. Decisions required (project owner)
 15. Studio authoring and registration inventory
 16. Folder structure and test registration
@@ -511,7 +512,7 @@ A field the viewer cannot read unmasked is neither a dimension nor a measure for
 - Every cell state is text. Colour only supports it.
 - Expand controls say what they load ("Show fiscal periods under Office supplies").
 
-## 13. Chart (A5): a reusable chart, and Summary's use of it (approved, revision 7)
+## 13. Chart: Summary's use of the shared chart (A5.3)
 
 **Moved (10 October 2026):** the reusable chart (its data contract, component, colour tokens, "Others" rule and other consumers) now lives in the [Chart blueprint](../chart/blueprint.md), sections 13.1–13.5 and 13.7, with decisions 9, 10, 11, 13 and 15. This section keeps Summary's use of it (13.6), A5.3 (13.8), decisions 12 and 14, and A6.
 
@@ -599,7 +600,7 @@ Foundation section 9's policy gates run before each commit.
 | **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, through the service path the Entity takes (authorized-aggregate or SQL-covered), with index findings, and the fact-size precondition (status block) checked for this fact. The budget is a go/no-go number, set by the owner, that decides A4 | A1. The business partner, item and commodity category Entities for readable dimensions |
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated`. Built before A3 by the owner's approval (status block), with three conditions: a real-PostgreSQL test of its own SQL path; acceptance that measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS` and the statement's cost; and A3 kept as the gate before any real Entity publishes a pivot | A1. A3 gates publication on a real Entity, not the build |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
-| **A5** | The reusable chart and Summary's use of it, in three steps: chart colour tokens, the chart contract and component, Summary adoption with the published choice order (section 13.8) | A2; section 14 decisions 9–15 approved |
+| **A5** | The reusable chart and Summary's use of it, in three steps. A5.1 (chart colour tokens) and A5.2 (the chart contract and component) are specified and recorded in the [Chart blueprint](../chart/blueprint.md); A5.3 (Summary adoption with the published choice order) is here (section 13.8) | A2; decisions 9–15 approved |
 | **A6** | Top / Bottom N: a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. Matrix's deferred "Lowest on n items" uses the same capability. **It inherits the aggregate's authorization constraint:** on an Entity whose record authorization is not SQL-covered, it runs on the authorized-aggregate path, with its 2,000-record capacity refusal. Its acceptance states which path each adopting Entity takes | A5; its own approval, acceptance criteria and real-PostgreSQL test |
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |

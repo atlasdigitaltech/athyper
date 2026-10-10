@@ -138,6 +138,19 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   from group rows or loaded cells, and a semi-additive measure is never summed
   across its time fields.
 
+## Shared chart
+
+- The active design is the [Shared chart blueprint](docs/blueprints/chart/blueprint.md).
+  Read it before drawing a chart anywhere, and update it in place.
+- There is one chart-data contract (`@athyper/contract-platform-chart`) and
+  one design-system `Chart` component, drawn as SVG with theme tokens only.
+  Do not add a chart library or a second chart component.
+- The chart never computes a total or a share's denominator; it draws the
+  values and totals its producer gives, as exact decimal text for anything
+  shown. Producers carry readable labels only, never identifiers.
+- Each new consumer needs its own approved decision and adapter, recorded in
+  that blueprint's Consumers table.
+
 ## Entity list Compare
 
 - The active design is the

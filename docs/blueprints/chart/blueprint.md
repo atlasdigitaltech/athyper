@@ -1,5 +1,25 @@
 # Shared chart — blueprint
 
+**Status:** approved, not built (10 October 2026).
+- **Approval.** The owner approved this contract as the Entity list Aggregate blueprint's A5 decisions 9–15, in two steps:
+  - "Decisions (section 14, 9–15): Approved";
+  - decision 15 amended to its separated form, "Approved" (Aggregate status block, revision 8).
+- **Moved here** on the owner's instruction ("go ahead") in a move-only commit (`6d9510f29`), verified line by line: every line removed from the Aggregate blueprint appears here unchanged. Whether that approval covers the moved text is for the owner to confirm after an independent diff check, as for the [shared list layout foundation](../entity-list-layouts/foundation.md).
+- **Build:** no build instruction is recorded. A5.1 (chart colour tokens) comes first, then A5.2 (the contract and the component).
+- **Authority.** This is shared Entity Framework work under [AGENTS.md](../../../AGENTS.md): its first consumer is the Entity list Summary. The component lives in the design system under the owner's front-end design-system authorization of 1 October 2026. This document gives no authority to adopt the chart anywhere: each consumer needs its own approved decision (Consumers, below).
+- **Numbering.** Sections 13.1–13.5 and 13.7, and decisions 9, 10, 11, 13 and 15, keep their Aggregate numbers, so approvals and citations stay valid. Update this document in place. Do not create competing chart plans.
+
+## Consumers
+
+Each consumer has its own adapter, its own approved decision and its own tests. The chart contract and component change only through this document, and a change that a consumer relies on updates that consumer's blueprint in the same change.
+
+| Consumer | Status | Where it is decided |
+| --- | --- | --- |
+| Entity list Summary | Approved (A5.3), not built | [Aggregate blueprint](../entity-list-aggregate/blueprint.md) sections 13.6 and 13.8, decisions 12 and 14 |
+| Experience surfaces' `chart` block (Home, workspace) | Candidate; not approved. Its `number[]` data would move to `ChartDataV1` | A future owner decision, recorded here |
+| Board lane distribution, Matrix column comparison, a declared record-page metric section | Candidates; not approved | Each layout's own blueprint, then recorded here |
+| "Add to Dashboard" | Out of scope | Needs its own owner instruction |
+
 **Moved, not rewritten (10 October 2026).** Every section below was moved verbatim from the [Entity list Aggregate blueprint](../entity-list-aggregate/blueprint.md), revision 8, where the project owner approved it as the A5 chart contract (Aggregate decisions 9–15). This commit only moves it. Section and decision numbers keep their Aggregate numbers, so approvals and citations stay valid. The owner confirms after an independent diff check that the approval covers the moved text.
 
 ## Shape
