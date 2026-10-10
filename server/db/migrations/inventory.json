@@ -2929,6 +2929,36 @@
         "ddl/planes/studio/metadata/59_native_reference_target_read.sql",
         "ddl/planes/studio/metadata/68_native_bootstrap_readiness.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_fresh_identity_privileges.sql",
+      "path": "migrations/20261010_native_fresh_identity_privileges.sql",
+      "sha256": "e957fc4c6e0150c1f9b879d1e056b8fafabb2d25348c10080afe0398e7f3e487",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Complete canonical fresh identity INSERT columns after strict forced-RLS, insert policy and identity-trigger preflight.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/58_native_fresh_identity_privileges.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_declared_operation_initialization.sql",
+      "path": "migrations/20261010_declared_operation_initialization.sql",
+      "sha256": "74442632fa80a5cc47ee9b6451f4074e9be6244de3bff118c72286255f63b5ab",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install existing exact declared-operation initialization capability; no rows or new defaults are installed by the migration. Owner-approved declarations are installed separately.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/60_declared_operation_initialization.sql"
+      ]
     }
   ]
 }

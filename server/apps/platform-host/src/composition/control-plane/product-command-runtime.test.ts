@@ -46,7 +46,11 @@ function database(
           query: async (query: string) => ({
             rows:
               query.includes("native_descriptor_ready") &&
-              !query.includes("has_function_privilege")
+              !(
+                query.includes("has_function_privilege") ||
+                query.includes("has_column_privilege") ||
+                query.includes("declared_operation_initialization")
+              )
                 ? [{ ready: resourceAllowed }]
                 : query.includes("SELECT id,entity_id")
                   ? identities
@@ -55,7 +59,11 @@ function database(
                     : [
                         query.includes("has_schema_privilege")
                           ? { allowed: auditAllowed }
-                          : query.includes("has_function_privilege")
+                          : query.includes("has_function_privilege") ||
+                              query.includes("has_column_privilege") ||
+                              query.includes(
+                                "declared_operation_initialization",
+                              )
                             ? { allowed: resourceAllowed }
                             : row,
                       ],

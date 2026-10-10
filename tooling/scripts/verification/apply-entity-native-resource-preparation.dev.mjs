@@ -114,6 +114,8 @@ export function preparationSql(
       productCreationEntityReadMigrationName,
       nativeRootRegistrationMigrationName,
       "20261010_native_bootstrap_dependencies.sql",
+      "20261010_declared_operation_initialization.sql",
+      "20261010_native_fresh_identity_privileges.sql",
       nativeBootstrapPrivilegesMigrationName,
       operationReservationMigrationName,
       productDraftCreationMigrationName,
@@ -199,6 +201,8 @@ export function runPreparation(args) {
     "--product-creation-entity-read",
     "--native-root-registration",
     "--native-bootstrap-dependencies",
+    "--declared-operation-initialization",
+    "--native-fresh-identity-privileges",
     "--native-bootstrap-privileges",
     "--operation-reservation",
     "--product-draft-creation",
@@ -415,6 +419,10 @@ export function runPreparation(args) {
     selectedMigration = nativeBootstrapIdentityReadMigrationName;
   if (!allowed.has("--native-bootstrap-dependencies"))
     selectedMigration = "20261010_native_bootstrap_dependencies.sql";
+  if (!allowed.has("--native-fresh-identity-privileges"))
+    selectedMigration = "20261010_native_fresh_identity_privileges.sql";
+  if (!allowed.has("--declared-operation-initialization"))
+    selectedMigration = "20261010_declared_operation_initialization.sql";
   const apply = !allowed.has("--apply=DEV-NATIVE-RESOURCE-PREPARATION");
   const file = migrationSourcePath(selectedMigration),
     source = readFileSync(file, "utf8"),
