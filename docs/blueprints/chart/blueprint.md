@@ -1,7 +1,8 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built through decision 23; revision 8 (10 October 2026).
-- **Decision 23 approved and built (10 October 2026):** "Decision 23: approved". Every pair of sequence colours is checked, not only palette neighbours (13.4a.9). Decisions 24–27 are proposed for A5.1b.
+**Status:** approved; A5.1a built through decision 25; revision 9 (10 October 2026).
+- **Decisions 24–27 approved (10 October 2026):** "Approved". 24 and 25 are built into the validator (13.4a.10); 26 and 27 govern A5.1b, which may now proceed.
+- **Decision 23 approved and built (10 October 2026):** "Decision 23: approved". Every pair of sequence colours is checked, not only palette neighbours (13.4a.9). Decisions 24–27 were proposed with it and approved next.
 - **Decisions 20–22 approved (10 October 2026)** in the owner's words "Three proposals - Approved":
   - 21 (tones against series colours) and 22 (the 2:1 floor under relief) are built into the validator;
   - 20 (the runtime check of drawn pairs) belongs to the A5.2 component.
@@ -384,7 +385,7 @@ No colour is relieved, and every colour clears every tone. Two blues at 6 and 8,
 
 **A correction to audit round 14:** Okabe-Ito has **three** colours below 3:1 on white (orange 2.25, sky 2.31, yellow 1.32), not five. Its point stands: part of Okabe-Ito's separation comes from colours a light chart cannot use at 3:1.
 
-**Proposed for A5.1b (not approved):**
+**Proposed for A5.1b; approved 10 October 2026 ("Approved"):**
 
 24. **The neutral tone does two jobs; separate them.** Audit round 14 proposed excluding the neutral tone from decision 21, since it is deliberately unobtrusive. Measured, the collision it predicted is real: the theme's neutral tone (`#5b6578`) and a typical "Others" grey (`#6b6b75`) are only **6.0** apart for normal vision. A pie of statuses with a neutral status and an "Others" slice would show two indistinguishable greys. Recommended:
     - exclude the neutral tone from decision 21, as the audit proposes;
@@ -400,6 +401,22 @@ No colour is relieved, and every colour clears every tone. Two blues at 6 and 8,
     - The six default sets aim for eight colours at 3:1. Relief stays a safety valve for later custom sets or consumers that need a specific pale fill, not a budget for the defaults.
     - High-contrast sets are recorded separately rather than derived. They may hold fewer colours (recommended 5), so they clear the all-pairs bounds with room to spare.
     - Under high contrast the chart then caps its series at that count, and `CHART_SERIES_COUNT` gives the reason. That cap is the honest price, and it affects A5.2.
+
+#### 13.4a.10 Decisions 24 and 25 built; what A5.1b must do
+
+**Built:**
+- **Decision 24.** The neutral tone is no longer checked against the sequence (decision 21 covers success, warning and danger). A new failing check, `CHART_NEUTRAL_DISTANCE`, requires the neutral tone and `--a-chart-neutral` ("Others") to be distinct at 15/10 under every vision.
+- **Decision 25.** The report's `tonePairs` lists pairs of meaningful tones below 15/10 as `CHART_TONE_PAIR_DISTANCE`. They do not fail the set. The theme's light warning and danger appear there at 4.7 under deuteranopia. A5.2's renderer reads `tonePairs` to direct-label marks when both tones of a listed pair are drawn.
+- The test fixture's "Others" grey is now `#94949c`: 3.01:1 on white, so not relieved, and 18.9 or more from the neutral tone under every vision. The old `#6b6b75` is kept in a test as the failing case (6.0).
+- 13 tests pass; the theme package typechecks.
+
+**A5.1b, under decisions 26 and 27:**
+- six sets, one per family and mode; the four default sets reach eight colours at 3:1 with nothing relieved;
+- the two high-contrast sets are recorded on their own, with five colours;
+- each accepted set's exact values are asserted in the theme's tests, with its report (no findings; the expected `tonePairs`);
+- the tokens are added to the theme with the values the tests assert.
+
+The high-contrast cap of five (`CHART_SERIES_COUNT`) is A5.2's; the validator's eight-colour length check gains a high-contrast length of five in A5.1b.
 
 ### 13.5 "Others"
 
@@ -485,3 +502,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 14 | Lock accepted sets; no relief in the defaults; separate high-contrast sets with fewer colours | Proposed as decisions 26 and 27 |
 | Audit round 14 | Record the found set | Recorded as the worked example (13.4a.9) |
 | Audit round 14 | "Okabe-Ito has five colours below 3:1" | Corrected: three (13.4a.9) |
+| Owner (10 October 2026) | "Approved" (decisions 24–27) | 24 and 25 built (13.4a.10); 26 and 27 govern A5.1b |

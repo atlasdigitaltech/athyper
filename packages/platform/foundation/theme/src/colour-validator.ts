@@ -168,6 +168,8 @@ export type ChartColourFindingCode =
   | "CHART_FILL_CONTRAST"
   | "CHART_RELIEF_FLOOR"
   | "CHART_TONE_DISTANCE"
+  | "CHART_NEUTRAL_DISTANCE"
+  | "CHART_TONE_PAIR_DISTANCE"
   | "CHART_NEIGHBOUR_DISTANCE"
   | "CHART_AXIS_CONTRAST"
   | "CHART_GRID_DOMINATES";
@@ -207,6 +209,11 @@ export interface ChartColourReport {
   readonly relieved: readonly string[];
   /** The closest pair of sequence colours, per vision (decision 23). */
   readonly closestPairs: Readonly<Record<ColourVision, { readonly element: string; readonly distance: number }>>;
+  /** Pairs of meaningful status tones that are not distinct under some
+   * vision (`CHART_TONE_PAIR_DISTANCE`, decision 25). Informational: they do
+   * not fail the set, but a chart drawing both tones direct-labels their
+   * marks, so meaning never rests on hue alone. */
+  readonly tonePairs: readonly ChartColourFinding[];
   readonly axisContrast: number;
   readonly gridContrast: number;
 }
@@ -220,8 +227,10 @@ export interface ChartColourReport {
  * data table is available. Status tones identify by meaning, as badges and
  * Board lanes do without labels, so they always meet 3:1; so do the axis and
  * the grid's reference. A relieved fill still reaches the relief floor
- * (2:1), and every status tone stands apart from every sequence colour
- * under every simulated vision (decisions 21 and 22). */
+ * (2:1), every meaningful status tone stands apart from every sequence
+ * colour under every simulated vision, and the neutral tone from "Others"
+ * (decisions 21, 22 and 24). Status tone pairs that are not distinct are
+ * reported in `tonePairs`, without failing the set (decision 25). */
 export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
   const findings: ChartColourFinding[] = [];
   if (set.sequence.length !== 8)
@@ -256,9 +265,12 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
         if (distance < required) findings.push({ code: "CHART_NEIGHBOUR_DISTANCE", element, vision, measured: distance, required });
       }
   }
-  // Status tones stand apart from every sequence colour under every vision,
-  // so a toned category never looks like an arbitrary one (decision 21).
-  for (const [tone, colour] of Object.entries(set.tones) as [string, HexColour][])
+  // The meaningful status tones stand apart from every sequence colour under
+  // every vision, so a toned category never looks like an arbitrary one
+  // (decision 21). The neutral tone is deliberately unobtrusive and is not
+  // held to it (decision 24).
+  const meaningful = (Object.entries(set.tones) as [string, HexColour][]).filter(([tone]) => tone !== "neutral");
+  for (const [tone, colour] of meaningful)
     for (const vision of COLOUR_VISIONS) {
       const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
       set.sequence.forEach((series, index) => {
@@ -266,6 +278,22 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
         if (distance < required) findings.push({ code: "CHART_TONE_DISTANCE", element: `tone ${tone} and sequence ${index + 1}`, vision, measured: distance, required });
       });
     }
+  // The neutral tone and "Others" are both greys; they must not be mistaken
+  // for each other where a neutral status and "Others" share a chart
+  // (decision 24).
+  const tonePairs: ChartColourFinding[] = [];
+  for (const vision of COLOUR_VISIONS) {
+    const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
+    const distance = colourDistance(set.tones.neutral, set.neutral, vision);
+    if (distance < required) findings.push({ code: "CHART_NEUTRAL_DISTANCE", element: "tone neutral and neutral", vision, measured: distance, required });
+    // Status against status (decision 25): reported, not failed.
+    for (let first = 0; first < meaningful.length; first += 1)
+      for (let second = first + 1; second < meaningful.length; second += 1) {
+        const pair = colourDistance(meaningful[first]![1], meaningful[second]![1], vision);
+        if (pair < required)
+          tonePairs.push({ code: "CHART_TONE_PAIR_DISTANCE", element: `tone ${meaningful[first]![0]} and tone ${meaningful[second]![0]}`, vision, measured: pair, required });
+      }
+  }
   const axisContrast = contrastRatio(set.axis, set.surface);
   if (axisContrast < criteria.axisContrast) findings.push({ code: "CHART_AXIS_CONTRAST", element: "axis", measured: axisContrast, required: criteria.axisContrast });
   // Grid lines must sit below every data fill that meets the fill criterion,
@@ -280,6 +308,7 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
     fills: Object.freeze(fills),
     relieved: Object.freeze(fills.filter((fill) => fill.relieved).map((fill) => fill.element)),
     closestPairs: Object.freeze(closest),
+    tonePairs: Object.freeze(tonePairs),
     axisContrast,
     gridContrast,
   });

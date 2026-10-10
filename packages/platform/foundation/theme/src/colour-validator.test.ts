@@ -72,7 +72,7 @@ const passing: ChartColourSet = {
   surface: "#ffffff",
   sequence: ["#4d1a1a", "#cc8066", "#a18a17", "#1a4d3b", "#008f83", "#0070e0", "#002a66", "#0038e0"],
   single: "#234b84",
-  neutral: "#6b6b75",
+  neutral: "#94949c",
   grid: "#e4e4e0",
   axis: "#6a6a75",
   tones: { neutral: "#5b6578", success: "#067647", warning: "#b54708", danger: "#b42318" },
@@ -173,4 +173,30 @@ test("decision 23: every pair of sequence colours is distinct, not only neighbou
   assert.ok(!report.findings.some((item) => item.code === "CHART_NEIGHBOUR_DISTANCE"));
   assert.equal(report.closestPairs.tritanopia.element, "sequence 2 and 4");
   assert.equal(report.closestPairs.normal.distance.toFixed(1), "21.7");
+});
+
+test("decision 24: the neutral tone is free of decision 21 but stands apart from Others", () => {
+  // A sequence colour equal to the neutral tone is not a tone collision...
+  const grey = validateChartColours({ ...passing, sequence: passing.sequence.map((colour, index) => (index === 4 ? passing.tones.neutral : colour)) });
+  assert.ok(!grey.findings.some((item) => item.code === "CHART_TONE_DISTANCE"));
+  // ...but an Others grey next to the neutral tone is (6.0 apart for normal vision).
+  const others = validateChartColours({ ...passing, neutral: "#6b6b75" });
+  const finding = others.findings.find((item) => item.code === "CHART_NEUTRAL_DISTANCE" && item.vision === "normal");
+  assert.equal(finding?.element, "tone neutral and neutral");
+  assert.equal(finding?.measured.toFixed(1), "6.0");
+  assert.equal(others.pass, false);
+});
+
+test("decision 25: status tones against each other are reported without failing the set", () => {
+  // The theme's light warning and danger: 4.7 apart under deuteranopia.
+  const report = validateChartColours(passing);
+  assert.equal(report.pass, true);
+  const pair = report.tonePairs.find((item) => item.element === "tone warning and tone danger" && item.vision === "deuteranopia");
+  assert.equal(pair?.code, "CHART_TONE_PAIR_DISTANCE");
+  assert.equal(pair?.measured.toFixed(1), "4.7");
+  assert.ok(!report.tonePairs.some((item) => item.element.includes("neutral")));
+  // A warning separated from danger by lightness, not only hue, is distinct
+  // under every vision (a dark olive of the same lightness is not).
+  const distinct = validateChartColours({ ...passing, tones: { ...passing.tones, warning: "#e0a800" } });
+  assert.ok(!distinct.tonePairs.some((item) => item.element === "tone warning and tone danger"));
 });
