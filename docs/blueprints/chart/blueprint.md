@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a built through decision 25; A5.1b candidate sets proposed; revision 10 (10 October 2026).
+**Status:** approved; A5.1a and A5.1b built: the validator through decision 28, and the chart colour tokens; revision 11 (10 October 2026).
+- **A5.1b approved and built (10 October 2026):** "ok As of now its ok... go ahead and complete". Read as accepting the recommendations put to the owner: the five sets with Mono at the quieter level (chroma 40), and decision 28. The build is in 13.4a.12. A5.2, the component, is next.
 - **A5.1b started (10 October 2026):** "go ahead". The validator carries the high-contrast length (decision 27). Five candidate sets pass with no findings and nothing relieved, and await approval before they become tokens (13.4a.11). Decision 28 is proposed.
 - **Decisions 24–27 approved (10 October 2026):** "Approved". 24 and 25 are built into the validator (13.4a.10); 26 and 27 govern A5.1b, which may now proceed.
 - **Decision 23 approved and built (10 October 2026):** "Decision 23: approved". Every pair of sequence colours is checked, not only palette neighbours (13.4a.9). Decisions 24–27 were proposed with it and approved next.
@@ -478,9 +479,33 @@ For comparison, Modern averages chroma 56. Going lower still passes, but light m
 
 `--a-chart-neutral` is the name 13.4a.2 gives the "Others" token. 13.4 and 13.5 still say `--a-chart-rest` and are read as `--a-chart-neutral`.
 
-**Proposed (not approved):**
+**Approved with A5.1b (10 October 2026):**
 
 28. **"Others" stands apart from every sequence colour,** at 15/10 under every vision (`CHART_OTHERS_DISTANCE`, failing). "Others" is drawn beside the series it summarises, and a series that looks like "Others" reads as part of the remainder. The candidate sets already meet it, at 4% (Modern light) to 31% (high contrast) above the floors.
+
+#### 13.4a.12 Build record (A5.1b, 10 October 2026)
+
+- **Decision 28.** `CHART_OTHERS_DISTANCE` fails a set whose "Others" grey is within 15/10 of any sequence colour under any vision.
+  - The test fixture's "Others" moved to `#6c6c60`. A mid grey (`#94949c`) collapsed into its teal under deuteranopia, which is now the failing case in a test.
+  - The worked example in 13.4a.9 is otherwise unchanged.
+- **Tokens.** `CHART_COLOR_TOKENS` and `resolveChartColorTokens(family, mode)` live in `tokens.ts`, holding the sets in 13.4a.11 with Mono at the quieter level.
+  - High contrast is one frozen set shared by both families.
+  - `styles.css` declares `--a-chart-1` … `--a-chart-8`, `--a-chart-single`, `--a-chart-neutral`, `--a-chart-grid` and `--a-chart-axis` in each family-and-mode block.
+  - Under high contrast, `--a-chart-6` … `--a-chart-8` are `initial`.
+  - The Mono high-contrast block repeats the high-contrast chart set. Mono's light block also matches `[data-theme-family="atlas-mono"]` with no mode, and at equal specificity it would otherwise override high contrast.
+- **Locked (decision 26).** `chart-colors.test.ts` asserts:
+  - every set's exact values;
+  - every report: no findings, nothing relieved, and the expected `tonePairs` (light: warning and danger; dark: success and danger; high contrast: none);
+  - that `styles.css` declares the same values block by block.
+
+  The validator takes each set's surface, tones and label inks from the family's own colour tokens. The neutral tone is `--a-muted-foreground`, and the label inks are `--a-surface` and `--a-foreground`.
+- **Source comment.** `atlas-mono.ts` now names validated chart series as the second place Mono keeps chroma (13.4a.5).
+- **Verified:**
+  - 18 theme tests pass, and the theme package typechecks;
+  - `tests/foundation/theme-contract.test.tsx` passes (11);
+  - `policy:design-system` (1 known violation, none new), `policy:ui-system`, `policy:style-tokens:strict` and `policy:foundation` pass.
+  - `policy:theme-token-integrity:strict` reports one existing finding (`--a-panel-scroll-padding-top` in the UI package's stylesheet) that this change does not touch.
+- **Not built:** no component reads the tokens yet. A5.2 (the `Chart` component) is the first consumer.
 
 ### 13.5 "Others"
 
@@ -569,3 +594,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Owner (10 October 2026) | "Approved" (decisions 24–27) | 24 and 25 built (13.4a.10); 26 and 27 govern A5.1b |
 | Owner (10 October 2026) | "go ahead" (A5.1b) | High-contrast length built; five candidate sets proposed with measurements (13.4a.11); decision 28 proposed |
 | Owner (10 October 2026) | Mono: colour or black and white? Then "try the quieter Mono palette" | Colour kept (decision 16), with measured grey limits; two quieter Mono levels found, the chroma-40 level recommended (13.4a.11) |
+| Owner (10 October 2026) | "ok As of now its ok... go ahead and complete" | Read as accepting the sets (Mono at chroma 40) and decision 28; built (13.4a.12) |

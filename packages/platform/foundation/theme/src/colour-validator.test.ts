@@ -73,7 +73,7 @@ const passing: ChartColourSet = {
   surface: "#ffffff",
   sequence: ["#4d1a1a", "#cc8066", "#a18a17", "#1a4d3b", "#008f83", "#0070e0", "#002a66", "#0038e0"],
   single: "#234b84",
-  neutral: "#94949c",
+  neutral: "#6c6c60",
   grid: "#e4e4e0",
   axis: "#6a6a75",
   tones: { neutral: "#5b6578", success: "#067647", warning: "#b54708", danger: "#b42318" },
@@ -208,4 +208,13 @@ test("decision 27: a high-contrast set carries five colours, a default set eight
   const finding = validateChartColours(five).findings.find((item) => item.code === "CHART_COLOUR_SEQUENCE_LENGTH");
   assert.deepEqual([finding?.measured, finding?.required], [5, 8]);
   assert.ok(validateChartColours(passing, HIGH_CONTRAST_CHART_COLOUR_CRITERIA).findings.some((item) => item.code === "CHART_COLOUR_SEQUENCE_LENGTH"));
+});
+
+test("decision 28: Others stands apart from every sequence colour", () => {
+  // The fixture's teal and a mid grey collapse under deuteranopia.
+  const report = validateChartColours({ ...passing, neutral: "#94949c" });
+  const finding = report.findings.find((item) => item.code === "CHART_OTHERS_DISTANCE" && item.element === "neutral and sequence 5");
+  assert.ok(finding && finding.vision !== "normal");
+  assert.equal(report.pass, false);
+  assert.ok(!validateChartColours(passing).findings.some((item) => item.code === "CHART_OTHERS_DISTANCE"));
 });

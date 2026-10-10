@@ -175,6 +175,7 @@ export type ChartColourFindingCode =
   | "CHART_RELIEF_FLOOR"
   | "CHART_TONE_DISTANCE"
   | "CHART_NEUTRAL_DISTANCE"
+  | "CHART_OTHERS_DISTANCE"
   | "CHART_TONE_PAIR_DISTANCE"
   | "CHART_NEIGHBOUR_DISTANCE"
   | "CHART_AXIS_CONTRAST"
@@ -235,7 +236,8 @@ export interface ChartColourReport {
  * the grid's reference. A relieved fill still reaches the relief floor
  * (2:1), every meaningful status tone stands apart from every sequence
  * colour under every simulated vision, and the neutral tone from "Others"
- * (decisions 21, 22 and 24). Status tone pairs that are not distinct are
+ * (decisions 21, 22 and 24), and "Others" from every sequence colour
+ * (decision 28). Status tone pairs that are not distinct are
  * reported in `tonePairs`, without failing the set (decision 25). */
 export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
   const findings: ChartColourFinding[] = [];
@@ -292,6 +294,12 @@ export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOU
     const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
     const distance = colourDistance(set.tones.neutral, set.neutral, vision);
     if (distance < required) findings.push({ code: "CHART_NEUTRAL_DISTANCE", element: "tone neutral and neutral", vision, measured: distance, required });
+    // "Others" is drawn beside the series it summarises; a series that looks
+    // like it reads as part of the remainder (decision 28).
+    set.sequence.forEach((series, index) => {
+      const apart = colourDistance(set.neutral, series, vision);
+      if (apart < required) findings.push({ code: "CHART_OTHERS_DISTANCE", element: `neutral and sequence ${index + 1}`, vision, measured: apart, required });
+    });
     // Status against status (decision 25): reported, not failed.
     for (let first = 0; first < meaningful.length; first += 1)
       for (let second = first + 1; second < meaningful.length; second += 1) {

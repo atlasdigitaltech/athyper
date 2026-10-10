@@ -8,6 +8,7 @@
   --a-brand:#234b84;--a-brand-foreground:#fff;--a-brand-hover:color-mix(in srgb,var(--a-brand) 82%,black);--a-brand-soft:color-mix(in srgb,var(--a-brand) 8%,white);
   --a-brand-wordmark-filter:none;
   --a-story-start:color-mix(in srgb,var(--a-brand) 24%,black);--a-story-end:color-mix(in srgb,var(--a-brand) 64%,black);--a-story-foreground:var(--a-brand-foreground);--a-story-muted:color-mix(in srgb,var(--a-brand-foreground) 78%,transparent);--a-story-eyebrow:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-wave:color-mix(in srgb,var(--a-brand) 55%,white);--a-story-wave-bright:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-glow:color-mix(in srgb,var(--a-brand) 30%,transparent);--a-story-dot:color-mix(in srgb,var(--a-brand-foreground) 70%,transparent);--a-story-border:color-mix(in srgb,var(--a-story-foreground) 14%,transparent);--a-story-surface:color-mix(in srgb,var(--a-story-foreground) 6%,transparent);--a-story-surface-hover:color-mix(in srgb,var(--a-story-foreground) 10%,transparent);--a-story-surface-active:color-mix(in srgb,var(--a-story-wave) 22%,transparent);--a-story-selection-border:color-mix(in srgb,var(--a-story-wave-bright) 38%,transparent);--a-story-focus:#2e90fa;--a-story-danger:#b42318;--a-story-danger-foreground:#fff;--a-story-warning:#b54708;--a-story-warning-foreground:#fff;--a-story-success:#067647;--a-story-success-foreground:#fff;--a-story-contrast:#151515;--a-story-contrast-foreground:#fff;
+  --a-chart-1:#054e8d;--a-chart-2:#c18304;--a-chart-3:#2098f6;--a-chart-4:#89385a;--a-chart-5:#af71b6;--a-chart-6:#6250d6;--a-chart-7:#e93288;--a-chart-8:#51a062;--a-chart-single:#234b84;--a-chart-neutral:#8e94a0;--a-chart-grid:#e3e8ef;--a-chart-axis:#8a94a6;
 }
 :root[data-theme="dark"] {
   --a-background:#0b1220;--a-foreground:#e8edf5;--a-surface:#111b2e;--a-surface-raised:#17243a;
@@ -19,6 +20,7 @@
   --a-brand:#234b84;--a-brand-foreground:#fff;--a-brand-hover:color-mix(in srgb,var(--a-brand) 42%,white);--a-brand-soft:color-mix(in srgb,var(--a-brand) 52%,black);
   --a-brand-wordmark-filter:brightness(0) invert(1);
   --a-story-start:color-mix(in srgb,var(--a-brand) 24%,black);--a-story-end:color-mix(in srgb,var(--a-brand) 64%,black);--a-story-foreground:var(--a-brand-foreground);--a-story-muted:color-mix(in srgb,var(--a-brand-foreground) 78%,transparent);--a-story-eyebrow:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-wave:color-mix(in srgb,var(--a-brand) 55%,white);--a-story-wave-bright:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-glow:color-mix(in srgb,var(--a-brand) 30%,transparent);--a-story-dot:color-mix(in srgb,var(--a-brand-foreground) 70%,transparent);--a-story-border:color-mix(in srgb,var(--a-story-foreground) 14%,transparent);--a-story-surface:color-mix(in srgb,var(--a-story-foreground) 6%,transparent);--a-story-surface-hover:color-mix(in srgb,var(--a-story-foreground) 10%,transparent);--a-story-surface-active:color-mix(in srgb,var(--a-story-wave) 22%,transparent);--a-story-selection-border:color-mix(in srgb,var(--a-story-wave-bright) 38%,transparent);--a-story-focus:#84caff;--a-story-danger:#f97066;--a-story-danger-foreground:#230402;--a-story-warning:#fec84b;--a-story-warning-foreground:#241400;--a-story-success:#47cd89;--a-story-success-foreground:#031b12;--a-story-contrast:#f4f6f8;--a-story-contrast-foreground:#11151c;
+  --a-chart-1:#527ffa;--a-chart-2:#b27d06;--a-chart-3:#eb92af;--a-chart-4:#1f7746;--a-chart-5:#2ca08e;--a-chart-6:#ac9fea;--a-chart-7:#ce0c38;--a-chart-8:#b825ae;--a-chart-single:#b9c5d8;--a-chart-neutral:#6b7486;--a-chart-grid:#2a3850;--a-chart-axis:#6b7a93;
 }
 :root[data-theme="high-contrast"] {
   --a-background:#000;--a-foreground:#fff;--a-surface:#000;--a-surface-raised:#0a0a0a;
@@ -30,6 +32,7 @@
   --a-brand:#ff0;--a-brand-foreground:#000;--a-brand-hover:#fff;--a-brand-soft:#000;
   --a-brand-wordmark-filter:brightness(0) invert(1);
   --a-story-start:#000;--a-story-end:#000;--a-story-foreground:#fff;--a-story-muted:#fff;--a-story-eyebrow:#ff0;--a-story-wave:#ff0;--a-story-wave-bright:#fff;--a-story-glow:transparent;--a-story-dot:#fff;--a-story-border:#fff;--a-story-surface:#000;--a-story-surface-hover:#171717;--a-story-surface-active:#000;--a-story-selection-border:#ff0;--a-story-focus:#0ff;--a-story-danger:#ff6b6b;--a-story-danger-foreground:#000;--a-story-warning:#ff0;--a-story-warning-foreground:#000;--a-story-success:#6f9;--a-story-success-foreground:#000;--a-story-contrast:#ff0;--a-story-contrast-foreground:#000;
+  --a-chart-1:#4a78d0;--a-chart-2:#faa825;--a-chart-3:#f8c3ff;--a-chart-4:#b1578d;--a-chart-5:#05a7c2;--a-chart-6:initial;--a-chart-7:initial;--a-chart-8:initial;--a-chart-single:#ffff00;--a-chart-neutral:#9a9a9a;--a-chart-grid:#3a3a3a;--a-chart-axis:#ffffff;
 }
 /* Atlas Mono: greyscale surfaces/chrome. Danger/warning/success and story* gradient
    tokens (color-mix formulas against --a-brand) are intentionally left to inherit from the
@@ -39,6 +42,7 @@
   --a-background:#fafafa;--a-foreground:#1a1a1a;--a-surface:#fff;--a-surface-raised:#fff;
   --a-muted:#f0f0f0;--a-muted-foreground:#595959;--a-border:#d9d9d9;--a-input:#a6a6a6;--a-focus:var(--a-selection-subtle-foreground);
   --a-brand:#1a1a1a;--a-brand-foreground:#fff;--a-brand-hover:color-mix(in srgb,var(--a-brand) 82%,black);--a-brand-soft:color-mix(in srgb,var(--a-brand) 8%,white);
+  --a-chart-1:#4d4481;--a-chart-2:#9a934a;--a-chart-3:#4499d8;--a-chart-4:#13524a;--a-chart-5:#7f728b;--a-chart-6:#b66d6d;--a-chart-7:#8f4b68;--a-chart-8:#5870b3;--a-chart-single:#1a1a1a;--a-chart-neutral:#949494;--a-chart-grid:#e6e6e6;--a-chart-axis:#8c8c8c;
 }
 :root[data-theme-family="atlas-mono"][data-theme="dark"] {
   --a-background:#121212;--a-foreground:#ededed;--a-surface:#1c1c1c;--a-surface-raised:#242424;
@@ -51,8 +55,13 @@
   --a-story-start:#171717;--a-story-end:#0b0b0b;--a-story-foreground:#ededed;--a-story-muted:#b3b3b3;--a-story-eyebrow:#bdbdbd;
   --a-story-wave:#d9d9d9;--a-story-wave-bright:#fff;--a-story-glow:transparent;--a-story-dot:#8c8c8c;
   --a-story-surface-active:#262626;--a-story-selection-border:#4d4d4d;
+  --a-chart-1:#95a3eb;--a-chart-2:#857a33;--a-chart-3:#e6c4e5;--a-chart-4:#5da190;--a-chart-5:#835a84;--a-chart-6:#5079bc;--a-chart-7:#586f4f;--a-chart-8:#a48bb0;--a-chart-single:#ededed;--a-chart-neutral:#707070;--a-chart-grid:#333333;--a-chart-axis:#7a7a7a;
 }
-:root[data-theme-family="atlas-mono"][data-theme="high-contrast"] { --a-focus:#0ff; }
+:root[data-theme-family="atlas-mono"][data-theme="high-contrast"] {
+  --a-focus:#0ff;
+  /* The Mono light block above also matches high contrast; restore the shared high-contrast chart set. */
+  --a-chart-1:#4a78d0;--a-chart-2:#faa825;--a-chart-3:#f8c3ff;--a-chart-4:#b1578d;--a-chart-5:#05a7c2;--a-chart-6:initial;--a-chart-7:initial;--a-chart-8:initial;--a-chart-single:#ffff00;--a-chart-neutral:#9a9a9a;--a-chart-grid:#3a3a3a;--a-chart-axis:#ffffff;
+}
 :root {
   /* Declared-but-unset: `initial` is the guaranteed-invalid value, so every var(--x, fallback) still takes its fallback. The shell overrides --a-page-sticky-top on its body; --a-record-sticky-top is an optional per-page override. */
   --a-page-sticky-top:initial;--a-record-sticky-top:initial;

@@ -377,6 +377,72 @@ export function resolveFamilyColorTokens(family: ThemeFamily, mode: ColorMode): 
   return FAMILY_COLOR_TOKENS[family][mode];
 }
 
+/** One chart colour set: `--a-chart-1` … `--a-chart-8` (five under high
+ * contrast), `--a-chart-single`, `--a-chart-neutral` ("Others"),
+ * `--a-chart-grid` and `--a-chart-axis`. The tones are the status tokens
+ * (`--a-success`, `--a-warning`, `--a-danger`, and `--a-muted-foreground` for
+ * neutral). Shared chart blueprint 13.4a.11; every set passes the colour
+ * validator and is locked in chart-colors.test.ts (decision 26). */
+export interface ChartColorTokenSet {
+  readonly sequence: readonly string[];
+  readonly single: string;
+  readonly neutral: string;
+  readonly grid: string;
+  readonly axis: string;
+}
+
+/** High contrast is an accessibility mode, not a brand: one set, five colours. */
+const HIGH_CONTRAST_CHART_COLORS: ChartColorTokenSet = Object.freeze({
+  sequence: Object.freeze(["#4a78d0", "#faa825", "#f8c3ff", "#b1578d", "#05a7c2"]),
+  single: "#ffff00",
+  neutral: "#9a9a9a",
+  grid: "#3a3a3a",
+  axis: "#ffffff",
+});
+
+export const CHART_COLOR_TOKENS: Readonly<Record<ThemeFamily, Readonly<Record<ColorMode, ChartColorTokenSet>>>> =
+  Object.freeze({
+    "atlas-modern": Object.freeze({
+      light: Object.freeze({
+        sequence: Object.freeze(["#054e8d", "#c18304", "#2098f6", "#89385a", "#af71b6", "#6250d6", "#e93288", "#51a062"]),
+        single: "#234b84",
+        neutral: "#8e94a0",
+        grid: "#e3e8ef",
+        axis: "#8a94a6",
+      }),
+      dark: Object.freeze({
+        sequence: Object.freeze(["#527ffa", "#b27d06", "#eb92af", "#1f7746", "#2ca08e", "#ac9fea", "#ce0c38", "#b825ae"]),
+        single: "#b9c5d8",
+        neutral: "#6b7486",
+        grid: "#2a3850",
+        axis: "#6b7a93",
+      }),
+      "high-contrast": HIGH_CONTRAST_CHART_COLORS,
+    }),
+    /** Chromatic but quiet (chroma at most 40): decision 16, owner's quieter level. */
+    "atlas-mono": Object.freeze({
+      light: Object.freeze({
+        sequence: Object.freeze(["#4d4481", "#9a934a", "#4499d8", "#13524a", "#7f728b", "#b66d6d", "#8f4b68", "#5870b3"]),
+        single: "#1a1a1a",
+        neutral: "#949494",
+        grid: "#e6e6e6",
+        axis: "#8c8c8c",
+      }),
+      dark: Object.freeze({
+        sequence: Object.freeze(["#95a3eb", "#857a33", "#e6c4e5", "#5da190", "#835a84", "#5079bc", "#586f4f", "#a48bb0"]),
+        single: "#ededed",
+        neutral: "#707070",
+        grid: "#333333",
+        axis: "#7a7a7a",
+      }),
+      "high-contrast": HIGH_CONTRAST_CHART_COLORS,
+    }),
+  });
+
+export function resolveChartColorTokens(family: ThemeFamily, mode: ColorMode): ChartColorTokenSet {
+  return CHART_COLOR_TOKENS[family][mode];
+}
+
 /** Density token values; styles.css defines the same values for [data-density]. */
 export const DENSITY_TOKENS = Object.freeze({
   compact: Object.freeze({

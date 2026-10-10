@@ -1,7 +1,8 @@
 /**
  * Greyscale companion to Atlas Modern: no brand hue, chroma reserved for
- * status colors (danger/warning/success/focus), which stay unchanged so
- * status meaning never depends on shade alone.
+ * status colours (danger/warning/success/focus), which stay unchanged so
+ * status meaning never depends on shade alone, and validated chart series,
+ * which stay quiet (Shared chart blueprint 13.4a.5, decision 16).
  */
 export const ATLAS_MONO_BRAND = Object.freeze({
   id: "atlas-mono",
