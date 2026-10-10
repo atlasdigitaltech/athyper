@@ -124,7 +124,7 @@ export function selectorAt(css, index) {
 }
 /** Selectors that size something a person operates: a control, option or row. */
 const INTERACTIVE_SELECTOR =
-  /\b(?:button|summary|input|select|textarea|option|label)\b|\[role=|trigger|toggle|chip|__tab|tab-list|-row\b|__row|toolbar|__control|-control\b|__option|__item|picker|>div\b/;
+  /\b(?:button|summary|input|select|textarea|option|label)\b|\[role=|trigger|toggle|chip|__tab|tab-list|-row\b|__row|toolbar|__control|-control\b|__button|-button\b|__option|__item|picker|>div\b/;
 /** The element each selector in a list sizes: its last compound selector, so
  * `.menu>summary>.avatar` sizes the avatar (media), not the summary. */
 export function subjects(selectorList) {

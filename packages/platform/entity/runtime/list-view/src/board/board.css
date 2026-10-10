@@ -37,7 +37,7 @@
 .a-entity-board__card{border-radius:var(--a-radius-lg);outline:none}
 .a-entity-board__card .a-entity-list__card{transition:transform var(--a-motion-fast) var(--a-easing),box-shadow var(--a-motion-fast) var(--a-easing)}
 .a-entity-board__card:hover .a-entity-list__card,.a-entity-board__card:focus-within .a-entity-list__card{transform:translateY(-1px);box-shadow:var(--a-shadow-md)}
-.a-entity-board__card:focus-visible .a-entity-list__card{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:2px}
+.a-entity-board__card:focus-visible .a-entity-list__card{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:var(--a-focus-offset)}
 .a-entity-board__lane[data-terminal] .a-entity-list__card{opacity:.88}
 .a-entity-board__empty{margin:0;padding:var(--a-space-4) var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);text-align:center}
 .a-entity-board__failure{display:grid;justify-items:center;gap:var(--a-space-2);padding:var(--a-space-4) var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);text-align:center}

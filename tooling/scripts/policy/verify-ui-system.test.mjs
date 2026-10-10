@@ -167,6 +167,13 @@ test("control-height applies to interactive selectors, not media sizes", () => {
   assert.equal(selectorAt("@media (x){.a b{height:2rem}}", 20), ".a b");
 });
 
+test("a BEM __button or -button class is a control, though it has no word boundary before button", () => {
+  // `\bbutton\b` cannot match `.a-entity-compare__button`: `_` is a word
+  // character. Without its own alternative every __button escaped this rule.
+  assert.deepEqual(rules(auditStylesheet(".a-entity-compare__button{min-block-size:2rem}.a-toolbar-button{height:2rem}", scale)), ["control-height", "control-height"]);
+  assert.deepEqual(rules(auditStylesheet(".a-entity-compare__button{min-block-size:var(--a-density-control-height-small)}", scale)), []);
+});
+
 test("the compact tier is for containers only, never the viewport", () => {
   const tokens =
     'export const BREAKPOINT_SCALE = Object.freeze({ compact: 24, narrow: 40, medium: 48, wide: 64, extraWide: 80 });\nexport const CONTAINER_ONLY_BREAKPOINTS: readonly BreakpointName[] = Object.freeze(["compact"]);';
