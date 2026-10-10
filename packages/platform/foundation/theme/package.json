@@ -11,11 +11,13 @@
   "exports": {
     ".": "./src/index.tsx",
     "./tokens": "./src/tokens.ts",
+    "./colour-validator": "./src/colour-validator.ts",
     "./styles.css": "./src/styles.css",
     "./tailwind.css": "./src/tailwind.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/colour-validator.test.ts",
     "iam:build": "tsx scripts/build-iam-css.ts",
     "docs-theme:build": "tsx scripts/build-docs-css.ts",
     "docs-theme:check": "tsx scripts/build-docs-css.ts --check",

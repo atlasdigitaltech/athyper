@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved, not built; revision 4 (10 October 2026).
+**Status:** approved; A5.1a built; revision 5 (10 October 2026).
+- **A5.1a built (10 October 2026)** on the owner's instruction "go ahead and start build A5.1a", with reference to the [Neon Chart Prototype](../../prototypes/Neon%20Chart%20Prototype.html). The colour validator is in the theme package with its own tests (13.4a.6). No chart colour tokens exist yet: that is A5.1b, and the prototype's palette does not pass the validator (13.4a.6, point 5).
 - **13.4a approved (10 October 2026).** The owner approved decisions 16–19 in these words: "16, 17, 18 and 19 approved". Where 13.4a and 13.4 differ, 13.4a governs:
   - the validator is A5.1a, built before the token sets (A5.1b);
   - colours are keyed;
@@ -255,6 +256,46 @@ A palette checked by nothing ships on judgement. This amendment makes the check 
 - **The rule's source is amended with it.** At the A5.1b build, `atlas-mono.ts`'s comment changes from "chroma reserved for status colors" to "chroma reserved for status colours and validated chart series". The constraint and its exception then live in one file, and this document cites it.
 - **The alternative, rejected but reasonable:** keep Mono absolutely greyscale by limiting its charts to one series (in ink) and pointing to the data table for more. It was rejected because it removes grouped and stacked charts from one theme only. The same link would then show a different chart, or none, depending on the viewer's theme.
 
+#### 13.4a.6 Build record (A5.1a, 10 October 2026)
+
+1. **Where it lives.** `packages/platform/foundation/theme/src/colour-validator.ts`, exported as `@athyper/platform-theme/colour-validator`. The theme package's first test script is `node --import tsx --test`, the temporal package's convention, which `pnpm test` (`turbo test`) runs. Test files are excluded from the package typecheck, as in temporal.
+2. **What it computes.**
+   - WCAG 2.x relative luminance and contrast ratio.
+   - Colour-vision deficiency simulation with the Machado, Oliveira and Fernandes (2009) matrices at full severity, applied in linear RGB.
+   - CIEDE2000 colour difference over CIELAB (D65), as 13.4a.1 specifies. The prototype measured OKLab distance instead; the approved metric was kept.
+3. **What it checks** (`validateChartColours`, one set = one family in one mode). Each finding names the element and, for distances, the vision:
+   - `CHART_FILL_CONTRAST`: each sequence, single, neutral and tone fill at least 3:1 against the plot surface.
+   - `CHART_NEIGHBOUR_DISTANCE`: neighbouring sequence colours under normal vision and each deficiency.
+   - `CHART_AXIS_CONTRAST`: the axis at least 3:1.
+   - `CHART_GRID_DOMINATES`: the grid not lower in contrast than every fill.
+   - `CHART_COLOUR_SEQUENCE_LENGTH`: exactly 8 sequence colours.
+
+   Labels are reported, not failed: each fill names the label ink with the highest contrast and whether it reaches 4.5:1. If it does not, the label is drawn outside the mark.
+4. **The distance thresholds** (`CHART_COLOUR_CRITERIA`): **15** for neighbours under normal vision and **10** under each simulated deficiency, in CIEDE2000 units. They were calibrated on reference pairs, all in the tests:
+
+   | Palette or pair | Closest neighbours | Against 15 / 10 |
+   | --- | --- | --- |
+   | Okabe–Ito, the reference colour-blind-safe palette | 42.9 normal; 14.0 protanopia, 15.7 deuteranopia, 32.9 tritanopia | Passes with margin |
+   | Two near-identical blues | 3.3 | Fails |
+   | Red against green, under deuteranopia | 4.6 | Fails |
+
+   The CIEDE2000 implementation matches Sharma, Wu and Dalal's (2005) published test data to four decimals.
+5. **The prototype's palettes, run through it** (input to A5.1b, not a finding against A5.1a):
+
+   | Set (prototype values) | Result |
+   | --- | --- |
+   | Atlas Modern light | Fails. Three fills under 3:1 (2.8, 2.2, 2.7) and the warning tone (1.8); sequence 4 and 5 at 8.2 under tritanopia |
+   | Atlas Modern dark | Passes |
+   | Atlas Mono light | Fails. Only the warning tone (1.8) |
+   | Atlas Mono dark | Fails. Sequence 4 and 5 at 9.3 under tritanopia |
+
+   A5.1b must therefore choose values, not copy the prototype's. The light-mode fill result is the one the prototype's review raised. Two of its proposals bear on it, and neither is built because neither is approved:
+   - a relief rule (a fill under 3:1 allowed only with a direct label and the data table);
+   - a tone-against-sequence distance check.
+
+   The other prototype review items (line series, mixed units in the parser, stacked guards, category caps, zero totals, percent rounding, line gaps, key collisions, chart roles, `--a-chart-ring`) are proposals for A5.2, recorded in the prototype and awaiting the owner.
+6. **Verified:** 7 tests (luminance and contrast, the published CIEDE2000 data, Lab and greys under every deficiency, the calibration pairs, a passing set and a deterministic report, each finding code, label ink). Package typecheck and the design-system, UI-system, style-token and deployment-profile gates are clean.
+
 ### 13.5 "Others"
 
 - `rest` is exact only for a count, or a sum of an additive field in one unit: the server's total minus the given points, by exact decimal subtraction.
@@ -323,3 +364,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Audit round 12 | Amend Mono's source comment, and record the greyscale alternative | 13.4a.5; decision 16 |
 | Audit round 12 | Tokens, not raw hexes, in the deliverable; scope the 3:1 criterion per element; direct labels as a rule, not a fallback | 13.4a.2, 13.4a.1, 13.4a.4 |
 | Owner (10 October 2026) | "16, 17, 18 and 19 approved" | Status block; 13.4a approved and governs where it differs from 13.4 |
+| Owner (10 October 2026) | "go ahead and start build A5.1a" (with the Neon Chart Prototype) | Built: 13.4a.6 |

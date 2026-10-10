@@ -1,0 +1,245 @@
+// Chart colour validator (Shared chart blueprint, section 13.4a.1; step A5.1a).
+// A pure module with deterministic inputs: WCAG relative luminance and
+// contrast, colour-vision deficiency simulation, and CIEDE2000 colour
+// difference. Every chart colour set in the theme must pass it before any
+// chart draws with it; it belongs to the design system, not the chart, so
+// other data colours can use it later.
+
+/** A colour as six-digit hex, `#rrggbb`. */
+export type HexColour = string;
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function channels(hex: HexColour): readonly [number, number, number] {
+  if (!HEX.test(hex)) throw new TypeError(`Not a #rrggbb colour: ${hex}`);
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+/** sRGB channel (0–255) to linear light (0–1). */
+function linear(channel: number): number {
+  const c = channel / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function linearRgb(hex: HexColour): readonly [number, number, number] {
+  const [r, g, b] = channels(hex);
+  return [linear(r), linear(g), linear(b)];
+}
+
+/** WCAG 2.x relative luminance. */
+export function relativeLuminance(hex: HexColour): number {
+  const [r, g, b] = linearRgb(hex);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG 2.x contrast ratio, 1 to 21. */
+export function contrastRatio(a: HexColour, b: HexColour): number {
+  const x = relativeLuminance(a);
+  const y = relativeLuminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+export type ColourVision = "normal" | "protanopia" | "deuteranopia" | "tritanopia";
+export const COLOUR_VISIONS: readonly ColourVision[] = Object.freeze(["normal", "protanopia", "deuteranopia", "tritanopia"]);
+
+/** Machado, Oliveira and Fernandes (2009), severity 1.0, applied in linear RGB. */
+const DEFICIENCY: Readonly<Record<Exclude<ColourVision, "normal">, readonly (readonly [number, number, number])[]>> = Object.freeze({
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.01182, 0.04294, 0.968881]],
+  tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.3039]],
+});
+
+function seen(hex: HexColour, vision: ColourVision): readonly [number, number, number] {
+  const rgb = linearRgb(hex);
+  if (vision === "normal") return rgb;
+  const clamp = (value: number) => Math.min(1, Math.max(0, value));
+  return DEFICIENCY[vision].map((row) => clamp(row[0] * rgb[0] + row[1] * rgb[1] + row[2] * rgb[2])) as unknown as readonly [number, number, number];
+}
+
+export interface Lab {
+  readonly l: number;
+  readonly a: number;
+  readonly b: number;
+}
+
+/** Linear sRGB to CIELAB, D65 white. */
+function labOf([r, g, b]: readonly [number, number, number]): Lab {
+  const x = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047;
+  const y = 0.2126729 * r + 0.7151522 * g + 0.072175 * b;
+  const z = (0.0193339 * r + 0.119192 * g + 0.9503041 * b) / 1.08883;
+  const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const fx = f(x), fy = f(y), fz = f(z);
+  return { l: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+
+/** A colour in CIELAB as a viewer with the given vision sees it. */
+export function labAsSeen(hex: HexColour, vision: ColourVision = "normal"): Lab {
+  return labOf(seen(hex, vision));
+}
+
+/** CIEDE2000 colour difference (Sharma, Wu and Dalal, 2005), kL = kC = kH = 1. */
+export function ciede2000(one: Lab, two: Lab): number {
+  const rad = Math.PI / 180;
+  const c1 = Math.hypot(one.a, one.b), c2 = Math.hypot(two.a, two.b);
+  const cBar = (c1 + c2) / 2;
+  const g = 0.5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + 25 ** 7)));
+  const a1 = (1 + g) * one.a, a2 = (1 + g) * two.a;
+  const cp1 = Math.hypot(a1, one.b), cp2 = Math.hypot(a2, two.b);
+  const hue = (b: number, a: number) => {
+    if (b === 0 && a === 0) return 0;
+    const h = Math.atan2(b, a) / rad;
+    return h < 0 ? h + 360 : h;
+  };
+  const hp1 = hue(one.b, a1), hp2 = hue(two.b, a2);
+  const dL = two.l - one.l;
+  const dC = cp2 - cp1;
+  let dh = 0;
+  if (cp1 * cp2 !== 0) {
+    dh = hp2 - hp1;
+    if (dh > 180) dh -= 360;
+    else if (dh < -180) dh += 360;
+  }
+  const dH = 2 * Math.sqrt(cp1 * cp2) * Math.sin((dh / 2) * rad);
+  const lBar = (one.l + two.l) / 2;
+  const cpBar = (cp1 + cp2) / 2;
+  let hBar = hp1 + hp2;
+  if (cp1 * cp2 !== 0) {
+    if (Math.abs(hp1 - hp2) <= 180) hBar /= 2;
+    else hBar = hp1 + hp2 < 360 ? (hp1 + hp2 + 360) / 2 : (hp1 + hp2 - 360) / 2;
+  }
+  const t = 1 - 0.17 * Math.cos((hBar - 30) * rad) + 0.24 * Math.cos(2 * hBar * rad) + 0.32 * Math.cos((3 * hBar + 6) * rad) - 0.2 * Math.cos((4 * hBar - 63) * rad);
+  const dTheta = 30 * Math.exp(-(((hBar - 275) / 25) ** 2));
+  const rc = 2 * Math.sqrt(cpBar ** 7 / (cpBar ** 7 + 25 ** 7));
+  const sl = 1 + (0.015 * (lBar - 50) ** 2) / Math.sqrt(20 + (lBar - 50) ** 2);
+  const sc = 1 + 0.045 * cpBar;
+  const sh = 1 + 0.015 * cpBar * t;
+  const rt = -Math.sin(2 * dTheta * rad) * rc;
+  return Math.sqrt((dL / sl) ** 2 + (dC / sc) ** 2 + (dH / sh) ** 2 + rt * (dC / sc) * (dH / sh));
+}
+
+/** The colour difference between two colours as a viewer with the given vision sees them. */
+export function colourDistance(a: HexColour, b: HexColour, vision: ColourVision = "normal"): number {
+  return ciede2000(labAsSeen(a, vision), labAsSeen(b, vision));
+}
+
+/** The criteria per element class (13.4a.1). The two distances are
+ * CIEDE2000 values, recorded with their reasons in the blueprint: the
+ * Okabe-Ito palette, the reference for colour-blind-safe categories, passes
+ * with margin (closest neighbours 42.9 normal, 14.0 protanopia), while two
+ * near-identical blues (3.3) and red against green under deuteranopia (4.6)
+ * fail. */
+export const CHART_COLOUR_CRITERIA = Object.freeze({
+  /** Series, single-series and tone fills against the plot background (WCAG 1.4.11). */
+  fillContrast: 3,
+  /** Axis lines against the background (WCAG 1.4.11). */
+  axisContrast: 3,
+  /** Label text drawn on a fill (WCAG 1.4.3). */
+  labelContrast: 4.5,
+  /** Neighbouring series, normal colour vision. */
+  neighbourDistance: 15,
+  /** Neighbouring series, under each simulated deficiency. */
+  neighbourDistanceDeficient: 10,
+});
+
+/** One chart colour set: one family in one mode (13.4a.2). */
+export interface ChartColourSet {
+  /** The plot background the marks sit on. */
+  readonly surface: HexColour;
+  /** `--a-chart-1` … `--a-chart-8`, in sequence order. */
+  readonly sequence: readonly HexColour[];
+  /** `--a-chart-single`. */
+  readonly single: HexColour;
+  /** `--a-chart-neutral` ("Others"). */
+  readonly neutral: HexColour;
+  readonly grid: HexColour;
+  readonly axis: HexColour;
+  /** The status tone colours a chart uses for meaning. */
+  readonly tones: Readonly<Record<"neutral" | "success" | "warning" | "danger", HexColour>>;
+  /** The text colours a data label may be drawn in, on a fill. */
+  readonly labelInks: readonly HexColour[];
+}
+
+export type ChartColourFindingCode =
+  | "CHART_COLOUR_SEQUENCE_LENGTH"
+  | "CHART_FILL_CONTRAST"
+  | "CHART_NEIGHBOUR_DISTANCE"
+  | "CHART_AXIS_CONTRAST"
+  | "CHART_GRID_DOMINATES";
+
+export interface ChartColourFinding {
+  readonly code: ChartColourFindingCode;
+  /** Which element, for example "sequence 3", "tone success", "sequence 2 and 3". */
+  readonly element: string;
+  readonly vision?: ColourVision;
+  readonly measured: number;
+  /** The bound the measurement had to meet (a minimum, or for the grid a maximum). */
+  readonly required: number;
+}
+
+export interface ChartFillReport {
+  readonly element: string;
+  readonly colour: HexColour;
+  readonly contrast: number;
+  /** The label ink with the highest contrast on this fill, and whether it is
+   * enough to draw a label inside the mark; otherwise labels go outside. */
+  readonly labelInk: HexColour;
+  readonly labelContrast: number;
+  readonly labelInside: boolean;
+}
+
+export interface ChartColourReport {
+  readonly pass: boolean;
+  readonly findings: readonly ChartColourFinding[];
+  readonly fills: readonly ChartFillReport[];
+  /** The smallest neighbour distance found, per vision. */
+  readonly closestNeighbours: Readonly<Record<ColourVision, { readonly element: string; readonly distance: number }>>;
+  readonly axisContrast: number;
+  readonly gridContrast: number;
+}
+
+/** Checks one chart colour set against the 13.4a.1 criteria. Pure and
+ * deterministic: the same set always gives the same report. */
+export function validateChartColours(set: ChartColourSet, criteria = CHART_COLOUR_CRITERIA): ChartColourReport {
+  const findings: ChartColourFinding[] = [];
+  if (set.sequence.length !== 8)
+    findings.push({ code: "CHART_COLOUR_SEQUENCE_LENGTH", element: "sequence", measured: set.sequence.length, required: 8 });
+  if (!set.labelInks.length) throw new TypeError("A chart colour set needs at least one label ink");
+  const filled: [string, HexColour][] = [
+    ...set.sequence.map((colour, index): [string, HexColour] => [`sequence ${index + 1}`, colour]),
+    ["single", set.single],
+    ["neutral", set.neutral],
+    ...(Object.entries(set.tones) as [string, HexColour][]).map(([tone, colour]): [string, HexColour] => [`tone ${tone}`, colour]),
+  ];
+  const fills = filled.map(([element, colour]) => {
+    const contrast = contrastRatio(colour, set.surface);
+    if (contrast < criteria.fillContrast) findings.push({ code: "CHART_FILL_CONTRAST", element, measured: contrast, required: criteria.fillContrast });
+    const [labelInk, labelContrast] = set.labelInks
+      .map((ink): [HexColour, number] => [ink, contrastRatio(ink, colour)])
+      .reduce((best, next) => (next[1] > best[1] ? next : best));
+    return Object.freeze({ element, colour, contrast, labelInk, labelContrast, labelInside: labelContrast >= criteria.labelContrast });
+  });
+  const closest = {} as Record<ColourVision, { element: string; distance: number }>;
+  for (const vision of COLOUR_VISIONS) {
+    const required = vision === "normal" ? criteria.neighbourDistance : criteria.neighbourDistanceDeficient;
+    for (let index = 0; index + 1 < set.sequence.length; index += 1) {
+      const element = `sequence ${index + 1} and ${index + 2}`;
+      const distance = colourDistance(set.sequence[index]!, set.sequence[index + 1]!, vision);
+      if (!closest[vision] || distance < closest[vision].distance) closest[vision] = { element, distance };
+      if (distance < required) findings.push({ code: "CHART_NEIGHBOUR_DISTANCE", element, vision, measured: distance, required });
+    }
+  }
+  const axisContrast = contrastRatio(set.axis, set.surface);
+  if (axisContrast < criteria.axisContrast) findings.push({ code: "CHART_AXIS_CONTRAST", element: "axis", measured: axisContrast, required: criteria.axisContrast });
+  // Grid lines must sit below every data fill, so the data dominates.
+  const gridContrast = contrastRatio(set.grid, set.surface);
+  const lowestFill = Math.min(...fills.map((fill) => fill.contrast));
+  if (gridContrast >= lowestFill) findings.push({ code: "CHART_GRID_DOMINATES", element: "grid", measured: gridContrast, required: lowestFill });
+  return Object.freeze({
+    pass: !findings.length,
+    findings: Object.freeze(findings),
+    fills: Object.freeze(fills),
+    closestNeighbours: Object.freeze(closest),
+    axisContrast,
+    gridContrast,
+  });
+}
