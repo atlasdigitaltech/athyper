@@ -2872,6 +2872,18 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/66_historical_compatibility_names.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_clean_foundation_component_resource_compatibility.sql",
+      "path": "migrations/20261010_native_clean_foundation_component_resource_compatibility.sql",
+      "sha256": "13784f645a884321ca960f34af3a2fd1375130ee62fcf3d8e041d544086cc962",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Restore the canonical UI-component reviewed-resource kind after the empty-foundation live-read compatibility bridge; exact predecessor function hashes reject drift and the migration creates no resources, grants or catalogue rows.",
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/34_component_resource_review.sql"
+      ]
     }
   ]
 }
