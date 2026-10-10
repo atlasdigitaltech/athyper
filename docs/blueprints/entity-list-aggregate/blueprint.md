@@ -577,7 +577,7 @@ Within a ranked expansion, No value reads "Not ranked", and the held-back and ti
   - the two-condition rule: a fallback expansion shows its reason **and** its truncation notice, while a ranked expansion replaces the truncation notice with its ranking notice;
   - a currency fallback decided from the parent row's totals with no request sent;
   - one request per expansion.
-- **Browser** (the opt-in larger fixture): a ranked expansion's notice and "Not ranked" row, and a fallback expansion with its reason.
+- **Browser** (the opt-in larger fixture): a ranked expansion's notice and "Not ranked" row. **Restated after the build (audit round 21):** the line also asked for a fallback expansion with its reason. Given a ranked level 1, consistent data cannot produce one (nested build record, note 1), so that half is withdrawn. The fallback rule is covered by a jsdom test built directly from a row's totals.
 
 **Build record (nested Top N, 10 October 2026)**
 
@@ -597,6 +597,12 @@ Within a ranked expansion, No value reads "Not ranked", and the held-back and ti
    - Currency: the records under one row are a subset of level 1's, so a single-currency total implies single-currency subsets, and a level with no unknown currency has none in any subset.
 
    The "Within each group" picker exists only once a level 1 order is chosen. So the fallback is a guard, kept because it is cheap and because a state that reaches the server unvalidated (an old saved view, a hand-edited link) is still handled. The jsdom test builds the case directly from a row's totals. The browser case in the acceptance list cannot be produced from consistent data and is not claimed.
+
+   **Re-check triggers.** The proof holds only while all of the following hold. A change to any of them makes the fallback reachable: the guard then carries real weight, its jsdom test is its only check, and a browser case becomes both possible and required.
+   - an expansion's filters are built from its ancestors' values (`[...ancestors, ...row.filters]`);
+   - the not-summable rule treats a level's own, unbucketed field as rankable, and a date bucket as not its own field;
+   - "Within each group" is offered only with a level 1 order;
+   - an expansion's currency check reads its parent row's own totals.
 2. **"No request sent" in the acceptance list means no refused *ordered* request.** A fallback expansion is still requested, in its own order. The ranking request the server would refuse is never sent.
 3. **Option labels say what they set:** "Show 10", "5 within each group" and "Own order within groups". Two bare numbers side by side ("10", "5") were ambiguous in the browser.
 4. **Notice rows are left-aligned.** In the table, every notice row (loading, truncation and now ranking) had inherited the measure cells' right alignment.
@@ -1091,4 +1097,9 @@ The status block distinguishes what is built, published and verified at runtime.
 | Owner (10 October 2026) | "Nested Top N approved for build go ahead" | Built on fixtures (7.5, nested build record) |
 | Audit round 21 | The client change is one call site, and `orderRefusal` needs only the expansion's parent totals | Confirmed in the build (nested build record) |
 | Author, nested build | Given a ranked level 1, the fallback (decision 39) cannot occur | Built as a guard; tested directly; browser case not claimed (build note 1) |
+| Audit round 21 | Record the fallback's reachability proof, not only the conclusion | The proof was in build note 1; added the re-check triggers that would make the guard carry weight |
+| Audit round 21 | Decision 40's browser condition is unsatisfiable | Corrected: the line is in the acceptance list (point 6), not in decision 40. Its fallback half is withdrawn with the reason recorded; decision 40's two-condition rule stands |
+| Audit round 21 | The screenshot's Closing net cells show "the per-level refusal working" | Corrected: they show the semi-additive display rule (decision 8, section 8.2), a separate rule from the ordering refusal, though both use the same pinned-or-own-field condition. Closing net was not the ranked measure there |
+| Audit round 21 | No Arabic page has been exercised for this layout | Agreed; it spans A1 to nested A6. Proposed as separate evidence work, not part of this commit |
+| Owner (10 October 2026) | "go ahead" | Re-check triggers and the restated acceptance line recorded |
 
