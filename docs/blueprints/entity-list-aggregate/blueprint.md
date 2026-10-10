@@ -807,7 +807,7 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
 33. **Level 1 only.** Nested Top N needs a later decision.
 34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only. **Amended (10 October 2026):** the heading reads "Top N of M" only when M > N, "All M … highest first" (or "lowest first") when every ranked group is shown, and "Top N" with no total when M is not given. The No value row is labelled "Not ranked" (section 7.5, "Headings and counts").
-36. **In a ranked view the Total row is labelled "Not ranked"** (approved and built, 10 October 2026; 7.5). It keeps its first place. Rejected alternatives:
+36. **In a ranked view the Total row is labelled "Not ranked"** (approved and built, 10 October 2026; 7.5). It keeps its first place. **Why:** the Total row is not a group. It aggregates every record, including No value and held-back groups, while the ranking compares groups. It is therefore outside the ranking for the same reason No value is, which is why both carry one label. Rejected alternatives:
     - moving it last, which breaks A1's convention and the tree grid's first-row total;
     - a separate wording such as "Outside the ranking", which gives two labels for one idea.
 35. **No "Others" for a measure that declares `minimumGroupSize`** (approved and built, 10 October 2026; 13.9, build note 3). It closes a live exposure in A5.3 and also governs A6.
@@ -949,4 +949,7 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 18 | Enlarge the browser fixture | Adopted as an opt-in larger fixture, so the 15 tests on the shared fixture are unchanged |
 | Audit round 18 | Mark the Total row as outside the ranking | Decision 36, approved and built |
 | Owner (10 October 2026) | "approved both" | Decision 36 built; larger fixture added |
+| Audit round 19 | The Total row is outside the ranking because its cells read "Not summed across Fiscal period" | Corrected: that text belongs to the semi-additive Closing net column on most rows, and the ranked measure's total is a value. The reason recorded in decision 36 is that the Total row is not a group |
+| Audit round 19 | The spec held five ranking-heading assertions at `1bb8ddd7a` | Corrected count: four. Three are on the heading element and one finds the ranked chart by the same caption. The round 18 row's "three" counted the heading element only |
+| Owner (10 October 2026) | "go ahead" | Decision 36's rationale recorded |
 
