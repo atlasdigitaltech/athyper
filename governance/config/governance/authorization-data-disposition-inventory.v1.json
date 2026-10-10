@@ -4,11 +4,11 @@
   "policyHash": "c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 785,
+    "discoveredTables": 780,
     "externalObjects": 12,
     "exactTableOverrides": 16,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 767,
+    "schemaDefaultedTables": 761,
     "byDataClass": {
       "ai_governance_and_runtime": 31,
       "audit_log": 17,
@@ -33,18 +33,18 @@
       "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 63,
+      "metadata_authority": 61,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
-      "published_definition_authority": 15,
+      "published_definition_authority": 11,
       "secret": 1,
       "session_token": 2,
       "tenant_business_context_non_authorizing": 1,
       "tenant_finance_configuration": 5,
       "tenant_foundation": 1,
       "trace_telemetry": 1,
-      "unknown": 1
+      "unknown": 2
     },
     "byDisposition": {
       "archive_evidence_and_reinstall_only_for_verified_target": 1,
@@ -65,8 +65,8 @@
       "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 31,
-      "migrate_published_artifacts_and_release_history": 15,
-      "migrate_published_authority_and_rebuild_projections": 63,
+      "migrate_published_artifacts_and_release_history": 11,
+      "migrate_published_authority_and_rebuild_projections": 61,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
@@ -84,7 +84,7 @@
       "revoke_and_do_not_migrate": 1,
       "revoke_flush_and_do_not_migrate": 1,
       "supported_encrypted_backup_and_restore": 1,
-      "unclassified": 1
+      "unclassified": 2
     }
   },
   "gates": {
@@ -92,7 +92,8 @@
     "everyExternalObjectHasOneDisposition": true,
     "allDispositionsApproved": false,
     "unknownTables": [
-      "entity_command_private.declared_operation_initialization"
+      "entity_command_private.declared_operation_initialization",
+      "entity_command_private.root_registration_admission"
     ],
     "duplicateRuntimeRegistrations": [],
     "approvalStatus": "pending"
@@ -6375,6 +6376,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "entity_command_private.root_registration_admission",
+      "schema": "entity_command_private",
+      "table": "root_registration_admission",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/67_native_root_registration.sql",
+          "line": 16
+        }
+      ],
+      "decisionSource": "none",
+      "dataClass": "unknown",
+      "disposition": "unclassified",
+      "retention": "unclassified",
+      "evidence": "missing policy",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "event.authorization_invalidation_outbox",
       "schema": "event",
       "table": "authorization_invalidation_outbox",
@@ -11379,42 +11398,6 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "metadata.entity_baseline_import",
-      "schema": "metadata",
-      "table": "entity_baseline_import",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
-          "line": 2
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "metadata_authority",
-      "disposition": "migrate_published_authority_and_rebuild_projections",
-      "retention": "published metadata and governance history retention",
-      "evidence": "release hashes, source counts, and projection rebuild parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "metadata.entity_baseline_import_revocation",
-      "schema": "metadata",
-      "table": "entity_baseline_import_revocation",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
-          "line": 23
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "metadata_authority",
-      "disposition": "migrate_published_authority_and_rebuild_projections",
-      "retention": "published metadata and governance history retention",
-      "evidence": "release hashes, source counts, and projection rebuild parity",
-      "approvalStatus": "pending"
-    },
-    {
       "id": "metadata.entity_capability",
       "schema": "metadata",
       "table": "entity_capability",
@@ -13054,60 +13037,6 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "publication.entity_authorization_successor_link",
-      "schema": "publication",
-      "table": "entity_authorization_successor_link",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
-          "line": 26
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "publication.entity_authorization_successor_payload",
-      "schema": "publication",
-      "table": "entity_authorization_successor_payload",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
-          "line": 12
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "publication.entity_baseline_release_link",
-      "schema": "publication",
-      "table": "entity_baseline_release_link",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
-          "line": 55
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
       "id": "publication.entity_release_link",
       "schema": "publication",
       "table": "entity_release_link",
@@ -13116,24 +13045,6 @@
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
           "line": 35
-        }
-      ],
-      "decisionSource": "schema_default",
-      "dataClass": "published_definition_authority",
-      "disposition": "migrate_published_artifacts_and_release_history",
-      "retention": "published release and deployment evidence retention",
-      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
-      "approvalStatus": "pending"
-    },
-    {
-      "id": "publication.entity_runtime_restoration_link",
-      "schema": "publication",
-      "table": "entity_runtime_restoration_link",
-      "objectKind": "table",
-      "definitions": [
-        {
-          "path": "server/db/ddl/planes/studio/metadata/14_runtime_restoration.sql",
-          "line": 14
         }
       ],
       "decisionSource": "schema_default",

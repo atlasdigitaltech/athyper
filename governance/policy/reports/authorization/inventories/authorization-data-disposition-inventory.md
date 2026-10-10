@@ -6,10 +6,10 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `c24c9338604b845fc704051b57f771cf61c08773de68e67362449eeee9737013`
 - Approval: **pending**
-- Cataloged database tables: 785
+- Cataloged database tables: 780
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
-- Unclassified tables: 1
+- Unclassified tables: 2
 
 The checked-in inventory assigns one proposed disposition to every table
 discoverable in versioned DDL, every exactly registered runtime-created table,
@@ -46,18 +46,18 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 63 |
+| metadata_authority | 61 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
-| published_definition_authority | 15 |
+| published_definition_authority | 11 |
 | secret | 1 |
 | session_token | 2 |
 | tenant_business_context_non_authorizing | 1 |
 | tenant_finance_configuration | 5 |
 | tenant_foundation | 1 |
 | trace_telemetry | 1 |
-| unknown | 1 |
+| unknown | 2 |
 
 ## Table dispositions
 
@@ -408,6 +408,7 @@ or multiply classified runtime objects.
 | `document.workforce_requisition_supplier` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `entity_command_private.declared_operation_initialization` | unknown | unclassified | none |
 | `entity_command_private.operation_bootstrap_source` | governance_audit | archive_evidence_and_reinstall_only_for_verified_target | exact_table_override |
+| `entity_command_private.root_registration_admission` | unknown | unclassified | none |
 | `event.authorization_invalidation_outbox` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.channel_consent_event` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.command_execution` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
@@ -686,8 +687,6 @@ or multiply classified runtime objects.
 | `metadata.entity_ai_term` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_authoring_command_receipt` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_authorization_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
-| `metadata.entity_baseline_import` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
-| `metadata.entity_baseline_import_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_capability` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_change_case_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_change_set` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -779,11 +778,7 @@ or multiply classified runtime objects.
 | `publication.deployment` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_acknowledgement` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_event` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.entity_authorization_successor_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.entity_authorization_successor_payload` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.entity_baseline_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.entity_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
-| `publication.entity_runtime_restoration_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.local_publication_host` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.local_publication_request` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.release` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |

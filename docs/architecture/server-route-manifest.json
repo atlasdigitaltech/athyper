@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1224,
+    "identities": 1225,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 356,
+    "currentOnly": 357,
     "legacyOccurrences": 898,
-    "currentOccurrences": 422
+    "currentOccurrences": 423
   },
   "routes": [
     {
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3960,
+          "line": 3955,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3350,
+          "line": 3345,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 378,
+          "line": 383,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 433,
+          "line": 438,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 411,
+          "line": 416,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 502,
+          "line": 507,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 395,
+          "line": 400,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2924,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 456,
+          "line": 461,
           "declaredPath": "/api/entity-runtime/:entityCode/own-record",
           "kind": "contract"
         }
@@ -2939,7 +2939,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 487,
+          "line": 492,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2984,7 +2984,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 470,
+          "line": 475,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/detail",
           "kind": "contract"
         }
@@ -3044,7 +3044,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 377,
+          "line": 382,
           "declaredPath": "/api/entity-runtime/:entityCode/references/:fieldKey",
           "kind": "contract"
         }
@@ -3059,7 +3059,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 350,
+          "line": 355,
           "declaredPath": "/api/entity-runtime/directory",
           "kind": "contract"
         }
@@ -11990,7 +11990,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/development/publication.ts",
-          "line": 315,
+          "line": 265,
           "declaredPath": "/api/dev-publication/publish",
           "kind": "direct"
         }
@@ -15872,7 +15872,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 143,
+          "line": 149,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/bootstrap-native",
           "kind": "direct"
         }
@@ -15887,7 +15887,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 150,
+          "line": 157,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/convert-native",
           "kind": "direct"
         }
@@ -15917,7 +15917,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 156,
+          "line": 163,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/initialize-ownership",
           "kind": "direct"
         }
@@ -15932,7 +15932,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
-          "line": 165,
+          "line": 172,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
           "kind": "direct"
         }
@@ -15950,6 +15950,21 @@
           "line": 289,
           "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/local-publication",
           "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/platform-control/meta-entity-authoring/change-sets/:param/register-native-root",
+      "method": "POST",
+      "path": "/api/platform-control/meta-entity-authoring/change-sets/:param/register-native-root",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts",
+          "line": 143,
+          "declaredPath": "/api/platform-control/meta-entity-authoring/change-sets/:id/register-native-root",
+          "kind": "direct"
         }
       ],
       "status": "current-only"
