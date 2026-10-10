@@ -218,6 +218,10 @@ export interface RecordRepositoryListInput {
     readonly bucket?: import("./query.js").RecordGroupBucket;
     readonly values?: readonly (string | null)[];
   };
+  /** Top / Bottom N (Aggregate A6, section 7.5), with the ordered measure's
+   * floor: groups with fewer records take no position, decided in the same
+   * statement as the sort, so a withheld value never influences the order. */
+  readonly groupOrder?: import("./query.js").RecordGroupOrder & { readonly floor?: number };
   /** Record hierarchy: child existence per row, or orphans only. */
   readonly hierarchy?: {
     readonly mode: "nodes" | "orphans" | "matches";

@@ -95,6 +95,17 @@ export interface ListAggregateChartStateV1 {
   readonly label: ListAggregateChartLabel;
 }
 
+/** Top / Bottom N limits (A6): never more than the group cap, so 7.2's cell bound holds. */
+export type ListAggregateOrderLimit = 5 | 10 | 20 | 50;
+export const LIST_AGGREGATE_ORDER_LIMITS: readonly ListAggregateOrderLimit[] = Object.freeze([5, 10, 20, 50]);
+
+/** Level 1 ordered by a shown measure (A6, section 7.5). */
+export interface ListAggregateOrderStateV1 {
+  readonly measure: string;
+  readonly direction: "asc" | "desc";
+  readonly limit: ListAggregateOrderLimit;
+}
+
 /** Saved Summary state (section 5.6): row dimensions, level 1 first, the
  * measures shown, the column dimension (A2), and the chart (A5.3). */
 export interface ListAggregateStateV1 {
@@ -108,6 +119,8 @@ export interface ListAggregateStateV1 {
   readonly view?: "chart";
   /** The chosen chart; absent until the viewer chooses one. */
   readonly chart?: ListAggregateChartStateV1;
+  /** Level 1 ordered by a measure (A6); absent for the dimension's own order. */
+  readonly order?: ListAggregateOrderStateV1;
 }
 
 /** A column entry this Summary declares: a dimension marked `column`,
@@ -217,9 +230,21 @@ export function parseListAggregateState(
         label: LIST_AGGREGATE_CHART_LABELS.includes(chartRaw.label as ListAggregateChartLabel) ? (chartRaw.label as ListAggregateChartLabel) : "value",
       })
     : undefined;
+  // Top / Bottom N (A6): a shown measure (or the record count), a direction
+  // and a limit; anything else falls back to the dimension's own order.
+  const orderRaw = value.order && typeof value.order === "object" && !Array.isArray(value.order) ? (value.order as Record<string, unknown>) : undefined;
+  const order =
+    orderRaw &&
+    typeof orderRaw.measure === "string" &&
+    (orderRaw.measure === "count" || shownMeasures.includes(orderRaw.measure)) &&
+    (orderRaw.direction === "asc" || orderRaw.direction === "desc") &&
+    LIST_AGGREGATE_ORDER_LIMITS.includes(orderRaw.limit as ListAggregateOrderLimit)
+      ? Object.freeze({ measure: orderRaw.measure, direction: orderRaw.direction as "asc" | "desc", limit: orderRaw.limit as ListAggregateOrderLimit })
+      : undefined;
   return Object.freeze({
     rows: Object.freeze(shownRows),
     measures: Object.freeze(shownMeasures),
+    ...(order ? { order } : {}),
     ...(columnOffered ? { column } : {}),
     ...(value.view === "chart" ? { view: "chart" as const } : {}),
     ...(chart && shownMeasures.length ? { chart } : {}),

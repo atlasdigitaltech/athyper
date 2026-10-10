@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 13 (10 October 2026).
+**Status:** approved, revision 14 (10 October 2026).
+- **A6 built on fixtures (10 October 2026):** "start build A6". Section 7.5's build record has what was built, two notes on the design, the measurements and what is not verified. No real Entity can publish an ordered Summary until A0.
 - **Decision 34 amended (10 October 2026):** "approved go aheand and update blueprint for review". The heading depends on whether every ranked group is shown, and the No value row is labelled "Not ranked" (section 7.5, "Headings and counts"). This came from audit round 16; the contract is unchanged. A6 is still not built.
 - **A6 approved as revised (10 October 2026), not built.** The owner, after audit round 15: "approved A6 as revised, including the amended decision 12 separating "lowest on n items" back to Matrix, with the three implementation details above written into the design". The design is section 7.5; decisions 29–34 are in section 14, and decision 12 is amended there. "Lowest on n items" returns to the [Matrix blueprint](../entity-list-matrix/blueprint.md).
 - **Decision 35 approved and built (10 October 2026):** "The decision on 35 and the A5.3 fix also approved". A measure that declares `minimumGroupSize` never gets "Others" in the chart. Its own commit, independent of A6 (13.9, build note 3).
@@ -498,6 +499,80 @@ The heading therefore says which case it is:
   - N above the ranked count: "All 36 … highest first", with the No value row reading "Not ranked" and the held-back note present.
 - **Other tests:** contract tests for the parameters, the state and the URL round trip; jsdom tests; and browser tests for a top 10 in the grid and the chart, a bottom 5, the tie notice, the held-back notice and a phone.
 
+**Build record (A6, 10 October 2026)**
+
+*Prerequisite.* Audit round 17 suggested reading A6's prerequisite "A5" as A5.3, on the understanding that A5.1 and A5.2 were not built. They are built: A5.1 is the validator and tokens (`59f5ccd85`), and A5.2 is the contract and component (`002eb5bb9`). A5 is therefore complete as written, and there is no deviation from the phases table to record.
+
+*What was built*
+- **Server contract and route.**
+  - `ListRecordsQuery.groupOrder { key, direction, limit }` and `RecordRepositoryListInput.groupOrder` (with the measure's floor).
+  - Results gain `groupCount`, `groupsUnranked` and `groupOrderTieAtCut`.
+  - The list operation and `records.list` accept `groupOrder=<key>:asc|desc` with `groupLimit=5|10|20|50`. The two come together, only on a Summary request; anything else is `LIST_AGGREGATE_INVALID`.
+- **Admission** (`admitAggregateRequest`):
+  - the ordered key is `count` or one of the request's aggregates;
+  - a semi-additive sum is refused with `LIST_AGGREGATE_ORDER_NOT_SUMMABLE` unless each time field is pinned or is the level's own field;
+  - after the statement, `refuseUnrankableOrder` refuses the whole level for a mixed or unknown currency on the parent total.
+- **SQL, flat statement** (`orderedGroupBuckets`). The `GROUPING SETS` output feeds a step that marks ranked groups: not the total row, not No value, and at least the floor in record count. Window counts give the ranked and unranked counts. The sort is `"__total" DESC, (value IS NULL) DESC, <measure> DESC|ASC NULLS LAST, value ASC` with `LIMIT N + 3`. The tie is read from the first ranked row past N.
+- **SQL, pivot statement.** `"__agg"` groups `"__src"` by the row key, which gives each row's total across every column. `"__rank"` applies the floor and the window counts, and `"__rows"` keeps the first N + 1 ranked rows with their position. The main statement reads each row's position and value from `"__rows"` and orders the row totals by it.
+- **In-memory repository:** the same rules, in exact decimals.
+- **Browser contract and client.**
+  - `aggregate.order` state, with URL keys `aggregate.orderBy`, `aggregate.direction` and `aggregate.top`; an empty `orderBy` returns to the dimension's order.
+  - The result's ranking fields are parsed together with `groupOrder`, or not at all.
+  - The API client sends `groupOrder` and `groupLimit` on level 1 only; expansions are never ordered.
+- **The view.**
+  - The Rows fieldset gains "Order rows" ("By {dimension}", and "Highest" and "Lowest" for the record count and each shown measure), and "Show 5/10/20/50" once an order is chosen.
+  - A measure that cannot order the level is disabled, and its reason is listed beneath, decided from the opening response by the same rules as the server (`orderRefusal`).
+  - The heading follows "Headings and counts"; No value reads "Not ranked"; the held-back and tie notes appear when they apply.
+  - The key order's "Showing 50 of more" notice is not shown under an order.
+  - A ranked chart takes the heading as its caption, and its categories follow the ranking.
+  - Decision 14's published order is not applied to ranked rows.
+
+*Build notes*
+1. **Not-summable is decided per group, not from the parent total.** Decision 31 and the refusal list say the refusals are decided from the parent total. That holds for the two currency refusals. For `LIST_AGGREGATE_ORDER_NOT_SUMMABLE` it would contradict 7.5's own list of orderable measures. The parent total of a semi-additive sum is withheld whenever the level is grouped by its time field (it rolls up across periods), yet each group's value is then valid and can rank. The server and the view therefore use the group rule `applyAggregateRules` already applies: every time field is pinned or is the level's own field.
+2. **The pivot reads positions from `"__rows"` through two small correlated lookups.** That step holds at most 51 rows and is materialized once.
+
+*Measured* (real PostgreSQL, 1,200 records, the A2 cost case, three measures):
+- flat statement: 0.87 ms unordered, 0.88 ms ordered;
+- pivot statement: 4.82 ms unordered, 3.80 ms ordered, because there are fewer rows to compute cells for.
+
+The order adds no measurable cost here. A3's volume remains the real test.
+
+*Verified*
+- **Real PostgreSQL** (`aggregate-summary.postgres.test.ts`, 14 tests, 6 new). The three tests the audit named as load-bearing:
+  - No value survives a Top 10 over 500 groups, where it holds the largest sum. The test expects 11 rows (10 ranked, then No value), `groupCount` 500, and the same for ascending order;
+  - a group below the floor neither appears in nor shifts the ranking, and is counted in `groupsUnranked`, on both statement shapes;
+  - `groupCount` excludes the total row, No value and held-back groups.
+
+  The others cover ties broken by key with the tie flag, a column dimension ranked by row total with its count taken from `"__rows"`, an authorized identity set, and the cost.
+- **Service, on the in-memory repository** (`list-aggregate.test.ts`, 5 new):
+  - order and echo;
+  - the floor;
+  - semi-additive by its own time field and when pinned;
+  - the whole-level currency refusals, including groups each single-currency but different from each other;
+  - parameter parsing.
+
+  The records service suite passes: 667 tests.
+- **Contract:** the order state, the URL, normalization, and the ranking result fields (1 new).
+- **jsdom** (3 new):
+  - the three heading cases, "Not ranked" and the notes;
+  - expansions never ordered, and the refusal reason;
+  - the ranked chart caption and order.
+- **Browser** (`entity-list-aggregate.spec.ts`, 15 tests, 3 new, on a fixture that ranks as the server does):
+  - choosing an order through the control, the URL, "All 3 … highest first" and "lowest first", and back to the dimension's order;
+  - a held-back group;
+  - a ranked chart;
+  - a phone with no horizontal scroll.
+
+  The screenshot is `entity-list-aggregate-ranked.png`.
+- **Gates:** the design-system, UI-system and strict style-token gates pass.
+
+*Not verified*
+- a real Entity, which waits for A0;
+- A3's volume;
+- an Arabic page.
+
+The browser fixture has three accounts, so "Top N of M" with M > N is covered by jsdom and by PostgreSQL, not in the browser.
+
 ## 8. Totals, additivity and currency
 
 ### 8.1 Totals from base rows
@@ -855,4 +930,8 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 16 | Retraction of `GROUPING(__group_key) = 0` for the pivot | Recorded; the refutation stays in constraint 3 |
 | Audit round 16 | Prototypes stay uncommitted unless they are marked illustrative | Agreed; they remain uncommitted, unchanged |
 | Owner (10 October 2026) | "approved go aheand and update blueprint for review" | Decision 34 amended (7.5) |
+| Owner (10 October 2026) | "start build A6" | Built on fixtures (7.5, build record) |
+| Audit round 17 | Read A6's prerequisite as A5.3, because A5.1 and A5.2 are not built | Not adopted: both are built (`59f5ccd85`, `002eb5bb9`), so A5 is complete as written |
+| Audit round 17 | Hold the build to the three load-bearing tests and the pivot's PostgreSQL path, and measure | Done: 6 PostgreSQL tests on both statement shapes, with measurements |
+| Author, A6 build | Not-summable is decided per group, not from the parent total | Build note 1 (7.5); the currency refusals stay on the parent total |
 

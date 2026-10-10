@@ -7,6 +7,7 @@ import {
   type ListAggregateBucket,
   type ListAggregateDimensionV1,
   type ListAggregateMeasureV1,
+  type ListAggregateOrderStateV1,
   type ListAggregateStateV1,
   type ListAggregateV1,
   type ListFieldDescriptorV1,
@@ -129,6 +130,8 @@ export function summaryQuery(input: {
   /** The column dimension (A2) and, for an expansion, the opening's columns. */
   readonly column?: SummaryLevel;
   readonly columnValues?: readonly JsonValue[];
+  /** Top / Bottom N (A6): level 1 only. */
+  readonly order?: ListAggregateOrderStateV1;
 }): EntityListQueryState {
   const aggregates = input.measures.filter((measure) => measure.aggregate !== "count").map((measure) => measure.key);
   return {
@@ -145,7 +148,29 @@ export function summaryQuery(input: {
     ...((input.level.unit || input.column?.unit) && input.timeZone ? { timeZone: input.timeZone } : {}),
     ...(input.column ? { pivot: input.column.entry } : {}),
     ...(input.column && input.columnValues ? { pivotValues: input.columnValues } : {}),
+    ...(input.order ? { groupOrder: { key: input.order.measure, direction: input.order.direction, limit: input.order.limit } } : {}),
   };
+}
+
+/** Why a measure cannot order level 1 (A6, section 7.5), from what the
+ * opening response already says; the server refuses the same cases.
+ * - `notSummable`: a semi-additive sum whose time fields are not each pinned
+ *   by an eq or is_null filter or grouped by value at this level;
+ * - `mixedCurrency` / `unknownCurrency`: the parent total's currency state,
+ *   for the whole level, never for some groups. */
+export function orderRefusal(
+  measure: ListAggregateMeasureV1,
+  level: SummaryLevel,
+  filters: readonly ListFilterV1[],
+  parent: ListGroupTotalsV1 | undefined,
+): "notSummable" | "mixedCurrency" | "unknownCurrency" | undefined {
+  if (measure.aggregate === "count") return undefined;
+  const pinned = new Set(filters.filter((filter) => filter.operator === "eq" || filter.operator === "is_null").map((filter) => filter.field));
+  const own = level.unit ? undefined : level.field.key;
+  if (measure.timeFields?.some((time) => !pinned.has(time.key) && time.key !== own)) return "notSummable";
+  if (parent?.mixedCurrencies?.includes(measure.key)) return "mixedCurrency";
+  if (parent?.unknownCurrencies?.includes(measure.key)) return "unknownCurrency";
+  return undefined;
 }
 
 /** What a cell shows. Every state that is not a value is text (principle 5). */
@@ -200,9 +225,11 @@ export function summaryRows(
   groups: readonly (ListGroupTotalsV1 & { readonly value: JsonValue; readonly label: string })[],
   level: SummaryLevel,
   timeZone?: string,
+  /** The server ranked these groups by a measure (A6): keep its order. */
+  ranked = false,
 ): readonly SummaryRow[] {
   const none = (value: JsonValue) => value === null || value === "";
-  const order = level.unit ? undefined : publishedOrder(level.field);
+  const order = level.unit || ranked ? undefined : publishedOrder(level.field);
   const rank = (value: JsonValue) => {
     const index = order?.findIndex((item) => JSON.stringify(item) === JSON.stringify(value)) ?? -1;
     return index < 0 ? Number.MAX_SAFE_INTEGER : index;

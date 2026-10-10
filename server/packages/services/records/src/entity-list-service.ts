@@ -1203,6 +1203,7 @@ export function createEntityListService(options: {
           pivot: query.pivot ?? null,
           pivotBucket: query.pivotBucket ?? null,
           pivotValues: query.pivotValues ?? [],
+          groupOrder: query.groupOrder ?? null,
           groupBucket: query.groupBucket ?? null,
           groupAggregates: query.groupAggregates ?? [],
           hierarchy: query.hierarchy ?? null,
@@ -1227,6 +1228,15 @@ export function createEntityListService(options: {
             }
           : {}),
         ...(result.groupsTruncated ? { groupsTruncated: true as const } : {}),
+        // Top / Bottom N (Aggregate A6): the order applied, and the ranked count.
+        ...(query.groupOrder && result.groupCount !== undefined
+          ? {
+              groupOrder: Object.freeze({ ...query.groupOrder }),
+              groupCount: result.groupCount,
+              groupsUnranked: result.groupsUnranked ?? 0,
+              ...(result.groupOrderTieAtCut ? { groupOrderTieAtCut: true as const } : {}),
+            }
+          : {}),
         ...(result.matchesTruncated ? { matchesTruncated: true as const } : {}),
         ...(result.matchesBeyondDepth ? { matchesBeyondDepth: result.matchesBeyondDepth } : {}),
         pagination: Object.freeze({

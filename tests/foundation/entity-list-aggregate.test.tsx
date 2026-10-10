@@ -139,7 +139,7 @@ const accounts = [
 const total = { count: 5, aggregates: { "period_net:sum": 196, "salary:average": 30, "fee:sum": null }, aggregateCurrencies: { "period_net:sum": "MYR" }, mixedCurrencies: ["fee:sum"], states: { "closing_net:sum": "notSummable" } };
 
 async function withSummary(
-  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean; pivoted?: boolean },
+  options: { state?: Partial<ListLocationStateV1>; narrow?: boolean; changedParent?: boolean; pivoted?: boolean; ranking?: { groupCount: number; groupsUnranked: number; tie?: boolean } },
   run: (h: { container: HTMLElement; calls: Call[]; settle: () => Promise<void>; drills: (readonly ListFilterV1[])[]; changes: unknown[] }) => Promise<void>,
 ) {
   const dom = new JSDOM("<div id='root'></div>", { url: "https://example.test/app/trial-balance" });
@@ -153,6 +153,17 @@ async function withSummary(
     request: async (_operation: unknown, input: { query: Record<string, unknown> }) => {
       calls.push(input.query);
       if (input.query.pivot) return pivotResult(input.query);
+      // Top / Bottom N (A6): the server's ranking, with No value kept last.
+      if (input.query.groupOrder) {
+        const spec = String(input.query.groupOrder), at = spec.lastIndexOf(":");
+        return {
+          ...result([accounts[1], accounts[0], { value: null, label: "—", count: 1 }], total),
+          groupOrder: { key: spec.slice(0, at), direction: spec.slice(at + 1), limit: Number(input.query.groupLimit) },
+          groupCount: options.ranking?.groupCount ?? 2,
+          groupsUnranked: options.ranking?.groupsUnranked ?? 0,
+          ...(options.ranking?.tie ? { groupOrderTieAtCut: true } : {}),
+        } as unknown as EntityListResultV1;
+      }
       if (input.query.group === "account") return result(accounts, total);
       // Under 1000 Cash: two periods, each summable because the period is grouped by value.
       return result(
@@ -482,5 +493,57 @@ test("with a column dimension the series are the columns, and a point drills dow
     const point = [...container.querySelectorAll("[data-chart-point]")].find((item) => item.getAttribute("aria-label")!.startsWith("1000 Cash, Period 2"))!;
     await act(async () => { point.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); });
     assert.deepEqual(drills[0], [{ field: "account", operator: "eq", value: id(1) }, { field: "period", operator: "eq", value: "P02" }]);
+  });
+});
+
+// ---- A6: Top / Bottom N (blueprint 7.5).
+const orderedState = (order: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({ aggregate: { rows: ["account", "period"], measures: ["count", "period_net:sum", "closing_net:sum"], order, ...extra } });
+
+test("A6 headings and counts: Top N of M only when M > N, All M otherwise; No value is Not ranked; held-back groups are a note", async () => {
+  // More ranked groups than N: "Top 5 of 36", one held back.
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 5 }), ranking: { groupCount: 36, groupsUnranked: 1, tie: true } }, async ({ container, calls }) => {
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.groupOrder, "count:desc");
+    assert.equal(calls[0]!.groupLimit, "5");
+    assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "Top 5 of 36 GL account by Records");
+    assert.match(container.textContent!, /1 group is too small to rank/);
+    assert.match(container.textContent!, /Another group has the same value as the last one shown/);
+    // The server's order is kept (no published-order resort), and No value is last and labelled.
+    const rows = [...container.querySelectorAll("tbody tr[aria-level='1']")];
+    assert.deepEqual(rows.map((row) => row.querySelector("[data-tree-open]")?.textContent), ["2000 Payables", "1000 Cash", "No value"]);
+    assert.equal(rows[2]!.querySelector(".a-entity-aggregate__unranked")?.textContent, "Not ranked");
+    assert.equal(rows[0]!.querySelector(".a-entity-aggregate__unranked"), null);
+    // The key order's "Showing 50 of more" notice is not shown under an order.
+    assert.doesNotMatch(container.textContent!, /Showing 50/);
+  });
+  // Every ranked group shown: "All 2 … highest first", never "Top 10 of 2".
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
+    assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "All 2 GL account by Records, highest first");
+    assert.doesNotMatch(container.textContent!, /too small to rank|same value/);
+  });
+  await withSummary({ state: orderedState({ measure: "period_net:sum", direction: "asc", limit: 10 }), ranking: { groupCount: 2, groupsUnranked: 0 } }, async ({ container }) => {
+    assert.equal(container.querySelector(".a-entity-aggregate__ranking")?.textContent, "All 2 GL account by Period net total, lowest first");
+  });
+});
+
+test("A6: an expansion is never ordered, and a measure that cannot rank this level says why", async () => {
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 5 }) }, async ({ container, calls, settle }) => {
+    await act(async () => container.querySelector<HTMLButtonElement>("tbody tr[aria-level='1'] [data-tree-toggle]")!.click());
+    await settle();
+    assert.equal(calls[1]!.groupOrder, undefined);
+    // Closing net is semi-additive over Fiscal period and the level is GL account.
+    assert.match(container.querySelector(".a-entity-aggregate__reasons")!.textContent!, /Closing net total cannot order rows: it is not summed across Fiscal period/);
+  });
+  // Grouped by its own time field, the balance can order.
+  await withSummary({ state: { aggregate: { rows: ["period"], measures: ["closing_net:sum"] } } }, async ({ container }) => {
+    assert.equal(container.querySelector(".a-entity-aggregate__reasons"), null);
+  });
+});
+
+test("A6: a ranked chart follows the ranking and takes the heading as its caption", async () => {
+  await withSummary({ state: orderedState({ measure: "count", direction: "desc", limit: 5 }, { view: "chart" }), ranking: { groupCount: 36, groupsUnranked: 0 } }, async ({ container }) => {
+    assert.equal(container.querySelector("svg.a-chart__svg")?.getAttribute("aria-label"), "Top 5 of 36 GL account by Records");
+    const names = [...container.querySelectorAll("[data-chart-point]")].map((point) => point.getAttribute("aria-label")!.split(",")[0]);
+    assert.deepEqual(names, ["2000 Payables", "1000 Cash", "No value"]);
   });
 });

@@ -66,6 +66,10 @@ export interface ListRecordsQuery {
   /** The column values an expansion keeps (the opening's columns), as text;
    * null is the No value column. At most 12. */
   readonly pivotValues?: readonly (string | null)[];
+  /** Top / Bottom N (Aggregate A6, section 7.5): order the groups by a
+   * measure (`count` or one of `groupAggregates`) across every group the
+   * request admits, and keep `groupLimit` of them. Valid only with `groupTotals`. */
+  readonly groupOrder?: RecordGroupOrder;
   /** A record-hierarchy request (Tree blueprint section 5.3): `nodes` adds
    * hasChildren to every row; `orphans` selects visible records whose parent
    * the viewer cannot read; `matches` returns the records that match the
@@ -84,6 +88,14 @@ export interface ListRecordsQuery {
   /** Matrix participant page: column key values the returned rows are narrowed
    * to. Output only; never part of the ranked set. Valid only with `rank`. */
   readonly matrixColumns?: readonly string[];
+}
+
+export interface RecordGroupOrder {
+  /** `count` or a `field:aggregate` key among the request's aggregates. */
+  readonly key: string;
+  readonly direction: "asc" | "desc";
+  /** 5, 10, 20 or 50: never more than the group cap, so the cell bound holds. */
+  readonly limit: 5 | 10 | 20 | 50;
 }
 
 /** One returned row's place in its Matrix partition. */
@@ -154,8 +166,17 @@ export interface RecordListResult {
   readonly pivotColumns?: readonly unknown[];
   /** More column values exist than were returned. */
   readonly pivotColumnsTruncated?: boolean;
-  /** More groups exist than the 50 returned (the "more groups" notice). */
+  /** More groups exist than the 50 returned (the "more groups" notice); under
+   * `groupOrder`, more ranked groups exist than the limit. */
   readonly groupsTruncated?: boolean;
+  /** Under `groupOrder` (A6): the exact number of ranked groups, never the
+   * grand total, No value or groups below the measure's floor. */
+  readonly groupCount?: number;
+  /** Under `groupOrder`: groups below the measure's floor, which take no position. */
+  readonly groupsUnranked?: number;
+  /** Under `groupOrder`: the first ranked group past the limit has the same
+   * value as the last one returned. */
+  readonly groupOrderTieAtCut?: boolean;
   /** Per row of a rank request: its rank, or null when it is not ranked
    * (an empty value or an ineligible column record). */
   readonly ranks?: readonly (RecordRank | null)[];

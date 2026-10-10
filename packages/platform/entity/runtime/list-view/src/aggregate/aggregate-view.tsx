@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { entityListOperation, entityListQuery, type HttpClient } from "@athyper/platform-api-client";
 import {
+  LIST_AGGREGATE_ORDER_LIMITS,
   LIST_AGGREGATE_REQUEST_MEASURES,
   LIST_GROUP_LIMIT,
   type EntityListDescriptorV1,
@@ -10,6 +11,7 @@ import {
   type JsonValue,
   type ListAggregateChartLabel,
   type ListAggregateMeasureV1,
+  type ListAggregateOrderStateV1,
   type ListAggregateStateV1,
   type ListAggregateV1,
   type ListFieldDescriptorV1,
@@ -28,6 +30,7 @@ import {
   choiceLabel,
   columnOptions,
   levelOptions,
+  orderRefusal,
   sameTotals,
   summaryCell,
   summaryColumn,
@@ -76,6 +79,8 @@ type Loaded =
       /** With a column dimension (A2): the columns every row's cells align with. */
       readonly columns?: readonly SummaryColumnValue[];
       readonly columnsTruncated?: boolean;
+      /** Top / Bottom N (A6): the server's ranked count and notes. */
+      readonly ranking?: { readonly groupCount: number; readonly groupsUnranked: number; readonly tieAtCut: boolean };
     };
 
 /** One level's groups under a parent: one request (section 7.1). */
@@ -93,13 +98,15 @@ function useLevel(input: {
   /** The column dimension (A2); an expansion keeps the opening's columns. */
   readonly column?: SummaryLevel;
   readonly columnValues?: readonly JsonValue[];
+  /** Top / Bottom N (A6): level 1 only. */
+  readonly order?: ListAggregateOrderStateV1;
 }): Loaded {
   const [loaded, setLoaded] = useState<{ readonly key: string; readonly value: Loaded }>({ key: "", value: { status: "loading" } });
   const latest = useRef(input);
   latest.current = input;
-  const key = input.level ? JSON.stringify([input.identity, input.level.entry, input.filters, input.measures.map((item) => item.key), input.column?.entry ?? null, input.columnValues ?? null]) : "";
+  const key = input.level ? JSON.stringify([input.identity, input.level.entry, input.filters, input.measures.map((item) => item.key), input.column?.entry ?? null, input.columnValues ?? null, input.order ?? null]) : "";
   useEffect(() => {
-    const { client, descriptor, state, scope, level, filters, measures, timeZone, column, columnValues } = latest.current;
+    const { client, descriptor, state, scope, level, filters, measures, timeZone, column, columnValues, order } = latest.current;
     if (!key || !level) return;
     const controller = new AbortController();
     latest.current.count();
@@ -107,7 +114,7 @@ function useLevel(input: {
       .request(entityListOperation, {
         params: { entityCode: descriptor.entity.code },
         query: entityListQuery(
-          summaryQuery({ state, level, filters, measures, identityField: descriptor.entity.identityField, ...(timeZone ? { timeZone } : {}), ...(column ? { column } : {}), ...(column && columnValues ? { columnValues } : {}) }),
+          summaryQuery({ state, level, filters, measures, identityField: descriptor.entity.identityField, ...(timeZone ? { timeZone } : {}), ...(column ? { column } : {}), ...(column && columnValues ? { columnValues } : {}), ...(order ? { order } : {}) }),
           descriptor,
           scope,
         ),
@@ -121,7 +128,10 @@ function useLevel(input: {
           key,
           value: {
             status: "ready",
-            rows: summaryRows(page.groups ?? [], level, timeZone),
+            rows: summaryRows(page.groups ?? [], level, timeZone, Boolean(page.groupOrder)),
+            ...(page.groupOrder && page.groupCount !== undefined
+              ? { ranking: { groupCount: page.groupCount, groupsUnranked: page.groupsUnranked ?? 0, tieAtCut: page.groupOrderTieAtCut === true } }
+              : {}),
             ...(page.parentGroup ? { parent: page.parentGroup } : {}),
             truncated: page.groupsTruncated === true,
             ...(column && page.pivotColumns ? { columns: summaryColumns(page.pivotColumns, column, timeZone) } : {}),
@@ -209,7 +219,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
     requests.current += 1;
   };
   // Everything a level's numbers depend on; a change starts again collapsed.
-  const identity = JSON.stringify([props.refreshKey, attempt, state.filters, state.query ?? null, state.standardViewKey ?? null, summary.rows, summary.measures, summary.column ?? null]);
+  const identity = JSON.stringify([props.refreshKey, attempt, state.filters, state.query ?? null, state.standardViewKey ?? null, summary.rows, summary.measures, summary.column ?? null, summary.order ?? null]);
   const [expanded, setExpanded] = useState<{ readonly identity: string; readonly keys: ReadonlySet<string> }>({ identity, keys: new Set() });
   const open = expanded.identity === identity ? expanded.keys : new Set<string>();
   const toggle = (key: string) =>
@@ -220,7 +230,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
       return { identity, keys: next };
     });
   const shared = { client: props.client, descriptor, state, ...(props.scope ? { scope: props.scope } : {}), measures, ...(props.timeZone ? { timeZone: props.timeZone } : {}), identity, count, ...(column ? { column } : {}) };
-  const top = useLevel({ ...shared, level: levels[0], filters: [] });
+  const top = useLevel({ ...shared, level: levels[0], filters: [], ...(summary.order ? { order: summary.order } : {}) });
   // Expansions keep the opening's columns, so every level aligns (section 7.1).
   const columns = top.status === "ready" ? top.columns : undefined;
   const narrow = props.widthTier === "narrow";
@@ -232,6 +242,29 @@ export function EntityAggregate(props: EntityAggregateProps) {
     setChanged(false);
     setAttempt((value) => value + 1);
   };
+  // Top / Bottom N (A6, section 7.5): level 1 ordered by a measure.
+  const order = summary.order;
+  const countMeasure = aggregate.measures.find((measure) => measure.aggregate === "count") ?? ({ key: "count", aggregate: "count" } as ListAggregateMeasureV1);
+  const orderable = [...(measures.some((measure) => measure.aggregate === "count") ? [] : [countMeasure]), ...measures];
+  const orderMeasure = order ? orderable.find((measure) => measure.key === order.measure) : undefined;
+  const refusals = levels[0] ? orderable.flatMap((measure) => {
+    const reason = orderRefusal(measure, levels[0]!, state.filters, top.status === "ready" ? top.parent : undefined);
+    return reason ? [{ measure, reason }] : [];
+  }) : [];
+  const changeOrder = (next: ListAggregateOrderStateV1 | undefined) => {
+    setChanged(false);
+    const { order: _order, ...rest } = summary;
+    props.onAggregateChange({ aggregate: next ? { ...rest, order: next } : rest });
+  };
+  const ranking = top.status === "ready" ? top.ranking : undefined;
+  const heading = order && orderMeasure && levels[0] && top.status === "ready"
+    ? (() => {
+        const values = { dimension: levelName(levels[0]!, intl), measure: measureLabel(orderMeasure, intl), limit: order.limit, total: ranking?.groupCount ?? 0 };
+        if (!ranking) return intl.message(order.direction === "desc" ? "list.aggregate.rankTop" : "list.aggregate.rankBottom", values);
+        if (ranking.groupCount > order.limit) return intl.message(order.direction === "desc" ? "list.aggregate.rankTopOf" : "list.aggregate.rankBottomOf", values);
+        return intl.message(order.direction === "desc" ? "list.aggregate.rankAllHighest" : "list.aggregate.rankAllLowest", values);
+      })()
+    : undefined;
   // The chart (A5.3, section 13.6): the opening response, charted; no request.
   const view = summary.view === "chart" ? "chart" : "table";
   const setView = (next: "table" | "chart") => {
@@ -303,6 +336,49 @@ export function EntityAggregate(props: EntityAggregateProps) {
             </span>
           );
         })}
+        <span className="a-entity-aggregate__level">
+          <ChoiceSelect
+            label={intl.message("list.aggregate.order")}
+            value={order ? `${order.measure}:${order.direction}` : ""}
+            options={[
+              { value: "", label: levels[0] ? intl.message("list.aggregate.orderByDimension", { dimension: levelName(levels[0], intl) }) : intl.message("list.aggregate.levelNone") },
+              ...orderable.flatMap((measure) => {
+                const refused = refusals.some((item) => item.measure.key === measure.key);
+                return [
+                  { value: `${measure.key}:desc`, label: intl.message("list.aggregate.orderHighest", { measure: measureLabel(measure, intl) }), disabled: refused },
+                  { value: `${measure.key}:asc`, label: intl.message("list.aggregate.orderLowest", { measure: measureLabel(measure, intl) }), disabled: refused },
+                ];
+              }),
+            ]}
+            onChange={(value) => {
+              if (!value) return changeOrder(undefined);
+              const at = value.lastIndexOf(":");
+              changeOrder({ measure: value.slice(0, at), direction: value.slice(at + 1) as "asc" | "desc", limit: order?.limit ?? 10 });
+            }}
+          />
+        </span>
+        {order ? (
+          <span className="a-entity-aggregate__level">
+            <ChoiceSelect
+              label={intl.message("list.aggregate.show")}
+              value={String(order.limit)}
+              options={LIST_AGGREGATE_ORDER_LIMITS.map((limit) => ({ value: String(limit), label: intl.number(limit) }))}
+              onChange={(limit) => changeOrder({ ...order, limit: Number(limit) as ListAggregateOrderStateV1["limit"] })}
+            />
+          </span>
+        ) : null}
+        {refusals.length ? (
+          <ul className="a-entity-aggregate__reasons">
+            {refusals.map((item) => (
+              <li key={item.measure.key}>
+                {intl.message("list.aggregate.orderUnavailable", {
+                  measure: measureLabel(item.measure, intl),
+                  reason: intl.message(`list.aggregate.orderRefused.${item.reason}`, { fields: (item.measure.timeFields ?? []).map((time) => time.label).join(", ") }),
+                })}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </fieldset>
       {aggregate.dimensions.some((dimension) => dimension.column) ? (
         <fieldset className="a-entity-aggregate__rows">
@@ -398,6 +474,9 @@ export function EntityAggregate(props: EntityAggregateProps) {
 
   const notices = (
     <>
+      {heading ? <p className="a-entity-aggregate__ranking" role="status">{heading}</p> : null}
+      {ranking?.groupsUnranked ? <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.unranked", { count: ranking.groupsUnranked })}</p> : null}
+      {ranking?.tieAtCut ? <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.tieAtCut")}</p> : null}
       {aggregate.fieldsRestricted ? <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.fieldsRestricted")}</p> : null}
       {column && top.status === "ready" && top.columnsTruncated ? (
         <p className="a-entity-aggregate__hint">{intl.message("list.aggregate.columnsTruncated", { count: columns?.length ?? 0, dimension: column.dimension.label })}</p>
@@ -433,7 +512,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
           data={chart.data}
           type={shown}
           dataLabel={chartLabel}
-          caption={intl.message("list.aggregate.chartCaption", { measure: measureLabel(chartMeasure, intl), dimension: levelName(levels[0]!, intl) })}
+          caption={heading ?? intl.message("list.aggregate.chartCaption", { measure: measureLabel(chartMeasure, intl), dimension: levelName(levels[0]!, intl) })}
           format={(value) => valueText(value, chartMeasure, intl)}
           stateLabel={(kind) => (kind === "empty" ? intl.message("list.board.noValue") : stateText(kind, chartMeasure, intl))}
           onSelect={(category, series) => {
@@ -458,6 +537,7 @@ export function EntityAggregate(props: EntityAggregateProps) {
       narrow,
       onDrillDown: props.onDrillDown,
       onChanged: () => setChanged(true),
+      ranked: Boolean(ranking),
       shared: { ...shared, ...(column && columns ? { columnValues: columns.map((item) => item.value) } : {}) },
       ...(column && columns ? { columns, columnLevel: column } : {}),
     };
@@ -468,7 +548,8 @@ export function EntityAggregate(props: EntityAggregateProps) {
         {top.rows.map((row, index) => (
           <SummaryNode key={row.key} row={row} depth={0} ancestors={[]} parentPath="" context={context} position={index + 1} size={top.rows.length} first={index === 0} />
         ))}
-        {top.truncated ? <Notice depth={0} context={context} text={intl.message("list.aggregate.truncated", { count: LIST_GROUP_LIMIT, dimension: levels[0]!.dimension.label })} /> : null}
+        {/* Under an order the heading states the cut (A6); this notice is the key order's. */}
+        {top.truncated && !ranking ? <Notice depth={0} context={context} text={intl.message("list.aggregate.truncated", { count: LIST_GROUP_LIMIT, dimension: levels[0]!.dimension.label })} /> : null}
       </>
     );
     body = narrow ? (
@@ -538,6 +619,8 @@ interface RowContext {
   readonly narrow: boolean;
   readonly onDrillDown: (filters: readonly ListFilterV1[]) => void;
   readonly onChanged: () => void;
+  /** Level 1 is ranked by a measure (A6): its No value row is "Not ranked". */
+  readonly ranked: boolean;
   readonly shared: Omit<Parameters<typeof useLevel>[0], "level" | "filters">;
   /** With a column dimension (A2): the opening's columns and their level. */
   readonly columns?: readonly SummaryColumnValue[];
@@ -716,6 +799,7 @@ function SummaryNode({
       <TreeIndent level={depth + 1} />
       {toggle}
       {drill}
+      {depth === 0 && context.ranked && row.kind === "none" ? <span className="a-entity-aggregate__unranked">{intl.message("list.aggregate.notRanked")}</span> : null}
     </>
   );
   const own = context.narrow ? (

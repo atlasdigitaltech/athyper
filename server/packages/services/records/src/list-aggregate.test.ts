@@ -64,9 +64,9 @@ const rows = [
   { id: id(5), adjustment: "0.25", code: "TB-5", account: "2000", period: "P02", posted: "2026-03-31", currency: "MYR", period_net: 6, closing_net: 46, preparer: "ben", salary: 50 },
 ];
 
-function lists(described = descriptor()) {
+function lists(described = descriptor(), data: readonly Record<string, unknown>[] = rows) {
   const persistence = createInMemoryRecordPersistence();
-  persistence.seed(described, tenantId, rows.map((row) => ({ ...row, tenant_id: tenantId })));
+  persistence.seed(described, tenantId, data.map((row) => ({ ...row, tenant_id: tenantId })));
   const options = { ...persistence, metadata: { getEntityDescriptor: async () => described }, authorizer: { authorize: async () => ({ allowed: true as const }) } };
   const listExecutor = createRecordListExecutor(options);
   return createEntityListService({ ...options, listExecutor, queries: createRecordQueryService(options, listExecutor) });
@@ -272,5 +272,57 @@ describe("Summary column dimension (Aggregate A2)", () => {
       pivotBucket: { unit: "month", timeZone: "Asia/Kuala_Lumpur" },
       pivotValues: ["2026-01", null],
     });
+  });
+});
+
+describe("Top / Bottom N (Aggregate A6, section 7.5)", () => {
+  const ordered = (key: string, direction: "asc" | "desc" = "desc", limit: 5 | 10 | 20 | 50 = 5) => ({ groupOrder: { key, direction, limit } });
+
+  it("orders groups by a measure across every group, echoes the order and counts ranked groups", async () => {
+    const page = parseEntityListResult(await lists().list({ ...summary, group: "account", ...ordered("count") }));
+    expect(page.groups?.map((group) => [group.value, group.count])).toEqual([["2000", 3], ["1000", 2]]);
+    expect([page.groupOrder, page.groupCount, page.groupsUnranked, page.groupOrderTieAtCut]).toEqual([{ key: "count", direction: "desc", limit: 5 }, 2, 0, undefined]);
+    const lowest = parseEntityListResult(await lists().list({ ...summary, group: "account", groupAggregates: [{ field: "period_net", aggregate: "sum" }], ...ordered("period_net:sum", "asc") }));
+    expect(lowest.groups?.map((group) => group.value)).toEqual(["2000", "1000"]);
+    // Without an order nothing changes.
+    expect(parseEntityListResult(await lists().list({ ...summary, group: "account" })).groupCount).toBeUndefined();
+  });
+
+  it("keeps a group below the measure's floor out of the ranking, counted only, and still suppressed", async () => {
+    // Account 1000 has two records, below the salary floor of 3.
+    const page = parseEntityListResult(await lists().list({ ...summary, group: "account", groupAggregates: [{ field: "salary", aggregate: "average" }], ...ordered("salary:average") }));
+    expect(page.groups?.map((group) => group.value)).toEqual(["2000"]);
+    expect([page.groupCount, page.groupsUnranked]).toEqual([1, 1]);
+    expect(page.parentGroup?.aggregates?.["salary:average"]).toBe(30);
+  });
+
+  it("ranks a semi-additive sum only where each group's value is shown", async () => {
+    await expect(lists().list({ ...summary, group: "account", groupAggregates: [{ field: "closing_net", aggregate: "sum" }], ...ordered("closing_net:sum") })).rejects.toMatchObject({ code: "LIST_AGGREGATE_ORDER_NOT_SUMMABLE" });
+    // Grouped by its own time field, or with it pinned, each group's value is valid.
+    const byPeriod = parseEntityListResult(await lists().list({ ...summary, group: "period", groupAggregates: [{ field: "closing_net", aggregate: "sum" }], ...ordered("closing_net:sum") }));
+    expect(byPeriod.groups?.map((group) => [group.value, group.aggregates?.["closing_net:sum"]])).toEqual([["P02", 236], ["P01", 110]]);
+    const pinned = parseEntityListResult(await lists().list({ ...summary, group: "account", filters: [{ field: "period", operator: "eq", value: "P02" }], groupAggregates: [{ field: "closing_net", aggregate: "sum" }], ...ordered("closing_net:sum", "asc") }));
+    expect(pinned.groups?.map((group) => group.value)).toEqual(["2000", "1000"]);
+  });
+
+  it("refuses the whole level when the measure spans currencies or has an unknown one, never a partial ranking", async () => {
+    const request = { ...summary, group: "account", groupAggregates: [{ field: "period_net", aggregate: "sum" as const }], ...ordered("period_net:sum") };
+    // Every group is single-currency on its own, but they differ: still refused (deliberately conservative).
+    const differing = rows.map((row) => (row.account === "2000" ? { ...row, currency: "EUR" } : row));
+    await expect(lists(descriptor(), differing).list(request)).rejects.toMatchObject({ code: "LIST_AGGREGATE_ORDER_MIXED_CURRENCY" });
+    const unknown = [...rows, { ...rows[0]!, id: id(9), code: "TB-9", currency: null }];
+    await expect(lists(descriptor(), unknown).list(request)).rejects.toMatchObject({ code: "LIST_AGGREGATE_ORDER_UNKNOWN_CURRENCY" });
+    // A measure the request does not aggregate cannot order it.
+    await expect(lists().list({ ...summary, group: "account", ...ordered("period_net:sum") })).rejects.toMatchObject({ code: "LIST_AGGREGATE_INVALID" });
+  });
+
+  it("parses groupOrder and groupLimit on the list operation, together and only on a Summary request", () => {
+    const base = { group: "account", groupsOnly: "true", countMode: "exact", totals: "true" };
+    expect(parseRecordListParameters({ ...base, groupOrder: "period_net:sum:desc", groupLimit: "10" }).groupOrder).toEqual({ key: "period_net:sum", direction: "desc", limit: 10 });
+    expect(parseRecordListParameters({ ...base, groupOrder: "count:asc", groupLimit: "5" }).groupOrder).toEqual({ key: "count", direction: "asc", limit: 5 });
+    for (const bad of [{ groupOrder: "count:desc" }, { groupLimit: "10" }, { groupOrder: "count:up", groupLimit: "10" }, { groupOrder: "salary:median:desc", groupLimit: "10" }])
+      expect(() => parseRecordListParameters({ ...base, ...bad })).toThrow(/groupOrder/);
+    expect(() => parseRecordListParameters({ ...base, groupOrder: "count:desc", groupLimit: "7" })).toThrow();
+    expect(() => parseRecordListParameters({ group: "account", groupsOnly: "true", countMode: "exact", groupOrder: "count:desc", groupLimit: "10" })).toThrow(/groupOrder/);
   });
 });

@@ -42,7 +42,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 404: { description: "Record not found" }, 423: { description: "Record lock required" }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, totals: { type: "string", enum: ["true"] }, pivot: { type: "string", minLength: 1, maxLength: 140 }, pivotValue: { oneOf: [{ type: "string" }, { type: "array", maxItems: 12, items: { type: "string" } }] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, rank: { type: "string", minLength: 1, maxLength: 127 }, matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 140 }, aggregate: { oneOf: [{ type: "string" }, { type: "array", maxItems: 5, items: { type: "string" } }] }, timeZone: { type: "string", minLength: 1, maxLength: 64 }, groupsOnly: { type: "string", enum: ["true"] }, totals: { type: "string", enum: ["true"] }, pivot: { type: "string", minLength: 1, maxLength: 140 }, pivotValue: { oneOf: [{ type: "string" }, { type: "array", maxItems: 12, items: { type: "string" } }] }, groupOrder: { type: "string", minLength: 1, maxLength: 140 }, groupLimit: { type: "string", enum: ["5", "10", "20", "50"] }, hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] }, rank: { type: "string", minLength: 1, maxLength: 127 }, matrixColumns: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({
     method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get",
     summary: "Get a record", tags: ["Records"], authenticated: true,
@@ -116,6 +116,20 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     return value === null ? null : String(value);
   });
   if (pivotValues.length && !pivot) throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", "pivotValue requires pivot");
+  // Top / Bottom N (Aggregate A6): `count:desc` or `field:aggregate:asc`, with
+  // a limit of 5, 10, 20 or 50; both or neither, and only on a Summary request.
+  const groupOrderSpec = query["groupOrder"] === undefined ? undefined : boundedQueryText(query["groupOrder"], "groupOrder", 140);
+  const groupLimitSpec = query["groupLimit"] === undefined ? undefined : oneOfQuery(query["groupLimit"], ["5", "10", "20", "50"] as const, "groupLimit");
+  let groupOrder: RecordListParameters["groupOrder"];
+  if (groupOrderSpec !== undefined || groupLimitSpec !== undefined) {
+    const parts = groupOrderSpec?.split(":") ?? [];
+    const direction = parts.pop();
+    const key = parts.join(":");
+    const measure = /^(count|[a-z][a-z0-9_]*:(countDistinct|sum|average|minimum|maximum))$/.test(key);
+    if (!groupTotals || !groupLimitSpec || !measure || (direction !== "asc" && direction !== "desc"))
+      throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", "groupOrder is count or field:aggregate with :asc or :desc, given with groupLimit, on a Summary request");
+    groupOrder = Object.freeze({ key, direction, limit: Number(groupLimitSpec) as 5 | 10 | 20 | 50 });
+  }
   const hierarchy = query["hierarchy"] === undefined ? undefined : oneOfQuery(query["hierarchy"], ["nodes", "orphans", "matches"] as const, "hierarchy");
   // A tree level is never also grouped.
   if (hierarchy && group) throw new RecordServiceError(400, "LIST_HIERARCHY_INVALID", "hierarchy cannot be combined with group");
@@ -142,6 +156,7 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
     ...(pivot ? { pivot } : {}),
     ...(pivotUnit ? { pivotBucket: { unit: pivotUnit as "month" | "quarter", ...(timeZone ? { timeZone } : {}) } } : {}),
     ...(pivotValues.length ? { pivotValues: Object.freeze(pivotValues) } : {}),
+    ...(groupOrder ? { groupOrder } : {}),
     ...(hierarchy ? { hierarchy } : {}),
     ...(filters.length ? { filters } : {}),
     ...(sort.length ? { sort } : {}),

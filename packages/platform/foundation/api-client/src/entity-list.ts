@@ -91,6 +91,8 @@ export type EntityListQueryState = Pick<ListLocationStateV1, "standardViewKey" |
    * column entry, and the column values an expansion keeps. */
   readonly pivot?: string;
   readonly pivotValues?: readonly import("@athyper/contract-platform-entity-list").JsonValue[];
+  /** Top / Bottom N on a Summary request (Aggregate A6). */
+  readonly groupOrder?: { readonly key: string; readonly direction: "asc" | "desc"; readonly limit: 5 | 10 | 20 | 50 };
   readonly hierarchy?: "nodes" | "orphans" | "matches";
   /** Per-group aggregates as `field:aggregate` (Tree blueprint A2). */
   readonly aggregates?: readonly string[];
@@ -114,6 +116,7 @@ export function entityListQuery(state: EntityListQueryState, descriptor: EntityL
     ...(state.groupsOnly && state.totals ? { totals: "true" } : {}),
     ...(state.groupsOnly && state.totals && state.pivot ? { pivot: state.pivot } : {}),
     ...(state.groupsOnly && state.totals && state.pivot && state.pivotValues?.length ? { pivotValue: Object.freeze(state.pivotValues.map((value) => JSON.stringify(value))) } : {}),
+    ...(state.groupsOnly && state.totals && state.groupOrder ? { groupOrder: `${state.groupOrder.key}:${state.groupOrder.direction}`, groupLimit: String(state.groupOrder.limit) } : {}),
     ...(state.group && state.aggregates?.length ? { aggregate: Object.freeze([...state.aggregates]) } : {}),
     ...(state.group && state.timeZone ? { timeZone: state.timeZone } : {}),
     ...(state.hierarchy ? { hierarchy: state.hierarchy } : {}),

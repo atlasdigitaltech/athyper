@@ -175,3 +175,26 @@ test("the chart (A5.3): view and chart state travel in the URL and saved state, 
   const back = decodeListLocationState("view=aggregate&aggregate.view=table", offered);
   assert.equal(back.aggregate?.view, undefined);
 });
+
+test("Top / Bottom N (A6): the order travels in the URL and saved state, normalized; results carry the ranked counts", () => {
+  const offered = descriptor(true);
+  const state = decodeListLocationState("view=aggregate&aggregate.measures=count,period_net:sum&aggregate.orderBy=period_net:sum&aggregate.direction=asc&aggregate.top=20", offered);
+  assert.deepEqual(state.aggregate?.order, { measure: "period_net:sum", direction: "asc", limit: 20 });
+  const encoded = encodeListLocationState(state, offered);
+  assert.deepEqual(["aggregate.orderBy", "aggregate.direction", "aggregate.top"].map((key) => encoded.get(key)), ["period_net:sum", "asc", "20"]);
+  assert.deepEqual(toSaveableListState(state).aggregate?.order, { measure: "period_net:sum", direction: "asc", limit: 20 });
+  // A measure not shown, a direction or a limit outside the set: back to the dimension's order.
+  const parsedAggregate = parseListAggregate(aggregate, listed);
+  for (const order of [{ measure: "salary:average", direction: "desc", limit: 10 }, { measure: "count", direction: "up", limit: 10 }, { measure: "count", direction: "desc", limit: 7 }])
+    assert.equal(parseListAggregateState({ measures: ["count"], order }, parsedAggregate).order, undefined);
+  // The record count can always order.
+  assert.deepEqual(parseListAggregateState({ measures: ["period_net:sum"], order: { measure: "count", direction: "desc", limit: 5 } }, parsedAggregate).order, { measure: "count", direction: "desc", limit: 5 });
+  // Clearing the order from a shared link writes an empty orderBy.
+  assert.equal(decodeListLocationState("view=aggregate&aggregate.orderBy=", offered).aggregate?.order, undefined);
+  // The result's ranking fields travel together with the order, or not at all.
+  const page = (extra: Record<string, unknown>) => ({ schemaVersion: 1, descriptorHash: "a".repeat(64), scopeFingerprint: "f".repeat(64), queryHash: "d".repeat(64), rows: [], groups: [], parentGroup: { count: 0 }, pagination: { pageSize: 0, hasNext: false, hasPrevious: false, countMode: "exact", total: 0 }, ...extra });
+  const ranked = parseEntityListResult(page({ groupOrder: { key: "count", direction: "desc", limit: 10 }, groupCount: 36, groupsUnranked: 1, groupOrderTieAtCut: true }));
+  assert.deepEqual([ranked.groupCount, ranked.groupsUnranked, ranked.groupOrderTieAtCut], [36, 1, true]);
+  assert.throws(() => parseEntityListResult(page({ groupCount: 36 })), /need groupOrder/);
+  assert.throws(() => parseEntityListResult(page({ groupOrder: { key: "count", direction: "desc", limit: 7 }, groupCount: 1, groupsUnranked: 0 })), /limit/);
+});

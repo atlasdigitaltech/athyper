@@ -22,6 +22,11 @@ import { RecordServiceError } from "./errors.js";
 export const LIST_AGGREGATE_COUNTS_UNAVAILABLE = "LIST_AGGREGATE_COUNTS_UNAVAILABLE";
 export const LIST_AGGREGATE_DIMENSION_UNAVAILABLE = "LIST_AGGREGATE_DIMENSION_UNAVAILABLE";
 export const LIST_AGGREGATE_MEASURE_UNAVAILABLE = "LIST_AGGREGATE_MEASURE_UNAVAILABLE";
+/** Top / Bottom N refusals (A6, section 7.5): the whole level is refused,
+ * never partly ranked. */
+export const LIST_AGGREGATE_ORDER_NOT_SUMMABLE = "LIST_AGGREGATE_ORDER_NOT_SUMMABLE";
+export const LIST_AGGREGATE_ORDER_MIXED_CURRENCY = "LIST_AGGREGATE_ORDER_MIXED_CURRENCY";
+export const LIST_AGGREGATE_ORDER_UNKNOWN_CURRENCY = "LIST_AGGREGATE_ORDER_UNKNOWN_CURRENCY";
 
 export type ListAggregateResolution =
   | { readonly aggregate: ListAggregateV1 }
@@ -234,7 +239,35 @@ export function admitAggregateRequest(input: {
     }
     if (measure.minimumGroupSize) floors.set(key, measure.minimumGroupSize);
   }
+  // Top / Bottom N (A6): the ordered measure is the count or one of this
+  // request's aggregates, and each group's value must be shown: a
+  // semi-additive sum ranks only when every time field is pinned or is the
+  // level's own field (grouped by value).
+  if (query.groupOrder) {
+    const key = query.groupOrder.key;
+    // Every group's record count is already in the response, so it can always order.
+    if (key !== "count" && !(query.groupAggregates ?? []).some((item) => `${item.field}:${item.aggregate}` === key))
+      throw new RecordServiceError(400, "LIST_AGGREGATE_INVALID", `groupOrder names a measure this request does not aggregate: ${key}`);
+    const times = semiAdditive.get(key);
+    const pinned = new Set((query.filters ?? []).filter((filter) => filter.operator === "eq" || filter.operator === "is_null").map((filter) => filter.field));
+    const rowField = query.groupBucket ? undefined : query.group;
+    if (times && !times.every((time) => pinned.has(time) || time === rowField))
+      throw new RecordServiceError(400, LIST_AGGREGATE_ORDER_NOT_SUMMABLE, "This measure is not summed across these groups, so it cannot order them");
+  }
   return Object.freeze({ semiAdditive, floors, ...(pivotField ? { pivotField } : {}) });
+}
+
+/** A6's currency refusals, from the ordered measure's state on the parent
+ * total in the same statement. Deliberately conservative: groups in different
+ * currencies are refused even when each group is single-currency, because a
+ * ranking across currencies has no meaning (section 7.5). */
+export function refuseUnrankableOrder(result: RecordListResult, query: Pick<ListRecordsQuery, "groupOrder">): void {
+  const key = query.groupOrder?.key;
+  if (!key || key === "count" || !result.parentGroup) return;
+  if (result.parentGroup.mixedCurrencies?.includes(key))
+    throw new RecordServiceError(400, LIST_AGGREGATE_ORDER_MIXED_CURRENCY, "This measure's values are in more than one currency, so they cannot be ranked");
+  if (result.parentGroup.unknownCurrencies?.includes(key))
+    throw new RecordServiceError(400, LIST_AGGREGATE_ORDER_UNKNOWN_CURRENCY, "Some of this measure's amounts have no recorded currency, so they cannot be ranked");
 }
 
 /** Applies the cell rules to an admitted Summary result before it leaves the

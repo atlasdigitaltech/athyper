@@ -4,7 +4,7 @@ import {
   ENTITY_LIST_MAX_URL_LENGTH,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
 } from "./types";
-import type { ListAggregateChartStateV1 } from "./aggregate";
+import type { ListAggregateChartStateV1, ListAggregateOrderStateV1 } from "./aggregate";
 import { readCompareLocation, writeCompareLocation } from "./compare";
 import {
   parseEntityListDescriptor,
@@ -193,7 +193,7 @@ export function decodeListLocationState(
       },
     });
   }
-  if (state.aggregate && ["aggregate.rows", "aggregate.measures", "aggregate.column", "aggregate.view", "aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel"].some((key) => parameters.has(key))) {
+  if (state.aggregate && ["aggregate.rows", "aggregate.measures", "aggregate.column", "aggregate.view", "aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel", "aggregate.orderBy", "aggregate.direction", "aggregate.top"].some((key) => parameters.has(key))) {
     const listed = (key: string, fallback: readonly string[]) => {
       const raw = parameters.get(key);
       return raw === null ? fallback : raw.split(",").filter(Boolean);
@@ -213,6 +213,12 @@ export function decodeListLocationState(
         ...(["aggregate.chartType", "aggregate.chartMeasure", "aggregate.chartLabel"].some((key) => parameters.has(key))
           ? { chart: { type: parameters.get("aggregate.chartType") ?? state.aggregate.chart?.type, measure: parameters.get("aggregate.chartMeasure") ?? state.aggregate.chart?.measure, label: parameters.get("aggregate.chartLabel") ?? state.aggregate.chart?.label } as unknown as ListAggregateChartStateV1 } // normalized by parseListAggregateState
           : state.aggregate.chart ? { chart: state.aggregate.chart } : {}),
+        // Top / Bottom N (A6): an empty orderBy returns to the dimension's order.
+        ...(parameters.has("aggregate.orderBy")
+          ? parameters.get("aggregate.orderBy")
+            ? { order: { measure: parameters.get("aggregate.orderBy"), direction: parameters.get("aggregate.direction") ?? "desc", limit: Number(parameters.get("aggregate.top") ?? 10) } as unknown as ListAggregateOrderStateV1 } // normalized by parseListAggregateState
+            : {}
+          : state.aggregate.order ? { order: state.aggregate.order } : {}),
       },
     });
   }
@@ -320,6 +326,12 @@ export function encodeListLocationState(
     if (normalized.aggregate.view !== base.aggregate.view)
       parameters.set("aggregate.view", normalized.aggregate.view ?? "table");
     const chart = normalized.aggregate.chart, baseChart = base.aggregate.chart;
+    const order = normalized.aggregate.order, baseOrder = base.aggregate.order;
+    if (order && (order.measure !== baseOrder?.measure || order.direction !== baseOrder?.direction || order.limit !== baseOrder?.limit)) {
+      parameters.set("aggregate.orderBy", order.measure);
+      parameters.set("aggregate.direction", order.direction);
+      parameters.set("aggregate.top", String(order.limit));
+    } else if (!order && baseOrder) parameters.set("aggregate.orderBy", "");
     if (chart && (chart.type !== baseChart?.type || chart.measure !== baseChart?.measure || chart.label !== baseChart?.label)) {
       parameters.set("aggregate.chartType", chart.type);
       parameters.set("aggregate.chartMeasure", chart.measure);

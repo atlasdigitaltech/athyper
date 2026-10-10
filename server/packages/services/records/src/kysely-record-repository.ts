@@ -101,7 +101,12 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.groupsOnly && input.pivot && input.groupTotals) {
         // A Summary with a column dimension (Aggregate A2): one statement.
         const pivoted = await pivotBuckets(input, conditions, executor);
-        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(pivoted.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total: pivoted.total.count, countMode: "exact" as const } };
+        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(pivoted.truncated ? { groupsTruncated: true } : {}), ...pivoted.ranking, pagination: { pageSize: 0, hasMore: false, total: pivoted.total.count, countMode: "exact" as const } };
+      }
+      if (input.groupsOnly && input.groupTotals && input.groupOrder) {
+        // Top / Bottom N (Aggregate A6): one statement, ordered by the measure.
+        const ranked = await orderedGroupBuckets(input, conditions, executor);
+        return { data: [], groups: ranked.buckets, parentGroup: ranked.total, ...(ranked.truncated ? { groupsTruncated: true } : {}), ...ranked.ranking, pagination: { pageSize: 0, hasMore: false, total: ranked.total.count, countMode: "exact" as const } };
       }
       if (input.groupsOnly) {
         // Groups only (Tree blueprint section 5.1): no row query, no cursor.
@@ -442,6 +447,7 @@ function groupAggregateParts(input: RecordRepositoryListInput, sourced: boolean)
     const currency = sourced ? sql.ref(`__currency_input_${index}`) : currencySource;
     return {
       name: `${item.field}:${item.aggregate}`,
+      fn,
       input: sql`, ${source} AS ${target}${currencySource ? sql`, ${currencySource} AS ${currency}` : sql``}`,
       select: sql`, ${fn} AS ${sql.ref(`__aggregate_${index}`)}${currencySource ? sql`, count(DISTINCT ${currency}) AS ${sql.ref(`__currencies_${index}`)}, min(${currency}) AS ${sql.ref(`__currency_${index}`)}, count(*) FILTER (WHERE ${target} IS NOT NULL AND ${currency} IS NULL) AS ${sql.ref(`__uncurrenced_${index}`)}` : sql``}`,
       money: Boolean(currencySource),
@@ -474,10 +480,73 @@ function groupAggregateParts(input: RecordRepositoryListInput, sourced: boolean)
       ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
     };
   };
+  const indexOf = (key: string) => {
+    const index = aggregates.findIndex((item) => item.name === key);
+    if (index < 0) throw new Error(`Not a requested aggregate: ${key}`);
+    return index;
+  };
   return {
     inputs: sql.join(aggregates.map((item) => item.input), sql``),
     selects: sql.join(aggregates.map((item) => item.select), sql``),
     summarize,
+    /** The result column holding an aggregate (A6 orders by it). */
+    alias: (key: string) => `__aggregate_${indexOf(key)}`,
+    /** An aggregate's expression over the statement's inputs. */
+    expression: (key: string) => aggregates[indexOf(key)]!.fn,
+  };
+}
+
+/** Top / Bottom N (Aggregate A6, section 7.5) for a Summary level: one
+ * statement that aggregates every group with the total (GROUPING SETS), then
+ * orders the groups by the measure and keeps the limit. Its three
+ * constraints live in the statement:
+ * 1. No value is fetched first by the sort key, never ranked, and drawn last,
+ *    so no cap drops it under any ordering.
+ * 2. A group with fewer records than the measure's floor takes no position:
+ *    the floor is on the record count, decided here before the sort, so a
+ *    withheld value never influences the order. Such groups are only counted.
+ * 3. `groupCount` counts ranked groups only: never the total row, No value or
+ *    groups below the floor. */
+async function orderedGroupBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
+  const order = input.groupOrder!;
+  const key = groupKeyExpression(input, input.group!, input.groupBucket);
+  const { inputs, selects, summarize, alias } = groupAggregateParts(input, true);
+  const groupKey = sql.ref("__group_key");
+  const column = order.key === "count" ? "count" : alias(order.key);
+  const direction = order.direction === "asc" ? sql`ASC` : sql`DESC`;
+  const floor = order.floor ?? 0;
+  type Row = Record<string, unknown> & { value: unknown; count: string | number | bigint; __total: number | string; __ranked_count: string | number; __unranked_count: string | number };
+  const result = await sql<Row>`
+    WITH "__g" AS (
+      SELECT ${groupKey} AS value, count(*) AS count${selects}, GROUPING(${groupKey}) AS "__total"
+        FROM (SELECT ${key} AS ${groupKey}${inputs} FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}) AS "__group_source"
+       GROUP BY GROUPING SETS ((${groupKey}), ())
+    ), "__w" AS (
+      SELECT "__g".*, ("__total" = 0 AND value IS NOT NULL AND count >= ${floor}) AS "__ranked" FROM "__g"
+    ), "__c" AS (
+      SELECT "__w".*,
+             count(*) FILTER (WHERE "__ranked") OVER () AS "__ranked_count",
+             count(*) FILTER (WHERE "__total" = 0 AND value IS NOT NULL AND NOT "__ranked") OVER () AS "__unranked_count"
+        FROM "__w"
+    )
+    SELECT * FROM "__c" WHERE "__total" = 1 OR value IS NULL OR "__ranked"
+     ORDER BY "__total" DESC, (value IS NULL) DESC, ${sql.ref(column)} ${direction} NULLS LAST, value ASC
+     LIMIT ${order.limit + 3}`.execute(executor);
+  const totalRow = result.rows.find((row) => Number(row.__total) === 1)!;
+  const groups = result.rows.filter((row) => Number(row.__total) !== 1);
+  const none = groups.filter((row) => row.value === null);
+  const ranked = groups.filter((row) => row.value !== null);
+  const kept = ranked.slice(0, order.limit);
+  const past = ranked[order.limit];
+  return {
+    truncated: ranked.length > order.limit,
+    buckets: Object.freeze([...kept, ...none].map((row) => Object.freeze({ value: row.value, ...summarize(row) }))),
+    total: Object.freeze(summarize(totalRow)),
+    ranking: {
+      groupCount: Number(totalRow.__ranked_count),
+      groupsUnranked: Number(totalRow.__unranked_count),
+      ...(past && String(past[column]) === String(kept.at(-1)?.[column]) ? { groupOrderTieAtCut: true } : {}),
+    },
   };
 }
 
@@ -531,16 +600,37 @@ async function pivotBuckets(input: RecordRepositoryListInput, conditions: readon
       ? sql`"__cols" ("__column") AS MATERIALIZED (VALUES ${sql.join(pivot.values.map((value) => sql`(${value}::text)`))})`
       : sql`"__cols" ("__column") AS MATERIALIZED (SELECT NULL::text WHERE FALSE)`
     : sql`"__cols" ("__column") AS MATERIALIZED (SELECT ${pivotKey}::text FROM "__src" GROUP BY ${pivotKey} ORDER BY ${pivotKey} ASC NULLS LAST LIMIT ${LIST_AGGREGATE_MAX_COLUMNS + 1})`;
-  type Row = Record<string, unknown> & { value: unknown; count: string | number | bigint; __pivot_text: string | null; __total: number | string; __pivot_total: number | string };
+  // The row cap is the "__rows" step, not a grouping set. Under A6 the
+  // ranking, the floor and the ranked count all live there: it groups
+  // "__src" by the row key alone, so each row's value is its total across
+  // every column, and it holds row-level groups only by construction
+  // (GROUPING(__group_key) = 0 would also match the cells).
+  const order = input.groupOrder;
+  const rankColumn = order?.key === "count" ? sql.ref("__n") : sql.ref("__order");
+  const rankDirection = order?.direction === "asc" ? sql`ASC` : sql`DESC`;
+  const rowsCte = order
+    ? sql`"__agg" AS (SELECT ${groupKey}, count(*) AS "__n"${order.key === "count" ? sql`` : sql`, ${groupAggregateParts(input, true).expression(order.key)} AS "__order"`} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1),
+    "__rank" AS (SELECT "__agg".*, ("__n" >= ${order.floor ?? 0}) AS "__ranked",
+                        count(*) FILTER (WHERE "__n" >= ${order.floor ?? 0}) OVER () AS "__ranked_count",
+                        count(*) FILTER (WHERE "__n" < ${order.floor ?? 0}) OVER () AS "__unranked_count" FROM "__agg"),
+    "__rows" AS MATERIALIZED (SELECT ${groupKey}, ${rankColumn}::text AS "__rank_value", row_number() OVER (ORDER BY ${rankColumn} ${rankDirection} NULLS LAST, ${groupKey} ASC) AS "__position"
+                                FROM "__rank" WHERE "__ranked" ORDER BY "__position" LIMIT ${order.limit + 1})`
+    : sql`"__rows" AS MATERIALIZED (SELECT ${groupKey} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1 ORDER BY 1 ASC LIMIT ${LIST_GROUP_LIMIT + 1})`;
+  const rankSelect = order
+    ? sql`, (SELECT "__r"."__position" FROM "__rows" AS "__r" WHERE "__r".${groupKey} = "__src".${groupKey}) AS "__position",
+          (SELECT "__r"."__rank_value" FROM "__rows" AS "__r" WHERE "__r".${groupKey} = "__src".${groupKey}) AS "__rank_value",
+          (SELECT max("__ranked_count") FROM "__rank") AS "__ranked_count", (SELECT max("__unranked_count") FROM "__rank") AS "__unranked_count"`
+    : sql``;
+  type Row = Record<string, unknown> & { value: unknown; count: string | number | bigint; __pivot_text: string | null; __total: number | string; __pivot_total: number | string; __position?: string | number | null; __rank_value?: string | null; __ranked_count?: string | number | null; __unranked_count?: string | number | null };
   const result = await sql<Row>`
     WITH "__src" AS MATERIALIZED (
       SELECT ${groupKeyExpression(input, input.group!, input.groupBucket)} AS ${groupKey}, ${groupKeyExpression(input, pivot.field, pivot.bucket)} AS ${pivotKey}${inputs}
         FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
     ),
-    "__rows" AS MATERIALIZED (SELECT ${groupKey} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1 ORDER BY 1 ASC LIMIT ${LIST_GROUP_LIMIT + 1}),
+    ${rowsCte},
     ${columnsCte}
     SELECT ${groupKey} AS value, ${pivotKey}::text AS "__pivot_text", count(*) AS count${selects},
-           GROUPING(${groupKey}) AS "__total", GROUPING(${pivotKey}) AS "__pivot_total"
+           GROUPING(${groupKey}) AS "__total", GROUPING(${pivotKey}) AS "__pivot_total"${rankSelect}
       FROM "__src"
      GROUP BY GROUPING SETS ((${groupKey}, ${pivotKey}), (${groupKey}), (${pivotKey}), ())
     HAVING (GROUPING(${groupKey}) = 1 OR ${groupKey} IS NULL OR ${groupKey} IN (SELECT ${groupKey} FROM "__rows"))
@@ -562,9 +652,18 @@ async function pivotBuckets(input: RecordRepositoryListInput, conditions: readon
   const cellKey = (group: unknown, column: string | null) => JSON.stringify([group, column]);
   const cellRows = new Map(cells.map((row) => [cellKey(row.value, row.__pivot_text), row]));
   const none = rowTotals.filter((row) => row.value === null);
-  const values = rowTotals.filter((row) => row.value !== null);
-  const truncated = values.length > LIST_GROUP_LIMIT;
-  const rows = [...values.slice(0, LIST_GROUP_LIMIT), ...none];
+  // Under A6 the rows follow the ranking's positions; otherwise the key order.
+  const values = order ? rowTotals.filter((row) => row.value !== null).sort((a, b) => Number(a.__position) - Number(b.__position)) : rowTotals.filter((row) => row.value !== null);
+  const cap = order ? order.limit : LIST_GROUP_LIMIT;
+  const truncated = values.length > cap;
+  const rows = [...values.slice(0, cap), ...none];
+  const ranking = order
+    ? {
+        groupCount: Number(grand?.__ranked_count ?? 0),
+        groupsUnranked: Number(grand?.__unranked_count ?? 0),
+        ...(values[cap] && values[cap]!.__rank_value === values[cap - 1]?.__rank_value ? { groupOrderTieAtCut: true } : {}),
+      }
+    : {};
   const cellsOf = (lookup: (column: string | null) => Row | undefined) =>
     Object.freeze(shown.map((column) => {
       const row = lookup(column);
@@ -577,6 +676,7 @@ async function pivotBuckets(input: RecordRepositoryListInput, conditions: readon
     // Raw column values for labelling; a kept value with no records keeps its text.
     columns: Object.freeze(shown),
     columnsTruncated,
+    ranking,
   };
 }
 

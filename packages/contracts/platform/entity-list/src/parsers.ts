@@ -847,7 +847,34 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
       : record.pivotColumnsTruncated === true
         ? { pivotColumnsTruncated: true as const }
         : (() => { throw new TypeError("pivotColumnsTruncated must be true when present"); })()),
+    ...parseGroupRanking(record),
   });
+}
+
+/** Top / Bottom N (Aggregate A6): the applied order and the ranked counts
+ * travel together, or not at all. */
+function parseGroupRanking(record: Record<string, unknown>) {
+  if (record.groupOrder === undefined) {
+    if (record.groupCount !== undefined || record.groupsUnranked !== undefined || record.groupOrderTieAtCut !== undefined)
+      throw new TypeError("groupCount, groupsUnranked and groupOrderTieAtCut need groupOrder");
+    return {};
+  }
+  const order = object(record.groupOrder, "groupOrder");
+  const count = (value: unknown, name: string) => {
+    if (!Number.isSafeInteger(value) || (value as number) < 0) throw new TypeError(`${name} must be a non-negative integer`);
+    return value as number;
+  };
+  if (typeof order.key !== "string" || !/^(count|[a-z][a-z0-9_]*:(countDistinct|sum|average|minimum|maximum))$/.test(order.key))
+    throw new TypeError("groupOrder.key must be a Summary measure key");
+  if (order.direction !== "asc" && order.direction !== "desc") throw new TypeError("groupOrder.direction must be asc or desc");
+  if (![5, 10, 20, 50].includes(order.limit as number)) throw new TypeError("groupOrder.limit must be 5, 10, 20 or 50");
+  if (record.groupOrderTieAtCut !== undefined && record.groupOrderTieAtCut !== true) throw new TypeError("groupOrderTieAtCut must be true when present");
+  return {
+    groupOrder: Object.freeze({ key: order.key, direction: order.direction, limit: order.limit as number }),
+    groupCount: count(record.groupCount, "groupCount"),
+    groupsUnranked: count(record.groupsUnranked, "groupsUnranked"),
+    ...(record.groupOrderTieAtCut ? { groupOrderTieAtCut: true as const } : {}),
+  };
 }
 
 export function parseListLocationState(

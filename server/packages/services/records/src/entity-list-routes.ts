@@ -318,6 +318,8 @@ const query = {
     totals: { type: "string", enum: ["true"] },
     pivot: { type: "string", minLength: 1, maxLength: 140 },
     pivotValue: { oneOf: [{ type: "string" }, { type: "array", maxItems: 12, items: { type: "string" } }] },
+    groupOrder: { type: "string", minLength: 1, maxLength: 140 },
+    groupLimit: { type: "string", enum: ["5", "10", "20", "50"] },
     hierarchy: { type: "string", enum: ["nodes", "orphans", "matches"] },
     filter: {
       oneOf: [

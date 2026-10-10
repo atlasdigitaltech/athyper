@@ -1,6 +1,6 @@
 import { lockedScope } from "./list-tree.js";
 import { resolveMatrixRank } from "./list-matrix-rank.js";
-import { admitAggregateRequest, applyAggregateRules } from "./list-aggregate.js";
+import { admitAggregateRequest, applyAggregateRules, refuseUnrankableOrder } from "./list-aggregate.js";
 import { LIST_TREE_MATCHES_LIMIT } from "./tree-matches.js";
 import {
   withEntityEffectiveRead,
@@ -425,6 +425,16 @@ export function createRecordListExecutor<Transaction = unknown>(
                       },
                     }
                   : {}),
+                // A6: the ordered measure's floor travels with the order, so the
+                // statement that sorts also keeps small groups out of the ranking.
+                ...(query.groupTotals && query.groupOrder
+                  ? {
+                      groupOrder: {
+                        ...query.groupOrder,
+                        ...(aggregatePlan?.floors.get(query.groupOrder.key) ? { floor: aggregatePlan.floors.get(query.groupOrder.key)! } : {}),
+                      },
+                    }
+                  : {}),
                 ...(query.hierarchy && descriptor.hierarchy
                   ? {
                       hierarchy: {
@@ -521,6 +531,7 @@ export function createRecordListExecutor<Transaction = unknown>(
           );
         }
       }
+      if (query.groupOrder) refuseUnrankableOrder(repositoryResult, query);
       const result = restrictResponseProjection(
         // Withheld values are removed here, before any response.
         aggregatePlan ? applyAggregateRules(repositoryResult, aggregatePlan, query) : repositoryResult,

@@ -456,8 +456,18 @@ export interface EntityListResultV1 {
   readonly pivotColumns?: readonly { readonly value: JsonValue; readonly label: string }[];
   /** More column values exist than the 12 returned (section 7.2). */
   readonly pivotColumnsTruncated?: true;
-  /** More groups exist than the 50 returned (the "more groups" notice). */
+  /** More groups exist than the 50 returned (the "more groups" notice); under
+   * `groupOrder`, more ranked groups exist than the limit. */
   readonly groupsTruncated?: true;
+  /** Top / Bottom N (Aggregate A6, section 7.5): the order the server applied. */
+  readonly groupOrder?: { readonly key: string; readonly direction: "asc" | "desc"; readonly limit: number };
+  /** Under `groupOrder`: the exact number of ranked groups, never the total
+   * row, No value or groups below the measure's floor. */
+  readonly groupCount?: number;
+  /** Under `groupOrder`: groups too small to rank, only counted. */
+  readonly groupsUnranked?: number;
+  /** Under `groupOrder`: the first ranked group past the limit ties the last one shown. */
+  readonly groupOrderTieAtCut?: true;
   /** Only on a Matrix `rank` request: each ranked row's place, by row id. */
   readonly ranks?: Readonly<Record<string, import("./matrix").ListMatrixRankV1>>;
   /** Only on a Matrix `rank` request: a digest of the ranked set. */

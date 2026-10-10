@@ -96,15 +96,15 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
         return { ...assembled, pagination: { pageSize: assembled.treeRoles!.filter((role) => role === "match").length, hasMore: false, ...(input.countMode === "exact" ? { total } : {}), countMode: input.countMode === "exact" ? "exact" as const : "none" as const } };
       }
       // Group counts only under exact counts (layout foundation section 5).
-      const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates, input.groupTotals === true) : undefined;
+      const grouped = input.group && input.countMode === "exact" ? groupBuckets(rows, input.descriptor, input.group, input.groupBucket, input.groupAggregates, input.groupTotals === true, input.groupsOnly && input.groupTotals ? input.groupOrder : undefined) : undefined;
       const groups = grouped?.buckets;
       if (input.groupsOnly && groups && input.pivot && input.groupTotals && grouped) {
         // A Summary with a column dimension (Aggregate A2), as the SQL does.
         const pivoted = pivotCells(rows, input.descriptor, input.group!, input.groupBucket, input.pivot, groups, grouped.summarize);
-        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(grouped.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+        return { data: [], groups: pivoted.buckets, parentGroup: pivoted.total, pivotColumns: pivoted.columns, ...(pivoted.columnsTruncated ? { pivotColumnsTruncated: true } : {}), ...(grouped.truncated ? { groupsTruncated: true } : {}), ...grouped.ranking, pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       }
       if (input.groupsOnly && groups)
-        return { data: [], groups, ...(grouped?.total ? { parentGroup: grouped.total } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
+        return { data: [], groups, ...(grouped?.total ? { parentGroup: grouped.total } : {}), ...(grouped?.truncated ? { groupsTruncated: true } : {}), ...grouped?.ranking, pagination: { pageSize: 0, hasMore: false, total, countMode: "exact" as const } };
       // Matrix rank: over every admitted record, before the participant page
       // narrows the returned rows (as the SQL does).
       const rankSet = input.rank ? rankedSet(input, input.rank, rows, transaction?.state ?? state, table) : undefined;
@@ -254,7 +254,7 @@ function pivotCells<G extends { readonly value: unknown }>(
   };
 }
 
-function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = [], totals = false) {
+function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor, field: string, bucket?: RecordRepositoryListInput["groupBucket"], aggregates: RecordRepositoryListInput["groupAggregates"] = [], totals = false, order?: RecordRepositoryListInput["groupOrder"]) {
   // As the SQL does: a date bucket (A3) is the year and month or quarter, in
   // the viewer's zone for a datetime; aggregates (A2) per bucket.
   const type = descriptor.fields.find((item) => item.key === field)?.type;
@@ -282,7 +282,26 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
   };
   const ordered = [...groups].sort(([left], [right]) => (left === null ? 1 : right === null ? -1 : compare(left, right)));
   const nonNull = ordered.filter(([item]) => item !== null);
-  const kept = [...nonNull.slice(0, LIST_GROUP_LIMIT), ...ordered.filter(([item]) => item === null)];
+  // Top / Bottom N (A6), as the SQL does: groups below the floor take no
+  // position; the rest order by the measure (empty last), then by key; No
+  // value is never ranked and always kept.
+  const measureOf = (list: Row[]): number | string | null => {
+    if (!order || order.key === "count") return list.length;
+    const item = aggregates.find((entry) => `${entry.field}:${entry.aggregate}` === order.key)!;
+    return compute(list, item);
+  };
+  const ranked = order
+    ? nonNull
+        .filter(([, list]) => list.length >= (order.floor ?? 0))
+        .map(([item, list]) => ({ item, list, measure: measureOf(list) }))
+        .sort((a, b) => {
+          if (a.measure === null || b.measure === null) return a.measure === b.measure ? compare(a.item, b.item) : a.measure === null ? 1 : -1;
+          return (order.direction === "asc" ? 1 : -1) * compareDecimals(a.measure, b.measure) || compare(a.item, b.item);
+        })
+    : undefined;
+  const kept = ranked
+    ? [...ranked.slice(0, order!.limit).map(({ item, list }) => [item, list] as const), ...ordered.filter(([item]) => item === null)]
+    : [...nonNull.slice(0, LIST_GROUP_LIMIT), ...ordered.filter(([item]) => item === null)];
   const summarize = (list: Row[]) => {
       const currencies: Record<string, string> = {};
       const mixed: string[] = [];
@@ -307,8 +326,16 @@ function groupBuckets(rows: readonly Row[], descriptor: EntityRuntimeDescriptor,
         ...(unknown.length ? { unknownCurrencies: Object.freeze(unknown) } : {}),
       };
   };
+  const past = ranked?.[order!.limit], last = ranked?.[order!.limit - 1];
   return {
-    truncated: nonNull.length > LIST_GROUP_LIMIT,
+    truncated: ranked ? ranked.length > order!.limit : nonNull.length > LIST_GROUP_LIMIT,
+    ranking: ranked
+      ? {
+          groupCount: ranked.length,
+          groupsUnranked: nonNull.length - ranked.length,
+          ...(past && last && String(past.measure) === String(last.measure) ? { groupOrderTieAtCut: true } : {}),
+        }
+      : {},
     buckets: Object.freeze(kept.map(([item, list]) => Object.freeze({ value: item, ...summarize(list) }))),
     // A Summary's total over every group, from the base rows (GROUPING SETS).
     ...(totals ? { total: Object.freeze(rows.length ? summarize([...rows]) : { count: 0 }) } : {}),

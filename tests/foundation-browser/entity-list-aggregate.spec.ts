@@ -89,9 +89,23 @@ const script = buildSync({
         const pivot=q.pivot,given=[].concat(q.pivotValue??[]).map(v=>JSON.parse(v));
         const columns=pivot?(given.length?given:[...new Set(rows.map(r=>r.values[pivot]))].sort().slice(0,12)):undefined;
         const cellsOf=(members,groupedBy)=>columns.map(c=>{const list=members.filter(r=>r.values[pivot]===c);return list.length?totals(list,measures,pinned,[...groupedBy,pivot]):null;});
-        return envelope({groups:[...buckets].sort(([a],[b])=>String(a).localeCompare(String(b))).map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,unit?undefined:group),...(columns?{cells:cellsOf(members,unit?[]:[group])}:{})})),
+        let entries=[...buckets].sort(([a],[b])=>String(a).localeCompare(String(b)));
+        // Top / Bottom N (A6), as the server ranks: the floor first (salary's
+        // average needs 3 records), then the measure, then the key; No value kept.
+        let ranking={};
+        if(q.groupOrder){
+          const at=q.groupOrder.lastIndexOf(':'),key=q.groupOrder.slice(0,at),dir=q.groupOrder.slice(at+1),limit=Number(q.groupLimit),floor=key==='salary:average'?3:0;
+          const valueOf=members=>key==='count'?members.length:totals(members,[key],pinned,unit?undefined:group).aggregates?.[key]??null;
+          const named=entries.filter(([value])=>value!=null),none=entries.filter(([value])=>value==null);
+          const ranked=named.filter(([,members])=>members.length>=floor).map(entry=>[...entry,valueOf(entry[1])])
+            .sort((a,b)=>a[2]===null?1:b[2]===null?-1:(dir==='asc'?a[2]-b[2]:b[2]-a[2])||String(a[0]).localeCompare(String(b[0])));
+          entries=[...ranked.slice(0,limit).map(([value,members])=>[value,members]),...none];
+          ranking={groupOrder:{key,direction:dir,limit},groupCount:ranked.length,groupsUnranked:named.length-ranked.length,...(ranked.length>limit?{groupsTruncated:true}:{}),...(ranked[limit]&&ranked[limit][2]===ranked[limit-1][2]?{groupOrderTieAtCut:true}:{})};
+        }
+        return envelope({groups:entries.map(([value,members])=>({value,label:label(value),...totals(members,measures,pinned,unit?undefined:group),...(columns?{cells:cellsOf(members,unit?[]:[group])}:{})})),
           parentGroup:{...totals(rows,measures,pinned,undefined),...(columns?{cells:cellsOf(rows,[])}:{})},
           ...(columns?{pivotColumns:columns.map(value=>({value,label:value}))}:{}),
+          ...ranking,
           pagination:{pageSize:0,hasNext:false,hasPrevious:false,total:rows.length,countMode:'exact'}});}
       // Grouped Table: the same server rule for its sums (decision 8).
       if(q.groupsOnly){
@@ -270,7 +284,7 @@ test("Chart draws the opening response with no further request, and a point dril
   await expect(point(page, /^1000 Cash, Records: 3/)).toBeVisible();
   await expect(point(page, /^3000 Revenue, Records: 1/)).toBeVisible();
   // The table's toolbar keeps its pickers; the chart adds its own, with reasons for unavailable types.
-  await expect(page.locator(".a-entity-aggregate__reasons")).toContainText("Line chart: A line needs a sequence");
+  await expect(page.locator(".a-entity-aggregate__reasons").filter({ hasText: "Line chart" })).toContainText("Line chart: A line needs a sequence");
   expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
   await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-chart.png" });
   await point(page, /^2000 Payables,/).click();
@@ -306,5 +320,51 @@ test("right to left: a categorical column chart starts on the right; a month lin
   const january = await point(page, /^January 2026,/).boundingBox();
   const march = await point(page, /^March 2026,/).boundingBox();
   expect(january!.x).toBeLessThan(march!.x);
+});
+
+// ---- A6: Top / Bottom N (blueprint 7.5), on the same fixture: account 1000
+// nets 330 over three periods, 2000 nets 630, and 3000 nets 320 in one period.
+const level1 = (page: Page) => region(page).locator("tbody tr[aria-level='1'] [data-tree-open]");
+
+test("ordering rows by a measure ranks every group on the server, says All 3 … highest first, and travels in the URL", async ({ page }) => {
+  await mount(page, 1440);
+  await expect(region(page).getByRole("treegrid")).toBeVisible();
+  // Closing net is a balance across fiscal periods: it cannot order accounts, and says why.
+  await expect(region(page).locator(".a-entity-aggregate__reasons")).toContainText("Closing net total cannot order rows: it is not summed across Fiscal period");
+  await chooseOption(region(page).getByRole("combobox", { name: "Order rows" }), "period_net:sum:desc");
+  await expect(page).toHaveURL(/aggregate\.orderBy=period_net%3Asum/);
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveText("All 3 GL account by Period net total, highest first");
+  await expect(level1(page)).toHaveText(["2000 Payables", "1000 Cash", "3000 Revenue"]);
+  const last = (await summaries(page)).at(-1)! as Request & { groupOrder?: string; groupLimit?: string };
+  expect([last.groupOrder, last.groupLimit]).toEqual(["period_net:sum:desc", "10"]);
+  // Lowest first, and a smaller limit.
+  await chooseOption(region(page).getByRole("combobox", { name: "Order rows" }), "period_net:sum:asc");
+  await expect(level1(page)).toHaveText(["3000 Revenue", "1000 Cash", "2000 Payables"]);
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveText("All 3 GL account by Period net total, lowest first");
+  await page.screenshot({ path: "tooling/config/test-results/entity-list-aggregate-ranked.png" });
+  // Back to the dimension's own order.
+  await chooseOption(region(page).getByRole("combobox", { name: "Order rows" }), "");
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveCount(0);
+  await expect(level1(page)).toHaveText(["1000 Cash", "2000 Payables", "3000 Revenue"]);
+});
+
+test("a group below the measure's floor takes no position and is only counted", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.orderBy=salary%3Aaverage&aggregate.direction=desc&aggregate.top=10");
+  // Account 3000 has one record, below the salary floor of 3.
+  await expect(level1(page)).toHaveText(["2000 Payables", "1000 Cash"]);
+  await expect(region(page)).toContainText("1 group is too small to rank.");
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toHaveText("All 2 GL account by Salary average, highest first");
+  expect(UUID.test(await page.locator(".a-entity-list").innerText())).toBe(false);
+});
+
+test("a ranked chart follows the ranking, and a phone keeps no horizontal scroll", async ({ page }) => {
+  await mount(page, 1440, "?aggregate.view=chart&aggregate.orderBy=period_net%3Asum&aggregate.direction=desc&aggregate.top=10");
+  await expect(page.getByRole("group", { name: "All 3 GL account by Period net total, highest first" })).toBeVisible();
+  const first = await point(page, /^2000 Payables,/).boundingBox();
+  const second = await point(page, /^1000 Cash,/).boundingBox();
+  expect(first!.x).toBeLessThan(second!.x);
+  await mount(page, 390, "?aggregate.orderBy=period_net%3Asum&aggregate.direction=desc&aggregate.top=10");
+  await expect(region(page).locator(".a-entity-aggregate__ranking")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 

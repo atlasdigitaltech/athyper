@@ -242,3 +242,105 @@ describe.skipIf(!enabled)("Summary column dimension on PostgreSQL (Aggregate A2)
       expect(plan["Execution Time"]).toBeLessThan(50);
     }));
 });
+
+// ---- Top / Bottom N (Aggregate A6, section 7.5) on real PostgreSQL, both
+// statement shapes: the flat GROUPING SETS statement and the pivot's
+// "__rows" step. Rows are inserted per test into the same temporary table.
+describe.skipIf(!enabled)("Top / Bottom N on PostgreSQL (Aggregate A6)", () => {
+  // A6 needs No value rows, so the account may be empty here.
+  const insert = async (client: PoolClient, rows: readonly [account: string | null, period: string, net: number, currency?: string | null][]) => {
+    await client.query("ALTER TABLE summary_balance ALTER COLUMN account DROP NOT NULL");
+    for (const [account, period, net, currency] of rows)
+      await client.query("INSERT INTO summary_balance (id, tenant_id, account, period, posted_at, currency_code, period_net, preparer) VALUES (gen_random_uuid(), $1, $2, $3, now(), $4, $5, 'u')", [tenantId, account, period, currency === undefined ? "MYR" : currency, net]);
+  };
+  const order = (key: string, direction: "asc" | "desc", limit: 5 | 10 | 20 | 50, floor?: number) => ({ groupOrder: { key, direction, limit, ...(floor ? { floor } : {}) } });
+
+  it("No value survives a Top 10 over 500 groups, fetched first, never ranked, drawn last (invariant 1)", () =>
+    inSession(async (client, repository) => {
+      await client.query(`INSERT INTO summary_balance (id, tenant_id, account, period, posted_at, currency_code, period_net, preparer)
+        SELECT gen_random_uuid(), $1::uuid, 'A' || lpad(g::text, 3, '0'), 'P01', now(), 'MYR', g, 'u' FROM generate_series(1, 500) AS g`, [tenantId]);
+      // No value holds the largest sum of all, and still takes no position.
+      await insert(client, [[null, "P01", 1000], [null, "P02", 1000]]);
+      const result = await repository.list(input({ groupAggregates: [money], ...order("period_net:sum", "desc", 10) }));
+      expect(result.groups?.map((group) => group.value)).toEqual(["A500", "A499", "A498", "A497", "A496", "A495", "A494", "A493", "A492", "A491", null]);
+      expect(result.groups?.at(-1)?.aggregates?.["period_net:sum"]).toBe(2000);
+      // groupCount counts ranked groups only: not the total row, not No value (constraint 3).
+      expect([result.groupCount, result.groupsUnranked, result.groupsTruncated, result.groupOrderTieAtCut]).toEqual([500, 0, true, undefined]);
+      expect(result.parentGroup?.count).toBe(502);
+      // Ascending keeps No value too.
+      const bottom = await repository.list(input({ groupAggregates: [money], ...order("period_net:sum", "asc", 5) }));
+      expect(bottom.groups?.map((group) => group.value)).toEqual(["A001", "A002", "A003", "A004", "A005", null]);
+    }));
+
+  it("breaks ties by key and reports a tie at the cut", () =>
+    inSession(async (client, repository) => {
+      await insert(client, [["K1", "P01", 9], ["K2", "P01", 8], ["K3", "P01", 7], ["K4", "P01", 6], ["K5b", "P01", 5], ["K5a", "P01", 5], ["K7", "P01", 1]]);
+      const result = await repository.list(input({ groupAggregates: [money], ...order("period_net:sum", "desc", 5) }));
+      expect(result.groups?.map((group) => group.value)).toEqual(["K1", "K2", "K3", "K4", "K5a"]);
+      expect([result.groupCount, result.groupOrderTieAtCut, result.groupsTruncated]).toEqual([7, true, true]);
+      // Every ranked group shown: no cut, so no tie and no truncation.
+      const all = await repository.list(input({ groupAggregates: [money], ...order("period_net:sum", "desc", 10) }));
+      expect([all.groups?.length, all.groupCount, all.groupOrderTieAtCut, all.groupsTruncated]).toEqual([7, 7, undefined, undefined]);
+      // The record count orders too.
+      const counted = await repository.list(input(order("count", "asc", 5)));
+      expect(counted.groups?.[0]?.value).toBe("K1");
+    }));
+
+  it("a group below the floor neither appears in nor shifts the ranking, and is only counted (invariant 2)", () =>
+    inSession(async (client, repository) => {
+      // G2 has the largest sum but one record, below a floor of 2.
+      await insert(client, [["G1", "P01", 10], ["G1", "P02", 10], ["G1", "P03", 10], ["G2", "P01", 100], ["G3", "P01", 10], ["G3", "P02", 10], [null, "P01", 1]]);
+      const result = await repository.list(input({ groupAggregates: [money], ...order("period_net:sum", "desc", 5, 2) }));
+      expect(result.groups?.map((group) => group.value)).toEqual(["G1", "G3", null]);
+      expect([result.groupCount, result.groupsUnranked]).toEqual([2, 1]);
+      // The total still covers every record, G2 included.
+      expect(result.parentGroup?.aggregates?.["period_net:sum"]).toBe(151);
+    }));
+
+  it("ranks a column dimension's rows by their total across every column, counted in the rows step", () =>
+    inSession(async (client, repository) => {
+      await insert(client, [
+        ["R1", "P01", 1], ["R1", "P02", 50],
+        ["R2", "P01", 30], ["R2", "P02", 30],
+        ["R3", "P01", 40],
+        ["R4", "P02", 5], ["R5", "P01", 4], ["R6", "P02", 3], ["R7", "P01", 2],
+        [null, "P01", 999],
+      ]);
+      const result = await repository.list(input({ pivot: { field: "period" }, groupAggregates: [money], ...order("period_net:sum", "desc", 5) }));
+      expect(result.groups?.map((group) => group.value)).toEqual(["R2", "R1", "R3", "R4", "R5", null]);
+      expect(result.groups?.[1]?.cells?.map((cell) => cell?.aggregates?.["period_net:sum"] ?? null)).toEqual([1, 50]);
+      expect([result.groupCount, result.groupsUnranked, result.groupsTruncated]).toEqual([7, 0, true]);
+      // The floor applies in the rows step too: one-record rows take no position.
+      const floored = await repository.list(input({ pivot: { field: "period" }, groupAggregates: [money], ...order("period_net:sum", "desc", 5, 2) }));
+      expect(floored.groups?.map((group) => group.value)).toEqual(["R2", "R1", null]);
+      expect([floored.groupCount, floored.groupsUnranked]).toEqual([2, 5]);
+    }));
+
+  it("ranks only an authorized identity set, as executeAuthorizedAggregate passes it", () =>
+    inSession(async (client, repository) => {
+      await seed(client);
+      const result = await repository.list(input({ recordIds: [ids[2]!, ids[3]!, ids[4]!], groupAggregates: [money], ...order("count", "desc", 5) }));
+      expect(result.groups?.map((group) => [group.value, group.count])).toEqual([["2000", 2], ["3000", 1]]);
+      expect(result.groupCount).toBe(2);
+    }));
+
+  it("costs about what the unordered statement costs at the caps", () =>
+    inSession(async (client, repository) => {
+      await client.query(`
+        INSERT INTO summary_balance (id, tenant_id, account, period, posted_at, currency_code, period_net, preparer)
+        SELECT gen_random_uuid(), $1::uuid, 'A' || lpad(a::text, 3, '0'), 'P' || lpad(p::text, 2, '0'), now(), 'MYR', a * p, 'u' || (a % 7)
+          FROM generate_series(1, 60) AS a, generate_series(1, 20) AS p`, [tenantId]);
+      const measures = [money, { field: "period_net", aggregate: "average" as const }, { field: "preparer", aggregate: "countDistinct" as const }];
+      const timed = async (patch: Partial<RecordRepositoryListInput>) => {
+        sent.length = 0;
+        await repository.list(input({ groupAggregates: measures, ...patch }));
+        const statement = sent.at(-1)!;
+        return (await client.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${statement.sql}`, [...statement.parameters])).rows[0]["QUERY PLAN"][0]["Execution Time"] as number;
+      };
+      const flat = await timed({}), flatOrdered = await timed(order("period_net:sum", "desc", 10, 3));
+      const pivot = await timed({ pivot: { field: "period" } }), pivotOrdered = await timed({ pivot: { field: "period" }, ...order("period_net:sum", "desc", 10, 3) });
+      console.info(`A6 over 1,200 records: flat ${flat.toFixed(2)} ms, ordered ${flatOrdered.toFixed(2)} ms; pivot ${pivot.toFixed(2)} ms, ordered ${pivotOrdered.toFixed(2)} ms`);
+      expect(flatOrdered).toBeLessThan(50);
+      expect(pivotOrdered).toBeLessThan(50);
+    }));
+});
