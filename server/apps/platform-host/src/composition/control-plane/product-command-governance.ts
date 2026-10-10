@@ -84,20 +84,13 @@ export function createControlProductCommandGovernance(options: {
             tx,
           );
           if (actors.rows.length !== 1) throw denied();
+          // A fresh-root ticket carries only attributes resolved from the immutable
+          // proposal by trusted host composition. It deliberately performs no
+          // metadata.entity lookup: the control role has no root-table read grant,
+          // and the bounded security-definer routine validates/inserts that root.
           const roots =
             scope.rootRegistration !== undefined
-              ? await sql<{
-                  entity_id: string;
-                }>`SELECT ${scope.rootRegistration.entityId}::uuid AS entity_id
-                WHERE NOT EXISTS(
-                  SELECT 1 FROM metadata.entity e
-                  WHERE e.id=${scope.rootRegistration.entityId}::uuid
-                    AND (e.tenant_id IS DISTINCT FROM NULL OR e.entity_code<>${scope.rootRegistration.entityCode}
-                      OR e.entity_class<>${scope.rootRegistration.entityClass}
-                      OR e.ownership_model<>${scope.rootRegistration.ownershipModel}
-                      OR NOT EXISTS(SELECT 1 FROM control.module m WHERE m.id=e.module_id
-                        AND m.code=${scope.rootRegistration.moduleCode} AND m.status='active'))
-                )`.execute(tx)
+              ? { rows: [{ entity_id: scope.rootRegistration.entityId }] }
               : scope.creationEntityId !== undefined
                 ? await sql<{
                     entity_id: string;
