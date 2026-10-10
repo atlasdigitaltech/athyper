@@ -1,4 +1,5 @@
 import { registerLocalPublicationAdmission } from "./local-publication.js";
+import { registerLocalSuccessorPreparation } from "./local-successor.js";
 import { registerControlResourceReview } from "./resource-review-routes.js";
 import type { createControlResourceReview } from "./resource-review.js";
 import {
@@ -65,6 +66,10 @@ export function registerControlPlane(
       ...options,
       ...options.localPublication,
       source: options.nativeSource,
+    });
+    registerLocalSuccessorPreparation(application, {
+      ...options,
+      configuration: options.localPublication.configuration,
     });
   }
   if (options.productLabelEnrollment) {
