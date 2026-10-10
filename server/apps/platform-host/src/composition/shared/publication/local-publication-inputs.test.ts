@@ -1,12 +1,16 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it, vi } from "vitest";
+const fixture = vi.hoisted(() => ({ plane: "studio" }));
 vi.mock("@athyper/server-plane-studio-meta-entity-authoring", () => ({
   compileNativePublication: () => ({
     contractHash: "a".repeat(64),
     descriptorHash: "b".repeat(64),
   }),
   nativePublicationTargets: () => [
-    { targetPlane: "studio", artifact: { descriptorHash: "c".repeat(64) } },
+    {
+      targetPlane: fixture.plane,
+      artifact: { descriptorHash: "c".repeat(64) },
+    },
   ],
   sha256: () => "d".repeat(64),
 }));
@@ -69,6 +73,52 @@ it("uses the admitted predecessor reader for control requests and rejects missin
       "HEAD_INVALID",
     );
   } finally {
+    await db.destroy();
+  }
+});
+
+it("pins an absent destination head and rejects a conflicting destination predecessor", async () => {
+  let rows: unknown[] = [];
+  const db = new Kysely<Record<string, never>>({
+    dialect: new PostgresDialect({
+      pool: {
+        connect: async () => ({ query: async () => ({ rows }), release() {} }),
+        end: async () => {},
+      } as never,
+    }),
+  });
+  const input = {
+    database: db,
+    targetDatabases: { neon: db, mesh: db },
+    source: {
+      graph: {
+        entity: { entityClass: "reference", entityCode: "test_fixture" },
+      },
+      compiler: {},
+    } as never,
+    changeSetId: "draft",
+    revision: 1,
+    predecessorReleaseId: "prior",
+    instance: "dev",
+  };
+  try {
+    for (const plane of ["neon", "mesh"]) {
+      fixture.plane = plane;
+      rows = [];
+      const result = await resolveLocalPublicationInputs(input);
+      expect(result.targets[0]).toMatchObject({ plane, predecessorHash: null });
+      expect(result.targets[0]?.predecessor).toBeUndefined();
+      rows = [{ source_release_id: "different", valid: true }];
+      await expect(resolveLocalPublicationInputs(input)).rejects.toThrow(
+        "PREDECESSOR_EVIDENCE_REQUIRED",
+      );
+      rows = [{ source_release_id: "prior", valid: false }];
+      await expect(resolveLocalPublicationInputs(input)).rejects.toThrow(
+        "HEAD_INVALID",
+      );
+    }
+  } finally {
+    fixture.plane = "studio";
     await db.destroy();
   }
 });

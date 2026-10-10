@@ -87,9 +87,13 @@ export async function resolveLocalPublicationInputs(options: {
     }
     if (
       options.predecessorReleaseId &&
-      (!prior || prior.source_release_id !== options.predecessorReleaseId)
+      ((!prior && target.targetPlane === "studio") ||
+        (prior && prior.source_release_id !== options.predecessorReleaseId))
     )
       throw Error("LOCAL_PUBLICATION_PREDECESSOR_EVIDENCE_REQUIRED");
+    // A successor can add a destination with no activation head. Pin that
+    // absence as null; activation must still reject a concurrently added head.
+    // Studio remains the source plane and must prove its existing predecessor.
     targets.push({
       plane: target.targetPlane,
       instance: options.instance,
