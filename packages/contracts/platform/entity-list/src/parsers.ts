@@ -21,6 +21,7 @@ import {
   ENTITY_LIST_MAX_SORT_LEVELS,
   ENTITY_LIST_MAX_GROUP_LEVELS,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
+  LIST_AUDIT_ROLES,
 } from "./types";
 import type {
   EffectiveListActionV1,
@@ -1210,6 +1211,15 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
           ),
         }
       : {}),
+    ...(field.auditRole === undefined
+      ? {}
+      : {
+          auditRole: oneOf(
+            field.auditRole,
+            LIST_AUDIT_ROLES,
+            `fields[${index}].auditRole`,
+          ),
+        }),
     ...(field.cardPriority === undefined
       ? {}
       : {

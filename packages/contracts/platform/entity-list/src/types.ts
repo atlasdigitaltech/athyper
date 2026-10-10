@@ -10,6 +10,11 @@ export type ListDensity = "compact" | "comfortable" | "spacious";
 /** Metadata ordering hint for narrow record cards. It orders fields the user
  * can already see; it never widens the authorized list projection. */
 export type ListCardPriority = "primary" | "secondary" | "hidden";
+/** A field's declared audit stamp (shared list layout foundation, gap 7):
+ * when and by whom a record was created or last updated. Field pickers group
+ * these fields from this declaration, never from the field's name. */
+export const LIST_AUDIT_ROLES = ["createdAt", "createdBy", "updatedAt", "updatedBy"] as const;
+export type ListAuditRole = (typeof LIST_AUDIT_ROLES)[number];
 export type ListCountMode = "none" | "cached" | "approximate" | "exact";
 export type DataOperationState = "enabled" | "disabled" | "hidden";
 export type RecordExportFormat = "xlsx" | "csv" | "json" | "ndjson";
@@ -215,6 +220,7 @@ export interface ListFieldDescriptorV1 {
   readonly columnGroup?: string;
   readonly valueKind: ListValueKind;
   readonly semanticRole?: string;
+  readonly auditRole?: ListAuditRole;
   readonly cardPriority?: ListCardPriority;
   readonly statusTones?: Readonly<
     Record<string, "neutral" | "success" | "warning" | "danger">

@@ -14,6 +14,7 @@ import {
   MenuItem,
   MenuTrigger,
 } from "@athyper/platform-ui";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { FilterValueEditor } from "./filter-editor";
 import { FilterOperatorMenu } from "./operator-menu";
 
@@ -31,36 +32,12 @@ const valueless = (operator: ListFilterOperator) =>
 /** People read operators as words; dates read as "On or after", not "At least". */
 export function filterOperatorLabel(
   operator: ListFilterOperator,
-  field?: Pick<ListFieldDescriptorV1, "valueKind">,
+  field: Pick<ListFieldDescriptorV1, "valueKind"> | undefined,
+  intl: Pick<ReturnType<typeof useEntityI18n>, "message">,
 ): string {
-  if (field && (field.valueKind === "date" || field.valueKind === "datetime")) {
-    const label = {
-      eq: field.valueKind === "date" ? "On" : "At",
-      ne: field.valueKind === "date" ? "Not on" : "Not at",
-      gt: "After",
-      gte: "On or after",
-      lt: "Before",
-      lte: "On or before",
-    }[operator as "eq"];
-    if (label) return label;
-  }
-  return (
-    {
-      eq: "Equals",
-      ne: "Does not equal",
-      in: "Any of",
-      contains: "Contains",
-      starts_with: "Starts with",
-      gt: "Greater than",
-      gte: "At least",
-      lt: "Less than",
-      lte: "At most",
-      between: "Between",
-      is_null: "Is empty",
-      is_not_null: "Is not empty",
-      relative: "Relative period",
-    } as Record<string, string>
-  )[operator] ?? operator;
+  if (field && (field.valueKind === "date" || field.valueKind === "datetime") && ["eq", "ne", "gt", "gte", "lt", "lte"].includes(operator))
+    return intl.message(`list.operator.${field.valueKind}.${operator}`);
+  return intl.message(`list.operator.${operator}`);
 }
 
 /** The Filters section every collection uses: Quick filters for the fields its
@@ -85,6 +62,7 @@ export function CollectionFilterEditor({
   /** The section's CollectionDraftFooter. */
   readonly footer: ReactNode;
 }) {
+  const intl = useEntityI18n();
   const quick = quickKeys
     .map((key) => fields.find((field) => field.key === key))
     .filter((field): field is ListFieldDescriptorV1 => Boolean(field?.filterOperators.length));
@@ -108,10 +86,10 @@ export function CollectionFilterEditor({
   };
   return (
     <Drawer.Tabs value={tab} onValueChange={(value) => setTab(value === "all" ? "all" : "common")}>
-      <Drawer.Navigation aria-label="Filter views">
+      <Drawer.Navigation aria-label={intl.message("list.chrome.filterViews")}>
         <Drawer.TabList>
-          <Drawer.Tab value="common">Quick filters</Drawer.Tab>
-          <Drawer.Tab value="all">All filters{draft.length ? ` · ${draft.length}` : ""}</Drawer.Tab>
+          <Drawer.Tab value="common">{intl.message("list.chrome.quickFilters")}</Drawer.Tab>
+          <Drawer.Tab value="all">{draft.length ? intl.message("list.text.separated", { first: intl.message("list.chrome.allFilters"), second: intl.number(draft.length) }) : intl.message("list.chrome.allFilters")}</Drawer.Tab>
         </Drawer.TabList>
       </Drawer.Navigation>
       <Drawer.Body className="a-entity-list__filter-content">
@@ -120,9 +98,9 @@ export function CollectionFilterEditor({
             {quick.length ? (
               <div className="a-entity-list__filter-list a-entity-list__filter-list--quick">
                 <div className="a-entity-list__filter-header" aria-hidden="true">
-                  <span>Field</span>
-                  <span>Operator</span>
-                  <span>Value</span>
+                  <span>{intl.message("list.chrome.field")}</span>
+                  <span>{intl.message("list.chrome.operator")}</span>
+                  <span>{intl.message("list.chrome.value")}</span>
                 </div>
                 {quick.map((field, index) => {
                   const existing = draft.find((item) => item.field === field.key),
@@ -132,10 +110,10 @@ export function CollectionFilterEditor({
                       <div className="a-entity-list__filter-heading">
                         <strong>{field.label}</strong>
                         <FilterOperatorMenu
-                          label={`Operator for quick ${field.label} filter`}
+                          label={intl.message("list.chrome.quickOperatorFor", { field: field.label })}
                           value={operator}
                           operators={field.filterOperators}
-                          labelFor={(candidate) => filterOperatorLabel(candidate, field)}
+                          labelFor={(candidate) => filterOperatorLabel(candidate, field, intl)}
                           onChange={(next) => {
                             setQuickOperators({ ...quickOperators, [field.key]: next });
                             setQuick(field, next, "");
@@ -156,13 +134,13 @@ export function CollectionFilterEditor({
               </div>
             ) : (
               <p className="a-entity-list__filter-guidance">
-                No quick filters are published for this collection. Use All filters to choose from every filterable field.
+                {intl.message("list.chrome.noQuickFiltersCollection")}
               </p>
             )}
             {additional ? (
               <p className="a-entity-list__additional-filters">
-                {additional} additional {additional === 1 ? "filter is" : "filters are"} configured under{" "}
-                <button type="button" onClick={() => setTab("all")}>All filters</button>.
+                {intl.message("list.chrome.additionalFilters", { count: additional })}{" "}
+                <button type="button" onClick={() => setTab("all")}>{intl.message("list.chrome.openAllFilters")}</button>
               </p>
             ) : null}
           </div>
@@ -173,10 +151,10 @@ export function CollectionFilterEditor({
               {draft.length ? (
                 <div className="a-entity-list__filter-list">
                   <div className="a-entity-list__filter-header" aria-hidden="true">
-                    <span>Field</span>
-                    <span>Operator</span>
-                    <span>Value</span>
-                    <span>Action</span>
+                    <span>{intl.message("list.chrome.field")}</span>
+                    <span>{intl.message("list.chrome.operator")}</span>
+                    <span>{intl.message("list.chrome.value")}</span>
+                    <span>{intl.message("list.chrome.action")}</span>
                   </div>
                   {draft.map((item, index) => {
                     const field = fields.find((candidate) => candidate.key === item.field) ?? fields[0];
@@ -186,9 +164,9 @@ export function CollectionFilterEditor({
                     return (
                       <div className="a-entity-list__filter-row" key={item.id}>
                         <div className="a-entity-list__filter-control">
-                          <span className="a-entity-list__filter-label">Field</span>
+                          <span className="a-entity-list__filter-label">{intl.message("list.chrome.field")}</span>
                           <ChoiceSelect
-                            label={`Field for filter ${index + 1}`}
+                            label={intl.message("list.chrome.fieldFor", { number: index + 1 })}
                             value={item.field}
                             options={available.map((candidate) => ({ value: candidate.key, label: candidate.label }))}
                             onChange={(key) => {
@@ -199,12 +177,12 @@ export function CollectionFilterEditor({
                           />
                         </div>
                         <div className="a-entity-list__filter-control a-entity-list__filter-operator-control">
-                          <span className="a-entity-list__filter-label">Operator</span>
+                          <span className="a-entity-list__filter-label">{intl.message("list.chrome.operator")}</span>
                           <FilterOperatorMenu
-                            label={`Operator for ${field?.label ?? `filter ${index + 1}`}`}
+                            label={field ? intl.message("list.chrome.operatorFor", { field: field.label }) : intl.message("list.chrome.operatorForNumber", { number: index + 1 })}
                             value={item.operator}
                             operators={field?.filterOperators ?? []}
-                            labelFor={(operator) => filterOperatorLabel(operator, field)}
+                            labelFor={(operator) => filterOperatorLabel(operator, field, intl)}
                             onChange={(operator) => replace(item, { ...item, operator, value: "" })}
                           />
                         </div>
@@ -224,8 +202,8 @@ export function CollectionFilterEditor({
                           className="a-entity-list__filter-remove"
                           variant="ghost"
                           size="icon"
-                          aria-label={`Remove ${field?.label ?? "filter"}`}
-                          title={`Remove ${field?.label ?? "filter"}`}
+                          aria-label={field ? intl.message("list.chrome.removeFilter", { field: field.label }) : intl.message("list.chrome.removeFilterUnnamed")}
+                          title={field ? intl.message("list.chrome.removeFilter", { field: field.label }) : intl.message("list.chrome.removeFilterUnnamed")}
                           onClick={() => onDraftChange(draft.filter((candidate) => candidate.id !== item.id))}
                         >
                           <TrashIcon size={17} />
@@ -239,14 +217,14 @@ export function CollectionFilterEditor({
                   <span aria-hidden="true">
                     <FilterIcon />
                   </span>
-                  <strong>No filters configured</strong>
-                  <p>Add a filter to narrow the authorized result set.</p>
+                  <strong>{intl.message("list.chrome.noFilters")}</strong>
+                  <p>{intl.message("list.chrome.noFiltersHint")}</p>
                 </div>
               )}
               <Menu>
                 <MenuTrigger variant="secondary" className="a-button--small" disabled={!remaining.length}>
                   <PlusIcon size={16} />
-                  Add filter
+                  {intl.message("list.chrome.addFilter")}
                 </MenuTrigger>
                 <MenuContent portal>
                   {remaining.map((field) => (

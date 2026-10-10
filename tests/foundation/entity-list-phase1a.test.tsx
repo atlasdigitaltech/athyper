@@ -1860,7 +1860,7 @@ test("field-aware filters select reference keys, reuse applied choices, and reje
   };
   assert.match(
     filterValidationError(date, "between", "2026-09-09T10:00,")!,
-    /both/,
+    /^range$/,
   );
   assert.match(
     filterValidationError(
@@ -1868,11 +1868,11 @@ test("field-aware filters select reference keys, reuse applied choices, and reje
       "between",
       "2026-09-09T10:00,2026-09-08T10:00",
     )!,
-    /end/,
+    /^order$/,
   );
   assert.match(
     filterValidationError(date, "eq", "2026-02-30T10:00")!,
-    /valid date/,
+    /^date$/,
   );
   assert.equal(
     filterValidationError(date, "between", "2026-09-08T10:00,2026-09-09T10:00"),

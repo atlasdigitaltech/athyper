@@ -114,6 +114,7 @@ export function projectNativeFieldChoices(
   const list = Object.fromEntries(
     [
       "semanticRole",
+      "auditRole",
       "statusTones",
       "cardPriority",
       "filterOperators",

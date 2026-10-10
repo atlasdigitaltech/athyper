@@ -38,7 +38,7 @@
     "build:entity-foundation": "turbo build --filter=@athyper/server-contract-meta-entity-authoring --filter=@athyper/server-plane-studio-meta-entity-authoring --concurrency=2",
     "lint": "pnpm policy:i18n && pnpm lint:eslint && turbo lint",
     "lint:errors": "turbo run lint",
-    "lint:eslint": "eslint packages/contracts/platform packages/platform --max-warnings=274 && pnpm lint:entity-server",
+    "lint:eslint": "eslint packages/contracts/platform packages/platform --max-warnings=272 && pnpm lint:entity-server",
     "lint:entity-server": "eslint server/packages/contracts/metadata/src server/packages/services/records/src --max-warnings=0",
     "policy:design-system": "node tooling/scripts/policy/verify-design-system.mjs",
     "policy:entity-list-breakpoints": "node tooling/scripts/policy/verify-entity-list-breakpoints.mjs",

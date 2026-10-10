@@ -36,6 +36,9 @@ export type EntityListFilterOperator =
 export type EntityListViewMode =
   import("@athyper/contract-platform-entity-list").ListViewMode;
 export type EntityListDensity = "compact" | "comfortable" | "spacious";
+/** The declared audit stamps a list field can carry (shared list layout foundation, gap 7). */
+export const ENTITY_LIST_AUDIT_ROLES = ["createdAt", "createdBy", "updatedAt", "updatedBy"] as const;
+export type EntityListAuditRole = (typeof ENTITY_LIST_AUDIT_ROLES)[number];
 
 const PRESENCE_FILTER_OPERATORS = ["is_null", "is_not_null"] as const;
 
@@ -120,6 +123,10 @@ export interface EntityFieldDescriptor {
     /** Human-readable section used to organize large field catalogues. */
     readonly columnGroup?: string;
     readonly semanticRole?: string;
+    /** A declared audit stamp (shared list layout foundation, gap 7): when and
+     * by whom a record was created or last updated. Field pickers group these
+     * fields from this declaration, never from the field's name. */
+    readonly auditRole?: EntityListAuditRole;
     /** Ordering hint for narrow record cards; it never widens the authorized projection. */
     readonly cardPriority?: "primary" | "secondary" | "hidden";
     readonly rendererKey?: string;

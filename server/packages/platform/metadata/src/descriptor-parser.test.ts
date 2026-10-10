@@ -45,6 +45,15 @@ it("rejects an unknown record-card priority instead of ignoring it", () => {
   ).toThrow("field.list.cardPriority is invalid");
 });
 
+it("keeps a declared audit role and rejects one outside the enumeration (foundation gap 7)", () => {
+  expect(
+    parseEntityRuntimeDescriptor(row({ auditRole: "updatedAt" })).fields[0]?.list,
+  ).toEqual({ auditRole: "updatedAt" });
+  expect(() =>
+    parseEntityRuntimeDescriptor(row({ auditRole: "audit" })),
+  ).toThrow("field.list.auditRole is invalid");
+});
+
 it("retains a published UUID reference and rejects an implicit string-key join", () => {
   const value = row({});
   const reference = {

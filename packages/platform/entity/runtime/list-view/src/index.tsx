@@ -49,6 +49,7 @@ export {
 import {
   FilterChoiceLoader,
   FilterValueEditor,
+  filterOperatorLabel,
   filterValidationError,
   recentFilterKey,
   rememberFilters,
@@ -266,7 +267,6 @@ import {
   groupAvailableColumns,
   matchesColumnSearch,
   reorderColumn,
-  SYSTEM_FIELD_GROUP,
 } from "./columns";
 import {
   FieldCataloguePicker,
@@ -3348,7 +3348,7 @@ function FilterDialog({
                             value={operator}
                             operators={field.filterOperators}
                             labelFor={(candidate) =>
-                              operatorLabel(candidate, field, filterIntl)
+                              filterOperatorLabel(candidate, field, filterIntl)
                             }
                             onChange={(next) => {
                               setQuickOperators({
@@ -3449,7 +3449,7 @@ function FilterDialog({
                               value={item.operator}
                               operators={operators}
                               labelFor={(operator) =>
-                                operatorLabel(operator, field, filterIntl)
+                                filterOperatorLabel(operator, field, filterIntl)
                               }
                               onChange={(operator) =>
                                 replaceItem({ ...item, operator, value: "" })
@@ -3774,7 +3774,7 @@ function ColumnsDialog({
         left.defaultOrder - right.defaultOrder ||
         left.label.localeCompare(right.label),
     );
-  const availableGroups = groupAvailableColumns(availableFields);
+  const availableGroups = groupAvailableColumns(availableFields, columnsIntl);
   const move = (key: string, target: number) => {
     const current = columns.indexOf(key);
     if (
@@ -3940,10 +3940,10 @@ function ColumnsDialog({
             ) : null}
             {availableGroups.map((group) => {
               const collapsible =
-                  group.label === SYSTEM_FIELD_GROUP && !normalizedSearch,
+                  group.audit && !normalizedSearch,
                 groupOpen = !collapsible || systemOpen;
               return (
-                <div className="a-entity-list__column-group" key={group.label}>
+                <div className="a-entity-list__column-group" key={group.key}>
                   {collapsible ? (
                     <button
                       type="button"
@@ -5748,7 +5748,7 @@ function ColumnFilter({
                     label={intl.message("list.chrome.operatorForCondition", { field: field.label, number: index + 1 })}
                     value={item.operator}
                     operators={field.filterOperators}
-                    labelFor={(operator) => operatorLabel(operator, field, intl)}
+                    labelFor={(operator) => filterOperatorLabel(operator, field, intl)}
                     onChange={(operator) =>
                       setDraft(
                         draft.map((row) =>
@@ -6013,16 +6013,6 @@ function moveItem<T>(
     [item] = next.splice(from, 1);
   if (item !== undefined) next.splice(to, 0, item);
   return next;
-}
-function operatorLabel(
-  operator: ListFilterOperator,
-  field: ListFieldDescriptorV1 | undefined,
-  intl: Pick<ReturnType<typeof useEntityI18n>, "message">,
-): string {
-  // A date reads "On" and "After"; a datetime "At"; other kinds "Equals".
-  if (field && (field.valueKind === "date" || field.valueKind === "datetime") && ["eq", "ne", "gt", "gte", "lt", "lte"].includes(operator))
-    return intl.message(`list.operator.${field.valueKind}.${operator}`);
-  return intl.message(`list.operator.${operator}`);
 }
 function writeLocation(
   state: ListLocationStateV1,

@@ -1555,6 +1555,7 @@ export function compileEntityListDescriptor(
           }
         : {}),
       ...(semanticRole ? { semanticRole } : {}),
+      ...(field.list?.auditRole ? { auditRole: field.list.auditRole } : {}),
       ...(field.list?.cardPriority
         ? { cardPriority: field.list.cardPriority }
         : {}),

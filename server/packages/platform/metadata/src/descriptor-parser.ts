@@ -33,6 +33,7 @@ import {
 } from "@athyper/contract-platform-entity-runtime";
 import {
   COMMON_REFERENCE_VIEW_PERMISSION,
+  ENTITY_LIST_AUDIT_ROLES,
   ENTITY_LIST_VIEW_MODES,
   assertCommonReferenceDescriptor,
   compileFieldPattern,
@@ -1274,6 +1275,15 @@ function parseField(raw: unknown): EntityFieldDescriptor {
               semanticRole: code(
                 listValue["semanticRole"],
                 "field.list.semanticRole",
+              ),
+            }),
+        ...(listValue["auditRole"] === undefined
+          ? {}
+          : {
+              auditRole: oneOf(
+                listValue["auditRole"],
+                ENTITY_LIST_AUDIT_ROLES,
+                "field.list.auditRole",
               ),
             }),
         ...(listValue["cardPriority"] === undefined

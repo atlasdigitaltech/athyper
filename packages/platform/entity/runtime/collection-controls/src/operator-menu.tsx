@@ -3,6 +3,7 @@ import React from "react";
 import type { ListFilterOperator } from "@athyper/contract-platform-entity-list";
 import { CheckIcon, ChevronDownIcon } from "@athyper/platform-icons";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@athyper/platform-ui";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 /** Compact operator choice beside a filter's field name. The operator list and
  * its default come from field metadata; with one operator it is plain text. */
@@ -20,11 +21,12 @@ export function FilterOperatorMenu({
   readonly labelFor: (operator: ListFilterOperator) => string;
   readonly onChange: (operator: ListFilterOperator) => void;
 }) {
+  const intl = useEntityI18n();
   if (operators.length < 2)
     return <span className="a-filter-operator a-filter-operator--static">{labelFor(value)}</span>;
   return (
     <Menu>
-      <MenuTrigger className="a-filter-operator" aria-label={`${label}: ${labelFor(value)}`}>
+      <MenuTrigger className="a-filter-operator" aria-label={intl.message("list.text.labelled", { label, value: labelFor(value) })}>
         <span>{labelFor(value)}</span>
         <ChevronDownIcon size={14} />
       </MenuTrigger>

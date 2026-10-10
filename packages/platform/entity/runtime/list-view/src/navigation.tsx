@@ -7,6 +7,7 @@ import {
   type EffectiveEntitySectionV1,
 } from "@athyper/contract-platform-entity-list";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 export function EntityNavigationSkeleton() {
   return (
@@ -36,6 +37,7 @@ export function EntityNavigation({
 }) {
   const navigate = useEntityNavigate();
   const locale = useOptionalI18n()?.localization.uiLocale;
+  const intl = useEntityI18n();
   if (!sections.length) return null;
   const pathname =
     activePath ??
@@ -49,5 +51,5 @@ export function EntityNavigation({
         (href) => href.replace(/\/$/, "") === pathname,
       ),
     )?.surfaceKey;
-  return <ManagementNavigation label={resolveEntityText({defaultLocale:"en",values:{en:"Entity sections",ms:"Bahagian entiti"}},locale)} moreLabel={resolveEntityText({defaultLocale:"en",values:{en:"More",ms:"Lagi"}},locale)} items={sections.map(section=>({key:section.key,label:resolveEntityText(section.label,locale),href:section.href,count:section.attentionCount,overflow:section.placement==="overflow"}))} currentKey={sections.find(section=>section.surfaceKey===current)?.key} onNavigate={onNavigate ?? navigate}/>;
+  return <ManagementNavigation label={intl.message("list.chrome.entitySections")} moreLabel={intl.message("list.chrome.moreSections")} items={sections.map(section=>({key:section.key,label:resolveEntityText(section.label,locale),href:section.href,count:section.attentionCount,overflow:section.placement==="overflow"}))} currentKey={sections.find(section=>section.surfaceKey===current)?.key} onNavigate={onNavigate ?? navigate}/>;
 }

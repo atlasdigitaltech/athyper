@@ -485,6 +485,9 @@ describe("safe entity list service", () => {
         ...(field.key === "code"
           ? { list: { cardPriority: "primary" as const } }
           : {}),
+        ...(field.key === "name"
+          ? { list: { auditRole: "updatedAt" as const } }
+          : {}),
         ...(field.key === "tax_id"
           ? {
               list: {
@@ -521,6 +524,10 @@ describe("safe entity list service", () => {
     );
     expect(compiled.fields.find((field) => field.key === "code")).toMatchObject(
       { cardPriority: "primary" },
+    );
+    // A declared audit role is published with its field (foundation gap 7).
+    expect(compiled.fields.find((field) => field.key === "name")).toMatchObject(
+      { auditRole: "updatedAt" },
     );
     expect(
       compiled.fields.find((field) => field.key === "code"),

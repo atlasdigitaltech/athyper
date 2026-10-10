@@ -251,6 +251,18 @@ describe("entity list browser contract", () => {
     );
   });
 
+  it("accepts the four declared audit roles and rejects any other", () => {
+    const withAudit = (auditRole: string) => ({
+      ...descriptorPayload,
+      fields: descriptorPayload.fields.map((field, index) =>
+        index ? field : { ...field, auditRole },
+      ),
+    });
+    for (const role of ["createdAt", "createdBy", "updatedAt", "updatedBy"])
+      assert.equal(parseEntityListDescriptor(withAudit(role)).fields[0]!.auditRole, role);
+    assert.throws(() => parseEntityListDescriptor(withAudit("updated_at")), /auditRole/);
+  });
+
   it("normalizes unknown URL fields, unsupported operators, duplicate sorts, and unsupported modes", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState(

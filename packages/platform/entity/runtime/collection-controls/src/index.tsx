@@ -7,6 +7,7 @@ import React, {
   type ComponentType,
 } from "react";
 import { Drawer, Button, PanelTabs } from "@athyper/platform-ui";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 export * from "./filter-editor";
 export * from "./filter-state";
 export * from "./operator-menu";
@@ -86,6 +87,7 @@ export function CollectionControlSections<K extends string>({
  * current state belongs to the panel's context row. Closing and discarding a
  * draft belong to the panel (close button, Escape, backdrop), so there is no
  * Cancel. `onCancel` is accepted for existing callers and ignored. */
-export function CollectionDraftFooter({count,dirty,error,onReset,onApply,summary,resetLabel="Reset",applyLabel="Apply",resetDisabled=false,applyDisabled=false,className}:{count?:number;dirty:boolean;error?:string;onReset:()=>void;onCancel?:()=>void;onApply:()=>void;summary?:ReactNode;resetLabel?:ReactNode;applyLabel?:ReactNode;resetDisabled?:boolean;applyDisabled?:boolean;className?:string}) {
- return <Drawer.Footer className={className ? `a-collection-footer ${className}` : "a-collection-footer"}>{dirty||error?<Drawer.FooterSummary>{dirty?(summary??<strong>{count===undefined?"Apply to refresh results":`${count} matching items`}</strong>):null}{error?<span role="alert">{error}</span>:null}</Drawer.FooterSummary>:null}<Drawer.FooterActions><Button variant="ghost" size="small" disabled={resetDisabled} onClick={onReset}>{resetLabel}</Button><Button size="small" disabled={!dirty||!!error||applyDisabled} onClick={onApply}>{applyLabel}</Button></Drawer.FooterActions></Drawer.Footer>;
+export function CollectionDraftFooter({count,dirty,error,onReset,onApply,summary,resetLabel,applyLabel,resetDisabled=false,applyDisabled=false,className}:{count?:number;dirty:boolean;error?:string;onReset:()=>void;onCancel?:()=>void;onApply:()=>void;summary?:ReactNode;resetLabel?:ReactNode;applyLabel?:ReactNode;resetDisabled?:boolean;applyDisabled?:boolean;className?:string}) {
+ const intl = useEntityI18n();
+ return <Drawer.Footer className={className ? `a-collection-footer ${className}` : "a-collection-footer"}>{dirty||error?<Drawer.FooterSummary>{dirty?(summary??<strong>{count===undefined?intl.message("list.chrome.applyToRefresh"):intl.message("list.chrome.matchingItems",{count})}</strong>):null}{error?<span role="alert">{error}</span>:null}</Drawer.FooterSummary>:null}<Drawer.FooterActions><Button variant="ghost" size="small" disabled={resetDisabled} onClick={onReset}>{resetLabel??intl.message("list.chrome.reset")}</Button><Button size="small" disabled={!dirty||!!error||applyDisabled} onClick={onApply}>{applyLabel??intl.message("list.chrome.apply")}</Button></Drawer.FooterActions></Drawer.Footer>;
 }

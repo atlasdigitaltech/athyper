@@ -35,6 +35,7 @@ import {
   entityListRelativeDateRange,
 } from "@athyper/contract-platform-entity-list";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import { filterInputValue } from "./filter-state";
@@ -125,19 +126,21 @@ export function rememberFilters(
     }
   }
 }
+/** Why a filter value cannot be applied; shown as `list.filter.error.<code>`. */
+export type FilterValidationError = "operator" | "required" | "relative" | "range" | "option" | "reference" | "boolean" | "number" | "date" | "order";
 export function filterValidationError(
   field: ListFieldDescriptorV1 | undefined,
   operator: ListFilterOperator,
   raw: string,
-): string | undefined {
+): FilterValidationError | undefined {
   if (!field || !field.filterOperators.includes(operator))
-    return "Choose an available field and operator.";
+    return "operator";
   if (operator === "is_null" || operator === "is_not_null") return undefined;
-  if (!raw.trim()) return "Select or enter a value.";
+  if (!raw.trim()) return "required";
   if (operator === "relative")
     return entityListRelativeDateRange(raw)
       ? undefined
-      : "Select a relative period.";
+      : "relative";
   const parts =
     operator === "between" || operator === "in"
       ? raw.split(",").map((value) => value.trim())
@@ -146,7 +149,7 @@ export function filterValidationError(
     parts.some((value) => !value) ||
     (operator === "between" && parts.length !== 2)
   )
-    return "Enter both range boundaries.";
+    return "range";
   if (
     ["eq", "ne", "in"].includes(operator) &&
     !field.referenceLookup &&
@@ -156,19 +159,19 @@ export function filterValidationError(
         !field.filterOptions!.some((option) => String(option.value) === value),
     )
   )
-    return "Select an available value.";
+    return "option";
   if (
     field.valueKind === "reference" &&
     !field.referenceLookup &&
     ["eq", "ne", "in"].includes(operator) &&
     !field.filterOptions?.length
   )
-    return "Reference choices are unavailable.";
+    return "reference";
   if (
     field.valueKind === "boolean" &&
     parts.some((value) => !["true", "false"].includes(value))
   )
-    return "Select Yes or No.";
+    return "boolean";
   const numeric = ["integer", "decimal", "money"].includes(field.valueKind),
     temporal = ["date", "datetime"].includes(field.valueKind);
   if (
@@ -179,7 +182,7 @@ export function filterValidationError(
         (field.valueKind === "integer" && !Number.isInteger(Number(value))),
     )
   )
-    return "Enter a valid number.";
+    return "number";
   if (
     temporal &&
     parts.some((value) => {
@@ -194,7 +197,7 @@ export function filterValidationError(
       );
     })
   )
-    return "Enter a valid date.";
+    return "date";
   if (
     operator === "between" &&
     (numeric
@@ -203,47 +206,37 @@ export function filterValidationError(
         ? new Date(parts[0]!).valueOf() > new Date(parts[1]!).valueOf()
         : false)
   )
-    return "The end must be on or after the start.";
+    return "order";
   return undefined;
 }
+type Intl = Pick<ReturnType<typeof useEntityI18n>, "message">;
+type RelativeGroup = "days" | "weeks" | "months" | "years";
+const ROLLING = /^(last|next)_(\d+)_days$/;
 const RELATIVE_DATE_GROUPS = Object.freeze(
-  (["Days", "Weeks", "Months", "Years"] as const).map((label) => ({
-    label,
-    options: ENTITY_LIST_RELATIVE_DATE_VALUES.filter((value) => {
+  (["days", "weeks", "months", "years"] as const).map((group) => ({
+    group,
+    values: ENTITY_LIST_RELATIVE_DATE_VALUES.filter((value) => {
       const range = entityListRelativeDateRange(value)!;
-      const group = range.kind === "days"
-        ? Math.max(Math.abs(range.from), Math.abs(range.to)) >= 365 ? "Years" : "Days"
-        : range.unit === "week" ? "Weeks" : range.unit === "year" ? "Years" : "Months";
-      return group === label;
-    }).map((value) => ({
-      value,
-      label: value === "last_year" ? "Last calendar year"
-        : value === "next_year" ? "Next calendar year"
-        : value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase()),
-    })),
+      const of: RelativeGroup = range.kind === "days"
+        ? Math.max(Math.abs(range.from), Math.abs(range.to)) >= 365 ? "years" : "days"
+        : range.unit === "week" ? "weeks" : range.unit === "year" ? "years" : "months";
+      return of === group;
+    }),
   })),
 );
 
+/** A relative period's name, from the catalogue. */
+export function relativePeriodLabel(value: string, intl: Intl): string {
+  const rolling = ROLLING.exec(value);
+  if (rolling) return intl.message(rolling[1] === "last" ? "list.relative.lastDays" : "list.relative.nextDays", { count: Number(rolling[2]) });
+  return intl.message(`list.relative.${value}`);
+}
+
 /** Describe the existing server calendar semantics without assuming browser timezone. */
-export function relativePeriodDescription(value: string): string | undefined {
-  const rolling = /^(last|next)_(\d+)_days$/.exec(value);
-  if (rolling)
-    return rolling[1] === "last"
-      ? `Previous ${rolling[2]} days plus today, through the end of today.`
-      : `Today plus the following ${rolling[2]} days, through the end of the final day.`;
-  return (
-    {
-      today: "Today, from start to end of day.",
-      yesterday: "Yesterday, from start to end of day.",
-      tomorrow: "Tomorrow, from start to end of day.",
-      this_week: "The complete current week, Monday through Sunday.",
-      this_month: "The complete current calendar month.",
-      this_quarter: "The complete current calendar quarter.",
-      last_year: "January 1 through December 31 of the previous year.",
-      this_year: "January 1 through December 31 of the current year.",
-      next_year: "January 1 through December 31 of the following year.",
-    } as Record<string, string>
-  )[value];
+export function relativePeriodDescription(value: string, intl: Intl): string | undefined {
+  const rolling = ROLLING.exec(value);
+  if (rolling) return intl.message(rolling[1] === "last" ? "list.relative.describe.lastDays" : "list.relative.describe.nextDays", { count: Number(rolling[2]) });
+  return entityListRelativeDateRange(value) ? intl.message(`list.relative.describe.${value}`) : undefined;
 }
 function RelativeDatePicker({
   value,
@@ -254,14 +247,15 @@ function RelativeDatePicker({
   readonly label: string;
   readonly onChange: (value: string) => void;
 }) {
+  const intl = useEntityI18n();
   const descriptionId = useId();
-  const description = relativePeriodDescription(value);
+  const description = relativePeriodDescription(value, intl);
   const options = useMemo(
     () =>
       RELATIVE_DATE_GROUPS.flatMap((group) =>
-        group.options.map((option) => ({ value: option.value, label: option.label, group: group.label })),
+        group.values.map((option) => ({ value: option, label: relativePeriodLabel(option, intl), group: intl.message(`list.relative.group.${group.group}`) })),
       ),
-    [],
+    [intl],
   );
   // A short, grouped, fixed list: a select-only choice, not a search.
   return (
@@ -271,13 +265,12 @@ function RelativeDatePicker({
         value={value}
         options={options}
         onChange={onChange}
-        placeholder="Select a relative period"
+        placeholder={intl.message("list.filter.selectRelative")}
         aria-describedby={description ? descriptionId : undefined}
       />
       {description ? (
         <small id={descriptionId}>
-          {description} Uses the server calendar; recalculated when the filter
-          runs.
+          {intl.message("list.filter.serverCalendar", { description })}
         </small>
       ) : null}
     </div>
@@ -301,6 +294,7 @@ function ChoicePicker({
   recentValues: readonly string[];
   onClearRecent?: () => void;
 }) {
+  const intl = useEntityI18n();
   const id = useId(),
     load = useContext(FilterChoiceLoader),
     referenceLoad = useContext(FilterReferenceLoader),
@@ -346,12 +340,12 @@ function ChoicePicker({
     () =>
       (field.valueKind === "boolean"
         ? [
-            { value: true, label: "Yes" },
-            { value: false, label: "No" },
+            { value: true, label: intl.message("list.chrome.yes") },
+            { value: false, label: intl.message("list.chrome.no") },
           ]
         : (field.filterOptions ?? [])
       ).map((option) => ({ value: String(option.value), label: option.label })),
-    [field.filterOptions, field.valueKind],
+    [field.filterOptions, field.valueKind, intl],
   );
   return (
     <SearchableSelect
@@ -402,6 +396,7 @@ function DateSetPicker({
   onChange: (value: string) => void;
 }) {
   const localization = useOptionalI18n()?.localization;
+  const intl = useEntityI18n();
   const [pending, setPending] = useState("");
   const dates = value
     .split(",")
@@ -421,7 +416,7 @@ function DateSetPicker({
           <button
             type="button"
             key={date}
-            aria-label={`Remove ${date}`}
+            aria-label={intl.message("list.filter.removeDate", { date })}
             onClick={() =>
               onChange(dates.filter((_, i) => i !== index).join(","))
             }
@@ -448,7 +443,7 @@ function DateSetPicker({
           setPending("");
         }}
       >
-        Add date
+        {intl.message("list.filter.addDate")}
       </Button>
     </div>
   );
@@ -469,7 +464,8 @@ export function FilterValueEditor({
   readonly onChange: (value: string) => void;
   readonly historyKey?: string;
 }) {
-  const label = `Value for ${field.label} filter ${filterNumber}`,
+  const intl = useEntityI18n();
+  const label = intl.message("list.filter.valueFor", { field: field.label, number: filterNumber }),
     errorId = useId(),
     [historyVersion, setHistoryVersion] = useState(0);
   const recent = (
@@ -478,7 +474,7 @@ export function FilterValueEditor({
   void historyVersion;
   if (operator === "is_null" || operator === "is_not_null")
     return (
-      <span className="a-entity-list__filter-no-value">No value required</span>
+      <span className="a-entity-list__filter-no-value">{intl.message("list.filter.noValueRequired")}</span>
     );
   const error = value
     ? filterValidationError(field, operator, value)
@@ -502,8 +498,8 @@ export function FilterValueEditor({
     publishedChoices =
       field.valueKind === "boolean"
         ? [
-            { value: "true", label: "Yes" },
-            { value: "false", label: "No" },
+            { value: "true", label: intl.message("list.chrome.yes") },
+            { value: "false", label: intl.message("list.chrome.no") },
           ]
         : field.filterOptions?.map((option) => ({ value: String(option.value), label: option.label })),
     chips =
@@ -532,13 +528,13 @@ export function FilterValueEditor({
     control = (
       <div className="a-entity-list__filter-range-inputs">
         <label>
-          From
+          {intl.message("list.filter.from")}
           <Input
             type={type}
             step={step}
             value={from.trim()}
             max={temporal ? to.trim() || undefined : undefined}
-            aria-label={`From ${label}`}
+            aria-label={intl.message("list.filter.fromFor", { label })}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
             onChange={(event) =>
@@ -547,13 +543,13 @@ export function FilterValueEditor({
           />
         </label>
         <label>
-          To
+          {intl.message("list.filter.to")}
           <Input
             type={type}
             step={step}
             min={temporal ? from.trim() || undefined : undefined}
             value={to.trim()}
-            aria-label={`To ${label}`}
+            aria-label={intl.message("list.filter.toFor", { label })}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
             onChange={(event) =>
@@ -610,17 +606,17 @@ export function FilterValueEditor({
         onChange={(event) => onChange(event.currentTarget.value)}
         placeholder={
           operator === "in"
-            ? "Enter values separated by commas"
-            : "Enter a value"
+            ? intl.message("list.filter.enterValues")
+            : intl.message("list.filter.enterValue")
         }
       />
     );
   return (
     <div className="a-entity-list__filter-control">
-      <span className="a-entity-list__filter-label">Value</span>
+      <span className="a-entity-list__filter-label">{intl.message("list.chrome.value")}</span>
       {control}
       {field.valueKind === "datetime" && operator !== "relative" ? (
-        <small>{`Time zone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}. Choose an exact time, or use Relative period for whole days.`}</small>
+        <small>{intl.message("list.filter.timeZone", { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</small>
       ) : null}
       {error ? (
         <small
@@ -628,12 +624,12 @@ export function FilterValueEditor({
           role="alert"
           className="a-entity-list__filter-error"
         >
-          {error}
+          {intl.message(`list.filter.error.${error}`)}
         </small>
       ) : null}
       {recent.length && !searchable ? (
-        <div className="a-entity-list__recent a-filter-chip-group" role="group" aria-label={`Recent choices for ${field.label}`}>
-          <span aria-hidden="true">Recent</span>
+        <div className="a-entity-list__recent a-filter-chip-group" role="group" aria-label={intl.message("list.filter.recentFor", { field: field.label })}>
+          <span aria-hidden="true">{intl.message("list.filter.recent")}</span>
           {recent.map((item) => (
             <button
               type="button"
@@ -642,9 +638,7 @@ export function FilterValueEditor({
               onClick={() => onChange(item.value)}
             >
               {item.operator === "relative"
-                ? RELATIVE_DATE_GROUPS.flatMap((group) => group.options).find(
-                    (option) => option.value === item.value,
-                  )?.label
+                ? relativePeriodLabel(item.value, intl)
                 : item.value
                     .split(",")
                     .map(
@@ -653,11 +647,11 @@ export function FilterValueEditor({
                           (option) => String(option.value) === key.trim(),
                         )?.label ?? key,
                     )
-                    .join(", ")}
+                    .reduce((first, second) => intl.message("list.text.listed", { first, second }))}
             </button>
           ))}
           <Button variant="ghost" size="small" onClick={clearRecent}>
-            Clear recent
+            {intl.message("list.filter.clearRecent")}
           </Button>
         </div>
       ) : null}

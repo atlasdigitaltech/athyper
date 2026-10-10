@@ -20,7 +20,7 @@ import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { groupAvailableColumns, matchesColumnSearch, SYSTEM_FIELD_GROUP } from "./columns";
+import { groupAvailableColumns, matchesColumnSearch } from "./columns";
 
 /** Large catalogues stay responsive; typical entities show every field. */
 const MAX_CATALOGUE_RESULTS = 100;
@@ -103,7 +103,7 @@ export function FieldCataloguePicker({
     options = useRef<HTMLDivElement>(null),
     matching = fields.filter((field) => matchesColumnSearch(field, search)),
     shown = matching.slice(0, MAX_CATALOGUE_RESULTS),
-    groups = groupAvailableColumns(shown);
+    groups = groupAvailableColumns(shown, intl);
   const choices = () => [
     ...(options.current?.querySelectorAll<HTMLInputElement>("[data-field-option] input:not(:disabled)") ?? []),
   ];
@@ -160,10 +160,10 @@ export function FieldCataloguePicker({
       />
       <div ref={options} className="a-entity-list__field-options">
         {groups.map((group) => {
-          const collapsible = group.label === SYSTEM_FIELD_GROUP && !search.trim(),
+          const collapsible = group.audit && !search.trim(),
             open = !collapsible || systemOpen;
           return (
-            <div key={group.label} className="a-entity-list__column-group" role="group" aria-label={group.label}>
+            <div key={group.key} className="a-entity-list__column-group" role="group" aria-label={group.label}>
               {collapsible ? (
                 <button
                   type="button"

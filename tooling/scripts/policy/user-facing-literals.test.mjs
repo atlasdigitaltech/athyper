@@ -27,6 +27,35 @@ test("flags JSX text, user-facing attributes, composites and rendered literals",
   ]);
 });
 
+test("flags an inline locale map (foundation gap 8)", () => {
+  const found = findLiteralText(`export const A = ({ locale }) => resolveEntityText({ defaultLocale: "en", values: { en: "Entity sections", ms: "Bahagian entiti" } }, locale);`);
+  assert.deepEqual(found.map((item) => [item.kind, item.text]), [["locale map", "Entity sections"]]);
+});
+
+test("flags English as a default parameter value (foundation gap 8)", () => {
+  const found = findLiteralText(`export function Footer({ resetLabel = "Reset", applyLabel = "Apply", className = "a-footer" }) { return null; }
+  export function Panel(title = "Untitled panel") { return title; }`);
+  assert.deepEqual(found.map((item) => [item.kind, item.text]), [["default resetLabel", "Reset"], ["default applyLabel", "Apply"], ["default title", "Untitled panel"]]);
+});
+
+test("flags English returned from a helper and rendered later (foundation gap 7)", () => {
+  const found = findLiteralText(`function group(field) {
+    if (field.defaultVisible) return "Recommended fields";
+    return field.kind === "date" ? "Dates and time" : "General fields";
+  }
+  const operatorName = (operator) => ({ eq: "Equals", ne: "Does not equal" })[operator] ?? operator;`);
+  assert.deepEqual(found.map((item) => [item.kind, item.text]), [["returned text", "Recommended fields"], ["returned text", "Dates and time"], ["returned text", "General fields"], ["returned text", "Equals"], ["returned text", "Does not equal"]]);
+});
+
+test("returned identifiers, class names, message ids and codes pass", () => {
+  assert.deepEqual(findLiteralText(`function kind(field) {
+    if (field.audit) return "builtIn:audit";
+    return field.wide ? "a-entity-list__wide" : "list.chrome.fieldGroup.general";
+  }
+  const code = (value) => value === 1 ? "range" : value === 2 ? "GET" : "UTC";
+  function label(intl) { return intl.message("list.chrome.reset"); }`), []);
+});
+
 test("messages, identifiers and punctuation pass", () => {
   assert.deepEqual(findLiteralText(`export const A = ({ intl }) => (
     <p aria-label={intl.message("list.chrome.selection")} className="a-entity-list__bar" data-state="open">

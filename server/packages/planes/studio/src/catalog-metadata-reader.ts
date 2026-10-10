@@ -19,7 +19,7 @@ const metadataEntityDescriptor: EntityRuntimeDescriptor = Object.freeze({
     field("ownership_model", "enum", true, true, true, { label: "Ownership", defaultVisible: true, defaultOrder: 2, defaultWidth: 160, groupable: true }),
     field("status", "enum", true, true, true, { label: "Status", semanticRole: "status", defaultVisible: true, defaultOrder: 3, defaultWidth: 130, groupable: true }),
     field("created_at", "datetime", true, true, true, { label: "Created", defaultVisible: true, defaultOrder: 4, defaultWidth: 190 }),
-    field("updated_at", "datetime", false, true, true, { label: "Updated", semanticRole: "updated_at", defaultVisible: true, defaultOrder: 5, defaultWidth: 190 }),
+    field("updated_at", "datetime", false, true, true, { label: "Updated", semanticRole: "updated_at", auditRole: "updatedAt", defaultVisible: true, defaultOrder: 5, defaultWidth: 190 }),
     field("tenant_id", "uuid", false, false, false, { label: "Tenant", defaultVisible: false, defaultOrder: 20 }),
     field("module_id", "uuid", true, false, false, { label: "Module", defaultVisible: false, defaultOrder: 21 }),
   ]),
