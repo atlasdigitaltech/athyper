@@ -26,6 +26,8 @@ async function render(enabledLocales: readonly SupportedLocale[], run: (h: { bod
     dom.window.close();
   }
 }
+// Assertions take strings or booleans, never a jsdom node: formatting one for a
+// failure message blocks the process instead of reporting the failure.
 const languageGroup = (body: HTMLElement) => body.querySelector<HTMLElement>('[role="group"][aria-label="Language"]');
 
 test("two enabled locales: exactly those two, and a choice reports its code", async () => {
@@ -47,16 +49,16 @@ test("choosing the current locale reports nothing", async () => {
 
 test("one enabled locale is shown read-only, with no picker", async () => {
   await render(["ms"], ({ body }) => {
-    assert.equal(languageGroup(body), null);
+    assert.ok(!languageGroup(body), "no segmented language choice");
     const readonly = body.querySelector(".athyper-shell__utilities-readonly")!;
     assert.match(readonly.textContent!, /Bahasa Melayu/);
-    assert.equal(readonly.querySelector("button, select, [role=combobox]"), null);
+    assert.ok(!readonly.querySelector("button, select, [role=combobox]"), "no language picker");
   });
 });
 
 test("more than three enabled locales become a select of exactly those", async () => {
   await render(["en", "ar", "ms", "fr"], async ({ body, window, chosen }) => {
-    assert.equal(languageGroup(body), null);
+    assert.ok(!languageGroup(body), "no segmented language choice");
     const select = body.querySelector<HTMLElement>('[role="combobox"][aria-label="Language"]')!;
     await act(async () => { select.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); });
     const options = [...body.querySelectorAll<HTMLElement>('[role="option"]')];
