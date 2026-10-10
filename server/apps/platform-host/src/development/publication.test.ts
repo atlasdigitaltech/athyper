@@ -287,12 +287,12 @@ describe("intake prerequisite retry", () => {
   it("reuses the reviewed projection after authoring IDs are regenerated, but rejects descriptor drift", async () => {
     const { reusePublishedIntakePrerequisite } =
       await import("./publication.js");
-    const { baselineJsonHash } = await import("@athyper/server-plane-studio");
+    const { runtimePayloadHash } = await import("@athyper/server-plane-studio");
     const descriptor = { intakeSurfaces: [{ key: "intake_partner" }] };
     const marker = {
       publicationKey: "intake-test",
       descriptor,
-      descriptorHash: baselineJsonHash(descriptor),
+      descriptorHash: runtimePayloadHash(descriptor),
     };
     const proposed = {
       entity: { entityCode: "business_partner" },

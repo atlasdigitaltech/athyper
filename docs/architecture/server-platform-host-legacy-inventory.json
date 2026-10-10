@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 261,
+    "configuration:new": 262,
     "database-commands:deferred": 76,
     "database-commands:migrated": 19,
     "database-commands:new": 102,
@@ -26,11 +26,11 @@
     "jobs:new": 67,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 409,
+    "operational-scripts:new": 418,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 149,
+    "routes:new": 150,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -117,6 +117,7 @@
         "deploy/compose/instance/compose.component-review.yaml",
         "deploy/compose/instance/compose.control-api-source.yaml",
         "deploy/compose/instance/compose.control-api.yaml",
+        "deploy/compose/instance/compose.local-native-authoring.yaml",
         "deploy/compose/instance/compose.native-bootstrap.yaml",
         "deploy/compose/instance/compose.product-command.yaml",
         "deploy/compose/instance/compose.reference-enrollment.yaml",
@@ -1416,6 +1417,7 @@
       "currentLocations": [
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/aggregate-summary.postgres.test.ts",
         "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts"
       ],
@@ -1575,6 +1577,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "configuration:athyper_root_registration_postgres",
+      "category": "configuration",
+      "key": "athyper_root_registration_postgres",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/native-root-registration.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:athyper_runtime_command_db_tests",
       "category": "configuration",
       "key": "athyper_runtime_command_db_tests",
@@ -1685,6 +1699,7 @@
         "server/packages/platform/metadata/src/entity-hierarchy-readiness.postgres.test.ts",
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/aggregate-summary.postgres.test.ts",
         "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts"
       ],
@@ -1698,6 +1713,7 @@
       "key": "athyper_service_test_other_tenant_id",
       "legacyLocations": [],
       "currentLocations": [
+        "server/packages/services/records/src/aggregate-summary.postgres.test.ts",
         "server/packages/services/records/src/matrix-rank.postgres.test.ts"
       ],
       "disposition": "new",
@@ -1727,6 +1743,7 @@
       "currentLocations": [
         "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/records/src/__tests__/snapshot-concurrency.postgres.test.ts",
+        "server/packages/services/records/src/aggregate-summary.postgres.test.ts",
         "server/packages/services/records/src/matrix-rank.postgres.test.ts",
         "server/packages/services/records/src/tree.postgres.test.ts",
         "server/packages/test-utils/src/authz-epoch.postgres.test.ts"
@@ -1815,6 +1832,7 @@
         "server/packages/planes/studio/meta-entity-authoring/src/native-fresh-identity.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-identity-adoption.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/native-operation-bootstrap.postgres.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/native-root-registration.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/product-draft-creation.postgres.test.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/scoped-graph-writer.postgres.test.ts"
       ],
@@ -3783,6 +3801,8 @@
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/operations/repair/repair-tenant-ledger-hashes.ts",
         "server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts",
+        "server/db/scripts/provisioning/restore-plane-resource-baseline.ts",
+        "server/db/scripts/provisioning/restore-published-entity-readers.ts",
         "server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs",
         "server/db/scripts/tests/integration/governed-entity-case-foundation.mjs",
         "server/db/scripts/tools/introspection/extract-schema-ddl.ts",
@@ -13314,12 +13334,60 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:20261010_entity_native_root_registration",
+      "category": "operational-scripts",
+      "key": "20261010_entity_native_root_registration",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/entity-product-command/20261010_entity_native_root_registration.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20261010_native_worker_component_installation",
+      "category": "operational-scripts",
+      "key": "20261010_native_worker_component_installation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/repair/native-publication/20261010_native_worker_component_installation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:account-isolation",
       "category": "operational-scripts",
       "key": "account-isolation",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/db-review/account-isolation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:activate-clean-dev-platform-authority",
+      "category": "operational-scripts",
+      "key": "activate-clean-dev-platform-authority",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/activate-clean-dev-platform-authority.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:activate-clean-dev-platform-authority.test",
+      "category": "operational-scripts",
+      "key": "activate-clean-dev-platform-authority.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/activate-clean-dev-platform-authority.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -17876,6 +17944,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:prepare-component-resource-candidates",
+      "category": "operational-scripts",
+      "key": "prepare-component-resource-candidates",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/prepare-component-resource-candidates.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:prepare-coordinated-candidate",
       "category": "operational-scripts",
       "key": "prepare-coordinated-candidate",
@@ -18269,6 +18349,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/authorization/provision-dev-control-client.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-local-publication-workloads",
+      "category": "operational-scripts",
+      "key": "provision-dev-local-publication-workloads",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/provision-dev-local-publication-workloads.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-local-publication-workloads.test",
+      "category": "operational-scripts",
+      "key": "provision-dev-local-publication-workloads.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/provision-dev-local-publication-workloads.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -19313,6 +19417,30 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:restore-plane-resource-baseline",
+      "category": "operational-scripts",
+      "key": "restore-plane-resource-baseline",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/restore-plane-resource-baseline.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:restore-published-entity-readers",
+      "category": "operational-scripts",
+      "key": "restore-published-entity-readers",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/restore-published-entity-readers.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:retry-coordinated-apply",
@@ -29535,6 +29663,18 @@
       "identity": "routes:post /api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
       "category": "routes",
       "key": "post /api/platform-control/meta-entity-authoring/change-sets/:id/install-identities",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/platform-control/meta-entity-authoring/change-sets/:id/register-native-root",
+      "category": "routes",
+      "key": "post /api/platform-control/meta-entity-authoring/change-sets/:id/register-native-root",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/product-reference-enrollment-routes.ts"

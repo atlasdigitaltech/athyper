@@ -1,12 +1,31 @@
-import { ENTITY_LIST_RENDERABLE_MODES, ENTITY_LIST_VIEW_MODES } from "@athyper/contract-platform-entity-list";
+import {
+  ENTITY_LIST_RENDERABLE_MODES,
+  ENTITY_LIST_VIEW_MODES,
+} from "@athyper/contract-platform-entity-list";
 import { deriveCanonicalRelations } from "./canonical-relations.js";
 import { parsePublishedLearningFixtureSet } from "./published-learning-fixture-schema.js";
-import { parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
+import {
+  parseRecordMutationPolicy,
+  parseRecordPredicates,
+} from "@athyper/server-contract-metadata";
 import { parseRecordOwnerAccess } from "@athyper/server-contract-metadata";
-import {collectionPublicationFromGraph} from "@athyper/server-contract-publication";
-import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
-import { capabilityArtifactMembers, capabilityAuthoringMode, PublicationContractError, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
-import { compileEntityIntakeSurfaces, parsePresentationLocalization, isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
+import { collectionPublicationFromGraph } from "@athyper/server-contract-publication";
+import {
+  COMMON_REFERENCE_VIEW_PERMISSION,
+  assertCommonReferenceGraph,
+} from "@athyper/server-contract-metadata";
+import {
+  capabilityArtifactMembers,
+  capabilityAuthoringMode,
+  PublicationContractError,
+  parseCapabilityBinding,
+  parseCapabilityDeclaration,
+} from "@athyper/server-contract-publication";
+import {
+  compileEntityIntakeSurfaces,
+  parsePresentationLocalization,
+  isCanonicalEntityCode,
+} from "@athyper/contract-platform-entity-runtime";
 import { compileEntityAi } from "./entity-ai.js";
 import { compileRuntimeRestoration } from "./runtime-restoration.js";
 import {
@@ -20,7 +39,10 @@ import {
   validateRecordPresentationReferences,
   validateRelatedPresentationOwner,
 } from "@athyper/contract-platform-entity-runtime";
-import { compileCollectionRelationship, compileCollectionCompilation } from "./collection-relationship.js";
+import {
+  compileCollectionRelationship,
+  compileCollectionCompilation,
+} from "./collection-relationship.js";
 import { compileListExperience } from "./list-experience.js";
 import { createHash } from "node:crypto";
 import type {
@@ -59,17 +81,42 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
         {
           code: "CONTRACT_SCHEMA_INVALID",
           path: "contractSchema",
-          message: "A supported graph schema matching its normalized members is required",
+          message:
+            "A supported graph schema matching its normalized members is required",
         },
       ],
     };
-  if (["athyper.meta-entity-contract/2.4", "athyper.meta-entity-contract/2.5"].includes(String(graph.contractSchema)))
-    return { deterministic: true, contractHash, issues: [{ code: "NATIVE_GRAPH_RELEASE_COMPILATION_NOT_QUALIFIED", path: "contractSchema", message: "Native whole-graph release lowering is required; legacy decoding cannot publish this source." }] };
-  if (graph.contractSchema !== (graph.referenceMembers ? "athyper.meta-entity-contract/2.3" : graph.ownedLabels ? "athyper.meta-entity-contract/2.2" : "athyper.meta-entity-contract/2.1")) {
+  if (
+    [
+      "athyper.meta-entity-contract/2.4",
+      "athyper.meta-entity-contract/2.5",
+    ].includes(String(graph.contractSchema))
+  )
+    return {
+      deterministic: true,
+      contractHash,
+      issues: [
+        {
+          code: "NATIVE_GRAPH_RELEASE_COMPILATION_NOT_QUALIFIED",
+          path: "contractSchema",
+          message:
+            "Native whole-graph release lowering is required; legacy decoding cannot publish this source.",
+        },
+      ],
+    };
+  if (
+    graph.contractSchema !==
+    (graph.referenceMembers
+      ? "athyper.meta-entity-contract/2.3"
+      : graph.ownedLabels
+        ? "athyper.meta-entity-contract/2.2"
+        : "athyper.meta-entity-contract/2.1")
+  ) {
     issues.push({
       code: "CONTRACT_SCHEMA_INVALID",
       path: "contractSchema",
-      message: "A supported graph schema matching its normalized members is required",
+      message:
+        "A supported graph schema matching its normalized members is required",
     });
   }
   if (!isObject(graph.entity))
@@ -99,19 +146,43 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   try {
     graph = deriveCanonicalRelations(graph);
   } catch (error) {
-    return { deterministic: true, contractHash, issues: [{
-      code: "ENTITY_RELATION_INVALID", path: "relations", message: (error as Error).message,
-    }] };
+    return {
+      deterministic: true,
+      contractHash,
+      issues: [
+        {
+          code: "ENTITY_RELATION_INVALID",
+          path: "relations",
+          message: (error as Error).message,
+        },
+      ],
+    };
   }
   const entityCode = graph.entity.entityCode;
   const capabilityKeys = new Set<string>();
   for (const [index, member] of (graph.capabilities ?? []).entries()) {
     try {
-      if (!member || !["comments", "attachments", "activity"].includes(member.capabilityKey) || capabilityKeys.has(member.capabilityKey)) throw new Error("Unknown or duplicate capability");
+      if (
+        !member ||
+        !["comments", "attachments", "activity"].includes(
+          member.capabilityKey,
+        ) ||
+        capabilityKeys.has(member.capabilityKey)
+      )
+        throw new Error("Unknown or duplicate capability");
       capabilityAuthoringMode(member, `capabilities[${index}]`);
       capabilityKeys.add(member.capabilityKey);
       capabilityArtifactMembers(entityCode, [member]);
-    } catch (error) { issues.push({code:error instanceof PublicationContractError ? error.code : "ENTITY_CAPABILITY_INVALID",path:`capabilities[${index}]`,message:error instanceof Error?error.message:"Invalid capability"}); }
+    } catch (error) {
+      issues.push({
+        code:
+          error instanceof PublicationContractError
+            ? error.code
+            : "ENTITY_CAPABILITY_INVALID",
+        path: `capabilities[${index}]`,
+        message: error instanceof Error ? error.message : "Invalid capability",
+      });
+    }
   }
   if (
     graph.entity.entityClass !== undefined &&
@@ -139,9 +210,7 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
         path: `surfaces.${index}.layoutKind`,
         message: "Surface layout must match the native storage domain",
       });
-  if (
-    !isCanonicalEntityCode(entityCode)
-  ) {
+  if (!isCanonicalEntityCode(entityCode)) {
     issues.push({
       code: "ENTITY_CODE_INVALID",
       path: "entity.entityCode",
@@ -191,9 +260,24 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
     "numberingBindings",
     issues,
   );
-  uniqueKeys(graph.changeCaseBindings ?? [], "bindingKey", "changeCaseBindings", issues);
-  uniqueKeys(graph.fieldReferenceBindings ?? [], "bindingKey", "fieldReferenceBindings", issues);
-  uniqueKeys(graph.materializationBindings ?? [], "bindingKey", "materializationBindings", issues);
+  uniqueKeys(
+    graph.changeCaseBindings ?? [],
+    "bindingKey",
+    "changeCaseBindings",
+    issues,
+  );
+  uniqueKeys(
+    graph.fieldReferenceBindings ?? [],
+    "bindingKey",
+    "fieldReferenceBindings",
+    issues,
+  );
+  uniqueKeys(
+    graph.materializationBindings ?? [],
+    "bindingKey",
+    "materializationBindings",
+    issues,
+  );
   boundedRows(graph, issues);
   requiredGraphValues(graph, issues);
   const fieldKeys = new Set(
@@ -316,19 +400,69 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
     "operationScopeBindings",
     issues,
   );
-  references(graph.changeCaseBindings, "entityOperationId", ids(graph.operations), "changeCaseBindings", issues);
-  references(graph.operationContextRequirements, "entityOperationId", ids(graph.operations), "operationContextRequirements", issues);
-  references(graph.fieldReferenceBindings, "entityFieldId", ids(graph.fields), "fieldReferenceBindings", issues);
-  references(graph.materializationFieldMappings, "entityMaterializationBindingId", ids(graph.materializationBindings), "materializationFieldMappings", issues);
-  const materializationKeys = new Set((graph.materializationBindings ?? []).map((binding) => binding.bindingKey));
+  references(
+    graph.changeCaseBindings,
+    "entityOperationId",
+    ids(graph.operations),
+    "changeCaseBindings",
+    issues,
+  );
+  references(
+    graph.operationContextRequirements,
+    "entityOperationId",
+    ids(graph.operations),
+    "operationContextRequirements",
+    issues,
+  );
+  references(
+    graph.fieldReferenceBindings,
+    "entityFieldId",
+    ids(graph.fields),
+    "fieldReferenceBindings",
+    issues,
+  );
+  references(
+    graph.materializationFieldMappings,
+    "entityMaterializationBindingId",
+    ids(graph.materializationBindings),
+    "materializationFieldMappings",
+    issues,
+  );
+  const materializationKeys = new Set(
+    (graph.materializationBindings ?? []).map((binding) => binding.bindingKey),
+  );
   const workflowKeys = new Set((graph.flows ?? []).map((flow) => flow.flowKey));
   for (const [index, binding] of (graph.changeCaseBindings ?? []).entries()) {
-    if (binding.workflowKey && !workflowKeys.has(binding.workflowKey)) issues.push({ code: "CHANGE_CASE_WORKFLOW_MISSING", path: `changeCaseBindings.${index}.workflowKey`, message: `Unknown workflow ${binding.workflowKey}` });
-    if (binding.materializationBindingKey && !materializationKeys.has(binding.materializationBindingKey)) issues.push({ code: "CHANGE_CASE_MATERIALIZATION_MISSING", path: `changeCaseBindings.${index}.materializationBindingKey`, message: `Unknown materialization binding ${binding.materializationBindingKey}` });
+    if (binding.workflowKey && !workflowKeys.has(binding.workflowKey))
+      issues.push({
+        code: "CHANGE_CASE_WORKFLOW_MISSING",
+        path: `changeCaseBindings.${index}.workflowKey`,
+        message: `Unknown workflow ${binding.workflowKey}`,
+      });
+    if (
+      binding.materializationBindingKey &&
+      !materializationKeys.has(binding.materializationBindingKey)
+    )
+      issues.push({
+        code: "CHANGE_CASE_MATERIALIZATION_MISSING",
+        path: `changeCaseBindings.${index}.materializationBindingKey`,
+        message: `Unknown materialization binding ${binding.materializationBindingKey}`,
+      });
   }
-  for (const [index, binding] of (graph.fieldReferenceBindings ?? []).entries()) {
-    const configured = Number(Boolean(binding.targetEntityCode)) + Number(Boolean(binding.lookupDomain)) + Number(Boolean(binding.resolverKey));
-    if (configured !== 1) issues.push({ code: "FIELD_REFERENCE_BINDING_INVALID", path: `fieldReferenceBindings.${index}`, message: "Exactly one reference target, lookup domain, or resolver is required" });
+  for (const [index, binding] of (
+    graph.fieldReferenceBindings ?? []
+  ).entries()) {
+    const configured =
+      Number(Boolean(binding.targetEntityCode)) +
+      Number(Boolean(binding.lookupDomain)) +
+      Number(Boolean(binding.resolverKey));
+    if (configured !== 1)
+      issues.push({
+        code: "FIELD_REFERENCE_BINDING_INVALID",
+        path: `fieldReferenceBindings.${index}`,
+        message:
+          "Exactly one reference target, lookup domain, or resolver is required",
+      });
   }
   references(
     graph.flowSteps,
@@ -443,9 +577,30 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
     issues,
   );
   validateOwners(graph, issues);
+  for (const surface of graph.surfaces ?? []) {
+    for (const marker of ["baselineImport", "authorizationSuccessor"]) {
+      if (
+        Object.prototype.hasOwnProperty.call(surface.layoutConfig ?? {}, marker)
+      )
+        issues.push({
+          code: "IMPORTED_BASELINE_PUBLICATION_RETIRED",
+          path: `surfaces.layoutConfig.${marker}`,
+          message:
+            "Create a native successor with current resource and authorization bindings; imported-baseline publication is retired.",
+        });
+    }
+  }
   validateListSurfaces(graph, issues);
-  try { compileEntityIntakeSurfaces(graph as unknown as Record<string, unknown>); }
-  catch (cause) { issues.push({code:"INTAKE_SURFACE_INVALID",path:"surfaces",message:cause instanceof Error ? cause.message : "Invalid intake surface"}); }
+  try {
+    compileEntityIntakeSurfaces(graph as unknown as Record<string, unknown>);
+  } catch (cause) {
+    issues.push({
+      code: "INTAKE_SURFACE_INVALID",
+      path: "surfaces",
+      message:
+        cause instanceof Error ? cause.message : "Invalid intake surface",
+    });
+  }
   try {
     compileEntityAuthorization(graph);
     compileEntityAuthorizationRuntime(graph);
@@ -505,11 +660,19 @@ export function runContractTests(graph: MetaEntityGraph): ContractTestReport {
     .map((test) => {
       if (test.assertion === "learning_fixture_set") {
         try {
-          if (test.path !== "entity") throw new TypeError("Fixture declaration path must be entity");
-          parsePublishedLearningFixtureSet(test.expected, String(graph.entity.entityCode));
+          if (test.path !== "entity")
+            throw new TypeError("Fixture declaration path must be entity");
+          parsePublishedLearningFixtureSet(
+            test.expected,
+            String(graph.entity.entityCode),
+          );
           return { key: test.key, passed: true };
         } catch {
-          return { key: test.key, passed: false, message: "Invalid learning fixture declaration" };
+          return {
+            key: test.key,
+            passed: false,
+            message: "Invalid learning fixture declaration",
+          };
         }
       }
       const actual = readPath(graph, test.path);
@@ -533,12 +696,16 @@ export function runContractTests(graph: MetaEntityGraph): ContractTestReport {
 export function compileGraph(
   graph: MetaEntityGraph,
 ): CompiledMetaEntityArtifact {
-  if (graph.referenceMembers) throw new Error("NORMALIZED_REFERENCE_PUBLICATION_NOT_QUALIFIED");
-  if (graph.ownedLabels) throw new Error("NORMALIZED_LABEL_PUBLICATION_NOT_QUALIFIED");
+  if (graph.referenceMembers)
+    throw new Error("NORMALIZED_REFERENCE_PUBLICATION_NOT_QUALIFIED");
+  if (graph.ownedLabels)
+    throw new Error("NORMALIZED_LABEL_PUBLICATION_NOT_QUALIFIED");
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
   graph = deriveCanonicalRelations(graph);
-  const commonReference = (graph.operationPermissions ?? []).some(p => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION);
+  const commonReference = (graph.operationPermissions ?? []).some(
+    (p) => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION,
+  );
   if (commonReference) assertCommonReferenceGraph(graph);
   const ai = compileEntityAi(graph);
   const authorization = compileEntityAuthorization(graph);
@@ -570,39 +737,93 @@ export function compileGraph(
       graph.entity.entityCode,
       recordPresentation.entityRelationships,
     );
-  const formBindings = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.formPresentation !== undefined);
+  const formBindings = (graph.surfaces ?? []).filter(
+    (surface) =>
+      surface.status !== "deprecated" &&
+      surface.layoutConfig?.formPresentation !== undefined,
+  );
   if (formBindings.length > 1) throw TypeError("Ambiguous form presentation");
-  const formPresentation = formBindings[0] ? parseEntityFormPresentation(formBindings[0].layoutConfig!.formPresentation, graph.fields.map(field => field.fieldKey)) : undefined;
+  const formPresentation = formBindings[0]
+    ? parseEntityFormPresentation(
+        formBindings[0].layoutConfig!.formPresentation,
+        graph.fields.map((field) => field.fieldKey),
+      )
+    : undefined;
   const directoryRules = (graph.surfaces ?? []).flatMap((surface) =>
     surface.layoutConfig?.["directoryScope"] === undefined
       ? []
       : [parseEntityDirectoryScope(surface.layoutConfig["directoryScope"])],
   );
   for (const rule of directoryRules) {
-    for (const key of [rule.fieldBinding?.companyField, rule.fieldBinding?.organizationField]) {
+    for (const key of [
+      rule.fieldBinding?.companyField,
+      rule.fieldBinding?.organizationField,
+    ]) {
       if (key === undefined) continue;
-      const field = graph.fields.find(field => field.fieldKey === key);
-      if (!field || field.dataType !== "uuid" || field.writeMode !== "read_only" || field.valueOrigin !== "stored")
-        throw new TypeError("Directory scope requires an immutable stored UUID field: " + key);
+      const field = graph.fields.find((field) => field.fieldKey === key);
+      if (
+        !field ||
+        field.dataType !== "uuid" ||
+        field.writeMode !== "read_only" ||
+        field.valueOrigin !== "stored"
+      )
+        throw new TypeError(
+          "Directory scope requires an immutable stored UUID field: " + key,
+        );
     }
   }
   if (directoryRules.length > 1)
     throw new TypeError("Only one directory scope rule is allowed");
-  const ownerAccessBindings = (graph.surfaces ?? []).flatMap(surface => surface.layoutConfig?.ownerAccess === undefined ? [] : [parseRecordOwnerAccess(surface.layoutConfig.ownerAccess)]);
-  if (ownerAccessBindings.length > 1) throw new Error("Ambiguous record owner access");
+  const ownerAccessBindings = (graph.surfaces ?? []).flatMap((surface) =>
+    surface.layoutConfig?.ownerAccess === undefined
+      ? []
+      : [parseRecordOwnerAccess(surface.layoutConfig.ownerAccess)],
+  );
+  if (ownerAccessBindings.length > 1)
+    throw new Error("Ambiguous record owner access");
   const ownerAccess = ownerAccessBindings[0];
-  if (ownerAccess && (!graph.runtimeProfiles?.every(profile => profile.tenantFieldKey) || !graph.fields.some(field => field.fieldKey === ownerAccess.ownerField && field.dataType === "uuid" && field.writeMode === "read_only")))
-    throw new Error("Owner access requires tenant storage and an immutable UUID owner field");
-  const predicateSets=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.recordPredicates===undefined?[]:[parseRecordPredicates(surface.layoutConfig.recordPredicates)]);
-  if(predicateSets.length>1 || predicateSets[0]?.some(p=>!graph.fields.some(f=>f.fieldKey===p.field&&f.valueOrigin==="stored")))throw Error("Invalid record predicate binding");
-  const mutationPolicies=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.mutationPolicy===undefined?[]:[parseRecordMutationPolicy(surface.layoutConfig.mutationPolicy)]);
-  if(mutationPolicies.length>1)throw Error("Ambiguous mutation policy");
+  if (
+    ownerAccess &&
+    (!graph.runtimeProfiles?.every((profile) => profile.tenantFieldKey) ||
+      !graph.fields.some(
+        (field) =>
+          field.fieldKey === ownerAccess.ownerField &&
+          field.dataType === "uuid" &&
+          field.writeMode === "read_only",
+      ))
+  )
+    throw new Error(
+      "Owner access requires tenant storage and an immutable UUID owner field",
+    );
+  const predicateSets = (graph.surfaces ?? []).flatMap((surface) =>
+    surface.layoutConfig?.recordPredicates === undefined
+      ? []
+      : [parseRecordPredicates(surface.layoutConfig.recordPredicates)],
+  );
+  if (
+    predicateSets.length > 1 ||
+    predicateSets[0]?.some(
+      (p) =>
+        !graph.fields.some(
+          (f) => f.fieldKey === p.field && f.valueOrigin === "stored",
+        ),
+    )
+  )
+    throw Error("Invalid record predicate binding");
+  const mutationPolicies = (graph.surfaces ?? []).flatMap((surface) =>
+    surface.layoutConfig?.mutationPolicy === undefined
+      ? []
+      : [parseRecordMutationPolicy(surface.layoutConfig.mutationPolicy)],
+  );
+  if (mutationPolicies.length > 1) throw Error("Ambiguous mutation policy");
   const collectionRelationship = compileCollectionRelationship(graph);
   const collectionCompilation = compileCollectionCompilation(graph);
-  const collectionConfiguration=collectionPublicationFromGraph(graph);
+  const collectionConfiguration = collectionPublicationFromGraph(graph);
   const descriptor = canonicalValue({
-    ...(commonReference ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION } : {}),
-    ...(collectionConfiguration?{collectionConfiguration}:{}),
+    ...(commonReference
+      ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION }
+      : {}),
+    ...(collectionConfiguration ? { collectionConfiguration } : {}),
     ...(authorization ? { authorization } : {}),
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
@@ -612,10 +833,12 @@ export function compileGraph(
     ...(recordPresentation ? { recordPresentation } : {}),
     ...(formPresentation ? { formPresentation } : {}),
     ...(ownerAccess ? { ownerAccess } : {}),
-    ...(predicateSets[0]?{recordPredicates:predicateSets[0]}:{}),
-    ...(mutationPolicies[0]?{mutationPolicy:mutationPolicies[0]}:{}),
+    ...(predicateSets[0] ? { recordPredicates: predicateSets[0] } : {}),
+    ...(mutationPolicies[0] ? { mutationPolicy: mutationPolicies[0] } : {}),
     entity: graph.entity,
-    ...(graph.capabilities?.length ? capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities) : {}),
+    ...(graph.capabilities?.length
+      ? capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities)
+      : {}),
     fields: graph.fields,
     keys: graph.keys ?? [],
     keyFields: graph.keyFields ?? [],
@@ -737,7 +960,13 @@ export function compileListPresentation(
     schemaVersion: 1,
     experience: compileListExperience(graph, surface),
     title: surface.title,
-    ...(config["localizedLabels"] === undefined ? {} : { localizedLabels: parsePresentationLocalization(config["localizedLabels"]) }),
+    ...(config["localizedLabels"] === undefined
+      ? {}
+      : {
+          localizedLabels: parsePresentationLocalization(
+            config["localizedLabels"],
+          ),
+        }),
     ...(config["filterPresentation"] !== undefined
       ? { filterPresentation: config["filterPresentation"] }
       : {}),
@@ -1191,7 +1420,15 @@ function validateListSurfaces(
   graph: MetaEntityGraph,
   issues: ValidationIssue[],
 ) {
-  try {collectionPublicationFromGraph(graph);}catch(error){issues.push({code:"COLLECTION_CONFIGURATION_INVALID",path:"surfaces",message:(error as Error).message});}
+  try {
+    collectionPublicationFromGraph(graph);
+  } catch (error) {
+    issues.push({
+      code: "COLLECTION_CONFIGURATION_INVALID",
+      path: "surfaces",
+      message: (error as Error).message,
+    });
+  }
   const fieldsById = new Map(
       graph.fields.flatMap((field) =>
         field.id ? [[field.id, field] as const] : [],

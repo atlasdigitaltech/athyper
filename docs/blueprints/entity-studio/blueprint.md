@@ -89,6 +89,8 @@ Completion stays deliberately small: repeatable maintained DEV startup/bootstrap
 
 #### Local authority and exact execution
 
+**Imported-baseline retirement — 10 October 2026:** remove the superseded imported-baseline and authorization-successor publication branches from host composition, worker source resolution and preview. Native successor/recovery remains the supported replacement. New graph validation rejects `baselineImport` and `authorizationSuccessor` carriers explicitly; historical artifacts remain immutable. The five retired tables are `metadata.entity_baseline_import`, `metadata.entity_baseline_import_revocation`, `publication.entity_baseline_release_link`, `publication.entity_authorization_successor_link` and `publication.entity_authorization_successor_payload`. Canonical setup no longer creates them; the registered forward migration refuses populated tables and drops only the named empty objects without CASCADE. Keep the shared activation-acknowledgement routine and order-preserving payload hashing independently of those retired modules. Runtime restoration remains used by the maintained metadata importer; tenant collection/notification authoring and native field identity lineage remain supported shared contracts. See the runbook for installed status.
+
 Reuse the machine-policy infrastructure, extending native admission and database/worker guards explicitly rather than fabricating `humanExecutionPolicy` evidence. Introduce the named approval basis `local_development_authority`. Existing exact draft/hash enrollment is not standing authority and cannot deliver successive edits without this change.
 
 | Contract | Required meaning |

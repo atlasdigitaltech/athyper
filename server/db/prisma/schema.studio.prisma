@@ -7317,7 +7317,6 @@ model tenant {
   tenant_relationship_tenant_relationship_from_tenant_idTotenant tenant_relationship[]                     @relation("tenant_relationship_from_tenant_idTotenant")
   tenant_relationship_tenant_relationship_to_tenant_idTotenant   tenant_relationship[]                     @relation("tenant_relationship_to_tenant_idTotenant")
   entity                                                         entity[]
-  entity_baseline_import                                         entity_baseline_import[]
   entity_capability                                              entity_capability[]
   publication_recovery_archive                                   publication_recovery_archive[]
   onboarding_case                                                onboarding_case[]
@@ -7329,8 +7328,6 @@ model tenant {
   job_execution_attempt                                          job_execution_attempt[]
   job_execution_command                                          job_execution_command[]
   record_edit_lock                                               record_edit_lock[]
-  entity_authorization_successor_link                            entity_authorization_successor_link[]
-  entity_authorization_successor_payload                         entity_authorization_successor_payload[]
   entity_runtime_restoration_link                                entity_runtime_restoration_link[]
   release                                                        release[]
   applied_release_payload                                        applied_release_payload[]
@@ -7533,46 +7530,6 @@ model entity {
   @@unique([tenant_id, id], map: "entity_tenant_id_uq")
   @@index([module_id, status, entity_code], map: "ix_metadata_entity_module_status")
   @@index([tenant_id, entity_class, status], map: "ix_metadata_entity_tenant_class")
-  @@schema("metadata")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_baseline_import {
-  id                                  String                                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                           String                                @db.Uuid
-  publication_key                     String
-  source_release_id                   String                                @db.Uuid
-  source_release_no                   BigInt
-  entity_code                         String
-  source_entity_id                    String                                @db.Uuid
-  source_plane                        String
-  content_hash                        String
-  payload                             Json
-  imported_at                         DateTime                              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  imported_by                         String                                @default(dbgenerated("SESSION_USER"))
-  tenant                              tenant                                @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  entity_baseline_import_revocation   entity_baseline_import_revocation?
-  entity_authorization_successor_link entity_authorization_successor_link[]
-  entity_baseline_release_link        entity_baseline_release_link?
-
-  @@unique([tenant_id, id])
-  @@unique([tenant_id, publication_key, source_release_id])
-  @@schema("metadata")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_baseline_import_revocation {
-  baseline_id            String                 @id @db.Uuid
-  tenant_id              String                 @db.Uuid
-  reason                 String
-  revoked_at             DateTime               @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  revoked_by             String                 @default(dbgenerated("SESSION_USER"))
-  entity_baseline_import entity_baseline_import @relation(fields: [tenant_id, baseline_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-
   @@schema("metadata")
 }
 
@@ -8555,8 +8512,6 @@ model entity_release {
   other_entity_release_entity_release_rollback_of_release_idToentity_release        entity_release[]                     @relation("entity_release_rollback_of_release_idToentity_release")
   entity_release_entity_release_supersedes_release_idToentity_release               entity_release?                      @relation("entity_release_supersedes_release_idToentity_release", fields: [supersedes_release_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_release_supersedes_fk")
   other_entity_release_entity_release_supersedes_release_idToentity_release         entity_release?                      @relation("entity_release_supersedes_release_idToentity_release")
-  entity_authorization_successor_link                                               entity_authorization_successor_link?
-  entity_baseline_release_link                                                      entity_baseline_release_link?
   entity_release_link                                                               entity_release_link?
   entity_runtime_restoration_link                                                   entity_runtime_restoration_link?
   entity_contract_revision_entity_contract_revision_base_release_idToentity_release entity_contract_revision[]           @relation("entity_contract_revision_base_release_idToentity_release")
@@ -10038,50 +9993,6 @@ model deployment_event {
   @@schema("publication")
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_authorization_successor_link {
-  publication_release_id                                                      String                                 @id @db.Uuid
-  tenant_id                                                                   String                                 @db.Uuid
-  predecessor_release_id                                                      String                                 @db.Uuid
-  baseline_id                                                                 String                                 @db.Uuid
-  descriptor_hash                                                             String
-  runtime_precondition                                                        Json
-  entity_release                                                              entity_release                         @relation(fields: [tenant_id, publication_release_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_authorization_successo_tenant_id_publication_releas_fkey")
-  entity_baseline_import                                                      entity_baseline_import                 @relation(fields: [baseline_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  entity_authorization_successor_payload                                      entity_authorization_successor_payload @relation(fields: [descriptor_hash], references: [content_hash], onDelete: NoAction, onUpdate: NoAction)
-  release_entity_authorization_successor_link_predecessor_release_idTorelease release                                @relation("entity_authorization_successor_link_predecessor_release_idTorelease", fields: [predecessor_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  release_entity_authorization_successor_link_publication_release_idTorelease release                                @relation("entity_authorization_successor_link_publication_release_idTorelease", fields: [publication_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenant                                                                      tenant                                 @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_authorization_successor_payload {
-  content_hash                        String                                @id
-  tenant_id                           String                                @db.Uuid
-  descriptor                          Json
-  installed_at                        DateTime                              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  entity_authorization_successor_link entity_authorization_successor_link[]
-  tenant                              tenant                                @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model entity_baseline_release_link {
-  tenant_id              String                 @db.Uuid
-  publication_release_id String                 @id @db.Uuid
-  entity_release_id      String                 @unique @db.Uuid
-  baseline_id            String                 @unique @db.Uuid
-  release                release                @relation(fields: [publication_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  entity_baseline_import entity_baseline_import @relation(fields: [tenant_id, baseline_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-  entity_release         entity_release         @relation(fields: [tenant_id, entity_release_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model entity_release_link {
   publication_release_id String         @id(map: "publication_entity_release_link_pkey") @db.Uuid
@@ -10133,9 +10044,6 @@ model release {
   artifact_compilation                                                                                    artifact_compilation[]
   business_partner_case_contract_release_link                                                             business_partner_case_contract_release_link?
   business_partner_definition_release_link                                                                business_partner_definition_release_link?
-  entity_authorization_successor_link_entity_authorization_successor_link_predecessor_release_idTorelease entity_authorization_successor_link[]        @relation("entity_authorization_successor_link_predecessor_release_idTorelease")
-  entity_authorization_successor_link_entity_authorization_successor_link_publication_release_idTorelease entity_authorization_successor_link?         @relation("entity_authorization_successor_link_publication_release_idTorelease")
-  entity_baseline_release_link                                                                            entity_baseline_release_link?
   entity_release_link                                                                                     entity_release_link?
   entity_runtime_restoration_link                                                                         entity_runtime_restoration_link?
   tenant                                                                                                  tenant                                       @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "publication_release_tenant_fk")

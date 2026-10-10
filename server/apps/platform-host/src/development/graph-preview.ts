@@ -11,9 +11,7 @@ import {
   DurableGraphPreviewStore,
 } from "@athyper/server-plane-studio";
 import { compileNativeRuntimeProjection } from "@athyper/server-platform-metadata";
-import {
-  compileDocumentCollection,
-} from "@athyper/server-service-publication/shared/collections/compiler";
+import { compileDocumentCollection } from "@athyper/server-service-publication/shared/collections/compiler";
 import { localPreviewRoot } from "@athyper/server-service-publication/shared/preview/environment";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
@@ -82,7 +80,8 @@ export function localGraphPreview(options: {
     },
     async project(input, artifact) {
       const native = artifact.descriptor;
-      const profile = native.authorization as { planeKey?: PlaneKey } | undefined;
+      const profile = native.authorization as
+        { planeKey?: PlaneKey } | undefined;
       const plane = profile?.planeKey;
       if (!plane || !["studio", "neon", "mesh"].includes(plane))
         throw Error("GRAPH_PREVIEW_RUNTIME_PROFILE_REQUIRED");
@@ -190,7 +189,8 @@ export function localGraphPreview(options: {
               AND cs.approved_by<>cs.created_by AND cs.approved_by IS DISTINCT FROM cs.submitted_by
               AND r.signature_algorithm='Ed25519' AND r.contract_signature IS NOT NULL
               AND a.compiled_json->>'schema'='athyper.entity-runtime-descriptor/1.0'
-              AND NOT EXISTS (SELECT 1 FROM publication.entity_baseline_release_link l JOIN metadata.entity_baseline_import_revocation v ON v.baseline_id=l.baseline_id WHERE l.entity_release_id=r.id)
+              AND NOT jsonb_path_exists(a.compiled_json, '$.surfaces[*].layoutConfig.baselineImport')
+              AND NOT jsonb_path_exists(a.compiled_json, '$.surfaces[*].layoutConfig.authorizationSuccessor')
             ORDER BY r.release_no DESC LIMIT 1`.execute(source)
                 ).rows[0]?.compiled_json,
             );

@@ -171,11 +171,7 @@ import {
   createPublishedLearningFixtureProvider,
   registerAtlasLearningInboxRoutes,
   prepareAtlasLearningRelease,
-  prepareInitialBaselineRelease,
-  prepareAuthorizationSuccessorRelease,
   prepareRuntimeRestorationRelease,
-  baselineJsonHash,
-  sha256 as baselineContentHash,
 } from "@athyper/server-plane-studio";
 import {
   createEntityScopeRegistry,
@@ -5659,75 +5655,7 @@ function registerStudioAuthoring(
             ),
         );
         if (restored) return;
-        const successor = await prepareAuthorizationSuccessorRelease(
-          tx,
-          input,
-          async (expected) =>
-            transactions.run(
-              "neon",
-              { tenantId: expected.tenantId, principalId: expected.actorId },
-              async (source) => {
-                const heads = (
-                  await sql<{
-                    source_release_id: string;
-                    source_release_no: number;
-                    applied_release_id: string;
-                    row_version: number;
-                    artifact_hash: string;
-                    compiled_json: Record<string, unknown>;
-                  }>`SELECT a.source_release_id,h.source_release_no,h.applied_release_id,h.row_version,h.artifact_hash,d.compiled_json
-        FROM runtime_meta.release_activation_head h JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
-        JOIN runtime_meta.entity_contract c ON c.publication_key=h.publication_key AND c.release_id=a.source_release_id
-        JOIN runtime_meta.entity_descriptor d ON d.entity_contract_id=c.id AND d.applied_release_id=a.id
-        WHERE h.publication_key=${expected.publicationKey} AND c.tenant_id=${expected.tenantId}::uuid AND d.tenant_id=c.tenant_id
-          AND d.plane_code='neon' AND d.descriptor_kind='entity_runtime' AND d.status='active'
-          AND EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='runtime_meta.release_activation_head'::regclass AND tgname='baseline_activation_precondition' AND tgenabled IN ('O','A'))`.execute(
-                    source,
-                  )
-                ).rows;
-                if (heads.length !== 1) return null;
-                const head = heads[0]!;
-                return {
-                  sourceReleaseId: head.source_release_id,
-                  sourceReleaseNo: Number(head.source_release_no),
-                  appliedReleaseId: head.applied_release_id,
-                  rowVersion: Number(head.row_version),
-                  artifactHash: head.artifact_hash,
-                  descriptorHash: baselineJsonHash(head.compiled_json),
-                };
-              },
-            ),
-        );
-        if (successor) return;
-        const prepared = await prepareInitialBaselineRelease(
-          tx,
-          input,
-          async (baseline, actorId) =>
-            transactions.run(
-              baseline.sourcePlane as "neon" | "mesh",
-              { tenantId: baseline.tenantId, principalId: actorId },
-              async (source) => {
-                const rows = (
-                  await sql<{
-                    capture: unknown;
-                  }>`SELECT jsonb_build_object('contract',to_jsonb(c),'descriptor',to_jsonb(d),'head',to_jsonb(h),'applied',to_jsonb(a)) AS capture
-        FROM runtime_meta.release_activation_head h JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
-        JOIN runtime_meta.entity_contract c ON c.publication_key=h.publication_key AND c.release_id=a.source_release_id
-        JOIN runtime_meta.entity_descriptor d ON d.entity_contract_id=c.id AND d.applied_release_id=a.id
-        WHERE ((c.tenant_id=${baseline.tenantId}::uuid AND d.tenant_id=c.tenant_id AND ${baseline.schema}='athyper.imported-entity-baseline/1') OR (c.tenant_id IS NULL AND d.tenant_id IS NULL AND ${baseline.schema}='athyper.imported-global-entity-baseline/1')) AND h.publication_key=${baseline.publicationKey}
-          AND d.plane_code=${baseline.sourcePlane} AND d.descriptor_kind='entity_runtime' AND d.status='active'
-          AND EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='runtime_meta.release_activation_head'::regclass AND tgname='baseline_activation_precondition' AND tgenabled IN ('O','A'))`.execute(
-                    source,
-                  )
-                ).rows;
-                return (
-                  rows.length === 1 &&
-                  baselineContentHash(rows[0]!.capture) === baseline.contentHash
-                );
-              },
-            ),
-        );
-        if (!prepared && !(await prepareDocumentCollectionRelease(tx, input)))
+        if (!(await prepareDocumentCollectionRelease(tx, input)))
           await prepareAtlasLearningRelease(tx, input);
       }),
   );

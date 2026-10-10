@@ -10,7 +10,7 @@ import {
   compileGraph,
   runContractTests,
 } from "../../../server/packages/planes/studio/meta-entity-authoring/src/deterministic.js";
-import { baselineJsonHash } from "../../../server/packages/planes/studio/meta-entity-authoring/src/baseline-publication.js";
+import { runtimePayloadHash } from "../../../server/packages/planes/studio/meta-entity-authoring/src/runtime-payload-hash.js";
 const root = join(homedir(), ".athyper/deployments/global-field-controls");
 const before = JSON.parse(readFileSync(join(root, "before.json"), "utf8"));
 const graph = structuredClone(before.graph);
@@ -36,7 +36,7 @@ function patch(value: any, path = "") {
 patch(graph);
 for (const surface of graph.surfaces) {
   const marker = surface.layoutConfig?.runtimeRestoration;
-  if (marker) marker.descriptorHash = baselineJsonHash(marker.descriptor);
+  if (marker) marker.descriptorHash = runtimePayloadHash(marker.descriptor);
 }
 const listSurface = graph.surfaces.find(
   (surface: any) => surface.surfaceKind === "list" && surface.isDefault,

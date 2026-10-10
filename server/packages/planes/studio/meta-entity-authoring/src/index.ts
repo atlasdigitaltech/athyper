@@ -18,9 +18,7 @@ export * from "./publication/human-reviewed-publication.js";
 export * from "./learning-inbox.js";
 export * from "./learning-routes.js";
 export * from "./learning-publication.js";
-export * from "./baseline-publication.js";
-export * from "./authorization-successor.js";
-export * from "./authorization-successor-publication.js";
+export * from "./runtime-payload-hash.js";
 export * from "./runtime-restoration.js";
 export * from "./runtime-restoration-publication.js";
 

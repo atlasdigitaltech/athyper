@@ -319,25 +319,6 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       }
     }
     if (!result.rows.length) {
-      result =
-        await sql<Row>`SELECT * FROM publication.fn_initial_baseline_compilation_source(${releaseId}::uuid)`.execute(
-          this.options.database,
-        );
-      if (!result.rows.length) {
-        const available = (
-          await sql<Row>`SELECT to_regprocedure('publication.fn_authorization_successor_compilation_source(uuid)') IS NOT NULL AS available`.execute(
-            this.options.database,
-          )
-        ).rows[0]?.["available"];
-        if (available)
-          result =
-            await sql<Row>`SELECT * FROM publication.fn_authorization_successor_compilation_source(${releaseId}::uuid)`.execute(
-              this.options.database,
-            );
-      }
-      if (result.rows.length) artifactKind = "entity_runtime";
-    }
-    if (!result.rows.length) {
       const available = (
         await sql<Row>`SELECT to_regprocedure('publication.fn_runtime_restoration_compilation_source(uuid)') IS NOT NULL AS available`.execute(
           this.options.database,

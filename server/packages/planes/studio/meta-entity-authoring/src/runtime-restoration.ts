@@ -1,6 +1,6 @@
 import { compileEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
-import { baselineJsonHash } from "./baseline-publication.js";
+import { runtimePayloadHash } from "./runtime-payload-hash.js";
 type Json = Record<string, any>;
 const deny = (code: string): never => {
   throw new AuthoringPolicyError(
@@ -45,7 +45,7 @@ export function compileRuntimeRestoration(native: Json):
   )
     deny("RESTORATION_MARKER_INVALID");
   const d = m.descriptor;
-  if (!d || baselineJsonHash(d) !== m.descriptorHash)
+  if (!d || runtimePayloadHash(d) !== m.descriptorHash)
     deny("RESTORATION_PAYLOAD_HASH_MISMATCH");
   if (
     d.schema !== "athyper.entity-runtime-descriptor/1.0" ||
@@ -54,7 +54,7 @@ export function compileRuntimeRestoration(native: Json):
   )
     deny("RESTORATION_IDENTITY_MISMATCH");
   const same = (a: unknown, b: unknown) =>
-    baselineJsonHash(a ?? null) === baselineJsonHash(b ?? null);
+    runtimePayloadHash(a ?? null) === runtimePayloadHash(b ?? null);
   if (
     !same(d.authorization, native.authorization) ||
     !same(d.ai, native.ai) ||
@@ -78,8 +78,18 @@ export function compileRuntimeRestoration(native: Json):
     !same(d.operation_scope_bindings, [])
   )
     deny("RESTORATION_BINDING_MISMATCH");
-  const intakeInputs = new Set(compileEntityIntakeSurfaces(native).flatMap(s => s.sections.flatMap(section => section.fields.map(f => f.key))));
-  const fields = (native.fields ?? []).filter((f: Json) => !(f.valueOrigin === "runtime" && intakeInputs.has(f.fieldKey))).map((f: Json) => f.fieldKey).sort();
+  const intakeInputs = new Set(
+    compileEntityIntakeSurfaces(native).flatMap((s) =>
+      s.sections.flatMap((section) => section.fields.map((f) => f.key)),
+    ),
+  );
+  const fields = (native.fields ?? [])
+    .filter(
+      (f: Json) =>
+        !(f.valueOrigin === "runtime" && intakeInputs.has(f.fieldKey)),
+    )
+    .map((f: Json) => f.fieldKey)
+    .sort();
   const operations = (native.operations ?? [])
     .filter((o: Json) => o.status !== "deprecated")
     .map((o: Json) => o.operationKey)

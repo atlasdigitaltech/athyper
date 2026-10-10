@@ -16,7 +16,7 @@ import {
   DevelopmentPublicationWorkflow,
   KyselyMetaEntityAuthoringRepository,
   sha256,
-  baselineJsonHash,
+  runtimePayloadHash,
   type MetaEntityAuthoringService,
   type DevelopmentPublicationRequest,
 } from "@athyper/server-plane-studio";
@@ -98,7 +98,7 @@ export function admitDevIntakePrerequisite(
         ),
       }),
     );
-    marker.descriptorHash = baselineJsonHash(marker.descriptor);
+    marker.descriptorHash = runtimePayloadHash(marker.descriptor);
     const path = `surfaces.${index}.layoutConfig.runtimeRestoration.descriptor`;
     proposed = {
       ...proposed,
@@ -130,7 +130,7 @@ export function reusePublishedIntakePrerequisite(
     published.length === 1 &&
     expected[0]!.publicationKey === published[0]!.publicationKey &&
     expected[0]!.descriptorHash === published[0]!.descriptorHash &&
-    baselineJsonHash(published[0]!.descriptor) === expected[0]!.descriptorHash
+    runtimePayloadHash(published[0]!.descriptor) === expected[0]!.descriptorHash
     ? current
     : proposed;
 }

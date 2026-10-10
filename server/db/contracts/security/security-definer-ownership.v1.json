@@ -172,7 +172,6 @@
     "publication.admit_local_publication_request(jsonb)",
     "publication.bind_local_publication_release(uuid)",
     "publication.fn_acknowledge_activation(uuid, text, text, uuid, jsonb)",
-    "publication.fn_authorization_successor_compilation_source(uuid)",
     "publication.fn_collection_configuration_compilation_source(uuid)",
     "publication.fn_compilation_recovery_source(jsonb, boolean)",
     "publication.fn_compiled_entity_compilation_source_v4(uuid)",
@@ -189,14 +188,11 @@
     "publication.fn_human_publication_review_evidence(uuid)",
     "publication.fn_human_review_identity_status(uuid, uuid, uuid, uuid)",
     "publication.fn_human_reviewed_entity_policy(jsonb, uuid, text)",
-    "publication.fn_initial_baseline_compilation_source(uuid)",
     "publication.fn_link_system_entity_release(uuid)",
     "publication.fn_local_publication_request_authority(jsonb, boolean)",
     "publication.fn_native_compilation_recovery_source(jsonb, boolean)",
-    "publication.fn_prepare_authorization_successor(uuid, jsonb)",
     "publication.fn_prepare_collection_configuration_release(uuid, jsonb)",
     "publication.fn_prepare_document_collection_release(uuid, jsonb)",
-    "publication.fn_prepare_initial_baseline_release(uuid, uuid, jsonb)",
     "publication.fn_prepare_runtime_restoration(uuid)",
     "publication.fn_record_system_entity_validation(uuid, bigint, jsonb, jsonb, uuid)",
     "publication.fn_recoverable_deployment_coordinates(timestamp with time zone, uuid, integer)",
@@ -4242,14 +4238,6 @@
           "privileges": ["SELECT"]
         },
         {
-          "relation": "metadata.entity_baseline_import",
-          "privileges": ["SELECT"]
-        },
-        {
-          "relation": "metadata.entity_baseline_import_revocation",
-          "privileges": ["SELECT"]
-        },
-        {
           "relation": "metadata.entity_change_set",
           "privileges": ["SELECT"]
         },
@@ -4271,18 +4259,6 @@
         },
         {
           "relation": "publication.deployment_event",
-          "privileges": ["INSERT", "SELECT"]
-        },
-        {
-          "relation": "publication.entity_authorization_successor_link",
-          "privileges": ["INSERT", "SELECT"]
-        },
-        {
-          "relation": "publication.entity_authorization_successor_payload",
-          "privileges": ["SELECT"]
-        },
-        {
-          "relation": "publication.entity_baseline_release_link",
           "privileges": ["INSERT", "SELECT"]
         },
         {
@@ -4381,18 +4357,6 @@
           "command": "SELECT",
           "reason": "Preserves the existing entity_release_tenant_read policy only when the original session is a member of athyperapp.",
           "using": "(pg_has_role(SESSION_USER, 'athyperapp'::name, 'MEMBER'::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
-        },
-        {
-          "relation": "publication.entity_authorization_successor_link",
-          "command": "INSERT",
-          "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-          "check": "(tenant_id = shared.current_tenant_id_soft())"
-        },
-        {
-          "relation": "publication.entity_baseline_release_link",
-          "command": "INSERT",
-          "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-          "check": "(tenant_id = shared.current_tenant_id_soft())"
         },
         {
           "relation": "publication.entity_runtime_restoration_link",

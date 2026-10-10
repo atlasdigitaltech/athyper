@@ -246,9 +246,9 @@ common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
 common/master/19_entity_saved_views.sql
-planes/studio/metadata/12_baseline_import.sql
-planes/studio/metadata/13_authorization_successor.sql
+planes/studio/metadata/12_activation_acknowledgement.sql
 planes/studio/metadata/14_runtime_restoration.sql
+planes/studio/metadata/67_imported_baseline_retirement.sql
 planes/studio/metadata/18_publication_recovery.sql
 planes/studio/metadata/19_publication_recovery_successor.sql
 planes/studio/metadata/20_publication_recovery_audit.sql

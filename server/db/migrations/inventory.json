@@ -975,7 +975,9 @@
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_baseline_publication_locking.sql",
@@ -986,7 +988,9 @@
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_baseline_publication_materializer.sql",
@@ -997,7 +1001,9 @@
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_entity_baseline_import.sql",
@@ -1005,10 +1011,12 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_entity_baseline_import.sql",
-      "callers": ["tooling/scripts/verification/adopt-atlas-neon-baseline.mjs"],
+      "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_experience_foundation.sql",
@@ -1102,7 +1110,7 @@
       "planes": [],
       "disposition": "operational-upgrade",
       "path": "scripts/operations/upgrades/publication/20260910_mesh_global_baseline_import.sql",
-      "callers": ["tooling/scripts/verification/adopt-atlas-mesh-baseline.mjs"],
+      "callers": [],
       "reason": "Explicit upgrade for existing or isolated target schemas; bytes preserved and excluded from automatic manifests."
     },
     {
@@ -1138,7 +1146,9 @@
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_neon_attachment_knowledge_writer.sql",
@@ -2987,6 +2997,18 @@
       "reason": "Repair an incomplete local foundation with a newer worker-source reader already installed. Install only its missing component reader; normal ordered installations already create this routine. Retain applied SQL bytes.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/37_native_worker_source.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20261010_imported_baseline_retirement.sql",
+      "path": "migrations/20261010_imported_baseline_retirement.sql",
+      "sha256": "261797b8738008b553c6219dc66bc9ae585a9c60ac2e4aa25ab913140d2b6d46",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire empty imported-baseline and authorization-successor storage after native caller cutover; retain immutable applied migrations.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/67_imported_baseline_retirement.sql"
       ]
     }
   ]

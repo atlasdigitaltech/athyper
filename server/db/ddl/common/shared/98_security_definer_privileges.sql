@@ -4379,18 +4379,6 @@ BEGIN
         ]
       },
       {
-        "relation": "metadata.entity_baseline_import",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_baseline_import_revocation",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
         "relation": "metadata.entity_change_set",
         "privileges": [
           "SELECT"
@@ -4426,26 +4414,6 @@ BEGIN
       },
       {
         "relation": "publication.deployment_event",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "publication.entity_authorization_successor_link",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "publication.entity_authorization_successor_payload",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "publication.entity_baseline_release_link",
         "privileges": [
           "INSERT",
           "SELECT"
@@ -4568,18 +4536,6 @@ BEGIN
         "command": "SELECT",
         "reason": "Preserves the existing entity_release_tenant_read policy only when the original session is a member of athyperapp.",
         "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
-      },
-      {
-        "relation": "publication.entity_authorization_successor_link",
-        "command": "INSERT",
-        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-        "check": "(tenant_id = shared.current_tenant_id_soft())"
-      },
-      {
-        "relation": "publication.entity_baseline_release_link",
-        "command": "INSERT",
-        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-        "check": "(tenant_id = shared.current_tenant_id_soft())"
       },
       {
         "relation": "publication.entity_runtime_restoration_link",

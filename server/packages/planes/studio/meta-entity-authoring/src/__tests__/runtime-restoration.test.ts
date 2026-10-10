@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { compileGraph, validateGraph } from "../deterministic.js";
 import { compileRuntimeRestoration } from "../runtime-restoration.js";
-import { baselineJsonHash } from "../baseline-publication.js";
+import { runtimePayloadHash } from "../runtime-payload-hash.js";
 import { intakeGraph } from "../testing/authoring-graph.js";
 const read = (path: string) =>
   JSON.parse(
@@ -29,7 +29,7 @@ function fixture() {
     tenantId: "44444444-4444-4444-8444-444444444444",
     publicationKey: proposal.predecessor.publicationKey,
     sourceArtifactHash: "a".repeat(64),
-    descriptorHash: baselineJsonHash(proposal.descriptor),
+    descriptorHash: runtimePayloadHash(proposal.descriptor),
     descriptor: structuredClone(proposal.descriptor),
   };
   return { graph, layout };
@@ -78,7 +78,7 @@ it("requires native policy, field and operation coverage even if the payload has
   ]) {
     const { graph, layout } = fixture();
     mutate(layout.runtimeRestoration.descriptor);
-    layout.runtimeRestoration.descriptorHash = baselineJsonHash(
+    layout.runtimeRestoration.descriptorHash = runtimePayloadHash(
       layout.runtimeRestoration.descriptor,
     );
     expect(
@@ -98,7 +98,7 @@ it("rejects ambiguous old/new markers, unexpected versions and different entity 
     },
     (l: any) => {
       l.runtimeRestoration.descriptor.entityCode = "other";
-      l.runtimeRestoration.descriptorHash = baselineJsonHash(
+      l.runtimeRestoration.descriptorHash = runtimePayloadHash(
         l.runtimeRestoration.descriptor,
       );
     },
@@ -118,14 +118,28 @@ it("keeps reviewed record coverage while allowing validated presentation-only in
   const choices = intakeGraph();
   graph.fields.push(...choices.fields);
   graph.surfaces.push(...choices.surfaces);
-  graph.surfaceSections = [...(graph.surfaceSections ?? []), ...choices.surfaceSections];
-  graph.surfaceFieldBindings = [...(graph.surfaceFieldBindings ?? []), ...choices.surfaceFieldBindings];
+  graph.surfaceSections = [
+    ...(graph.surfaceSections ?? []),
+    ...choices.surfaceSections,
+  ];
+  graph.surfaceFieldBindings = [
+    ...(graph.surfaceFieldBindings ?? []),
+    ...choices.surfaceFieldBindings,
+  ];
   expect(validateGraph(graph).issues).toEqual([]);
-  expect(compileRuntimeRestoration(compileGraph(graph).descriptor)!.descriptor).toEqual(proposal.descriptor);
-  const field = graph.fields.find((f:any)=>f.fieldKey==="requested_role");
+  expect(
+    compileRuntimeRestoration(compileGraph(graph).descriptor)!.descriptor,
+  ).toEqual(proposal.descriptor);
+  const field = graph.fields.find((f: any) => f.fieldKey === "requested_role");
   field.storagePath = "legal_name";
-  expect(validateGraph(graph).issues.some(i=>i.code==="INTAKE_SURFACE_INVALID")).toBe(true);
+  expect(
+    validateGraph(graph).issues.some(
+      (i) => i.code === "INTAKE_SURFACE_INVALID",
+    ),
+  ).toBe(true);
   delete field.storagePath;
-  graph.surfaceFieldBindings = graph.surfaceFieldBindings.filter((b:any)=>b.entityFieldId!==field.id);
+  graph.surfaceFieldBindings = graph.surfaceFieldBindings.filter(
+    (b: any) => b.entityFieldId !== field.id,
+  );
   expect(validateGraph(graph).issues.length).toBeGreaterThan(0);
 });

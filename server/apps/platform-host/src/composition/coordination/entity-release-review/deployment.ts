@@ -135,28 +135,9 @@ export function createDeploymentEntityReleaseReview(input: {
           return result.rows[0]?.current === true;
         });
       }
-      if (base.kind !== undefined) return false;
-      const active = await scoped(
-        input.neon,
-        coordinate.tenantId,
-        async (tx) => {
-          const result = await sql<{
-            current: boolean;
-          }>`SELECT EXISTS(SELECT 1 FROM runtime_meta.release_activation_head h JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id JOIN runtime_meta.entity_contract c ON c.publication_key=h.publication_key AND c.release_id=a.source_release_id JOIN runtime_meta.entity_descriptor d ON d.entity_contract_id=c.id AND d.applied_release_id=a.id WHERE c.tenant_id=${coordinate.tenantId}::uuid AND d.tenant_id=c.tenant_id AND h.publication_key=${base.publicationKey} AND h.applied_release_id=${base.appliedReleaseId}::uuid AND h.row_version=${base.headVersion} AND a.source_release_id=${base.releaseId}::uuid AND h.source_release_no=${base.releaseNo} AND d.compiled_hash=${base.compiledHash} AND d.status='active' AND d.plane_code='neon' AND d.descriptor_kind='entity_runtime') AS current`.execute(
-            tx,
-          );
-          return result.rows[0]?.current === true;
-        },
-      );
-      if (!active) return false;
-      return scoped(input.studio, coordinate.tenantId, async (tx) => {
-        const result = await sql<{
-          current: boolean;
-        }>`SELECT EXISTS(SELECT 1 FROM publication.release r JOIN publication.entity_authorization_successor_link l ON l.publication_release_id=r.id AND l.tenant_id=r.tenant_id WHERE r.id=${coordinate.releaseId}::uuid AND r.tenant_id=${coordinate.tenantId}::uuid AND r.release_no=${coordinate.releaseNo} AND r.status IN ('approved','published') AND l.predecessor_release_id=${base.releaseId}::uuid AND NOT EXISTS(SELECT 1 FROM metadata.entity_baseline_import_revocation v WHERE v.baseline_id=l.baseline_id)) AS current`.execute(
-          tx,
-        );
-        return result.rows[0]?.current === true;
-      });
+      // Imported-baseline successors are retired; native successors have
+      // their own source and target qualification contracts.
+      return false;
     },
     async evidenceCurrent(evidence) {
       const path = resolve(input.evidenceRoot, evidence.path);
