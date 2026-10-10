@@ -5055,18 +5055,6 @@ BEGIN
         ]
       },
       {
-        "relation": "metadata.entity_change_case_binding",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_contract_test_case",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
         "relation": "metadata.entity_field",
         "privileges": [
           "SELECT"
@@ -5134,30 +5122,6 @@ BEGIN
       },
       {
         "relation": "metadata.entity_label_translation",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_lifecycle_binding",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_lifecycle_operation_binding",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_materialization_binding",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.entity_materialization_field_mapping",
         "privileges": [
           "SELECT"
         ]
@@ -5541,18 +5505,6 @@ BEGIN
         "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
       },
       {
-        "relation": "metadata.entity_change_case_binding",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
-        "relation": "metadata.entity_contract_test_case",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
         "relation": "metadata.entity_field",
         "command": "SELECT",
         "using": "(tenant_id IS NULL)",
@@ -5620,30 +5572,6 @@ BEGIN
       },
       {
         "relation": "metadata.entity_label_translation",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
-        "relation": "metadata.entity_lifecycle_binding",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
-        "relation": "metadata.entity_lifecycle_operation_binding",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
-        "relation": "metadata.entity_materialization_binding",
-        "command": "SELECT",
-        "using": "(tenant_id IS NULL)",
-        "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."
-      },
-      {
-        "relation": "metadata.entity_materialization_field_mapping",
         "command": "SELECT",
         "using": "(tenant_id IS NULL)",
         "reason": "Product graph integrity reads for nonlogin publication functions after exact authority validation; no worker table access."

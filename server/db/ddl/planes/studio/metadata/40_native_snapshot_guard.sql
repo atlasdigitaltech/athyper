@@ -11,7 +11,7 @@ BEGIN
  PERFORM metadata.fn_assert_native_layout_graph(draft);
  PERFORM metadata.validate_reference_members(draft);
  -- Use a finite repository-owned inventory, not entity names or author-supplied tables.
- FOREACH member_table IN ARRAY ARRAY['entity_access_permission','entity_ai_binding','entity_ai_field','entity_ai_profile','entity_ai_reference','entity_ai_term','entity_authorization_profile','entity_capability','entity_change_case_binding','entity_contract_test_case','entity_field','entity_field_access','entity_field_choice','entity_field_policy_binding','entity_field_reference_binding','entity_flow','entity_flow_step','entity_key','entity_key_field','entity_label','entity_label_translation','entity_lifecycle_binding','entity_lifecycle_operation_binding','entity_materialization_binding','entity_numbering_binding','entity_operation','entity_operation_context_requirement','entity_operation_field','entity_operation_permission','entity_operation_rule','entity_operation_scope_binding','entity_policy_binding','entity_predicate','entity_relation','entity_relation_field','entity_relation_target','entity_runtime_profile','entity_search_field','entity_search_profile','entity_surface','entity_surface_field_binding','entity_surface_navigation_group','entity_surface_operation','entity_surface_section','entity_surface_view','entity_surface_view_field','entity_target'] LOOP
+ FOREACH member_table IN ARRAY ARRAY['entity_access_permission','entity_ai_binding','entity_ai_field','entity_ai_profile','entity_ai_reference','entity_ai_term','entity_authorization_profile','entity_capability','entity_field','entity_field_access','entity_field_choice','entity_field_policy_binding','entity_field_reference_binding','entity_flow','entity_flow_step','entity_key','entity_key_field','entity_label','entity_label_translation','entity_numbering_binding','entity_operation','entity_operation_context_requirement','entity_operation_field','entity_operation_permission','entity_operation_rule','entity_operation_scope_binding','entity_policy_binding','entity_predicate','entity_relation','entity_relation_field','entity_relation_target','entity_runtime_profile','entity_search_field','entity_search_profile','entity_surface','entity_surface_field_binding','entity_surface_navigation_group','entity_surface_operation','entity_surface_section','entity_surface_view','entity_surface_view_field','entity_target'] LOOP
   EXECUTE format('SELECT EXISTS(SELECT 1 FROM metadata.%I WHERE change_set_id=$1 AND (entity_id IS DISTINCT FROM $2 OR tenant_id IS DISTINCT FROM $3))',member_table)
    INTO invalid USING draft,root.entity_id,root.tenant_id;
   IF invalid THEN RAISE EXCEPTION 'NATIVE_SNAPSHOT_OWNER_INVALID:%',member_table USING ERRCODE='23514'; END IF;
@@ -19,7 +19,6 @@ BEGIN
  IF EXISTS(SELECT 1 FROM metadata.entity_label_translation t LEFT JOIN metadata.entity_label l ON l.id=t.label_id AND l.change_set_id=draft
   WHERE t.change_set_id=draft AND (l.id IS NULL OR t.locale_code=root.default_locale OR NOT(t.locale_code=ANY(root.required_locales))))
  THEN RAISE EXCEPTION 'NATIVE_SNAPSHOT_LABEL_REFERENCE_INVALID' USING ERRCODE='23514'; END IF;
- IF EXISTS(SELECT 1 FROM metadata.entity_materialization_field_mapping m JOIN metadata.entity_materialization_binding b ON b.id=m.entity_materialization_binding_id WHERE b.change_set_id=draft AND m.tenant_id IS DISTINCT FROM root.tenant_id) THEN RAISE EXCEPTION 'NATIVE_SNAPSHOT_MAPPING_OWNER_INVALID' USING ERRCODE='23514'; END IF;
  IF expected_version=1 THEN
   IF EXISTS(SELECT 1 FROM metadata.entity_ai_profile WHERE change_set_id=draft)
     OR EXISTS(SELECT 1 FROM metadata.entity_ai_field WHERE change_set_id=draft)
@@ -79,15 +78,8 @@ CREATE OR REPLACE FUNCTION metadata.native_snapshot_final_guard() RETURNS trigge
 LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,metadata AS $$
 DECLARE previous_draft uuid; next_draft uuid; draft uuid; root metadata.entity_change_set%ROWTYPE;
 BEGIN
- IF TG_TABLE_NAME='entity_materialization_field_mapping' THEN
-  IF TG_OP<>'INSERT' THEN SELECT change_set_id INTO previous_draft FROM metadata.entity_materialization_binding WHERE id=OLD.entity_materialization_binding_id; END IF;
-  IF TG_OP<>'DELETE' THEN SELECT change_set_id INTO next_draft FROM metadata.entity_materialization_binding WHERE id=NEW.entity_materialization_binding_id;
-   IF NOT FOUND THEN RAISE EXCEPTION 'NATIVE_SNAPSHOT_PARENT_REQUIRED' USING ERRCODE='23514'; END IF;
-  END IF;
- ELSE
  IF TG_OP<>'INSERT' THEN previous_draft:=(to_jsonb(OLD)->>CASE WHEN TG_TABLE_NAME='entity_change_set' THEN 'id' ELSE 'change_set_id' END)::uuid; END IF;
  IF TG_OP<>'DELETE' THEN next_draft:=(to_jsonb(NEW)->>CASE WHEN TG_TABLE_NAME='entity_change_set' THEN 'id' ELSE 'change_set_id' END)::uuid; END IF;
- END IF;
  FOR draft IN SELECT DISTINCT value FROM unnest(ARRAY[previous_draft,next_draft]) value WHERE value IS NOT NULL ORDER BY value LOOP
   SELECT * INTO root FROM metadata.entity_change_set WHERE id=draft FOR UPDATE;
   IF FOUND AND root.native_core_layout_version IS NOT NULL THEN
@@ -97,7 +89,7 @@ BEGIN
  RETURN NULL;
 END $$;
 DO $$ DECLARE member_table text; BEGIN
- FOREACH member_table IN ARRAY ARRAY['entity_access_permission','entity_ai_binding','entity_ai_field','entity_ai_profile','entity_ai_reference','entity_ai_term','entity_authorization_profile','entity_capability','entity_change_case_binding','entity_contract_test_case','entity_field','entity_field_access','entity_field_choice','entity_field_policy_binding','entity_field_reference_binding','entity_flow','entity_flow_step','entity_key','entity_key_field','entity_label','entity_label_translation','entity_lifecycle_binding','entity_lifecycle_operation_binding','entity_materialization_binding','entity_numbering_binding','entity_operation','entity_operation_context_requirement','entity_operation_field','entity_operation_permission','entity_operation_rule','entity_operation_scope_binding','entity_policy_binding','entity_predicate','entity_relation','entity_relation_field','entity_relation_target','entity_runtime_profile','entity_search_field','entity_search_profile','entity_surface','entity_surface_field_binding','entity_surface_navigation_group','entity_surface_operation','entity_surface_section','entity_surface_view','entity_surface_view_field','entity_target']||ARRAY['entity_change_set','entity_materialization_field_mapping'] LOOP
+ FOREACH member_table IN ARRAY ARRAY['entity_access_permission','entity_ai_binding','entity_ai_field','entity_ai_profile','entity_ai_reference','entity_ai_term','entity_authorization_profile','entity_capability','entity_field','entity_field_access','entity_field_choice','entity_field_policy_binding','entity_field_reference_binding','entity_flow','entity_flow_step','entity_key','entity_key_field','entity_label','entity_label_translation','entity_numbering_binding','entity_operation','entity_operation_context_requirement','entity_operation_field','entity_operation_permission','entity_operation_rule','entity_operation_scope_binding','entity_policy_binding','entity_predicate','entity_relation','entity_relation_field','entity_relation_target','entity_runtime_profile','entity_search_field','entity_search_profile','entity_surface','entity_surface_field_binding','entity_surface_navigation_group','entity_surface_operation','entity_surface_section','entity_surface_view','entity_surface_view_field','entity_target']||ARRAY['entity_change_set'] LOOP
   EXECUTE format('CREATE CONSTRAINT TRIGGER native_snapshot_final_guard AFTER INSERT OR UPDATE OR DELETE ON metadata.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.native_snapshot_final_guard()',member_table);
  END LOOP;
 END $$;

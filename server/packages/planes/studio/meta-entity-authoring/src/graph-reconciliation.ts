@@ -84,13 +84,6 @@ const keys: Record<GraphTable, readonly string[]> = {
   entity_flow_step: ["entity_flow_id", "step_key"],
   entity_policy_binding: ["binding_key"],
   entity_field_policy_binding: ["binding_key"],
-  entity_contract_test_case: ["test_key"],
-  entity_lifecycle_binding: ["binding_key"],
-  entity_lifecycle_operation_binding: [
-    "entity_lifecycle_binding_id",
-    "entity_operation_id",
-    "mapping_key",
-  ],
   entity_numbering_binding: [
     "entity_field_id",
     "entity_operation_id",
@@ -98,17 +91,11 @@ const keys: Record<GraphTable, readonly string[]> = {
   ],
   entity_operation_scope_binding: ["entity_operation_id", "binding_key"],
   entity_capability: ["capability_key"],
-  entity_change_case_binding: ["entity_operation_id", "binding_key"],
   entity_operation_context_requirement: [
     "entity_operation_id",
     "coordinate_key",
   ],
   entity_field_reference_binding: ["binding_key"],
-  entity_materialization_binding: ["binding_key"],
-  entity_materialization_field_mapping: [
-    "entity_materialization_binding_id",
-    "source_field_key",
-  ],
 };
 export const positionConstraints: Partial<Record<GraphWriteTable, string>> = {
   entity_ai_field: "entity_ai_field_logical_1_uq",
@@ -121,8 +108,6 @@ export const positionConstraints: Partial<Record<GraphWriteTable, string>> = {
   entity_surface_field_binding: "entity_surface_field_binding_position_uq",
   entity_surface_operation: "entity_surface_operation_position_uq",
   entity_flow_step: "entity_flow_step_position_uq",
-  entity_materialization_field_mapping:
-    "entity_materialization_field_mapping_position_uq",
 };
 export function snakeKey(key: string) {
   return key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);

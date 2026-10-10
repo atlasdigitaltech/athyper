@@ -120,3 +120,4 @@
 20261011_publication_archive_retirement.sql
 20261011_business_partner_studio_retirement.sql
 20261011_business_partner_delivery_bridge_retirement.sql
+20261011_native_optional_graph_retirement.sql

@@ -1,5 +1,5 @@
 {
-  "contractHash": "ac5d91460abcac0c85b110588dadb45a0332a21070e0f18b2f45f2907fd941c0",
+  "contractHash": "0bdc3e51d82df3abd13c64cb2702e5ba55f45b9ad38ab8e3f3e9c42d5063b0ee",
   "manifest": {
     "key": "entity.foundation-owned-labels/1",
     "scope": "owned-label-contract-and-scoped-persistence",
@@ -68,8 +68,7 @@
       "entity_operation_scope_binding",
       "entity_operation_field",
       "entity_authorization_profile",
-      "entity_field_access",
-      "entity_contract_test_case"
+      "entity_field_access"
     ],
     "gates": {
       "contractCoverage": "partial-labels-and-reference-members",

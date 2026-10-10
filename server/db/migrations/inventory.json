@@ -3070,6 +3070,16 @@
         "ddl/planes/neon/control/19_business_partner_delivery_bridge_retirement.sql",
         "ddl/planes/mesh/mesh/16_business_partner_delivery_bridge_retirement.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261011_native_optional_graph_retirement.sql",
+      "path": "migrations/20261011_native_optional_graph_retirement.sql",
+      "sha256": "d245e706db049aa5c50428d44df7531ee1d4c878106547622fc37d0b897f9af0",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire empty optional Entity graph storage while preserving the independent onboarding flow and numbering contracts.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/70_native_optional_graph_retirement.sql"]
     }
   ]
 }

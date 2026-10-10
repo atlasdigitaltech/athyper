@@ -13,7 +13,12 @@ it("keeps the closed SQL read inventory complete as the canonical legacy reader 
     (match) => match[1],
   );
   expect(tables.sort()).toEqual(
-    ["entity", ...Object.keys(BRANCH_COLUMNS)].sort(),
+    [
+      "entity",
+      ...Object.keys(BRANCH_COLUMNS).filter(
+        (table) => table !== "entity_flow" && table !== "entity_flow_step" && table !== "entity_numbering_binding",
+      ),
+    ].sort(),
   );
   expect(new Set(tables).size).toBe(tables.length);
 });
@@ -35,14 +40,11 @@ it("pins the atomic operational package without enrolling it in automatic plane 
   expect(createHash("sha256").update(source).digest("hex")).toBe(entry.sha256);
   expect(source.startsWith("BEGIN;\n")).toBe(true);
   expect(source.endsWith("COMMIT;\n")).toBe(true);
-  for (const file of [
-    "product-command-authority.sql",
-    "product-command-reader.sql",
-  ]) {
-    expect(source).toContain(
-      readFileSync(new URL(file, import.meta.url), "utf8"),
-    );
-  }
+  expect(source).toContain(
+    readFileSync(new URL("product-command-authority.sql", import.meta.url), "utf8"),
+  );
+  // The immutable operational package intentionally keeps the reader that was
+  // installed with it. New native reader composition is delivered separately.
   for (const plane of ["studio", "neon", "mesh"]) {
     expect(
       readFileSync(

@@ -23,20 +23,11 @@ DO $$ DECLARE t text; BEGIN
   'entity_operation_permission',
   'entity_surface_operation',
   'entity_operation_rule',
-  'entity_flow',
-  'entity_flow_step',
   'entity_policy_binding',
   'entity_field_policy_binding',
-  'entity_contract_test_case',
-  'entity_lifecycle_binding',
-  'entity_lifecycle_operation_binding',
-  'entity_numbering_binding',
   'entity_operation_scope_binding',
-  'entity_change_case_binding',
   'entity_operation_context_requirement',
-  'entity_field_reference_binding',
-  'entity_materialization_binding',
-  'entity_materialization_field_mapping'
+  'entity_field_reference_binding'
  ] LOOP
   IF NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='metadata' AND c.relname=t AND c.relrowsecurity AND c.relforcerowsecurity) THEN
@@ -67,19 +58,11 @@ DO $$ DECLARE t text; BEGIN
   'entity_operation_permission',
   'entity_surface_operation',
   'entity_operation_rule',
-  'entity_flow',
-  'entity_flow_step',
   'entity_policy_binding',
   'entity_field_policy_binding',
-  'entity_contract_test_case',
-  'entity_lifecycle_binding',
-  'entity_lifecycle_operation_binding',
-  'entity_numbering_binding',
   'entity_operation_scope_binding',
-  'entity_change_case_binding',
   'entity_operation_context_requirement',
-  'entity_field_reference_binding',
-  'entity_materialization_binding'
+  'entity_field_reference_binding'
  ] LOOP
   EXECUTE format('GRANT SELECT ON metadata.%I TO athyper_product_command_app',t);
   EXECUTE format('CREATE POLICY product_command_graph_read ON metadata.%I FOR SELECT TO athyper_product_command_app USING(tenant_id IS NULL AND entity_command_private.admitted(change_set_id))',t);
@@ -87,8 +70,7 @@ DO $$ DECLARE t text; BEGIN
  END LOOP;
 END $$;
 
-GRANT SELECT ON metadata.entity, metadata.entity_class_profile,
- metadata.entity_materialization_field_mapping TO athyper_product_command_app;
+GRANT SELECT ON metadata.entity, metadata.entity_class_profile TO athyper_product_command_app;
 CREATE POLICY product_command_entity_read ON metadata.entity FOR SELECT TO athyper_product_command_app
  USING(tenant_id IS NULL AND (
   EXISTS(SELECT 1 FROM metadata.entity_change_set c WHERE c.entity_id=entity.id AND entity_command_private.admitted(c.id))
@@ -103,13 +85,6 @@ CREATE POLICY product_command_class_read ON metadata.entity_class_profile FOR SE
 CREATE POLICY product_command_class_fence ON metadata.entity_class_profile AS RESTRICTIVE FOR SELECT TO athyper_product_command_app
  USING(EXISTS(SELECT 1 FROM metadata.entity_change_set c JOIN metadata.entity e ON e.id=c.entity_id
  WHERE e.entity_class=entity_class_profile.entity_class AND entity_command_private.admitted(c.id)));
-CREATE POLICY product_command_mapping_read ON metadata.entity_materialization_field_mapping FOR SELECT TO athyper_product_command_app
- USING(tenant_id IS NULL AND EXISTS(SELECT 1 FROM metadata.entity_materialization_binding b
- WHERE b.id=entity_materialization_binding_id AND b.tenant_id IS NULL AND entity_command_private.admitted(b.change_set_id)));
-CREATE POLICY product_command_mapping_fence ON metadata.entity_materialization_field_mapping AS RESTRICTIVE FOR SELECT TO athyper_product_command_app
- USING(tenant_id IS NULL AND EXISTS(SELECT 1 FROM metadata.entity_materialization_binding b
- WHERE b.id=entity_materialization_binding_id AND b.tenant_id IS NULL AND entity_command_private.admitted(b.change_set_id)));
-
 CREATE POLICY product_command_root_fence ON metadata.entity_change_set AS RESTRICTIVE FOR SELECT TO athyper_product_command_app
  USING(tenant_id IS NULL AND entity_command_private.admitted(id));
 DO $$ DECLARE t text; BEGIN

@@ -907,9 +907,6 @@ BEGIN
         + (SELECT count(*) FROM metadata.entity_capability WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_policy_binding WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_field_policy_binding WHERE change_set_id = p_change_set_id)
-        + (SELECT count(*) FROM metadata.entity_contract_test_case WHERE change_set_id = p_change_set_id)
-        + (SELECT count(*) FROM metadata.entity_lifecycle_binding WHERE change_set_id = p_change_set_id)
-        + (SELECT count(*) FROM metadata.entity_lifecycle_operation_binding WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_numbering_binding WHERE change_set_id = p_change_set_id)
     ) INTO v_graph_count;
 
@@ -951,23 +948,6 @@ BEGIN
        ) THEN
         RAISE EXCEPTION 'ENTITY_TENANT_FIELD_INVALID'
             USING ERRCODE = 'check_violation', DETAIL = 'runtime_profile.tenant_field_key';
-    END IF;
-
-    SELECT lifecycle.binding_key INTO v_problem_path
-      FROM metadata.entity_lifecycle_binding AS lifecycle
-     WHERE lifecycle.change_set_id = p_change_set_id
-       AND lifecycle.status = 'active'
-       AND lifecycle.required
-       AND NOT EXISTS (
-            SELECT 1
-              FROM metadata.entity_lifecycle_operation_binding AS operation_binding
-             WHERE operation_binding.entity_lifecycle_binding_id = lifecycle.id
-               AND operation_binding.status = 'active'
-       )
-     LIMIT 1;
-    IF FOUND THEN
-        RAISE EXCEPTION 'ENTITY_LIFECYCLE_OPERATION_REQUIRED'
-            USING ERRCODE = 'check_violation', DETAIL = 'lifecycle.' || v_problem_path;
     END IF;
 
     SELECT entity_key.key_key INTO v_problem_path
@@ -1362,35 +1342,10 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM control.policy_definition p WHERE p.id = NEW.policy_definition_id AND (p.tenant_id IS NULL OR p.tenant_id IS NOT DISTINCT FROM NEW.tenant_id)) THEN RAISE EXCEPTION 'Field policy binding must reference a global or same-tenant policy definition' USING ERRCODE = 'foreign_key_violation'; END IF;
         IF NEW.entity_operation_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM metadata.entity_operation x WHERE x.id = NEW.entity_operation_id AND x.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND x.entity_id = NEW.entity_id AND x.change_set_id = NEW.change_set_id) THEN RAISE EXCEPTION 'Field policy operation must belong to the same Entity graph' USING ERRCODE = 'foreign_key_violation'; END IF;
         IF NOT EXISTS (SELECT 1 FROM metadata.entity_field x WHERE x.id = NEW.entity_field_id AND x.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND x.entity_id = NEW.entity_id AND x.change_set_id = NEW.change_set_id) THEN RAISE EXCEPTION 'Field policy must reference a field in the same Entity graph' USING ERRCODE = 'foreign_key_violation'; END IF;
-    ELSIF TG_TABLE_NAME = 'entity_contract_test_case' THEN
-        IF NEW.entity_operation_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM metadata.entity_operation x WHERE x.id = NEW.entity_operation_id AND x.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND x.entity_id = NEW.entity_id AND x.change_set_id = NEW.change_set_id) THEN RAISE EXCEPTION 'Test operation must belong to the same Entity graph' USING ERRCODE = 'foreign_key_violation'; END IF;
-        IF NEW.entity_flow_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM metadata.entity_flow x WHERE x.id = NEW.entity_flow_id AND x.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND x.entity_id = NEW.entity_id AND x.change_set_id = NEW.change_set_id) THEN RAISE EXCEPTION 'Test flow must belong to the same Entity graph' USING ERRCODE = 'foreign_key_violation'; END IF;
     END IF;
     RETURN NEW;
 END;
 $$;
-
-CREATE OR REPLACE FUNCTION metadata.trg_validate_entity_lifecycle_binding()
-RETURNS trigger LANGUAGE plpgsql
-SET search_path = pg_catalog, metadata
-AS $$ BEGIN
-    IF TG_TABLE_NAME = 'entity_lifecycle_binding' THEN
-        IF NOT EXISTS (SELECT 1 FROM metadata.entity_field f WHERE f.id=NEW.entity_field_id
-          AND f.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND f.entity_id=NEW.entity_id
-          AND f.change_set_id=NEW.change_set_id AND f.status='active' AND f.cardinality <> 'many'
-          AND f.data_type IN ('string','enum')) THEN
-            RAISE EXCEPTION 'Lifecycle state field must be an active scalar string or enum in the same Entity graph' USING ERRCODE='foreign_key_violation';
-        END IF;
-    ELSE
-        IF NOT EXISTS (SELECT 1 FROM metadata.entity_lifecycle_binding b JOIN metadata.entity_operation o ON o.id=NEW.entity_operation_id
-          WHERE b.id=NEW.entity_lifecycle_binding_id AND b.tenant_id IS NOT DISTINCT FROM NEW.tenant_id
-          AND o.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND b.entity_id=NEW.entity_id AND o.entity_id=NEW.entity_id
-          AND b.change_set_id=NEW.change_set_id AND o.change_set_id=NEW.change_set_id) THEN
-            RAISE EXCEPTION 'Lifecycle operation mapping members must belong to the same Entity graph' USING ERRCODE='foreign_key_violation';
-        END IF;
-    END IF;
-    RETURN NEW;
-END $$;
 
 CREATE OR REPLACE FUNCTION metadata.trg_validate_entity_numbering_binding()
 RETURNS trigger

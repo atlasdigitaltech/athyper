@@ -426,9 +426,6 @@ it.skipIf(!enabled)(
         ],
         fields: [],
         operations: [],
-        tests: [
-          { key: "probe", assertion: "path_exists", path: "entity.entityCode" },
-        ],
       };
       await repository.replaceGraph({
         changeSetId: draftId,
@@ -447,31 +444,6 @@ it.skipIf(!enabled)(
       });
       expect(noOp.revision).toBe(1);
       expect(await repository.listDraftSaves(draftId)).toHaveLength(2); // previous rev 0, saved rev 1
-      const testBefore = (
-        await sql<
-          Record<string, unknown>
-        >`SELECT * FROM metadata.entity_contract_test_case WHERE change_set_id=${draftId}::uuid`.execute(
-          db,
-        )
-      ).rows[0]!;
-      await repository.replaceGraph({
-        changeSetId: draftId,
-        expectedRevision: 1,
-        actorId: c.created_by,
-        graph: {
-          ...saved,
-          tests: [{ key: "probe", assertion: "path_exists", path: "entity" }],
-        },
-      });
-      const testAfter = (
-        await sql<
-          Record<string, unknown>
-        >`SELECT * FROM metadata.entity_contract_test_case WHERE change_set_id=${draftId}::uuid`.execute(
-          db,
-        )
-      ).rows[0]!;
-      expect(testAfter.id).toBe(testBefore.id);
-      expect(testAfter.created_at).toEqual(testBefore.created_at);
       expect(await repository.readDraftSave(draftId, 1)).toEqual(history);
       await expect(
         repository.replaceGraph({
@@ -481,7 +453,7 @@ it.skipIf(!enabled)(
           graph: saved,
         }),
       ).rejects.toMatchObject({ code: "AUTHORING_REVISION_CONFLICT" });
-      expect(await repository.listDraftSaves(draftId)).toHaveLength(3);
+      expect(await repository.listDraftSaves(draftId)).toHaveLength(2);
       await expect(
         sql`DELETE FROM snapshot.entity_draft_save WHERE change_set_id=${draftId}::uuid`.execute(
           db,

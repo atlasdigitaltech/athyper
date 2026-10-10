@@ -32,20 +32,11 @@ export async function readReconciliationPlans(
   const plans: BranchPlan[] = [];
   // Parent draft lock must already be held. Stable table/row order is shared by all writers.
   for (const [table, rows] of branches) {
-    const stored =
-      table === "entity_materialization_field_mapping"
-        ? await sql<{
-            value: StoredRow;
-          }>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
-          JOIN metadata.entity_materialization_binding b ON b.id=t.entity_materialization_binding_id
-          AND b.tenant_id IS NOT DISTINCT FROM t.tenant_id WHERE b.change_set_id=${id}::uuid ORDER BY t.id`.execute(
-            db,
-          )
-        : await sql<{
-            value: StoredRow;
-          }>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
-            db,
-          );
+    const stored = await sql<{
+      value: StoredRow;
+    }>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
+      db,
+    );
     plans.push(
       planBranch(
         table,
@@ -60,10 +51,7 @@ function scope(
   table: GraphWriteTable,
   c: GraphCoordinate,
 ): RawBuilder<unknown> {
-  return table === "entity_materialization_field_mapping"
-    ? sql`tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid AND entity_materialization_binding_id IN
-      (SELECT id FROM metadata.entity_materialization_binding WHERE change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid)`
-    : sql`change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid`;
+  return sql`change_set_id=${c.change_set_id}::uuid AND entity_id=${c.entity_id}::uuid AND tenant_id IS NOT DISTINCT FROM ${c.tenant_id}::uuid`;
 }
 const arrayColumns = new Map<string, string>();
 for (const d of [
@@ -274,13 +262,9 @@ export async function writeReconciliationPlans(
         ? sectionsInDependencyOrder(plan.insert)
         : plan.insert;
     for (const row of inserts) {
-      const coordinate =
-        plan.table === "entity_materialization_field_mapping"
-          ? { tenant_id: c.tenant_id, created_by: c.created_by }
-          : c;
       const entries = Object.entries({
         ...row.values,
-        ...coordinate,
+        ...c,
         id: row.id,
       });
       await sql`INSERT INTO ${sql.table(`metadata.${plan.table}`)} (${sql.join(entries.map(([key]) => sql.ref(key)))})

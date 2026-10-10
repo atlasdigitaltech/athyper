@@ -96,6 +96,7 @@ import {
 } from "./deterministic.js";
 import { parseEntityRegistration } from "./entity-registration.js";
 import { cloneGraphIds } from "./graph-identity.js";
+import { assertNoRetiredNativeGraphBranches } from "./retired-native-graph-branches.js";
 
 type Database = Record<string, never>;
 interface JsonRow {
@@ -1229,16 +1230,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
               WHERE t.change_set_id=${id}::uuid ORDER BY t.id`.execute(
                 this.database,
               )
-            : table === "entity_materialization_field_mapping"
-              ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
-              JOIN metadata.entity_materialization_binding b ON b.id=t.entity_materialization_binding_id
-                AND b.tenant_id IS NOT DISTINCT FROM t.tenant_id
-              WHERE b.change_set_id=${id}::uuid ORDER BY t.id`.execute(
-                  this.database,
-                )
-              : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
-                  this.database,
-                );
+            : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
+                this.database,
+              );
       return result.rows.map((row) => object(row.value));
     };
     const branch = async <T extends object>(
@@ -1306,45 +1300,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       operationPermissions: await branch("entity_operation_permission"),
       operationRules: await branch("entity_operation_rule"),
       operationScopeBindings: await branch("entity_operation_scope_binding"),
-      changeCaseBindings: await branch("entity_change_case_binding"),
       operationContextRequirements: await branch(
         "entity_operation_context_requirement",
       ),
       fieldReferenceBindings: await branch("entity_field_reference_binding"),
-      materializationBindings: await branch("entity_materialization_binding"),
-      materializationFieldMappings: await branch(
-        "entity_materialization_field_mapping",
-      ),
       surfaces: await branch("entity_surface"),
       surfaceSections: await branch("entity_surface_section"),
       surfaceFieldBindings: await branch("entity_surface_field_binding"),
       surfaceOperations: await branch("entity_surface_operation"),
       flows: await branch("entity_flow"),
       flowSteps: await branch("entity_flow_step"),
-      lifecycleBindings: await branch("entity_lifecycle_binding"),
-      lifecycleOperationBindings: await branch(
-        "entity_lifecycle_operation_binding",
-      ),
       policyBindings: await branch("entity_policy_binding"),
       capabilities: await branch("entity_capability"),
       fieldPolicyBindings: await branch("entity_field_policy_binding"),
       numberingBindings: await branch("entity_numbering_binding"),
-      tests: (await rows("entity_contract_test_case")).map((row) => {
-        const context = object(row["input_context"]);
-        return {
-          key: String(row["test_key"]),
-          assertion: (context["assertion"] === "learning_fixture_set"
-            ? "learning_fixture_set"
-            : context["assertion"] === "path_equals"
-              ? "path_equals"
-              : "path_exists") as
-            "learning_fixture_set" | "path_exists" | "path_equals",
-          path: String(context["path"] ?? ""),
-          ...(context["expected"] !== undefined
-            ? { expected: context["expected"] }
-            : {}),
-        };
-      }),
     };
   }
   async replaceGraph(
@@ -1783,6 +1752,7 @@ async function replaceGraphInTransaction(
         "Entity class profiles are immutable platform-owned defaults",
       );
   }
+  assertNoRetiredNativeGraphBranches(input.graph);
   const locked = required(
     (
       await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.id=${input.changeSetId}::uuid FOR UPDATE OF cs`.execute(
@@ -1845,17 +1815,11 @@ async function replaceGraphInTransaction(
     ["entity_operation_permission", input.graph.operationPermissions],
     ["entity_operation_rule", input.graph.operationRules],
     ["entity_operation_scope_binding", input.graph.operationScopeBindings],
-    ["entity_change_case_binding", input.graph.changeCaseBindings],
     [
       "entity_operation_context_requirement",
       input.graph.operationContextRequirements,
     ],
     ["entity_field_reference_binding", input.graph.fieldReferenceBindings],
-    ["entity_materialization_binding", input.graph.materializationBindings],
-    [
-      "entity_materialization_field_mapping",
-      input.graph.materializationFieldMappings,
-    ],
     ["entity_surface_section", input.graph.surfaceSections],
     ["entity_surface_field_binding", input.graph.surfaceFieldBindings],
     ["entity_surface_operation", input.graph.surfaceOperations],
@@ -1864,25 +1828,7 @@ async function replaceGraphInTransaction(
     ["entity_policy_binding", input.graph.policyBindings],
     ["entity_capability", input.graph.capabilities],
     ["entity_field_policy_binding", input.graph.fieldPolicyBindings],
-    ["entity_lifecycle_binding", input.graph.lifecycleBindings],
-    [
-      "entity_lifecycle_operation_binding",
-      input.graph.lifecycleOperationBindings,
-    ],
     ["entity_numbering_binding", input.graph.numberingBindings],
-    [
-      "entity_contract_test_case",
-      input.graph.tests?.map((test) => ({
-        testKey: test.key,
-        testKind: "compilation",
-        title: test.key,
-        inputContext: {
-          assertion: test.assertion,
-          path: test.path,
-          ...(test.expected !== undefined ? { expected: test.expected } : {}),
-        },
-      })),
-    ],
   ];
   const plans = await readReconciliationPlans(db, input.changeSetId, branches);
   if (!plans.some(changed)) return;

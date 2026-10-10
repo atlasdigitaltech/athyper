@@ -29,11 +29,10 @@ BEGIN
    'entity','entity_change_set','entity_release','entity_runtime_profile','entity_field','entity_key','entity_key_field',
    'entity_search_profile','entity_search_field','entity_relation','entity_relation_target','entity_relation_field',
    'entity_operation','entity_operation_permission','entity_operation_rule','entity_operation_scope_binding',
-   'entity_operation_context_requirement','entity_change_case_binding','entity_field_reference_binding',
-   'entity_materialization_binding','entity_materialization_field_mapping','entity_surface','entity_surface_section',
-   'entity_surface_field_binding','entity_surface_operation','entity_flow','entity_flow_step','entity_lifecycle_binding',
-   'entity_lifecycle_operation_binding','entity_policy_binding','entity_capability','entity_field_policy_binding',
-   'entity_numbering_binding','entity_contract_test_case'] LOOP
+   'entity_operation_context_requirement','entity_field_reference_binding','entity_surface','entity_surface_section',
+   'entity_surface_field_binding','entity_surface_operation','entity_flow','entity_flow_step',
+   'entity_policy_binding','entity_capability','entity_field_policy_binding',
+   'entity_numbering_binding'] LOOP
    EXECUTE format('GRANT SELECT ON metadata.%I TO athyper_control_api',t);
    EXECUTE format('DROP POLICY IF EXISTS control_product_read ON metadata.%I',t);
    EXECUTE format('CREATE POLICY control_product_read ON metadata.%I FOR SELECT TO athyper_control_api USING(tenant_id IS NULL)',t);

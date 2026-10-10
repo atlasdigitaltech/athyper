@@ -34,7 +34,6 @@ export const requiredReferenceTables = [
   "entity_operation_field",
   "entity_authorization_profile",
   "entity_field_access",
-  "entity_contract_test_case",
 ] as const;
 
 export const referenceFoundationGates = {

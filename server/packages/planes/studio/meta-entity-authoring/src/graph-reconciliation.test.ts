@@ -75,11 +75,11 @@ it("legacy omitted IDs resolve only the same scoped logical member", () => {
   ).toBe("field-a");
   expect(
     planBranch(
-      "entity_contract_test_case",
-      [{ testKey: "test", title: "Changed" }],
-      [{ id: "test-id", test_key: "test", title: "Original" }],
+      "entity_flow",
+      [{ flowKey: "flow", title: "Changed" }],
+      [{ id: "flow-id", flow_key: "flow", title: "Original" }],
     ).update[0]?.id,
-  ).toBe("test-id");
+  ).toBe("flow-id");
 });
 it("rejects duplicate identities/coordinates and implicit identity replacement", () => {
   expect(() =>

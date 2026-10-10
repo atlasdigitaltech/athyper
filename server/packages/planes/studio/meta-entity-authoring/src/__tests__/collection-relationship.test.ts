@@ -75,7 +75,7 @@ it("rejects an unsupported historical field property before any graph write", as
   const repository = new KyselyMetaEntityAuthoringRepository(db);
   try {
     await expect(repository.replaceGraph({ changeSetId: "change", expectedRevision: 1, actorId: "actor",
-      graph: { ...candidate, classProfiles: [] } })).rejects.toThrow("entity_field.nullSemantics");
+      graph: { ...candidate, classProfiles: [], tests: [] } })).rejects.toThrow("entity_field.nullSemantics");
     expect(serializedBinding).toBe(false);
     expect(tables.size).toBe(0);
     expect(saves.size).toBe(0);

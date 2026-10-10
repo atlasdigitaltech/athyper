@@ -98,18 +98,17 @@ REVOKE ALL ON metadata.entity_surface, metadata.entity_surface_section,
     metadata.entity_operation_permission FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION metadata.trg_validate_entity_surface_binding() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION metadata.trg_validate_entity_operation_references() FROM PUBLIC;
-REVOKE ALL ON metadata.entity_surface_component_binding FROM PUBLIC;
 
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE ON metadata.entity_surface,
-            metadata.entity_surface_section, metadata.entity_surface_field_binding, metadata.entity_surface_component_binding,
+            metadata.entity_surface_section, metadata.entity_surface_field_binding,
             metadata.entity_operation, metadata.entity_operation_permission TO athyperapp;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON metadata.entity_surface, metadata.entity_surface_section,
-            metadata.entity_surface_field_binding, metadata.entity_surface_component_binding, metadata.entity_operation,
+            metadata.entity_surface_field_binding, metadata.entity_operation,
             metadata.entity_operation_permission TO athyperadmin;
     END IF;
 END;
@@ -117,25 +116,19 @@ $$;
 
 REVOKE ALL ON metadata.entity_surface_operation, metadata.entity_operation_rule,
     metadata.entity_flow, metadata.entity_flow_step, metadata.entity_capability, metadata.entity_policy_binding,
-    metadata.entity_field_policy_binding, metadata.entity_contract_test_case FROM PUBLIC;
+    metadata.entity_field_policy_binding FROM PUBLIC;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON metadata.entity_surface_operation, metadata.entity_operation_rule,
     metadata.entity_flow, metadata.entity_flow_step, metadata.entity_capability, metadata.entity_policy_binding,
-    metadata.entity_field_policy_binding, metadata.entity_contract_test_case TO athyperapp;
+    metadata.entity_field_policy_binding TO athyperapp;
 
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE ON metadata.entity_surface_operation, metadata.entity_operation_rule,
             metadata.entity_flow, metadata.entity_flow_step, metadata.entity_capability, metadata.entity_policy_binding,
-            metadata.entity_field_policy_binding, metadata.entity_contract_test_case TO athyperadmin;
+            metadata.entity_field_policy_binding TO athyperadmin;
     END IF;
 END $$;
-
-REVOKE ALL ON metadata.entity_lifecycle_binding,metadata.entity_lifecycle_operation_binding FROM PUBLIC;
-GRANT SELECT,INSERT,UPDATE,DELETE ON metadata.entity_lifecycle_binding,metadata.entity_lifecycle_operation_binding TO athyperapp;
-DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
-  GRANT SELECT,INSERT,UPDATE,DELETE ON metadata.entity_lifecycle_binding,metadata.entity_lifecycle_operation_binding TO athyperadmin;
-END IF; END $$;
 
 REVOKE ALL ON metadata.entity_numbering_binding FROM PUBLIC;
 GRANT SELECT,INSERT,UPDATE,DELETE ON metadata.entity_numbering_binding TO athyperapp;
@@ -167,8 +160,8 @@ GRANT SELECT ON metadata.pii_inventory TO athyperapp;
 DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON metadata.pii_inventory TO athyperadmin; END IF; END $$;
 
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['entity_change_case_binding','entity_operation_context_requirement',
-    'entity_field_reference_binding','entity_materialization_binding','entity_materialization_field_mapping'] LOOP
+  FOREACH t IN ARRAY ARRAY['entity_operation_context_requirement',
+    'entity_field_reference_binding'] LOOP
     EXECUTE format('REVOKE ALL ON metadata.%I FROM PUBLIC,athyperapp',t);
     EXECUTE format('GRANT SELECT ON metadata.%I TO athyperapp',t);
     EXECUTE format('GRANT ALL ON metadata.%I TO athyperadmin',t);
