@@ -181,7 +181,7 @@ matrix?: {
 | **Dense cells** | Display presets derived from the declaration, with no metadata: "Price and rank" (the primary measure and its rank), "Everything". The primary measure stays first | M1 |
 | **Key metadata unavailable** | `LIST_MATRIX_KEY_UNAVAILABLE` in `unavailableModes`; the list shows Table, as every unavailable layout does | M1 |
 | **A cell filter** | With a fact-level filter applied, an empty cell shows "—" (the line may exist) instead of the absence label | M1 |
-| **"Lowest on n items" in the header** | Deferred: it needs a small server aggregate beside `rankWithin`, and is a later decision | — |
+| **"Lowest on n items" in the header** | Deferred: it needs a small server aggregate beside `rankWithin`, and is a later decision. **Not part of the Aggregate blueprint's A6 (10 October 2026, Aggregate decision 29, amending its decision 12):** A6 orders the groups of a level by a measure, while this counts, per column, the items whose rank is first, an aggregate over `rankWithin`'s ranks. The two share only the principle "computed on the server across every readable record". This item is designed here as an extension of `rankWithin` when the owner takes it up | — |
 | **Best in Compare is not rank in the Matrix** | The Compare panel says that "Best" is among the 2–4 chosen, and the Matrix ranks every visible participant | C4 |
 
 ### 5.4 Build-time specifics (revision 3, recorded at the start of the M1/M2 build)

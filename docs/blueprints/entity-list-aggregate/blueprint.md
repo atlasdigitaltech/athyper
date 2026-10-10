@@ -1,6 +1,7 @@
 # Entity list Aggregate (Summary) — blueprint
 
-**Status:** approved, revision 11 (10 October 2026).
+**Status:** approved, revision 12 (10 October 2026).
+- **A6 approved as revised (10 October 2026), not built.** The owner, after audit round 15: "approved A6 as revised, including the amended decision 12 separating "lowest on n items" back to Matrix, with the three implementation details above written into the design". The design is section 7.5; decisions 29–34 are in section 14, and decision 12 is amended there. "Lowest on n items" returns to the [Matrix blueprint](../entity-list-matrix/blueprint.md).
 - **Decision 35 approved and built (10 October 2026):** "The decision on 35 and the A5.3 fix also approved". A measure that declares `minimumGroupSize` never gets "Others" in the chart. Its own commit, independent of A6 (13.9, build note 3).
 - **A5.3 built (10 October 2026), on synthetic fixtures:** "go ahead with Next: A5.3". Summary has its Table | Chart toggle, its chart adapter and decision 14's published choice order. Section 13.9 records the build. No real Entity uses Summary yet, because A0 and A3 wait for the metadata cleanup.
 - **The shared chart moved to its own blueprint (10 October 2026).** On the owner's instruction ("go ahead"), the reusable chart moved verbatim to the [Chart blueprint](../chart/blueprint.md) in a move-only commit (`6d9510f29`). That covers its data contract, component, colour tokens, "Others" rule and other consumers, with decisions 9, 10, 11, 13 and 15. This document keeps how Summary uses it: 13.6, A5.3, decisions 12 and 14, and A6. **Coupled:** a change to the chart contract that Summary relies on updates both documents together.
@@ -403,6 +404,80 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
 - Every response carries `revision`, a digest of the aggregated set's count and latest change, as Matrix's rank revision does.
 - An expansion's `parent` row replaces the row drawn from the earlier response. If a revision differs from the opening's, the Summary shows "Values changed since this summary opened. Refresh to see current totals." It never mixes revisions silently.
 
+### 7.5 Top / Bottom N (A6; approved, not built)
+
+**Why.** A level shows its first 50 groups by key, so the question "which 10 suppliers had the highest spend" has no answer. Sorting the 50 groups already loaded would look right and be wrong (section 18). A6 orders groups by a measure on the server, across every group the viewer can read, before the cap.
+
+**What the code already does.**
+- The flat Summary statement (`groupBuckets`) aggregates every group in its `GROUPING SETS` before its `ORDER BY … LIMIT`. Ordering by a measure changes the sort over groups already computed and adds no second scan. Acceptance measures this; it is not assumed.
+- The authorized-aggregate path calls the same repository list over the authorized identities, so the ordering travels with the query on both paths. The 2,000-record capacity refusal still applies (section 17).
+
+**Request: new parameters on the existing list operation** (no new endpoint):
+
+| Parameter | Meaning |
+| --- | --- |
+| `groupOrder=<measureKey>:desc\|asc` | Order level 1's groups by this measure, which must be `count` or in the request's `aggregate` list |
+| `groupLimit=5\|10\|20\|50` | Keep the first N ranked groups. The maximum is `LIST_GROUP_LIMIT` |
+
+- Ties are broken by the group key, so a page reloads the same way.
+- Without `groupOrder`, nothing changes: key order, or the published choice order (decision 14).
+
+**Orderable measures and refusals (decision 31).**
+- **Orderable:** the record count; a distinct count; an additive sum in one currency; a semi-additive sum grouped by its own time field; an average, minimum or maximum (each group's own value).
+- **Refused for the whole level,** decided from the measure's state on the parent total in the same statement:
+  - the total spans currencies: `LIST_AGGREGATE_ORDER_MIXED_CURRENCY`;
+  - the total has an unknown currency: `LIST_AGGREGATE_ORDER_UNKNOWN_CURRENCY`;
+  - the total is not summable at this level: `LIST_AGGREGATE_ORDER_NOT_SUMMABLE`.
+- **Deliberately conservative.** The parent total spans currencies whenever any group does, and also whenever groups differ from each other. The order is therefore refused even when every group is single-currency and valid on its own. Ranking amounts in different currencies has no meaning however well each one is defined, and there is never a partial ranking that silently leaves groups out.
+- A refusal reaches the picker as its reason. The order never silently changes.
+
+**Response.** It keeps `groups`, `parentGroup` and `groupsTruncated`, and gains:
+- `groupOrder`: the order applied, echoed back;
+- `groupCount`: the exact number of **ranked** groups;
+- `groupsUnranked`: how many groups were below the measure's floor and took no position;
+- `groupOrderTieAtCut`: true when the first ranked group past N has the same value as the N-th.
+
+**Totals are unchanged.** The parent total still covers every record, and the grid still has no "Others" row (7.2). The chart's "Others" works as in A5.3 except for a measure with a floor (decision 35).
+
+**Implementation constraints** (written in on approval; a build that misses one passes its own tests and is wrong):
+1. **No value is never dropped by a cap, under any ordering.** Today it survives only because of `ORDER BY 1 ASC NULLS FIRST`. Under `groupOrder` the guarantee lives in the sort key: `ORDER BY "__total" DESC, (__group_key IS NULL) DESC, <measure> DESC|ASC NULLS LAST, __group_key ASC`. No value is fetched first, never ranked, and drawn last, in one pass. The tie flag and `groupCount` read ranked groups only.
+2. **A value that must not be shown must not influence an ordering.** The floor (`minimumGroupSize`) is on the group's **record count**, which the statement already computes as `count(*)`. Groups below it are kept out of the ranked rows in SQL, before the sort, and counted in `groupsUnranked`. They are never placed and never named; the view says "n groups are too small to rank". The service's `applyAggregateRules` keeps marking cells `suppressed` as it does today. Ranking in the database and suppressing only in the service would leak positions.
+3. **`groupCount` counts ranked groups and nothing else.**
+   - **Flat statement:** a window count over the grouping-set output would include the grand total row (`GROUPING(__group_key) = 1`), No value and groups below the floor. "Top 10 of 38" would then be wrong by one in every response, which looks plausible and is caught only by hand-counting. The count is taken over ranked group rows only.
+   - **Pivot statement:** the row cap is not in the grouping sets. It is the `"__rows"` CTE (today `GROUP BY 1 ORDER BY 1 ASC LIMIT 51` over `"__src"`, with nulls excluded), which the `HAVING` then matches.
+     - The ranking therefore moves into `"__rows"`: it groups `"__src"` by the row key, which gives each row's total across all columns. It applies the floor there, orders by the measure, and takes `count(*) OVER ()` for `groupCount`.
+     - `GROUPING(__group_key) = 0` alone would not isolate the row totals, because cell rows `(group, pivot)` match it too. The CTE has only row-level groups by construction.
+   - **Wording:** "Top 10 of 37 {dimension} by {measure}" appears only when `groupCount` is present; otherwise it reads "Top 10 {dimension} by {measure}". This is the same exactness rule as every count in the list's chrome.
+
+**Invariants**, each with a test:
+1. No value is never dropped by a cap, under any ordering.
+2. A value that must not be shown must not influence an ordering.
+3. A Top-N response stays within 7.2's bound: (50 + 4) × (12 + 1) × 5 = 3,510 ≤ `LIST_AGGREGATE_MAX_CELLS` (3,600). `groupLimit` never exceeds 50, so the constant needs no change.
+
+**Scope (decision 33).**
+- **Level 1 only.** Expanded levels keep their order; nested Top N needs a later decision.
+- **With a column dimension,** rows are ranked by their row total across all columns, and columns keep their order and their 12-column cap.
+
+**State, URL and view (decision 34).**
+- **State:** saved state gains `aggregate.order { measure, direction, limit }`. The URL keys are `aggregate.orderBy`, `aggregate.direction` and `aggregate.top`.
+- **One "Rows" control** offers "By {dimension}" (the default), and "Highest {measure}" and "Lowest {measure}" for each orderable measure. A refused measure is disabled, with its reason.
+- **"Show 5 / 10 / 20 / 50"** appears only once an order is chosen; a limit without an order is just today's cap.
+- **Messages:** when groups are held back below the floor, a note says "n groups are too small to rank". A tie at the cut-off says "Another group has the same value as the last one shown".
+- **Chart:** its categories follow the ranking, and its caption reads "Top 10 {dimension} by {measure}".
+
+**Acceptance**
+- **Real-PostgreSQL tests:**
+  - descending and ascending order;
+  - ties at the cut-off, broken by key;
+  - **a No value bucket survives a Top 10 over 500 groups;**
+  - a group below the floor never appears in or shifts the ranking, and is counted;
+  - `groupCount` equals the true number of distinct ranked group values. The reason for this test is the grand-total exclusion;
+  - the three whole-level refusals;
+  - a column dimension ranked by row total, with `groupCount` taken from `"__rows"`;
+  - the authorized-aggregate path with its capacity refusal.
+- **Cost:** the statement measured against A2's numbers (5.9), and on A3's volume once A3 runs.
+- **Other tests:** contract tests for the parameters, the state and the URL round trip; jsdom tests; and browser tests for a top 10 in the grid and the chart, a bottom 5, the tie notice, the held-back notice and a phone.
+
 ## 8. Totals, additivity and currency
 
 ### 8.1 Totals from base rows
@@ -567,11 +642,11 @@ The status block of this document records each step as it is built.
 **Build notes**
 
 1. **One unit per chart.** When the charted values span more than one currency, every value point is shown as "In more than one currency" and nothing is charted. Plotting MYR and EUR on one axis would be wrong, and the grid still shows each row's own figure.
+2. **The chart is laid out at its measured width,** with a `ResizeObserver` in the shared component (recorded in the Chart blueprint, 13.4a.13). Before this, the SVG scaled with the page, and at desktop width its text doubled in size.
 3. **Decision 35: no "Others" for a measure with a floor (fix, 10 October 2026).**
    - The remainder (total minus the shown groups) can be exactly one held-back group. "Others" would then draw that group's hidden value, labelled, doing the differencing that section 9.3 accepts only as something a viewer might work out alone.
    - The adapter therefore gives no `rest` when the measure declares `minimumGroupSize`. It is a condition on the declaration, decided before any arithmetic, so the same measure always behaves the same way.
    - A truncated pie of such a measure is unavailable (`CHART_TRUNCATED`). The test is "decision 35: no Others for a measure with a floor".
-2. **The chart is laid out at its measured width,** with a `ResizeObserver` in the shared component (recorded in the Chart blueprint, 13.4a.13). Before this, the SVG scaled with the page, and at desktop width its text doubled in size.
 
 **Verified**
 
@@ -619,7 +694,16 @@ Audit round 3 recommended approving decisions 1–6 unchanged; the owner approve
 
 **Raised for A5 (revision 6; all seven approved on 10 October 2026, status block):**
 
-12. **Top / Bottom N as its own phase, A6, after A5.** It is a server capability that orders groups by a measure across every group the viewer can read. Matrix's deferred "Lowest on n items" needs the same capability, so it is designed once for both (section 17). Until then, a chart shows the first groups by key, says so, and offers no "top N".
+12. **Top / Bottom N as its own phase, A6, after A5.** It is a server capability that orders groups by a measure across every group the viewer can read. Until then, a chart shows the first groups by key, says so, and offers no "top N". **Amended by decision 29 (10 October 2026):** "Lowest on n items" is not the same operation. It counts, per column, the items whose rank is first, which is an aggregate over `rankWithin`'s ranks, not an ordering of groups. It returns to the Matrix blueprint. The two share only the principle "computed on the server across every readable record".
+
+**A6 (approved as revised, 10 October 2026; section 7.5; not built):**
+
+29. **A6 covers Summary only.** "Lowest on n items" returns to the Matrix blueprint as an extension of `rankWithin`, a later Matrix decision. This amends decision 12.
+30. **The server orders groups across every group the viewer can read,** with `groupOrder` and `groupLimit` (5, 10, 20 or 50). Ties are broken by key. The cell bound is unchanged.
+31. **Orderable measures, and refusals for the whole level** (mixed currency, unknown currency, not summable), decided from the parent total in the same statement. The refusal is deliberately conservative.
+32. **Withheld values never rank.** Groups below the floor are kept out in SQL, before the sort, and only counted. No value is fetched first, never ranked, and drawn last.
+33. **Level 1 only.** Nested Top N needs a later decision.
+34. **State, URL keys, the single Rows control,** and wording gated on an exact `groupCount` of ranked groups only.
 35. **No "Others" for a measure that declares `minimumGroupSize`** (approved and built, 10 October 2026; 13.9, build note 3). It closes a live exposure in A5.3 and also governs A6.
 14. **Summary rows follow the published choice order** for a choice or boolean dimension, as grouped Table does, so the grid, its chart and grouped Table agree. References and date buckets keep the server's order.
 
@@ -659,7 +743,7 @@ Foundation section 9's policy gates run before each commit.
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated`. Built before A3 by the owner's approval (status block), with three conditions: a real-PostgreSQL test of its own SQL path; acceptance that measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS` and the statement's cost; and A3 kept as the gate before any real Entity publishes a pivot | A1. A3 gates publication on a real Entity, not the build |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
 | **A5** | The reusable chart and Summary's use of it, in three steps. A5.1 (chart colour tokens) and A5.2 (the chart contract and component) are specified and recorded in the [Chart blueprint](../chart/blueprint.md); A5.3 (Summary adoption with the published choice order) is here (section 13.8) | A2; decisions 9–15 approved |
-| **A6** | Top / Bottom N: a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. Matrix's deferred "Lowest on n items" uses the same capability. **It inherits the aggregate's authorization constraint:** on an Entity whose record authorization is not SQL-covered, it runs on the authorized-aggregate path, with its 2,000-record capacity refusal. Its acceptance states which path each adopting Entity takes | A5; its own approval, acceptance criteria and real-PostgreSQL test |
+| **A6** | Top / Bottom N (section 7.5; decisions 29–34, approved): a server capability ordering groups by a measure across every group the viewer can read, with the same scope, filters and authorization as the aggregate, and the row cap, totals and paging rules restated for it. "Lowest on n items" is not part of it (decision 29). **It inherits the aggregate's authorization constraint:** on an Entity whose record authorization is not SQL-covered, it runs on the authorized-aggregate path, with its 2,000-record capacity refusal. Its acceptance states which path each adopting Entity takes | A5; its own approval, acceptance criteria and real-PostgreSQL test |
 | — | Approval assignment fact | Owner instruction on a typed per-approver workflow row (AGENTS.md: this work does not authorize workflow/case execution) |
 | — | FX report currency; Dashboard; summary-grid export | Separate approvals |
 
@@ -740,3 +824,11 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 8 | No value is protected by the row cap but not the column cap | Recorded (5.9 point 3) |
 | Audit round 9 | Name the test that refutes the rejected source restriction | Recorded (5.9 point 7) |
 | Audit round 10 | A6 inherits the aggregate's authorization constraint and 2,000-record capacity | Recorded in A6's row (section 17) |
+| Owner (10 October 2026) | "approved A6 as revised …", and "The decision on 35 and the A5.3 fix also approved" | A6 written as section 7.5 with decisions 29–34; decision 35 built (`db98f0ed3`) |
+| Audit round 15 | No value is protected only by the key order A6 replaces | Adopted: implementation constraint 1, with the sort key instead of a `UNION` (the audit withdrew the `UNION`) |
+| Audit round 15 | Suppression runs after the query | Adopted, corrected: the floor is on the record count, so it moves into SQL (constraint 2) |
+| Audit round 15 | "of 37" needs an exact count | Adopted, and extended: `groupCount` from a window count of ranked groups only (constraint 3) |
+| Audit round 15 | The mixed-currency refusal should cover the whole level | Adopted, plus unknown currency, recorded as deliberately conservative |
+| Audit round 15, second note | `groupCount` would include the grand-total row; the pivot's ranked rows are ambiguous | Adopted, corrected: in the pivot the row cap is the `"__rows"` CTE, not a grouping set, so the ranking and count move there (`GROUPING(__group_key) = 0` also matches cell rows) |
+| Author, round 15 | "Others" does the differencing for the viewer when exactly one group is held back | Decision 35, built as its own commit |
+
