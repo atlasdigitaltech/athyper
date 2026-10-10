@@ -15,6 +15,7 @@ import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { Button, SegmentedControl } from "@athyper/platform-ui";
 import { resolveCardLayout } from "../card-content";
 import type { ListWidthTier } from "../presentation-tier";
+import { labelledText } from "../composite-text";
 import { BoardLaneColumn } from "./board-lane";
 import { boardCounts, boardDistribution, boardLanes, laneFilterFits } from "./board-model";
 
@@ -197,7 +198,7 @@ function BoardDistribution({
     <div className="a-entity-board__distribution">
       <div className="a-entity-board__bar" aria-hidden="true">
         {lanes.map(({ lane, count }) => (
-          <i key={lane.key} data-tone={lane.tone} style={{ flexGrow: count }} title={`${lane.label}: ${count}`} />
+          <i key={lane.key} data-tone={lane.tone} style={{ flexGrow: count }} title={labelledText(intl, lane.label, intl.number(count))} />
         ))}
       </div>
       <ul className="a-entity-board__legend" aria-label={intl.message("list.board.distribution", { field })}>

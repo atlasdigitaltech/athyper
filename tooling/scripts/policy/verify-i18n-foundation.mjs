@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { analyzeUserFacingLiterals, LITERAL_ALLOWLIST, LOCALIZED_DIRECTORIES } from "./user-facing-literals.mjs";
 
 const root = new URL("../../../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
@@ -32,6 +34,8 @@ for (const plane of ["studio", "neon", "mesh"]) {
   const manifest = read(`server/db/ddl/planes/${plane}/_manifest.txt`);
   for (const entry of ["common/shared/03_tables.sql", "common/control/03_tables.sql", "common/control/12_ui_locale_catalog_seed.sql"]) if (!manifest.includes(entry)) violations.push(`${plane} DDL manifest is missing ${entry}`);
 }
+
+violations.push(...analyzeUserFacingLiterals({ root: fileURLToPath(root), directories: LOCALIZED_DIRECTORIES, allowlist: LITERAL_ALLOWLIST }));
 
 if (violations.length) {
   console.error("i18n foundation policy failed:\n" + violations.map((item) => `- ${item}`).join("\n"));
