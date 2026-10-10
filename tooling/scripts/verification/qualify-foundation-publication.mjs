@@ -30,7 +30,6 @@ const host = [
   "src/composition/shared/verification-permissions.test.ts",
   "src/composition/shared/publication/__tests__/table-entity-publication.test.ts",
   "src/composition/shared/publication/__tests__/entity-authorization-activation.test.ts",
-  "src/composition/shared/publication/provenance-recovery.test.ts",
 ];
 
 // Fixed, reviewed commands; no deployed target or caller-supplied executable.

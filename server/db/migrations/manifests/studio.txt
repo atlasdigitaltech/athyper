@@ -117,3 +117,4 @@
 20261010_imported_baseline_retirement.sql
 20261010_runtime_restoration_retirement.sql
 20261010_retired_baseline_activation.sql
+20261011_publication_archive_retirement.sql

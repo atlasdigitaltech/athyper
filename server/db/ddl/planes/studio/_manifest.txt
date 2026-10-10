@@ -250,9 +250,7 @@ planes/studio/metadata/12_activation_acknowledgement.sql
 planes/studio/metadata/14_publication_payload_hash.sql
 planes/studio/metadata/67_imported_baseline_retirement.sql
 planes/studio/metadata/68_runtime_restoration_retirement.sql
-planes/studio/metadata/18_publication_recovery.sql
-planes/studio/metadata/19_publication_recovery_successor.sql
-planes/studio/metadata/20_publication_recovery_audit.sql
+planes/studio/metadata/69_publication_archive_retirement.sql
 planes/studio/metadata/21_entity_learning_ancestry.sql
 common/control/17_process_task_rule_publication.sql
 common/document/12_collaboration_integrity.sql

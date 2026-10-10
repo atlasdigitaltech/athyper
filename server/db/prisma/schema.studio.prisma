@@ -7318,7 +7318,6 @@ model tenant {
   tenant_relationship_tenant_relationship_to_tenant_idTotenant   tenant_relationship[]                     @relation("tenant_relationship_to_tenant_idTotenant")
   entity                                                         entity[]
   entity_capability                                              entity_capability[]
-  publication_recovery_archive                                   publication_recovery_archive[]
   onboarding_case                                                onboarding_case[]
   onboarding_case_target                                         onboarding_case_target[]
   authorization_session_shadow_comparison                        authorization_session_shadow_comparison[]
@@ -8834,40 +8833,9 @@ model entity_surface_section {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model publication_recovery_archive {
-  id                                 String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                          String                           @db.Uuid
-  source_release_id                  String                           @db.Uuid
-  entity_code                        String
-  artifact_hash                      String
-  backup_hash                        String
-  payload_hash                       String
-  payload                            Json
-  reason                             String
-  imported_by                        String                           @default(dbgenerated("SESSION_USER"))
-  imported_at                        DateTime                         @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  expires_at                         DateTime                         @db.Timestamptz(6)
-  supersedes_id                      String?                          @unique @db.Uuid
-  publication_recovery_archive       publication_recovery_archive?    @relation("publication_recovery_archiveTopublication_recovery_archive", fields: [supersedes_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_publication_recovery_archive publication_recovery_archive?    @relation("publication_recovery_archiveTopublication_recovery_archive")
-  tenant                             tenant                           @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  publication_recovery_revocation    publication_recovery_revocation?
-
-  @@unique([tenant_id, source_release_id], map: "publication_recovery_one_root", where: raw("(supersedes_id IS NULL)"))
-  @@schema("metadata")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model publication_recovery_revocation {
-  archive_id                   String                       @id @db.Uuid
-  reason                       String
-  revoked_by                   String                       @default(dbgenerated("SESSION_USER"))
-  revoked_at                   DateTime                     @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  publication_recovery_archive publication_recovery_archive @relation(fields: [archive_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("metadata")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

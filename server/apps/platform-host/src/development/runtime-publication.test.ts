@@ -21,9 +21,9 @@ const coordinate = {
   plane: "neon",
   entityCode: "business_partner",
   contractHash: "a".repeat(64),
-  profileHash: "b".repeat(64),
-  runtimeHash: "c".repeat(64),
-  catalogHash: "d".repeat(64),
+  profileHash: digest(JSON.stringify({ operations: [{ key: "read" }] })),
+  runtimeHash: digest("{}"),
+  catalogHash: digest("[]"),
   operationKeys: ["read"],
 };
 const config: DevPublicationConfiguration = {
@@ -89,18 +89,13 @@ function fixture() {
   const state = {
     revoked: false,
     wrongAuthor: false,
-    archive: undefined as any,
   };
   const query = vi.fn(async (sql: string) => ({
     rows: sql.includes("FROM master.principal")
       ? state.revoked
         ? []
         : [{ id }]
-      : sql.includes("FROM metadata.publication_recovery_archive")
-        ? state.archive
-          ? [state.archive]
-          : []
-        : sql.includes("FROM metadata.entity_release")
+      : sql.includes("FROM metadata.entity_release")
           ? [
               {
                 created_by: state.wrongAuthor ? publisher : author,
@@ -145,15 +140,32 @@ function fixture() {
   return { service, state, record, human, evidence, configPath, query };
 }
 describe("DEVFULL runtime workload approval", () => {
-  it("does not fall back to normal approval after a recovery permit is revoked", async () => {
+  it("qualifies a signed native runtime directly without archive recovery", async () => {
     const f = fixture();
-    f.state.archive = { revoked: true };
-    // A revoked terminal successor must never fall back to an older permit.
     await expect(
       f.service.authorizeActivation(id, {
-        document: { envelope: { targetPlane: "neon" } },
+        document: {
+          envelope: {
+            artifactKind: "entity_runtime",
+            payload: {
+              entityContract: {
+                releaseNo: 1,
+                tenantId: id,
+                entityCode: "business_partner",
+                contractHash: "a".repeat(64),
+              },
+              entityDescriptor: {
+                plane: "neon",
+                descriptor: {
+                  authorization: { operations: [{ key: "read" }] },
+                  authorizationRuntime: {},
+                },
+              },
+            },
+          },
+        },
       } as never),
-    ).rejects.toThrow("PUBLICATION_RECOVERY_EXPIRED_OR_REVOKED");
+    ).resolves.toMatchObject({ mode: "development_auto_approval" });
     expect(
       f.query.mock.calls.some(([query]) =>
         query.includes("fn_runtime_restoration_compilation_source"),
@@ -161,14 +173,13 @@ describe("DEVFULL runtime workload approval", () => {
     ).toBe(false);
     expect(
       f.query.mock.calls.some(([query]) =>
-        query.includes("successor.supersedes_id=a.id"),
+        query.includes("publication_recovery_archive"),
       ),
-    ).toBe(true);
-    expect(f.record).not.toHaveBeenCalled();
+    ).toBe(false);
+    expect(f.record).toHaveBeenCalledOnce();
   });
   it("never uses a recovery archive to qualify new authoring", async () => {
     const f = fixture();
-    f.state.archive = { revoked: true };
     await expect(f.service.review.qualify(coordinate)).resolves.toMatchObject({
       mode: "development_auto_approval",
     });
@@ -218,7 +229,7 @@ describe("DEVFULL runtime workload approval", () => {
     expect(f.human).toHaveBeenCalledOnce();
     expect(f.record).not.toHaveBeenCalled();
     await expect(f.service.authorizeActivation(publisher)).rejects.toThrow(
-      "RUNTIME_RESTORATION_RETIRED",
+      "DEV_RUNTIME_ACTIVATION_COORDINATE_REQUIRED",
     );
   });
   it.each([

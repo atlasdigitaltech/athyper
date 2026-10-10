@@ -4202,20 +4202,6 @@ BEGIN
         ]
       },
       {
-        "relation": "metadata.publication_recovery_archive",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "metadata.publication_recovery_revocation",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
         "relation": "publication.entity_release_link",
         "privileges": [
           "SELECT"
@@ -4249,12 +4235,6 @@ BEGIN
       "snapshot.fn_compute_entity_contract_hash(jsonb)"
     ],
     "policies": [
-      {
-        "relation": "metadata.publication_recovery_archive",
-        "command": "INSERT",
-        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-        "check": "(tenant_id = shared.current_tenant_id_soft())"
-      },
       {
         "relation": "metadata.entity",
         "command": "SELECT",

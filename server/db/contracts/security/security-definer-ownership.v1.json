@@ -154,10 +154,7 @@
     "mesh.trg_record_network_lifecycle()",
     "mesh.trg_sync_network_account_scope()",
     "mesh.trg_sync_network_relationship_scopes()",
-    "metadata.fn_import_publication_recovery(uuid, uuid, text, text, text, jsonb, text, timestamp with time zone)",
     "metadata.fn_product_learning_source(uuid, text, text)",
-    "metadata.fn_revoke_publication_recovery(uuid, text)",
-    "metadata.fn_succeed_publication_recovery(uuid, uuid, jsonb, text, timestamp with time zone)",
     "metadata.trg_entity_learning_ancestry()",
     "onboarding.fn_access_token_raw()",
     "onboarding.fn_advance_case_status(uuid, onboarding.case_status_d, text, uuid)",
@@ -4098,14 +4095,6 @@
           "privileges": ["SELECT"]
         },
         {
-          "relation": "metadata.publication_recovery_archive",
-          "privileges": ["INSERT", "SELECT"]
-        },
-        {
-          "relation": "metadata.publication_recovery_revocation",
-          "privileges": ["INSERT", "SELECT"]
-        },
-        {
           "relation": "publication.entity_release_link",
           "privileges": ["SELECT"]
         },
@@ -4131,12 +4120,6 @@
         "snapshot.fn_compute_entity_contract_hash(jsonb)"
       ],
       "policies": [
-        {
-          "relation": "metadata.publication_recovery_archive",
-          "command": "INSERT",
-          "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
-          "check": "(tenant_id = shared.current_tenant_id_soft())"
-        },
         {
           "relation": "metadata.entity",
           "command": "SELECT",

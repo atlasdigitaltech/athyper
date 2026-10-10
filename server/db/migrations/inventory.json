@@ -695,7 +695,7 @@
       "callers": [],
       "reason": "Register exact recovery activation audit event; service-account-only, critical, tenant scoped.",
       "canonicalPaths": [
-        "ddl/planes/studio/metadata/20_publication_recovery_audit.sql"
+        "ddl/planes/studio/metadata/69_publication_archive_retirement.sql"
       ]
     },
     {
@@ -707,7 +707,7 @@
       "callers": [],
       "reason": "Append-only reviewed successor permits preserve revoked evidence and permit catalog-only rebinding.",
       "canonicalPaths": [
-        "ddl/planes/studio/metadata/19_publication_recovery_successor.sql"
+        "ddl/planes/studio/metadata/69_publication_archive_retirement.sql"
       ]
     },
     {
@@ -719,7 +719,7 @@
       "callers": [],
       "reason": "Immutable operator-controlled provenance archive; no authoring guard bypass or permission grants.",
       "canonicalPaths": [
-        "ddl/planes/studio/metadata/18_publication_recovery.sql"
+        "ddl/planes/studio/metadata/69_publication_archive_retirement.sql"
       ]
     },
     {
@@ -3032,6 +3032,16 @@
       ],
       "reason": "Retire tenant QA restoration while preserving native publication and rejecting retired artifact activation.",
       "canonicalPaths": ["ddl/common/runtime_meta/12_baseline_precondition.sql"]
+    },
+    {
+      "originalPath": "migrations/20261011_publication_archive_retirement.sql",
+      "path": "migrations/20261011_publication_archive_retirement.sql",
+      "sha256": "2baac8de1b0dd18d9eadbf8a2c3af2f70b235b3cafaeb5984caf63864c27e62f",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/migrations/manifests/studio.txt"],
+      "reason": "Retire empty operator archive recovery while retaining native publication and delivery recovery.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/69_publication_archive_retirement.sql"]
     }
   ]
 }
