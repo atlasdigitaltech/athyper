@@ -113,3 +113,4 @@
 20261010_native_bootstrap_dependencies.sql
 20261010_native_fresh_identity_privileges.sql
 20261010_declared_operation_initialization.sql
+20261010_native_relation_target_guard.sql

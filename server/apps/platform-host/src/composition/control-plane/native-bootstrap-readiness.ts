@@ -11,6 +11,7 @@ export async function requireNativeBootstrapDependencies(
   const signatures = [
     "entity_command_private.enter_root_registration(text,text)",
     "entity_command_private.native_reference_target_exists(uuid,uuid,text)",
+    "entity_command_private.native_product_target_visible(uuid,uuid)",
     "entity_command_private.native_descriptor_ready(uuid,uuid,text,text,text)",
   ];
   for (const signature of signatures) {

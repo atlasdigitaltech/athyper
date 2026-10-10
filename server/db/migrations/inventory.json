@@ -2959,6 +2959,21 @@
       "canonicalPaths": [
         "ddl/planes/studio/metadata/60_declared_operation_initialization.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20261010_native_relation_target_guard.sql",
+      "path": "migrations/20261010_native_relation_target_guard.sql",
+      "sha256": "c8e696471c43562a9a49a1b003e7b959d5ae670945f1f1285c68025f3ae5ca1e",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [
+        "server/db/migrations/manifests/studio.txt",
+        "tooling/scripts/verification/apply-entity-native-resource-preparation.dev.mjs"
+      ],
+      "reason": "Install canonical admitted product relation-target visibility before fresh relation insertion. Preserve ordinary tenant visibility and reject unknown predecessor guards.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/61_native_relation_target_guard.sql"
+      ]
     }
   ]
 }

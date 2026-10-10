@@ -11,6 +11,7 @@ const pin = {
 it.each([
   "ready",
   "missing-routine",
+  "missing-relation-routine",
   "missing-resource",
   "missing-identity-grants",
   "missing-initializer",
@@ -28,7 +29,18 @@ it.each([
                 : text.includes("has_column_privilege")
                   ? [{ allowed: state !== "missing-identity-grants" }]
                   : text.includes("has_function_privilege")
-                    ? [{ allowed: state !== "missing-routine" }]
+                    ? [
+                        {
+                          allowed:
+                            state !== "missing-routine" &&
+                            !(
+                              state === "missing-relation-routine" &&
+                              values.includes(
+                                "entity_command_private.native_product_target_visible(uuid,uuid)",
+                              )
+                            ),
+                        },
+                      ]
                     : [{ ready: state !== "missing-resource" }],
               rowCount: 1,
             };
@@ -60,7 +72,8 @@ it.each([
           ? "DECLARED_INITIALIZER_INSTALLATION_REQUIRED"
           : state === "missing-identity-grants"
             ? "IDENTITY_INSERT_PRIVILEGES_REQUIRED"
-            : state === "missing-routine"
+            : state === "missing-routine" ||
+                state === "missing-relation-routine"
               ? "DATABASE_DEPENDENCY_REQUIRED"
               : "DESCRIPTOR_INSTALLATION_REQUIRED",
       );
