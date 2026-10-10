@@ -36,12 +36,14 @@ if (
 )
   throw Error("COMPONENT_RESOURCE_CANDIDATES_NOT_UNIQUE");
 const components = [
+  // Map retains the last value for each key; order versions oldest first so
+  // an older Studio-only declaration cannot replace a newer multi-plane one.
   ...new Map(
     supplied
       .sort(
         (left, right) =>
-          right.declaration.componentVersion -
-            left.declaration.componentVersion ||
+          left.declaration.componentVersion -
+            right.declaration.componentVersion ||
           left.declaration.id.localeCompare(right.declaration.id),
       )
       .map((component) => [component.declaration.componentKey, component]),
