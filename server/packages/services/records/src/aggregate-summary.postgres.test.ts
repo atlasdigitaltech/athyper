@@ -237,6 +237,8 @@ describe.skipIf(!enabled)("Summary column dimension on PostgreSQL (Aggregate A2)
       const statement = sent.at(-1)!;
       const plan = (await client.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${statement.sql}`, [...statement.parameters])).rows[0]["QUERY PLAN"][0];
       console.info(`A2 pivot statement: ${result.groups!.length} rows × ${result.pivotColumns!.length} columns × ${measures.length} measures = ${total} values; plan cost ${plan.Plan["Total Cost"]}, execution ${plan["Execution Time"]} ms over 1,205 records`);
-      expect(plan["Execution Time"]).toBeLessThan(2_000);
+      // The column list is computed once and matched by hash (5.9 point 7);
+      // a per-row re-evaluation cost about 110 ms here.
+      expect(plan["Execution Time"]).toBeLessThan(50);
     }));
 });

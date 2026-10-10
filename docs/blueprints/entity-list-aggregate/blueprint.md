@@ -2,10 +2,11 @@
 
 **Status:** approved, revision 5 (10 October 2026).
 - **Delivery (10 October 2026): A2 built, on synthetic fixtures, before A3.** Section 5.9 records the build, including the measured response size and statement time A2's acceptance asks for. A3 remains the gate before any real Entity publishes a pivot. Still not verified: a real Entity, and the server's real responses in a browser.
-- **A2 before A3 approved (10 October 2026).** The owner approved building A2 on fixtures ahead of A3, whose prerequisites (the metadata cleanup and the business partner, item and commodity Entities) are no design dependency of A2. The approved order existed to prove the pivot at volume before it ships, which is about what may ship, not what may be built. Three conditions, recorded in section 17:
+- **A2 before A3 approved (10 October 2026).** The owner approved building A2 on fixtures ahead of A3, whose prerequisites (the metadata cleanup and the business partner, item and commodity Entities) are no design dependency of A2. The approved order existed to prove the pivot at volume before it ships, which is about what may ship, not what may be built. Four conditions, recorded in section 17 (the fourth added by audit round 8):
   - A3 stays the gate before any real Entity publishes a pivot;
   - A2 carries a real-PostgreSQL test of its own SQL path;
-  - A2's acceptance measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS`, and the statement's cost.
+  - A2's acceptance measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS`, and the statement's cost;
+  - A3 measures the service path the pilot Entity actually takes: the authorized-aggregate path (2,000-record capacity) or SQL-covered authorization. A3 states its budget as a go/no-go number that decides A4. The number itself is for the owner to set; the audit suggested "above 500 ms at the expected fact size, A4 is required".
 - **Coupled with the Tree blueprint.** Since decision 8, one server rule (`applyAggregateRules`) governs every grouped total, in Summary and in grouped Table. A change to additivity updates this document and the [Entity list Tree blueprint](../entity-list-tree/blueprint.md) together.
 - **Decision 8 approved and built (10 October 2026).** The owner approved applying additivity to grouped Table's sums: "decision 8 approved". It is built as its own change before A2 (section 5.8).
 - **Build authority (10 October 2026).** After section 14 was approved, the owner gave the build instruction: "go ahead". Under decision 6, that authorizes A1 on synthetic fixtures. A0 still waits for the metadata cleanup and its dimension Entities.
@@ -307,6 +308,7 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
 3. **The statement** (`pivotBuckets`). One statement with `GROUPING SETS ((row, column), (row), (column), ())` over a CTE of the filtered records.
    - Rows keep 50 values plus No value, as A1 does.
    - Columns are the expansion's kept values, or the first 12 in order with No value last. No value counts within the 12, so the section 7.2 bound (12 columns plus the total) holds.
+   - **Rows and columns treat No value differently, by design.** On rows, No value sorts first so the cap never drops it, and it is drawn beside the 50. On columns, No value is the last of the 12. When there are more than 11 values and a No value, it is No value that is pushed out, and the truncation notice says columns were cut.
    - A `HAVING` keeps only the shown rows' and columns' cells and column totals. Row totals and the total still cover every record.
 4. **Cell rules.** `applyAggregateRules` treats each total by what groups it:
    - a cell is grouped by its row and its column;
@@ -327,8 +329,9 @@ The column dimension, built on fixtures ahead of A3 under the owner's approval a
    - the caps.
 7. **Condition: the response size and the statement's cost.**
    - At the caps (60 accounts × 20 periods, five measures), the response held 50 rows × 12 columns × 5 measures: **3,315 measure values**, under `LIST_AGGREGATE_MAX_CELLS` (3,600). The test asserts both figures.
-   - The statement executed in **114.6 ms** over 1,205 records, on PostgreSQL 16 temporary tables in one run; the test fails above 2,000 ms. The plan's cost estimate (24.14) is not meaningful on an unanalysed temporary table.
-   - The time is high for the record count, and the per-row `HAVING` filters are the likely cost. A3 measures both at real volume, on the real view, before any Entity publishes a pivot.
+   - **First measurement: 114.6 ms** over 1,205 records. The plan (`EXPLAIN ANALYZE`) showed the cause. The `GROUPING SETS` aggregation over the whole fact took about 1–2 ms. About 105 ms went to a correlated `EXISTS` against the column list: it re-ran that list's sort and limit once per grouped row (`loops=1040`).
+   - **Fix (revision 5):** the source, rows and columns CTEs are `MATERIALIZED`, and the column test is a hashed `IN` with an uncorrelated check for the No value column. **Re-measured: 5.3 ms** in three runs, with the same 3,315 values. The test now fails above 50 ms.
+   - **Not adopted: restricting the source to the shown rows and columns.** The audit proposed it, but row totals must include records in columns not shown, column totals records in rows not shown, and the total every record. Restricting the source would make all three wrong. The aggregation over the whole fact was not the cost.
 8. **Not built:** column paging (more than 12 values are filtered, never paged, as section 7.2 says), the location key `aggregate.open`, and Studio authoring.
 
 ## 6. Validation, availability and finding codes
@@ -570,7 +573,7 @@ Foundation section 9's policy gates run before each commit.
 | --- | --- | --- |
 | **A0** | View-backed read-only Entity onboarding proven end to end on `ledger.v_trial_balance`: published, authorized, listed in Table, reference dimensions resolving to readable labels | Metadata cleanup. Company code, ledger book and GL account Entities onboarded (cost centre, profit centre and project join as they are onboarded; until then those dimensions stay unpublished). A decision on fiscal period: keep year and number as dimensions, or add a fiscal-period reference to the view through a forward migration. Acceptance includes the fact-size precondition (status block): whether the list's record authorization is SQL-covered |
 | **A1** | Summary mode: rows at up to 3 levels with one request per expansion, `GROUPING SETS` totals, `count` and `countDistinct`, additivity and `notSummable`, currency states, `minimumGroupSize`, masked-field projection and the authorized-aggregate path (section 9.2), `LIST_AGGREGATE_MAX_CELLS` with its contract test, revision notice, drill-down to Table, saved and URL state, narrow layout, accessibility | Section 14 approved. On fixtures first; on A0's Entity once A0 lands |
-| **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, with index findings, and the fact-size precondition (status block) checked for this fact | A1. The business partner, item and commodity category Entities for readable dimensions |
+| **A3** | `purchase_invoice_line` at OLTP volume through a header-and-line view (supplier and posting date from the header). A performance budget measured on representative volume, through the service path the Entity takes (authorized-aggregate or SQL-covered), with index findings, and the fact-size precondition (status block) checked for this fact. The budget is a go/no-go number, set by the owner, that decides A4 | A1. The business partner, item and commodity category Entities for readable dimensions |
 | **A2** | Column dimension: `pivot`, `pivotValues`, column totals, `columnsTruncated`. Built before A3 by the owner's approval (status block), with three conditions: a real-PostgreSQL test of its own SQL path; acceptance that measures the pivot's response size against `LIST_AGGREGATE_MAX_CELLS` and the statement's cost; and A3 kept as the gate before any real Entity publishes a pivot | A1. A3 gates publication on a real Entity, not the build |
 | **A4** | `insight` schema, projector runtime, per-fact watermark and "As of", rebuild from source, RLS gate | Only if A3's evidence shows a live view cannot meet the budget, or a polymorphic or JSON source needs it |
 | **A5** | Chart (section 13), after its contract is approved | A2 |
@@ -648,3 +651,6 @@ The status block distinguishes what is built, published and verified at runtime.
 | Audit round 6 | The lesson: grouped Table's sums were verified for arithmetic, not for meaning | Recorded in the Tree blueprint's status as the missing half of its A2 contract |
 | Owner and audit round 7 | A2 before A3, with A3 kept as the publication gate, a real-PostgreSQL test of A2's SQL, and the response size and statement cost in A2's acceptance | Status block and section 17; built as section 5.9, with points 6 and 7 meeting the two build conditions |
 | Audit round 7 | Note the coupling between the Aggregate and Tree blueprints in each | Status block here; Tree status |
+| Audit round 8 | The pivot's cost is GROUPING SETS over the whole fact plus HAVING; restrict the source CTE to the shown rows and columns | **Corrected by measurement.** The aggregation took about 1–2 ms. The cost was a correlated `EXISTS` re-running the column query per grouped row. Fixed by materializing and hashing: 114.6 → 5.3 ms. Restricting the source would make row, column and overall totals wrong, so it was not adopted (5.9 point 7) |
+| Audit round 8 | A3 must measure the service path the Entity takes, with a go/no-go budget that decides A4 | Adopted as the fourth condition; the number awaits the owner |
+| Audit round 8 | No value is protected by the row cap but not the column cap | Recorded (5.9 point 3) |

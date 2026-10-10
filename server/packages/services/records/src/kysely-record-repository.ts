@@ -517,7 +517,10 @@ async function groupBuckets(input: RecordRepositoryListInput, conditions: readon
  * keeps 50 values plus No value; the columns are an expansion's kept values,
  * or the first 12 in order (No value last) with the rest reported as
  * truncated. Totals still cover every record: only cells and column totals
- * are limited to the shown columns. */
+ * are limited to the shown columns. The kept rows and columns are
+ * materialized once and matched by hash; a correlated EXISTS here re-ran the
+ * column query for every grouped row (110 ms against 5 ms over 1,200
+ * records, blueprint 5.9). */
 async function pivotBuckets(input: RecordRepositoryListInput, conditions: readonly RawBuilder<unknown>[], executor: RecordDatabase | RecordTransaction) {
   const pivot = input.pivot!;
   const { inputs, selects, summarize } = groupAggregateParts(input, true);
@@ -525,23 +528,25 @@ async function pivotBuckets(input: RecordRepositoryListInput, conditions: readon
   const pivotKey = sql.ref("__pivot_key");
   const columnsCte = pivot.values
     ? pivot.values.length
-      ? sql`"__cols" ("__column") AS (VALUES ${sql.join(pivot.values.map((value) => sql`(${value}::text)`))})`
-      : sql`"__cols" ("__column") AS (SELECT NULL::text WHERE FALSE)`
-    : sql`"__cols" ("__column") AS (SELECT ${pivotKey}::text FROM "__src" GROUP BY ${pivotKey} ORDER BY ${pivotKey} ASC NULLS LAST LIMIT ${LIST_AGGREGATE_MAX_COLUMNS + 1})`;
+      ? sql`"__cols" ("__column") AS MATERIALIZED (VALUES ${sql.join(pivot.values.map((value) => sql`(${value}::text)`))})`
+      : sql`"__cols" ("__column") AS MATERIALIZED (SELECT NULL::text WHERE FALSE)`
+    : sql`"__cols" ("__column") AS MATERIALIZED (SELECT ${pivotKey}::text FROM "__src" GROUP BY ${pivotKey} ORDER BY ${pivotKey} ASC NULLS LAST LIMIT ${LIST_AGGREGATE_MAX_COLUMNS + 1})`;
   type Row = Record<string, unknown> & { value: unknown; count: string | number | bigint; __pivot_text: string | null; __total: number | string; __pivot_total: number | string };
   const result = await sql<Row>`
-    WITH "__src" AS (
+    WITH "__src" AS MATERIALIZED (
       SELECT ${groupKeyExpression(input, input.group!, input.groupBucket)} AS ${groupKey}, ${groupKeyExpression(input, pivot.field, pivot.bucket)} AS ${pivotKey}${inputs}
         FROM ${table(input.descriptor)} WHERE ${sql.join(conditions, sql` AND `)}
     ),
-    "__rows" AS (SELECT ${groupKey} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1 ORDER BY 1 ASC LIMIT ${LIST_GROUP_LIMIT + 1}),
+    "__rows" AS MATERIALIZED (SELECT ${groupKey} FROM "__src" WHERE ${groupKey} IS NOT NULL GROUP BY 1 ORDER BY 1 ASC LIMIT ${LIST_GROUP_LIMIT + 1}),
     ${columnsCte}
     SELECT ${groupKey} AS value, ${pivotKey}::text AS "__pivot_text", count(*) AS count${selects},
            GROUPING(${groupKey}) AS "__total", GROUPING(${pivotKey}) AS "__pivot_total"
       FROM "__src"
      GROUP BY GROUPING SETS ((${groupKey}, ${pivotKey}), (${groupKey}), (${pivotKey}), ())
     HAVING (GROUPING(${groupKey}) = 1 OR ${groupKey} IS NULL OR ${groupKey} IN (SELECT ${groupKey} FROM "__rows"))
-       AND (GROUPING(${pivotKey}) = 1 OR EXISTS (SELECT 1 FROM "__cols" WHERE "__cols"."__column" IS NOT DISTINCT FROM ${pivotKey}::text))
+       AND (GROUPING(${pivotKey}) = 1
+            OR ${pivotKey}::text IN (SELECT "__column" FROM "__cols" WHERE "__column" IS NOT NULL)
+            OR (${pivotKey} IS NULL AND EXISTS (SELECT 1 FROM "__cols" WHERE "__column" IS NULL)))
      ORDER BY "__total" DESC, "__pivot_total" DESC, ${groupKey} ASC NULLS FIRST, ${pivotKey} ASC NULLS LAST`.execute(executor);
   const flags = (row: Row) => [Number(row.__total) === 1, Number(row.__pivot_total) === 1] as const;
   const grand = result.rows.find((row) => flags(row)[0] && flags(row)[1]);
