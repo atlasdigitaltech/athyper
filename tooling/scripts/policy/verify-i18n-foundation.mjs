@@ -22,7 +22,10 @@ const shell = read("packages/platform/shell/shell/src/index.tsx"), messages = re
 if (!shell.includes("IntlProvider") || !shell.includes("fallbackMessages")) violations.push("shared shell must provide catalog fallback");
 if (!messages.includes("shellArabicMessages")) violations.push("shared shell must publish an Arabic catalog");
 if (!styles.includes("[dir=rtl] .athyper-shell__rail") || !styles.includes("translateX(105%)")) violations.push("shared shell must mirror desktop and mobile RTL geometry");
-if (!shell.includes("onLocaleChange") || !read("packages/platform/shell/shell/src/client.tsx").includes("localePolicy.enabledLocales")) violations.push("shared shell must constrain user selection to the effective plane policy");
+// The language choice lives in the utilities menu; the policy reaches it through the client and header actions.
+const languageMenu = read("packages/platform/shell/shell/src/shell-utilities-menu.tsx");
+const policyForwarded = ["client.tsx", "shell-header-actions.tsx"].every((file) => read(`packages/platform/shell/shell/src/${file}`).includes("localePolicy={localePolicy}"));
+if (!shell.includes("onLocaleChange") || !policyForwarded || !languageMenu.includes("const locales = localePolicy?.enabledLocales ?? [];") || !languageMenu.includes("options={locales.map(")) violations.push("shared shell must constrain user selection to the effective plane policy");
 const localePolicy = read("server/db/ddl/common/control/03_tables.sql");
 const platformTables = read("server/db/ddl/common/master/03_platform_tables.sql");
 if (!platformTables.includes("fallback_locale_code") || !platformTables.includes("enabled_locale_codes")) violations.push("canonical plane policy storage must retain locale fallback and enablement controls");
