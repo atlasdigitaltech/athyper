@@ -81,6 +81,10 @@ export interface MetaEntityAuthoringRepository {
     actorId: string;
   }): Promise<MetaEntityChangeSet>;
   createDraft(input: {
+    /** Server-reserved draft coordinate used when a bounded command admission
+     * must exist before the first draft row is written. Public routes never
+     * accept this value. */
+    id?: string;
     tenantId: string | null;
     entityId: string;
     entityCode: string;

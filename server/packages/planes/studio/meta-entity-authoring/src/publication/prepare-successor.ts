@@ -7,6 +7,9 @@ import { compileGraph, sha256 } from "../deterministic.js";
 
 export interface PrepareEntitySuccessorInput {
   readonly requestId: string;
+  /** The server-reserved target coordinate. It is bound to command admission
+   * before the first row is written so the application login stays scoped. */
+  readonly changeSetId: string;
   readonly authorityTenantId: string;
   readonly entityId: string;
   readonly actorId: string;
@@ -26,7 +29,7 @@ const requireCondition = (v: unknown, code: string) => { if (!v) throw Error(cod
 export async function prepareEntitySuccessorDraft(database: Kysely<Record<string, never>>, authority: EntitySuccessorDraftAuthority, request: PrepareEntitySuccessorInput) {
   const input = structuredClone(request), p = input.predecessor;
   const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
-  requireCondition([input.requestId, input.authorityTenantId, input.entityId, input.actorId, p.authoringReleaseId, p.publicationReleaseId, p.revisionId].every(v => typeof v === "string" && uuid.test(v)), "SUCCESSOR_DRAFT_ID_INVALID");
+  requireCondition([input.requestId, input.changeSetId, input.authorityTenantId, input.entityId, input.actorId, p.authoringReleaseId, p.publicationReleaseId, p.revisionId].every(v => typeof v === "string" && uuid.test(v)), "SUCCESSOR_DRAFT_ID_INVALID");
   requireCondition([p.authoringReleaseHash, p.publicationReleaseHash, p.contractHash].every(v => typeof v === "string" && /^[a-f0-9]{64}$/.test(v)) &&
     [p.authoringReleaseNo, p.publicationReleaseNo].every(v => Number.isSafeInteger(v) && v > 0), "SUCCESSOR_DRAFT_PIN_INVALID");
   await authority.assertAuthorized({ ...structuredClone(input), action: "metadata.entity.successor.prepare" });
@@ -71,7 +74,7 @@ export async function prepareEntitySuccessorDraft(database: Kysely<Record<string
       requireCondition(saved && sha256(saved) === sha256(graph), "SUCCESSOR_DRAFT_SAVE_MISMATCH");
       return { changeSet: cs!, artifact: compileGraph(graph), reused: true };
     }
-    const draft = await repository.createDraft({ tenantId: null, entityId: input.entityId, entityCode: source.entity_code,
+      const draft = await repository.createDraft({ id: input.changeSetId, tenantId: null, entityId: input.entityId, entityCode: source.entity_code,
       branchCode: branch, title: `Successor of release ${p.authoringReleaseNo}`, actorId: input.actorId,
       baseRelease: { releaseId: p.authoringReleaseId, releaseHash: p.authoringReleaseHash } });
     const current = await repository.get(draft.id);

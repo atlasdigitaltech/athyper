@@ -51,6 +51,11 @@ export async function createControlProductCommandRuntime(options: {
 }): Promise<
   Parameters<typeof createProductLabelEnrollment>[0] & {
     referenceEnrollment?: ProductReferenceEnrollmentOptions;
+    /** Trusted host-only command executor for bounded generic authoring flows. */
+    productCommand: Pick<
+      Parameters<typeof createProductLabelEnrollment>[0],
+      "database" | "authority"
+    >;
   }
 > {
   if (options.nativeBootstrap && options.nativeBootstrapProposals)
@@ -234,18 +239,27 @@ export async function createControlProductCommandRuntime(options: {
     new Set(labels.supportedLocales).size !== labels.supportedLocales.length
   )
     throw Error("PRODUCT_COMMAND_LABEL_POLICY_INVALID");
+  const productCommandAuthority = createProductCommandAuthority({
+    issuer: options.issuerDatabase,
+    applicationLogin: options.applicationLogin,
+    governance: createControlProductCommandGovernance({
+      database: options.governanceDatabase,
+      authority: options.authority,
+    }),
+  });
   const runtime: Parameters<typeof createProductLabelEnrollment>[0] & {
     referenceEnrollment?: ProductReferenceEnrollmentOptions;
+    productCommand: Pick<
+      Parameters<typeof createProductLabelEnrollment>[0],
+      "database" | "authority"
+    >;
   } = {
     database: options.commandDatabase,
-    authority: createProductCommandAuthority({
-      issuer: options.issuerDatabase,
-      applicationLogin: options.applicationLogin,
-      governance: createControlProductCommandGovernance({
-        database: options.governanceDatabase,
-        authority: options.authority,
-      }),
-    }),
+    authority: productCommandAuthority,
+    productCommand: {
+      database: options.commandDatabase,
+      authority: productCommandAuthority,
+    },
     labels,
     host: createProductLabelHost(),
     async audit(tx, context, input, result) {

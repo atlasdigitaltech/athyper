@@ -4,7 +4,7 @@ import ts from "typescript";
 import type { Kysely } from "kysely";
 import { prepareEntitySuccessorDraft, type PrepareEntitySuccessorInput } from "../publication/prepare-successor.js";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const input: PrepareEntitySuccessorInput = { requestId: id(1), authorityTenantId: id(2), entityId: id(3), actorId: id(4), publicationKey: "metadata.entity.example",
+const input: PrepareEntitySuccessorInput = { requestId: id(1), changeSetId: id(8), authorityTenantId: id(2), entityId: id(3), actorId: id(4), publicationKey: "metadata.entity.example",
   predecessor: { authoringReleaseId: id(5), authoringReleaseNo: 1, authoringReleaseHash: "a".repeat(64), publicationReleaseId: id(6), publicationReleaseNo: 1, publicationReleaseHash: "b".repeat(64), revisionId: id(7), contractHash: "c".repeat(64) } };
 it("requires explicit maintenance authorization before database work", async () => {
   const transaction = vi.fn(), assertAuthorized = vi.fn(async () => { throw Error("DENIED"); });

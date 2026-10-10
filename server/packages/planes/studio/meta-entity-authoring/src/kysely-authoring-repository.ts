@@ -1044,11 +1044,12 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async createDraft(
     input: Parameters<MetaEntityAuthoringRepository["createDraft"]>[0],
   ) {
-    const id = randomUUID(),
+    const id = input.id ?? randomUUID(),
       code = `${input.branchCode.replace(/[^a-z0-9_.-]/g, "-")}.${id}`.slice(
         0,
         127,
       );
+    validateFoundationNode(referenceUuid, id, "/draft/id");
     if (!/^[a-z][a-z0-9_]{1,62}$/.test(input.entityCode))
       throw new TypeError("Canonical entity code required");
     const registration = parseEntityRegistration(input.registration);

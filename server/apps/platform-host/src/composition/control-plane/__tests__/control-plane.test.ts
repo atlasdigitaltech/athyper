@@ -170,6 +170,9 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
   );
   const allowed = new Set([
     "node:http",
+    "../composition/shared/publication/workload-configuration.js",
+    "../composition/control-plane/native-bootstrap-startup.js",
+    "../composition/shared/publication/component-qualification.js",
     "@athyper/server-service-publication",
     "@athyper/server-contract-publication",
     "../composition/control-plane/resource-review.js",

@@ -418,6 +418,7 @@ export async function startControlApi() {
           ...(productLabelEnrollment
             ? {
                 productLabelEnrollment,
+                productCommand: productLabelEnrollment.productCommand,
                 ...(productLabelEnrollment.referenceEnrollment
                   ? {
                       productReferenceEnrollment:

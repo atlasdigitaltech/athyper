@@ -137,6 +137,7 @@ export * from "./historical-normalization-application.js";
 export * from "./native-schema-qualification.js";
 export {
   createProductCommandAuthority,
+  withProductCommandAuthority,
   ProductCommandCleanupError,
   type ProductCommandGovernance,
   type ProductCommandScope,

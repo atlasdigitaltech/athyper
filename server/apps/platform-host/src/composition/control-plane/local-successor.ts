@@ -6,8 +6,10 @@ import type {
 } from "@athyper/server-contract-auth";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import {
+  createProductCommandAuthority,
   prepareEntitySuccessorDraft,
   type EntitySuccessorDraftAuthority,
+  withProductCommandAuthority,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
   defineRouteContract,
@@ -34,6 +36,12 @@ type Options = {
   authority: PlatformAuthority;
   audit: AuditRecorder<Database>;
   configuration: PublicationWorkloadConfiguration;
+  productCommand: {
+    database: Database;
+    authority: ReturnType<
+      typeof createProductCommandAuthority<VerifiedRequestContext>
+    >;
+  };
 };
 
 type Predecessor = {
@@ -130,7 +138,7 @@ export function createLocalSuccessorPreparation(options: Options) {
         "LOCAL_SUCCESSOR_ADMISSION_DENIED",
         "The configured platform authoring context is required",
       );
-    return options.database
+    const source = await options.database
       .transaction()
       .setIsolationLevel("serializable")
       .execute(async (tx) => {
@@ -157,13 +165,34 @@ export function createLocalSuccessorPreparation(options: Options) {
             "LOCAL_SUCCESSOR_ADMISSION_DENIED",
             "Current local authoring authority is required",
           );
-        const source = await predecessor(tx, entityId);
+        return predecessor(tx, entityId);
+      });
+    const successorCommand = {
+      schema: "athyper.local-successor-preparation/1" as const,
+      requestId: input.requestId,
+      changeSetId: input.requestId,
+      entityId,
+      predecessor: source,
+    };
+    return withProductCommandAuthority({
+      authority: options.productCommand.authority,
+      database: options.productCommand.database,
+      context,
+      scope: {
+        authorityTenantId: context.tenantId,
+        actorId: context.principalId,
+        changeSetId: input.requestId,
+        creationEntityId: entityId,
+      },
+      command: successorCommand,
+      async execute(tx, captured) {
         const draftAuthority: EntitySuccessorDraftAuthority = {
           async assertAuthorized(request) {
             if (
               request.action !== "metadata.entity.successor.prepare" ||
-              request.requestId !== input.requestId ||
-              request.entityId !== entityId ||
+              request.requestId !== captured.requestId ||
+              request.changeSetId !== captured.changeSetId ||
+              request.entityId !== captured.entityId ||
               request.actorId !== context.principalId ||
               request.authorityTenantId !== context.tenantId
             )
@@ -171,12 +200,13 @@ export function createLocalSuccessorPreparation(options: Options) {
           },
         };
         const result = await prepareEntitySuccessorDraft(tx, draftAuthority, {
-          requestId: input.requestId,
+          requestId: captured.requestId,
+          changeSetId: captured.changeSetId,
           authorityTenantId: context.tenantId,
-          entityId,
+          entityId: captured.entityId,
           actorId: context.principalId,
-          publicationKey: source.publicationKey,
-          predecessor: source,
+          publicationKey: captured.predecessor.publicationKey,
+          predecessor: captured.predecessor,
         });
         const event = await options.audit.record(
           {
@@ -192,7 +222,7 @@ export function createLocalSuccessorPreparation(options: Options) {
             correlationId: context.correlationId,
             metadata: {
               basis: "local_development_authority",
-              predecessor: source.authoringReleaseId,
+              predecessor: captured.predecessor.authoringReleaseId,
               reused: result.reused,
             },
           },
@@ -211,7 +241,8 @@ export function createLocalSuccessorPreparation(options: Options) {
           descriptorHash: result.artifact.descriptorHash,
           reused: result.reused,
         };
-      });
+      },
+    });
   };
 }
 

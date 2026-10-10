@@ -41,6 +41,10 @@ export function registerControlPlane(
     domainSuffix: string;
     /** Installed scoped command resources only; never fall back to the review DB. */
     productLabelEnrollment?: Parameters<typeof createProductLabelEnrollment>[0];
+    productCommand?: Pick<
+      Parameters<typeof createProductLabelEnrollment>[0],
+      "database" | "authority"
+    >;
     productReferenceEnrollment?: ProductReferenceEnrollmentOptions;
     resourceReview?: ReturnType<typeof createControlResourceReview>;
     localPublication?: Pick<
@@ -62,6 +66,8 @@ export function registerControlPlane(
   if (options.localPublication) {
     if (!options.nativeSource)
       throw Error("LOCAL_PUBLICATION_NATIVE_CONFIGURATION_REQUIRED");
+    if (!options.productCommand)
+      throw Error("LOCAL_SUCCESSOR_PRODUCT_COMMAND_CONFIGURATION_REQUIRED");
     registerLocalPublicationAdmission(application, {
       ...options,
       ...options.localPublication,
@@ -70,6 +76,7 @@ export function registerControlPlane(
     registerLocalSuccessorPreparation(application, {
       ...options,
       configuration: options.localPublication.configuration,
+      productCommand: options.productCommand,
     });
   }
   if (options.productLabelEnrollment) {
