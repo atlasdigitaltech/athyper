@@ -638,6 +638,15 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/contracts/platform/chart:
+    devDependencies:
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../../tooling/tsconfig
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/contracts/platform/collection:
     dependencies:
       '@athyper/contract-platform-entity-list':
@@ -1393,6 +1402,9 @@ importers:
 
   packages/platform/foundation/ui:
     dependencies:
+      '@athyper/contract-platform-chart':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/chart
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../i18n

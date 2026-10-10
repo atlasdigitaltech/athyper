@@ -10,7 +10,7 @@
     "Deprecated"
   ],
   "counts": {
-    "Shared contract": 31,
+    "Shared contract": 32,
     "Shared platform": 44,
     "Shared domain": 0,
     "Product-specific": 5,
@@ -198,7 +198,7 @@
         "classification": "Shared platform",
         "dependencyBudget": {
           "runtime": 20,
-          "workspace": 3
+          "workspace": 4
         }
       },
       {
@@ -961,6 +961,21 @@
       "deploymentTargets": "neon, studio, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
       "proposedFinalLocation": "packages/contracts/platform/authorization/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared contract",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/contract-platform-chart",
+      "physicalPath": "packages/contracts/platform/chart/package.json",
+      "currentConsumers": [
+        "packages/platform/foundation/ui/package.json"
+      ],
+      "intendedOwner": "Contract Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/contracts/platform/chart/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Shared contract",
       "workspaceActive": true
@@ -3786,6 +3801,7 @@
         "packages/contracts/platform/api/package.json",
         "packages/contracts/platform/auth-session/package.json",
         "packages/contracts/platform/authorization/package.json",
+        "packages/contracts/platform/chart/package.json",
         "packages/contracts/platform/collection/package.json",
         "packages/contracts/platform/dashboard/package.json",
         "packages/contracts/platform/entity-list/package.json",

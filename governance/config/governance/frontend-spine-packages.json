@@ -178,7 +178,7 @@
       "classification": "Shared platform",
       "dependencyBudget": {
         "runtime": 20,
-        "workspace": 3
+        "workspace": 4
       }
     },
     {

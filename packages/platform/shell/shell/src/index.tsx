@@ -45,6 +45,18 @@ function LocalizedFoundationUi({ children }: { readonly children: ReactNode }) {
     selectView: intl.message("ui.selectView"),
     selectOption: intl.message("ui.selectOption"),
     viewName: (name, modified) => intl.message(modified ? "ui.viewNameModified" : "ui.viewName", { name }),
+    chartUnavailable: (code, seriesLimit) => intl.message(`chart.unavailable.${code}`, { max: seriesLimit }),
+    chartTypeName: (type) => intl.message(`chart.type.${type}`),
+    chartSummary: (type, categories, series) => intl.message("chart.summary", { type, categories, series }),
+    chartPoint: (category, series, value, share) => intl.message(share ? "chart.pointShare" : "chart.point", { category, series, value, ...(share ? { share } : {}) }),
+    chartShare: (share) => intl.message("chart.share", { share }),
+    chartWithheldHeading: intl.message("chart.withheldHeading"),
+    chartWithheld: (category, state, series) => intl.message(series ? "chart.withheldSeries" : "chart.withheld", { category, state, ...(series ? { series } : {}) }),
+    chartTruncatedCategories: intl.message("chart.truncatedCategories"),
+    chartTruncatedSeries: intl.message("chart.truncatedSeries"),
+    chartShowDataTable: intl.message("chart.showDataTable"),
+    chartHideDataTable: intl.message("chart.hideDataTable"),
+    chartTotal: intl.message("chart.total"),
   };
   return <UiMessagesProvider messages={messages}>{children}</UiMessagesProvider>;
 }

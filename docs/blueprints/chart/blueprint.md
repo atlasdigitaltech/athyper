@@ -1,6 +1,7 @@
 # Shared chart — blueprint
 
-**Status:** approved; A5.1a and A5.1b built: the validator through decision 28, and the chart colour tokens; revision 11 (10 October 2026).
+**Status:** approved; A5.1 and A5.2 built: the colour validator and tokens, the chart-data contract and the `Chart` component; revision 12 (10 October 2026).
+- **A5.2 approved and built (10 October 2026):** "go ahead with next step approved". The build record is 13.4a.13. No consumer uses the chart yet: Summary's adapter is A5.3, in the Aggregate blueprint.
 - **A5.1b approved and built (10 October 2026):** "ok As of now its ok... go ahead and complete". Read as accepting the recommendations put to the owner: the five sets with Mono at the quieter level (chroma 40), and decision 28. The build is in 13.4a.12. A5.2, the component, is next.
 - **A5.1b started (10 October 2026):** "go ahead". The validator carries the high-contrast length (decision 27). Five candidate sets pass with no findings and nothing relieved, and await approval before they become tokens (13.4a.11). Decision 28 is proposed.
 - **Decisions 24–27 approved (10 October 2026):** "Approved". 24 and 25 are built into the validator (13.4a.10); 26 and 27 govern A5.1b, which may now proceed.
@@ -507,6 +508,71 @@ For comparison, Modern averages chroma 56. Going lower still passes, but light m
   - `policy:theme-token-integrity:strict` reports one existing finding (`--a-panel-scroll-padding-top` in the UI package's stylesheet) that this change does not touch.
 - **Not built:** no component reads the tokens yet. A5.2 (the `Chart` component) is the first consumer.
 
+#### 13.4a.13 Build record (A5.2, 10 October 2026)
+
+**What was built**
+
+- **The contract.** `@athyper/contract-platform-chart` (`packages/contracts/platform/chart`) holds:
+  - the 13.2 types, with `ChartTone` (decision 17's four tones; no tone field in the data);
+  - `parseChartData`, which enforces 13.2's rules: the bounds (1–52 categories, 1–8 series), aligned points, exact decimal text, one unit, distinct keys, a `total` on every part-of-whole series and a `rest` only there. It throws a `TypeError` that names the path, as the list contracts do;
+  - `chartTypes(data, { seriesLimit })`, the 13.3 availability table. `seriesLimit` is the theme's sequence length: 8, or 5 under high contrast (decision 27);
+  - `chartNumber`, which converts a value to a number for geometry only.
+
+  It has no dependencies. Its package-ownership row was added by hand rather than regenerated, because regenerating would also have rewritten unrelated rows.
+- **The component.** `Chart` lives in `@athyper/platform-ui` (`src/chart/`). Its pure parts are in `chart-model.ts`:
+  - ticks;
+  - keyed colour slots;
+  - the label ink;
+  - the decision 20 and 25 checks;
+  - the series limit.
+
+  It draws hand-written SVG and takes its colours only from `--a-chart-*` and the status tokens, through classes (`a-chart__fill--1` … `--8`, `--single`, `--neutral`, `--tone-*`). The design-system, UI-system and strict style-token gates pass.
+- **Copy.** `chart.*` messages are in a new shared catalog (`platform-i18n/src/catalogs/chart.ts`) in English, Malay and Arabic. They reach the component through `UiMessages`, wired in the shell, with English defaults in the design system.
+- **Dependency budget.** `@athyper/platform-ui`'s workspace dependency budget rises from 3 to 4, for the chart contract (decision 9's direction: the design system imports only the chart contract).
+
+**Build notes.** Each note completes or corrects an approved rule; none adds a feature.
+
+1. **Accessible structure.** 13.3 says the SVG has `role="img"`. That role hides its children, which would remove every point's accessible name and the arrow-key navigation 13.3 also requires.
+
+   The SVG is therefore a group:
+   - named by the caption;
+   - described by the one-line summary;
+   - given `aria-roledescription` with the chart type.
+
+   Each point is a focusable image named "category, series: value" (and its share when it has one). There is one tab stop, using a roving `tabindex`. The arrow keys move in visual order, so in a right-to-left chart ArrowRight moves to the point on the right. Home and End go to the first and last point, and Enter or Space calls `onSelect`.
+2. **`CHART_SERIES_COUNT`** carries the series limit it applies. Its message reads "Choose between 2 and {max} columns to compare.", or "Choose one column to chart." for single-series types, so high contrast shows 5, not 8. A single-series type given several series uses this code too.
+3. **Three optional props are added to 13.3's list:**
+   - **`paletteIndexOf(key)`** carries 13.4a.3's fixed reference order (a published choice order) to the component. Without it, colours follow the given keys' order.
+   - **`restLabel`** is the consumer's "Others" text (13.5).
+   - **`dataTable`** defaults to on. Summary turns it off, because its grid is the table.
+4. **Direct labels where they fit (13.4a.4).**
+   - Column, grouped column and line charts label each point above its mark when the mark is at least 28 px wide.
+   - A bar is labelled beside its end.
+   - A stacked segment is labelled inside only when it is large enough and a label ink (surface or foreground) reaches 4.5:1 on its fill; otherwise its value is in the data table.
+   - A pie or donut slice is labelled in its legend entry, beside the chart, with its value or share.
+5. **Decision 25.** Marks in status tones that are not distinct under some vision keep their labels even when the data label is "none". With the light tokens, warning and danger are such a pair.
+6. **Decision 20** runs outside production builds. It checks the keyed pairs actually drawn, including a reference position that wraps onto a colour already in use, against the theme's token tables, and reports through `console.error`. The checks read the same values the CSS draws, through `CHART_COLOR_TOKENS` and the family's colour tokens. The theme comes from the document's `data-theme-family` and `data-theme` attributes.
+7. **A withheld point breaks a line.** It is not drawn as a zero and is listed under the chart in the consumer's words, together with the series when the chart has several. An empty point is listed too.
+8. **Direction (decision 15).** The direction is read from the nearest `dir` attribute:
+   - a categorical axis mirrors;
+   - a time axis keeps the earliest category on the left;
+   - the value axis moves to the document's start side.
+9. **Ticks** are 1, 2 or 5 times a power of ten, always including zero, and are formatted by the consumer's `format`.
+10. **The fade** runs on a data change (keyed by a signature of the data) and is removed under `prefers-reduced-motion`.
+
+**Verified**
+
+- **Tests:**
+  - `tests/foundation/chart-contract.test.ts` (4 tests): every parser rule and every row of the availability table, including the high-contrast limit.
+  - `tests/foundation/chart.test.tsx` (10 jsdom tests): value and percentage labels, withheld points, truncation, the decision 25 labels, keyboard and `onSelect`, the data table with "Others" and the total, unavailable types, right to left for both axis kinds, high contrast's five series, pie colours by key with "Others", and the colour checks.
+  - The localization, list Phase 1a and theme-contract suites still pass.
+- **Typechecks:** the contract, design-system, theme, i18n and shell packages typecheck.
+- **Gates:**
+  - `policy:deployment-profiles`, `policy:canonical-packages`, `policy:workspace-resolution`, `policy:tsconfig` and `policy:peers` pass.
+  - `policy:frontend-spine` reports no finding for the design system after the budget change. Its other findings, and `policy:i18n`'s shell-locale finding, predate this change.
+
+**Not verified:** the chart has not been seen in a browser. No page uses it until A5.3.
+
 ### 13.5 "Others"
 
 - `rest` is exact only for a count, or a sum of an additive field in one unit: the server's total minus the given points, by exact decimal subtraction.
@@ -595,3 +661,4 @@ Folded into the Consumers table (revision 2), so there is one list. What the tab
 | Owner (10 October 2026) | "go ahead" (A5.1b) | High-contrast length built; five candidate sets proposed with measurements (13.4a.11); decision 28 proposed |
 | Owner (10 October 2026) | Mono: colour or black and white? Then "try the quieter Mono palette" | Colour kept (decision 16), with measured grey limits; two quieter Mono levels found, the chroma-40 level recommended (13.4a.11) |
 | Owner (10 October 2026) | "ok As of now its ok... go ahead and complete" | Read as accepting the sets (Mono at chroma 40) and decision 28; built (13.4a.12) |
+| Owner (10 October 2026) | "go ahead with next step approved" (A5.2) | Contract and component built (13.4a.13) |

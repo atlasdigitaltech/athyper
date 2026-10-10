@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/contract-platform-chart": "workspace:*",
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
     "@athyper/platform-theme": "workspace:*",
